@@ -1,4 +1,3 @@
-import { expect } from '@wdio/globals';
 import { select, swipeFullScreen, tap, typeText } from '../helpers/actions';
 import { launchFreshApp } from '../helpers/setup';
 
@@ -9,8 +8,8 @@ describe('Onboarding', () => {
 
   it('Can pass onboarding correctly', async () => {
     // TOS and PP
-    // const check = await select('Check1');
-    // expect(check.isDisplayed()).toBe(true);
+    const check = await select('Check1');
+    await check.waitForDisplayed({ timeout: 15000 });
     await tap('Check1');
     await tap('Check2');
     await tap('Continue');
