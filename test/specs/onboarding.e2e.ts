@@ -1,4 +1,4 @@
-import { select, swipeFullScreen, tap, typeText } from '../helpers/actions';
+import { elementById, getSeed, select, swipeFullScreen, tap, typeText } from '../helpers/actions';
 import { launchFreshApp } from '../helpers/setup';
 
 describe('Onboarding', () => {
@@ -8,19 +8,18 @@ describe('Onboarding', () => {
 
   it('Can pass onboarding correctly', async () => {
     // TOS and PP
-    const check = await select('Check1');
-    await check.waitForDisplayed({ timeout: 15000 });
+    await elementById('Check1');
     await tap('Check1');
     await tap('Check2');
     await tap('Continue');
     await tap('GetStarted');
-    await select('Slide0');
+    await elementById('Slide0');
     await swipeFullScreen('left');
-    await select('Slide1');
+    await elementById('Slide1');
     await swipeFullScreen('left');
-    await select('Slide2');
+    await elementById('Slide2');
     await swipeFullScreen('left');
-    await select('Slide3');
+    await elementById('Slide3');
     await swipeFullScreen('right');
     await tap('SkipButton');
 
@@ -29,5 +28,26 @@ describe('Onboarding', () => {
     await tap('Passphrase');
     await typeText('PassphraseInput', passphrase);
     await tap('CreateNewWallet');
+
+    // Wait for wallet to be created
+    for (let i = 0; i < 180; i++) {
+      try {
+        await elementById('WalletOnboardingClose').click();
+        break;
+      } catch {
+        if (i === 179) throw new Error('Tapping "WalletOnboardingClose" timeout');
+      }
+    }
+
+    const seed = await getSeed();
+
+    await tap('Receive');
+    const qrCode = await elementById('QRCode');
+    await qrCode.waitForDisplayed({ timeout: 5000 });
+    const attr = driver.isAndroid ? 'contentDescription' : 'label';
+    const address1 = await qrCode.getAttribute(attr);
+    console.info({ address1 });
+
+    
   });
 });
