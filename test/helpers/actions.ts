@@ -30,6 +30,7 @@ export const elementById = (testId: string) => select(testId);
 
 export const tap = async (testId: string) => {
   const el = await elementById(testId);
+  await el.waitForDisplayed({ timeout: 5000 });
   await el.click();
 };
 
@@ -101,7 +102,8 @@ export const getSeed = async (): Promise<string> => {
 
   // close the modal
   swipeFullScreen('down');
-  await selectAll('NavigationClose')[0].click();
+
+  await tap('NavigationClose');
 
   return seed;
 };

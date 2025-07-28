@@ -9,11 +9,16 @@ export function getAppId(): string {
   return driver.isAndroid ? APP_ID.android : APP_ID.ios;
 }
 
-export const APP_PATH = {
-  android: path.resolve(__dirname, '../../aut/bitkit.apk'),
-  ios: path.resolve(__dirname, '../../aut/bitkit.ipa'),
-};
+
 
 export function getAppPath(): string {
-  return driver.isAndroid ? APP_PATH.android : APP_PATH.ios;
+  const cap = browser.capabilities as any;
+  const possibleKeys = ['app', 'appium:app'];
+
+  for (const key of possibleKeys) {
+    if (typeof cap[key] === 'string') return cap[key];
+  }
+
+  throw new Error(`App path not defined in capabilities (tried ${possibleKeys.join(', ')})`);
 }
+
