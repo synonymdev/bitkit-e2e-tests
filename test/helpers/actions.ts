@@ -1,4 +1,7 @@
 import type { ChainablePromiseElement } from 'webdriverio';
+import { reinstallApp } from './setup';
+
+export const sleep = (ms: number) => browser.pause(ms);
 
 /**
  * Returns an element selector compatible with both Android and iOS.
@@ -28,16 +31,16 @@ export function selectAll(selector: string): ChainablePromiseArray {
 
 export const elementById = (testId: string) => select(testId);
 
-export const tap = async (testId: string) => {
+export async function tap(testId: string) {
   const el = await elementById(testId);
   await el.waitForDisplayed({ timeout: 5000 });
   await el.click();
-};
+}
 
-export const typeText = async (testId: string, text: string) => {
+export async function typeText(testId: string, text: string) {
   const el = await elementById(testId);
   await el.setValue(text);
-};
+}
 
 export async function swipeFullScreen(
   direction: 'left' | 'right' | 'up' | 'down'
@@ -84,13 +87,31 @@ export async function swipeFullScreen(
   ]);
 }
 
+export async function tapReturnKey() {
+  console.info('→ Tapping Return/Done key');
 
-export const getSeed = async (): Promise<string> => {
+  if (driver.isAndroid) {
+    // KeyEvent 66 is the ENTER key (Return)
+    await driver.pressKeyCode(66);
+  } else {
+    // iOS: Try common editor actions (done, go, search), and fall back to newline input if none work
+    for (const action of ['done', 'go', 'search']) {
+      try {
+        await driver.execute('mobile: performEditorAction', { action });
+        return;
+      } catch {}
+    }
+
+    console.warn('No editor action worked, falling back to newline input');
+    await driver.execute('mobile: type', { text: '\n' });
+  }
+}
+
+export async function getSeed(): Promise<string> {
   await tap('HeaderMenu');
   await tap('DrawerSettings');
   await tap('BackupSettings');
   await tap('BackupWallet');
-
 
   await tap('TapToReveal');
 
@@ -101,9 +122,60 @@ export const getSeed = async (): Promise<string> => {
   console.info({ seed });
 
   // close the modal
-  swipeFullScreen('down');
+  await swipeFullScreen('down');
 
   await tap('NavigationClose');
 
   return seed;
-};
+}
+
+export async function restoreWallet(seed: string, passphrase?: string) {
+  // Let cloud state flush - carried over from Detox
+  await sleep(5000);
+
+  // Reinstall app to wipe all data
+  await reinstallApp();
+
+  // Terms of service
+  await elementById('Check1').waitForDisplayed({ timeout: 30000 });
+  await tap('Check1');
+  await tap('Check2');
+  await tap('Continue');
+
+  // Skip intro
+  await elementById('SkipIntro').waitForDisplayed({ timeout: 10000 });
+  await tap('SkipIntro');
+  await tap('RestoreWallet');
+  await tap('MultipleDevices-button');
+
+  // Seed
+  const seedField = await elementById('Word-0');
+  await seedField.setValue(seed);
+
+  await elementById('WordIndex-4');
+
+  // Passphrase
+  if (passphrase) {
+    await tap('AdvancedButton');
+    await typeText('PassphraseInput', passphrase);
+    await tapReturnKey();
+  }
+
+  // Restore wallet
+  await tap('RestoreButton');
+
+  // Wait for Get Started
+  const getStarted = await elementById('GetStartedButton');
+  await getStarted.waitForDisplayed({ timeout: 300_000 }); // 5 minutes
+  await tap('GetStartedButton');
+
+  // Wait for SuggestionsLabel to appear (try tapping repeatedly)
+  for (let i = 0; i < 60; i++) {
+    try {
+      await tap('SuggestionsLabel');
+      break;
+    } catch {
+      await sleep(200);
+    }
+  }
+}
