@@ -32,10 +32,10 @@ npm install
 ### 📂 Directory structure
 
 ```
+aut/                    # Place your .apk / .ipa files here
 test/
   ├── specs/            # Test suites (e.g., onboarding.e2e.ts)
-  ├── helpers/          # Test helpers: selectors, setup, actions
-  ├── aut/              # Place your .apk / .ipa files here
+  ├── helpers/          # Test helpers: selectors, setup, actions        
 ```
 
 ---
