@@ -9,8 +9,6 @@ export function getAppId(): string {
   return driver.isAndroid ? APP_ID.android : APP_ID.ios;
 }
 
-
-
 export function getAppPath(): string {
   const cap = browser.capabilities as any;
   const possibleKeys = ['app', 'appium:app'];
@@ -21,4 +19,3 @@ export function getAppPath(): string {
 
   throw new Error(`App path not defined in capabilities (tried ${possibleKeys.join(', ')})`);
 }
-

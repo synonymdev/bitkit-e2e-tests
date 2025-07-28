@@ -33,7 +33,7 @@ export const elementById = (testId: string) => select(testId);
 
 export async function tap(testId: string) {
   const el = await elementById(testId);
-  await el.waitForDisplayed({ timeout: 5000 });
+  await el.waitForDisplayed();
   await el.click();
 }
 
@@ -42,9 +42,7 @@ export async function typeText(testId: string, text: string) {
   await el.setValue(text);
 }
 
-export async function swipeFullScreen(
-  direction: 'left' | 'right' | 'up' | 'down'
-) {
+export async function swipeFullScreen(direction: 'left' | 'right' | 'up' | 'down') {
   const { width, height } = await driver.getWindowSize();
 
   let startX = width / 2;
@@ -88,8 +86,6 @@ export async function swipeFullScreen(
 }
 
 export async function tapReturnKey() {
-  console.info('→ Tapping Return/Done key');
-
   if (driver.isAndroid) {
     // KeyEvent 66 is the ENTER key (Return)
     await driver.pressKeyCode(66);
@@ -130,6 +126,7 @@ export async function getSeed(): Promise<string> {
 }
 
 export async function restoreWallet(seed: string, passphrase?: string) {
+  console.info('→ Restoring wallet with seed:', seed);
   // Let cloud state flush - carried over from Detox
   await sleep(5000);
 
@@ -137,20 +134,17 @@ export async function restoreWallet(seed: string, passphrase?: string) {
   await reinstallApp();
 
   // Terms of service
-  await elementById('Check1').waitForDisplayed({ timeout: 30000 });
   await tap('Check1');
   await tap('Check2');
   await tap('Continue');
 
   // Skip intro
-  await elementById('SkipIntro').waitForDisplayed({ timeout: 10000 });
   await tap('SkipIntro');
   await tap('RestoreWallet');
   await tap('MultipleDevices-button');
 
   // Seed
-  const seedField = await elementById('Word-0');
-  await seedField.setValue(seed);
+  await typeText('Word-0', seed);
 
   await elementById('WordIndex-4');
 
@@ -178,4 +172,17 @@ export async function restoreWallet(seed: string, passphrase?: string) {
       await sleep(200);
     }
   }
+}
+
+export async function getReceiveAddress(): Promise<string> {
+  await tap('Receive');
+
+  const qrCode = await elementById('QRCode');
+  await qrCode.waitForDisplayed();
+
+  const attr = driver.isAndroid ? 'contentDescription' : 'label';
+  const address = await qrCode.getAttribute(attr);
+  console.info({ address });
+
+  return address;
 }

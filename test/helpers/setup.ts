@@ -11,6 +11,7 @@ export async function launchFreshApp() {
  * Uninstalls and reinstalls the app (like Detox `launchApp({ delete: true })`)
  */
 export async function reinstallApp() {
+  console.info('→ Reinstalling app...');
   const appId = getAppId();
   const appPath = getAppPath();
 

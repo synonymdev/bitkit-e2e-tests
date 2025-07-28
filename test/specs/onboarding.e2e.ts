@@ -1,4 +1,12 @@
-import { elementById, getSeed, select, swipeFullScreen, tap, typeText } from '../helpers/actions';
+import {
+  elementById,
+  getReceiveAddress,
+  getSeed,
+  restoreWallet,
+  swipeFullScreen,
+  tap,
+  typeText,
+} from '../helpers/actions';
 import { launchFreshApp } from '../helpers/setup';
 
 describe('Onboarding', () => {
@@ -8,7 +16,6 @@ describe('Onboarding', () => {
 
   it('Can pass onboarding correctly', async () => {
     // TOS and PP
-    await elementById('Check1');
     await tap('Check1');
     await tap('Check2');
     await tap('Continue');
@@ -32,7 +39,7 @@ describe('Onboarding', () => {
     // Wait for wallet to be created
     for (let i = 0; i < 180; i++) {
       try {
-        await elementById('WalletOnboardingClose').click();
+        await tap('WalletOnboardingClose');
         break;
       } catch {
         if (i === 179) throw new Error('Tapping "WalletOnboardingClose" timeout');
@@ -41,13 +48,12 @@ describe('Onboarding', () => {
 
     const seed = await getSeed();
 
-    await tap('Receive');
-    const qrCode = await elementById('QRCode');
-    await qrCode.waitForDisplayed({ timeout: 5000 });
-    const attr = driver.isAndroid ? 'contentDescription' : 'label';
-    const address1 = await qrCode.getAttribute(attr);
-    console.info({ address1 });
+    const address1 = await getReceiveAddress();
 
-    
+    await restoreWallet(seed, passphrase);
+
+    const address2 = await getReceiveAddress();
+
+    expect(address1).toEqual(address2);
   });
 });
