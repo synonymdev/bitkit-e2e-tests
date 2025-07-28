@@ -37,12 +37,12 @@ describe('Onboarding', () => {
     await tap('CreateNewWallet');
 
     // Wait for wallet to be created
-    for (let i = 0; i < 180; i++) {
+    for (let i = 1; i <= 3; i++) {
       try {
         await tap('WalletOnboardingClose');
         break;
       } catch {
-        if (i === 179) throw new Error('Tapping "WalletOnboardingClose" timeout');
+        if (i === 3) throw new Error('Tapping "WalletOnboardingClose" timeout');
       }
     }
 

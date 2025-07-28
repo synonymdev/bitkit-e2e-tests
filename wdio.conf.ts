@@ -1,5 +1,7 @@
 import path from 'node:path';
 
+const isAndroid = process.env.PLATFORM === 'android';
+
 export const config: WebdriverIO.Config = {
   //
   // ====================
@@ -53,15 +55,24 @@ export const config: WebdriverIO.Config = {
   // https://saucelabs.com/platform/platform-configurator
   //
   capabilities: [
-    {
-      platformName: 'Android',
-      'appium:automationName': 'UiAutomator2',
-      'appium:deviceName': 'Pixel_6_2',
-      'appium:platformVersion': '16.0',
-      'appium:app': path.join(__dirname, 'aut', 'bitkit_v1.1.2.apk'),
-      // 'appium:app': path.join(__dirname, 'aut', 'bitkit.apk'),
-      'appium:autoGrantPermissions': true,
-    },
+    isAndroid
+      ? {
+          platformName: 'Android',
+          'appium:automationName': 'UiAutomator2',
+          'appium:deviceName': 'Pixel_6_2',
+          'appium:platformVersion': '16.0',
+          // 'appium:app': path.join(__dirname, 'aut', 'bitkit_v1.1.2.apk'),
+          'appium:app': path.join(__dirname, 'aut', 'bitkit.apk'),
+          'appium:autoGrantPermissions': true,
+        }
+      : {
+          platformName: 'iOS',
+          'appium:automationName': 'XCUITest',
+          'appium:deviceName': 'iPhone 15',
+          'appium:platformVersion': '17.0',
+          'appium:app': path.join(__dirname, 'aut', 'bitkit.ipa'),
+          'appium:autoAcceptAlerts': true,
+        },
   ],
 
   //

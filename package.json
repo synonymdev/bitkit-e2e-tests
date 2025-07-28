@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "wdio": "wdio run ./wdio.conf.ts",
+    "e2e": "wdio run ./wdio.conf.ts",
+    "e2e:android": "PLATFORM=android npm run e2e",
+    "e2e:ios": "PLATFORM=ios npm run e2e",
     "lint": "eslint './**/*.{ts,js}'",
     "format": "prettier --write './**/*.{ts,js,json,md}'"
   },
