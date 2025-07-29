@@ -16,6 +16,7 @@ describe('Onboarding', () => {
 
   it('Can pass onboarding correctly', async () => {
     // TOS and PP
+    await elementById('Check1').waitForDisplayed();
     await tap('Check1');
     await tap('Check2');
     await tap('Continue');
