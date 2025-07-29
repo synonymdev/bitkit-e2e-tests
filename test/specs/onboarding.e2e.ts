@@ -18,6 +18,30 @@ describe('Onboarding suite', () => {
     await launchFreshApp();
   });
 
+  it('Can start onboarding', async () => {
+    // TOS and PP
+    await elementById('Check1').waitForDisplayed();
+    await tap('Check1');
+    await tap('Check2');
+    await tap('Continue');
+    await tap('GetStarted');
+    await elementById('Slide0');
+    await swipeFullScreen('left');
+    await elementById('Slide1');
+    await swipeFullScreen('left');
+    await elementById('Slide2');
+    await swipeFullScreen('left');
+    await elementById('Slide3');
+    await swipeFullScreen('right');
+    await tap('SkipButton');
+
+    // create new wallet with passphrase
+    const passphrase = 'supersecret';
+    await tap('Passphrase');
+    await typeText('PassphraseInput', passphrase);
+    await tap('CreateNewWallet');
+  });
+
   it('Can pass onboarding correctly', async () => {
     // TOS and PP
     await elementById('Check1').waitForDisplayed();
