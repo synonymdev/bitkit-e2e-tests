@@ -186,3 +186,23 @@ export async function getReceiveAddress(): Promise<string> {
 
   return address;
 }
+
+export async function completeOnboarding() {
+  // TOS and PP
+  await elementById('Check1').waitForDisplayed();
+  await tap('Check1');
+  await tap('Check2');
+  await tap('Continue');
+  await tap('SkipIntro');
+  await tap('NewWallet');
+
+  // Wait for wallet to be created
+  for (let i = 1; i <= 3; i++) {
+    try {
+      await tap('WalletOnboardingClose');
+      break;
+    } catch {
+      if (i === 3) throw new Error('Tapping "WalletOnboardingClose" timeout');
+    }
+  }
+}
