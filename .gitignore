@@ -1,3 +1,4 @@
 .vscode
 aut
 node_modules
+docker/lnd
