@@ -7,11 +7,15 @@ import {
   tap,
   typeText,
 } from '../helpers/actions';
-import { launchFreshApp } from '../helpers/setup';
+import { launchFreshApp, reinstallApp } from '../helpers/setup';
 
-describe('Onboarding', () => {
+describe('Onboarding suite', () => {
+  before(async () => {
+    await reinstallApp();
+  });
+
   beforeEach(async () => {
-    launchFreshApp();
+    await launchFreshApp();
   });
 
   it('Can pass onboarding correctly', async () => {
