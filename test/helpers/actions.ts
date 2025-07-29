@@ -31,6 +31,19 @@ export function selectAll(selector: string): ChainablePromiseArray {
 
 export const elementById = (testId: string) => select(testId);
 
+export function elementByText(text: string): ChainablePromiseElement {
+  if (driver.isAndroid) {
+    return $(`android=new UiSelector().text("${text}")`);
+  } else {
+    return $(`-ios predicate string:type == "XCUIElementTypeStaticText" AND label == "${text}"`);
+  }
+}
+
+export async function expectTextVisible(text: string) {
+  const el = await elementByText(text);
+  await el.waitForDisplayed({ timeout: 5000 });
+}
+
 export async function tap(testId: string) {
   const el = await elementById(testId);
   await el.waitForDisplayed();

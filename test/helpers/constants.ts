@@ -1,5 +1,5 @@
 export const APP_ID = {
-  android: 'to.bitkit.dev',
+  android: 'to.bitkit',
   ios: 'tbd',
 };
 
