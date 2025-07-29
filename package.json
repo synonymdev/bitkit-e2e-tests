@@ -4,9 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "e2e": "wdio run ./wdio.conf.ts",
-    "e2e:android": "PLATFORM=android npm run e2e",
-    "e2e:ios": "PLATFORM=ios npm run e2e",
+    "e2e:android": "PLATFORM=android wdio run ./wdio.conf.ts",
+    "e2e:ios": "PLATFORM=ios wdio run ./wdio.conf.ts",
     "lint": "eslint './**/*.{ts,js}'",
     "format": "prettier --write './**/*.{ts,js,json,md}'"
   },

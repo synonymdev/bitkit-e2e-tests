@@ -35,7 +35,7 @@ npm install
 aut/                    # Place your .apk / .ipa files here
 test/
   ├── specs/            # Test suites (e.g., onboarding.e2e.ts)
-  ├── helpers/          # Test helpers: selectors, setup, actions        
+  ├── helpers/          # Test helpers: selectors, setup, actions
 ```
 
 ---
@@ -53,7 +53,7 @@ npm run e2e:ios
 To run a **specific test file**:
 
 ```bash
-npm run e2e:android --spec ./test/specs/onboarding.e2e.ts
+npm run e2e:android -- --spec ./test/specs/onboarding.e2e.ts
 ```
 
 To run a **specific test case**:
