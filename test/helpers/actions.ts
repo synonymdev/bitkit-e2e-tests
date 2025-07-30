@@ -114,6 +114,24 @@ export async function tapReturnKey() {
   }
 }
 
+export async function acceptAppNotificationAlert(): Promise<void> {
+  if (driver.isAndroid) {
+    // Android: system permission dialog is handled via UiSelector
+    try {
+      await tap('com.android.permissioncontroller:id/permission_allow_button');
+    } catch (err) {
+      console.warn('⚠ Could not find or tap Android App Notification alert allow button:', err);
+    }
+  } else {
+    // iOS: handled as system alert
+    try {
+      await driver.acceptAlert();
+    } catch (err) {
+      console.warn('⚠ No iOS App Notification alert to accept or failed to accept:', err);
+    }
+  }
+}
+
 export async function getSeed(): Promise<string> {
   await tap('HeaderMenu');
   await tap('DrawerSettings');
@@ -198,7 +216,7 @@ export async function getReceiveAddress(): Promise<string> {
   return address;
 }
 
-export async function completeOnboarding() {
+export async function completeOnboarding({ isFirstTime = true } = {}) {
   // TOS and PP
   await elementById('Check1').waitForDisplayed();
   await tap('Check1');
@@ -206,6 +224,10 @@ export async function completeOnboarding() {
   await tap('Continue');
   await tap('SkipIntro');
   await tap('NewWallet');
+
+  if (isFirstTime) {
+    await acceptAppNotificationAlert();
+  }
 
   // Wait for wallet to be created
   for (let i = 1; i <= 3; i++) {

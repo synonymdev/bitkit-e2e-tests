@@ -1,8 +1,9 @@
 import { completeOnboarding, expectTextVisible, tap } from '../helpers/actions';
-import { launchFreshApp } from '../helpers/setup';
+import { launchFreshApp, reinstallApp } from '../helpers/setup';
 
 describe('NumberPad', () => {
   before(async () => {
+    await reinstallApp();
     await completeOnboarding();
   });
 

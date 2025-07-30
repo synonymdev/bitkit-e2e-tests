@@ -1,5 +1,7 @@
 import {
+  acceptAppNotificationAlert,
   elementById,
+  elementByText,
   getReceiveAddress,
   getSeed,
   restoreWallet,
@@ -40,6 +42,9 @@ describe('Onboarding suite', () => {
     await tap('Passphrase');
     await typeText('PassphraseInput', passphrase);
     await tap('CreateNewWallet');
+
+    await acceptAppNotificationAlert();
+    await elementByText('TO GET\nSTARTED\nSEND\nBITCOIN\nTO YOUR\nWALLET').waitForDisplayed();
   });
 
   it('Can pass onboarding correctly', async () => {
