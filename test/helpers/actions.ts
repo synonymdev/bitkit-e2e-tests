@@ -8,7 +8,7 @@ export const sleep = (ms: number) => browser.pause(ms);
  * - Android: uses resource-id
  * - iOS: uses accessibility ID
  */
-export function select(selector: string): ChainablePromiseElement {
+export function elementById(selector: string): ChainablePromiseElement {
   if (driver.isAndroid) {
     return $(`android=new UiSelector().resourceId("${selector}")`);
   } else {
@@ -21,15 +21,13 @@ export function select(selector: string): ChainablePromiseElement {
  * - Android: uses resource-id
  * - iOS: uses accessibility ID
  */
-export function selectAll(selector: string): ChainablePromiseArray {
+export function elementsById(selector: string): ChainablePromiseArray {
   if (driver.isAndroid) {
     return $$(`android=new UiSelector().resourceId("${selector}")`);
   } else {
     return $$(`~${selector}`);
   }
 }
-
-export const elementById = (testId: string) => select(testId);
 
 export function elementByText(text: string): ChainablePromiseElement {
   if (driver.isAndroid) {
