@@ -2,3 +2,4 @@
 aut
 node_modules
 docker/lnd
+artifacts

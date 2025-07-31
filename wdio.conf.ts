@@ -1,8 +1,10 @@
 import path from 'node:path';
+import fs from 'node:fs';
 
 const isAndroid = process.env.PLATFORM === 'android';
 
 export const config: WebdriverIO.Config = {
+  
   //
   // ====================
   // Runner Configuration
@@ -314,4 +316,33 @@ export const config: WebdriverIO.Config = {
    */
   // afterAssertion: function(params) {
   // }
+
+  beforeTest: async function () {
+    if (process.env.RECORD_VIDEO === 'true') {
+      await driver.startRecordingScreen();
+    }
+  },
+  
+  afterTest: async function (test, _context, _result) {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const testName = `${test.parent || 'unknown'}_${test.title}`.replace(/\s+/g, '_').replace(/[^\w\-]/g, '');
+  
+    // Create artifacts directories
+    const artifactsDir = path.join(__dirname, 'artifacts');
+    fs.mkdirSync(artifactsDir, { recursive: true });
+  
+    // Save screenshot
+    const screenshotPath = path.join(artifactsDir, `${testName}-${timestamp}.png`);
+    const screenshot = await driver.takeScreenshot();
+    fs.writeFileSync(screenshotPath, screenshot, 'base64');
+    console.log(`📸 Saved screenshot: ${screenshotPath}`);
+  
+    // Save video if recording was enabled
+    if (process.env.RECORD_VIDEO === 'true') {
+      const videoBase64 = await driver.stopRecordingScreen();
+      const videoPath = path.join(artifactsDir, `${testName}-${timestamp}.mp4`);
+      fs.writeFileSync(videoPath, videoBase64, 'base64');
+      console.log(`🎥 Saved test video: ${videoPath}`);
+    }
+  }
 };
