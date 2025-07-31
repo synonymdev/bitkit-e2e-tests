@@ -11,7 +11,7 @@ import {
 } from '../helpers/actions';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 
-describe('Onboarding suite', () => {
+describe('Onboarding', () => {
   before(async () => {
     await reinstallApp();
   });

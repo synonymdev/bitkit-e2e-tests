@@ -316,14 +316,17 @@ export const config: WebdriverIO.Config = {
    */
   // afterAssertion: function(params) {
   // }
-
-  beforeTest: async function () {
+  beforeTest: async function (test) {
     if (process.env.RECORD_VIDEO === 'true') {
       await driver.startRecordingScreen();
     }
+    console.log(`🧪 Start: ${test.parent} - ${test.title}`);
   },
   
-  afterTest: async function (test, _context, _result) {
+  afterTest: async function (test, _context, {error}) {
+
+    if (!error) return; // Skip artifacts if test passed
+
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const testNameRaw = `${test.parent || 'unknown'}_${test.title}`;
     const testName = testNameRaw.replace(/\s+/g, '_').replace(/[^\w\-]/g, '');
