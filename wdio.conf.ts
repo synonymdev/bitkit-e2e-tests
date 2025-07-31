@@ -325,14 +325,15 @@ export const config: WebdriverIO.Config = {
   
   afterTest: async function (test, _context, _result) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const testName = `${test.parent || 'unknown'}_${test.title}`.replace(/\s+/g, '_').replace(/[^\w\-]/g, '');
+    const testNameRaw = `${test.parent || 'unknown'}_${test.title}`;
+    const testName = testNameRaw.replace(/\s+/g, '_').replace(/[^\w\-]/g, '');
+    const testDir = path.join(__dirname, 'artifacts', testName);
   
-    // Create artifacts directories
-    const artifactsDir = path.join(__dirname, 'artifacts');
-    fs.mkdirSync(artifactsDir, { recursive: true });
+    // Ensure per-test directory exists
+    fs.mkdirSync(testDir, { recursive: true });
   
     // Save screenshot
-    const screenshotPath = path.join(artifactsDir, `${testName}-${timestamp}.png`);
+    const screenshotPath = path.join(testDir, `${testName}-${timestamp}.png`);
     const screenshot = await driver.takeScreenshot();
     fs.writeFileSync(screenshotPath, screenshot, 'base64');
     console.log(`📸 Saved screenshot: ${screenshotPath}`);
@@ -340,7 +341,7 @@ export const config: WebdriverIO.Config = {
     // Save video if recording was enabled
     if (process.env.RECORD_VIDEO === 'true') {
       const videoBase64 = await driver.stopRecordingScreen();
-      const videoPath = path.join(artifactsDir, `${testName}-${timestamp}.mp4`);
+      const videoPath = path.join(testDir, `${testName}-${timestamp}.mp4`);
       fs.writeFileSync(videoPath, videoBase64, 'base64');
       console.log(`🎥 Saved test video: ${videoPath}`);
     }
