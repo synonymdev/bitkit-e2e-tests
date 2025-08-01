@@ -20,7 +20,7 @@ End-to-end tests for the [Bitkit-android](https://github.com/synonymdev/bitkit-a
 
 ```bash
 # Clone the repo
-git clone https://github.com/your-org/bitkit-e2e-tests.git
+git clone https://github.com/synonymdev/bitkit-e2e-tests.git
 cd bitkit-e2e-tests
 
 # Install dependencies
@@ -32,11 +32,14 @@ npm install
 ### 📂 Directory structure
 
 ```
+artifacts/              # screenshots and (optionally) videos of failed tests
 aut/                    # Place your .apk / .ipa files here
 test/
   ├── specs/            # Test suites (e.g., onboarding.e2e.ts)
   ├── helpers/          # Test helpers: selectors, setup, actions
 ```
+
+> ℹ️ Screenshots and (optionally) videos of **failed tests** will be saved to `artifacts/`. To enable video recording, set the `RECORD_VIDEO=true` environment variable.
 
 ---
 
