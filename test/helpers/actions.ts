@@ -138,13 +138,13 @@ export async function getSeed(): Promise<string> {
   await tap('BackupSettings');
   await tap('BackupWallet');
 
-  await tap('TapToReveal');
-
   // get seed from SeedContaider
-  const seedElement = await elementById('SeedContaider');
+  const seedElement = await elementById('SeedContainer');
   const attr = driver.isAndroid ? 'contentDescription' : 'label';
   const seed = await seedElement.getAttribute(attr);
   console.info({ seed });
+
+  await tap('TapToReveal');
 
   // close the modal
   await swipeFullScreen('down');
@@ -186,21 +186,20 @@ export async function restoreWallet(seed: string, passphrase?: string) {
 
   // Restore wallet
   await tap('RestoreButton');
+  // Wait until text "SETTING UP YOUR WALLET" is no longer displayed
+  const settingUpWallet = await elementByText('SETTING UP\nYOUR WALLET');
+  await settingUpWallet.waitForDisplayed({ reverse: true, timeout: 300_000, interval: 100 }); // 5 minutes
+
+  await acceptAppNotificationAlert();
 
   // Wait for Get Started
   const getStarted = await elementById('GetStartedButton');
-  await getStarted.waitForDisplayed({ timeout: 300_000 }); // 5 minutes
+  await getStarted.waitForDisplayed();
   await tap('GetStartedButton');
 
-  // Wait for SuggestionsLabel to appear (try tapping repeatedly)
-  for (let i = 0; i < 60; i++) {
-    try {
-      await tap('SuggestionsLabel');
-      break;
-    } catch {
-      await sleep(200);
-    }
-  }
+  // Wait for Suggestions Label to appear
+  const suggestions = await elementById('Suggestions');
+  await suggestions.waitForDisplayed();
 }
 
 export async function getReceiveAddress(): Promise<string> {
@@ -210,7 +209,8 @@ export async function getReceiveAddress(): Promise<string> {
   await qrCode.waitForDisplayed();
 
   const attr = driver.isAndroid ? 'contentDescription' : 'label';
-  const address = await qrCode.getAttribute(attr);
+  const uri = await qrCode.getAttribute(attr);
+  const address = uri.replace(/^bitcoin:/, '').replace(/\?.*$/, '');
   console.info({ address });
 
   return address;
