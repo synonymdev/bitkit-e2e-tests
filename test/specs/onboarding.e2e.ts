@@ -39,7 +39,7 @@ describe('Onboarding', () => {
     await tap('NewWallet');
 
     await acceptAppNotificationAlert();
-    await elementByText('TO GET\nSTARTED\nSEND\nBITCOIN\nTO YOUR\nWALLET').waitForDisplayed( {timeout: 300_000 });
+    await elementByText('TO GET\nSTARTED\nSEND\nBITCOIN\nTO YOUR\nWALLET').waitForDisplayed();
   });
 
   it('Can pass onboarding correctly', async () => {
@@ -100,6 +100,5 @@ describe('Onboarding', () => {
     // Verify that the addresses match
     expect(address0).toEqual(address0Text);
     expect(address1).toEqual(address1Text);
-
   });
 });
