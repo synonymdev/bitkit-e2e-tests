@@ -12,11 +12,8 @@ import {
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 
 describe('Onboarding', () => {
-  before(async () => {
-    await reinstallApp();
-  });
-
   beforeEach(async () => {
+    await reinstallApp();
     await launchFreshApp();
   });
 
@@ -37,11 +34,9 @@ describe('Onboarding', () => {
     await swipeFullScreen('right');
     await tap('SkipButton');
 
-    // create new wallet with passphrase
-    const passphrase = 'supersecret';
-    await tap('Passphrase');
-    await typeText('PassphraseInput', passphrase);
-    await tap('CreateNewWallet');
+    // create new wallet
+    await elementById('NewWallet').waitForDisplayed();
+    await tap('NewWallet');
 
     await acceptAppNotificationAlert();
     await elementByText('TO GET\nSTARTED\nSEND\nBITCOIN\nTO YOUR\nWALLET').waitForDisplayed();
@@ -70,6 +65,8 @@ describe('Onboarding', () => {
     await typeText('PassphraseInput', passphrase);
     await tap('CreateNewWallet');
 
+    await acceptAppNotificationAlert();
+
     // Wait for wallet to be created
     for (let i = 1; i <= 3; i++) {
       try {
@@ -82,12 +79,26 @@ describe('Onboarding', () => {
 
     const seed = await getSeed();
 
-    const address1 = await getReceiveAddress();
+    const address0 = await getReceiveAddress();
 
     await restoreWallet(seed, passphrase);
 
-    const address2 = await getReceiveAddress();
+    const address1 = await getReceiveAddress();
 
-    expect(address1).toEqual(address2);
+    // Go to Address Viewer
+    await swipeFullScreen('down');
+    await tap('HeaderMenu');
+    await tap('DrawerSettings');
+    await tap('AdvancedSettings');
+    await tap('AddressViewer');
+
+    const address0Element = await elementById('Address-0');
+    const address1Element = await elementById('Address-1');
+    const address0Text = (await address0Element.getText()).split(':')[1].trim();
+    const address1Text = (await address1Element.getText()).split(':')[1].trim();
+    console.info({ address0Text, address1Text });
+    // Verify that the addresses match
+    expect(address0).toEqual(address0Text);
+    expect(address1).toEqual(address1Text);
   });
 });
