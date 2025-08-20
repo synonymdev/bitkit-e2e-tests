@@ -1,7 +1,8 @@
-import { completeOnboarding, expectTextVisible, tap } from '../helpers/actions';
+import { completeOnboarding, expectTextVisible, sleep, swipeFullScreen, tap } from '../helpers/actions';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 
-describe('NumberPad', () => {
+// Skip due to issues bitkit-android#309,#310
+describe.skip('NumberPad', () => {
   before(async () => {
     await reinstallApp();
     await completeOnboarding();
@@ -50,6 +51,9 @@ describe('NumberPad', () => {
 
   it('Can enter amounts in classic denomination', async () => {
     // switch to classic denomination
+    await tap('Receive');
+    await sleep(5000);
+    await swipeFullScreen('down');
     await tap('HeaderMenu');
     await tap('DrawerSettings');
     await tap('GeneralSettings');

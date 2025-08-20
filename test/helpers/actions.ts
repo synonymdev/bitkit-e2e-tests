@@ -163,6 +163,8 @@ export async function restoreWallet(seed: string, passphrase?: string) {
   await reinstallApp();
 
   // Terms of service
+  await elementById('Check1').waitForDisplayed();
+  await sleep(1000); // Wait for the app to settle
   await tap('Check1');
   await tap('Check2');
   await tap('Continue');
@@ -219,6 +221,7 @@ export async function getReceiveAddress(): Promise<string> {
 export async function completeOnboarding({ isFirstTime = true } = {}) {
   // TOS and PP
   await elementById('Check1').waitForDisplayed();
+  await sleep(1000); // Wait for the app to settle
   await tap('Check1');
   await tap('Check2');
   await tap('Continue');

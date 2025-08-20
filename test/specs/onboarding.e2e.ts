@@ -5,6 +5,7 @@ import {
   getReceiveAddress,
   getSeed,
   restoreWallet,
+  sleep,
   swipeFullScreen,
   tap,
   typeText,
@@ -20,6 +21,7 @@ describe('Onboarding', () => {
   it('Can start onboarding', async () => {
     // TOS and PP
     await elementById('Check1').waitForDisplayed();
+    await sleep(1000); // Wait for the app to settle
     await tap('Check1');
     await tap('Check2');
     await tap('Continue');
@@ -36,6 +38,7 @@ describe('Onboarding', () => {
 
     // create new wallet
     await elementById('NewWallet').waitForDisplayed();
+    await sleep(1000); // Wait for the app to settle
     await tap('NewWallet');
 
     await acceptAppNotificationAlert();
@@ -45,6 +48,7 @@ describe('Onboarding', () => {
   it('Can pass onboarding correctly', async () => {
     // TOS and PP
     await elementById('Check1').waitForDisplayed();
+    await sleep(1000); // Wait for the app to settle
     await tap('Check1');
     await tap('Check2');
     await tap('Continue');
