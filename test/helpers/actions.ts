@@ -138,7 +138,7 @@ export async function getSeed(): Promise<string> {
   await tap('BackupSettings');
   await tap('BackupWallet');
 
-  // get seed from SeedContaider
+  // get seed from SeedContainer
   const seedElement = await elementById('SeedContainer');
   const attr = driver.isAndroid ? 'contentDescription' : 'label';
   const seed = await seedElement.getAttribute(attr);
