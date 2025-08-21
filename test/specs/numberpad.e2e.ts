@@ -1,4 +1,10 @@
-import { completeOnboarding, expectTextVisible, sleep, swipeFullScreen, tap } from '../helpers/actions';
+import {
+  completeOnboarding,
+  expectTextVisible,
+  sleep,
+  swipeFullScreen,
+  tap,
+} from '../helpers/actions';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 
 // Skip due to issues bitkit-android#309,#310
