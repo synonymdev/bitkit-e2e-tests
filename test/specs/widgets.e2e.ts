@@ -32,10 +32,10 @@ describe('Widgets', () => {
     await tap('WidgetEdit');
     // Select BTC/EUR row
     await tap('WidgetEditField-BTC/EUR');
+    await sleep(1000); // Wait for the UI to settle
 
     // Scroll the edit view
     await swipeFullScreen('up');
-    await sleep(1000); // Wait for the UI to settle
 
     // Set timeframe and show source
     await tap('WidgetEditField-1W');
@@ -49,7 +49,6 @@ describe('Widgets', () => {
     // Back on Home: scroll a bit to ensure widget is in view
     await elementById('PriceWidget').waitForDisplayed();
     await swipeFullScreen('up');
-    await sleep(1000); // Wait for the UI to settle
 
     // Assertions
     await elementById('PriceWidget').waitForDisplayed();
@@ -68,7 +67,11 @@ describe('Widgets', () => {
     // reset options to defaults and save
     await tap('WidgetEdit');
     await tap('WidgetEditReset');
+    await elementById('WidgetEditPreview').waitForDisplayed();
+    await sleep(1000); // Wait for the UI to settle
     await tap('WidgetEditPreview');
+    await elementById('WidgetSave').waitForDisplayed();
+    await sleep(1000); // Wait for the UI to settle
     await tap('WidgetSave');
     await elementById('ActivitySpending').waitForDisplayed();
     await sleep(1000); // Wait for the UI to settle

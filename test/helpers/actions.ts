@@ -59,7 +59,9 @@ export async function expectTextVisible(text: string) {
 export async function tap(testId: string) {
   const el = await elementById(testId);
   await el.waitForDisplayed();
+  await sleep(100); // Allow time for the element to settle
   await el.click();
+  await sleep(50);
 }
 
 export async function typeText(testId: string, text: string) {
@@ -108,6 +110,7 @@ export async function swipeFullScreen(direction: 'left' | 'right' | 'up' | 'down
       ],
     },
   ]);
+  await sleep(500); // Allow time for the swipe to complete
 }
 
 export async function tapReturnKey() {
