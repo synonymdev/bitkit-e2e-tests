@@ -15,7 +15,6 @@ import { launchFreshApp, reinstallApp } from '../helpers/setup';
 describe('Onboarding', () => {
   beforeEach(async () => {
     await reinstallApp();
-    await launchFreshApp();
   });
 
   it('Can start onboarding', async () => {

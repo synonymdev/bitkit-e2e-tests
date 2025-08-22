@@ -37,6 +37,20 @@ export function elementByText(text: string): ChainablePromiseElement {
   }
 }
 
+export async function elementsByText(text: string, timeout = 8000): Promise<ChainablePromiseArray> {
+  const sel = driver.isAndroid
+    ? `android=new UiSelector().text("${text}")`
+    : `-ios predicate string:type == "XCUIElementTypeStaticText" AND label == "${text}"`;
+
+  await browser.waitUntil(async () => (await (await $$(sel)).length) > 1, {
+    timeout,
+    interval: 200,
+    timeoutMsg: `Expected > 1 "${text}" elements`,
+  });
+
+  return $$(sel);
+}
+
 export async function expectTextVisible(text: string) {
   const el = await elementByText(text);
   await el.waitForDisplayed({ timeout: 5000 });
@@ -45,7 +59,9 @@ export async function expectTextVisible(text: string) {
 export async function tap(testId: string) {
   const el = await elementById(testId);
   await el.waitForDisplayed();
+  await sleep(100); // Allow time for the element to settle
   await el.click();
+  await sleep(50);
 }
 
 export async function typeText(testId: string, text: string) {
@@ -94,6 +110,7 @@ export async function swipeFullScreen(direction: 'left' | 'right' | 'up' | 'down
       ],
     },
   ]);
+  await sleep(500); // Allow time for the swipe to complete
 }
 
 export async function tapReturnKey() {
@@ -226,6 +243,7 @@ export async function completeOnboarding({ isFirstTime = true } = {}) {
   await tap('Check2');
   await tap('Continue');
   await tap('SkipIntro');
+  await sleep(500); // Wait for the app to settle
   await tap('NewWallet');
 
   if (isFirstTime) {
@@ -241,4 +259,16 @@ export async function completeOnboarding({ isFirstTime = true } = {}) {
       if (i === 3) throw new Error('Tapping "WalletOnboardingClose" timeout');
     }
   }
+}
+
+// enable/disable widgets in settings
+export async function toggleWidgets() {
+  await sleep(3000);
+  await tap('HeaderMenu');
+  await tap('DrawerSettings');
+  await tap('GeneralSettings');
+  await tap('WidgetsSettings');
+  const widgets = await elementsByText('Widgets');
+  await widgets[1].click();
+  await tap('NavigationClose');
 }
