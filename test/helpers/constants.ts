@@ -17,3 +17,7 @@ export function getAppPath(): string {
 
   throw new Error(`App path not defined in capabilities (tried ${possibleKeys.join(', ')})`);
 }
+
+export const bitcoinURL = 'http://polaruser:polarpass@127.0.0.1:43782';
+export const electrumHost = '127.0.0.1';
+export const electrumPort = 60001;
