@@ -28,5 +28,9 @@
     "typescript": "^5.8.3",
     "wdio-wait-for": "^3.1.0",
     "webdriverio": "^9.18.1"
+  },
+  "dependencies": {
+    "bitcoin-json-rpc": "^1.4.1",
+    "rn-electrum-client": "^0.0.22"
   }
 }

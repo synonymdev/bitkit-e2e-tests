@@ -10,7 +10,7 @@ import {
   tap,
   typeText,
 } from '../helpers/actions';
-import { launchFreshApp, reinstallApp } from '../helpers/setup';
+import { reinstallApp } from '../helpers/setup';
 
 describe('Onboarding', () => {
   beforeEach(async () => {
