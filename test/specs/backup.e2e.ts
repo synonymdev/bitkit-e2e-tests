@@ -13,10 +13,8 @@ import {
   sleep,
   swipeFullScreen,
   tap,
-  tapReturnKey,
   toggleWidgets,
   typeText,
-  waitForBackup,
 } from '../helpers/actions';
 
 describe('Backup', () => {
@@ -79,6 +77,8 @@ describe('Backup', () => {
     await tap('ActivityTag');
     await typeText('TagInput', tag);
     await tap('ActivityTagsSubmit');
+    // workaround for Android keyboard not hiding (only in emulator)
+    await driver.hideKeyboard().catch(() => {});
     await sleep(200);
     await tap('NavigationClose');
     await tap('NavigationBack');
@@ -117,6 +117,8 @@ describe('Backup', () => {
     await elementById('PriceWidget').waitForDisplayed();
     // check metadata
 
+    // data backup not fully functional yet
+    // https://github.com/synonymdev/bitkit-android/issues/321
     // await tap('ActivitySavings');
     // await tap('Activity-1');
     // const tagElement = await elementById('Tag-${tag}');
