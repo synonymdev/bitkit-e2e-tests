@@ -70,6 +70,6 @@ npm run e2e:android -- --mochaOpts.grep "Can pass onboarding correctly"
 ### 💡 Tips
 
 - Use `elementById()` and `tap()` helpers to write cross-platform tests.
-- Use `tapReturnKey()` to handle keyboard actions across Android/iOS.
+- Use `confirmInputOnKeyboard()` to handle keyboard actions across Android/iOS.
 - Tests are designed to work identically on both platforms where possible.
 - To debug, add `console.info()` or enable `wdio` debug logs.

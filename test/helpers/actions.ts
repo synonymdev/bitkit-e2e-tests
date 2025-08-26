@@ -132,22 +132,16 @@ export async function swipeFullScreen(direction: 'left' | 'right' | 'up' | 'down
   await sleep(500); // Allow time for the swipe to complete
 }
 
-export async function tapReturnKey() {
-  if (driver.isAndroid) {
-    // KeyEvent 66 is the ENTER key (Return)
-    await driver.pressKeyCode(66);
-  } else {
-    // iOS: Try common editor actions (done, go, search), and fall back to newline input if none work
-    for (const action of ['done', 'go', 'search']) {
-      try {
-        await driver.execute('mobile: performEditorAction', { action });
-        return;
-      } catch {}
-    }
-
-    console.warn('No editor action worked, falling back to newline input');
-    await driver.execute('mobile: type', { text: '\n' });
-  }
+export async function confirmInputOnKeyboard(
+  action: 'done' | 'go' | 'send' | 'search' | 'next' = 'done'
+) {
+  try {
+    await driver.execute('mobile: performEditorAction', { action });
+    try {
+      await driver.hideKeyboard();
+    } catch {}
+    return;
+  } catch {}
 }
 
 export async function acceptAppNotificationAlert(): Promise<void> {
@@ -219,7 +213,7 @@ export async function restoreWallet(seed: string, passphrase?: string) {
   if (passphrase) {
     await tap('AdvancedButton');
     await typeText('PassphraseInput', passphrase);
-    await tapReturnKey();
+    await confirmInputOnKeyboard();
   }
 
   // Restore wallet
