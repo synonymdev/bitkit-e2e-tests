@@ -16,6 +16,25 @@ export function elementById(selector: string): ChainablePromiseElement {
   }
 }
 
+// Find a child testID within an ancestor testID (compatible with both Android and iOS.)
+export async function elementByIdWithin(
+  ancestorId: string,
+  childId: string
+): Promise<ChainablePromiseElement> {
+  if (driver.isIOS) {
+    const parent = await elementById(ancestorId); // reuses iOS path
+    await parent.waitForExist();
+    return parent.$(`~${childId}`);
+  } else {
+    // Android
+    return $(
+      `android=new UiSelector()` +
+        `.resourceId("${ancestorId}")` +
+        `.childSelector(new UiSelector().resourceId("${childId}"))`
+    );
+  }
+}
+
 /**
  * Returns all matching elements for a selector, compatible with both Android and iOS.
  * - Android: uses resource-id
@@ -270,5 +289,14 @@ export async function toggleWidgets() {
   await tap('WidgetsSettings');
   const widgets = await elementsByText('Widgets');
   await widgets[1].click();
+  await tap('NavigationClose');
+}
+
+export async function waitForBackup() {
+  await tap('HeaderMenu');
+  await tap('DrawerSettings');
+  await tap('BackupSettings');
+  const allSynced = await elementById('AllSynced');
+  await allSynced.waitForDisplayed();
   await tap('NavigationClose');
 }
