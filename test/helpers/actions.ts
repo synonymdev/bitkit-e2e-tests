@@ -75,6 +75,17 @@ export async function expectTextVisible(text: string) {
   await el.waitForDisplayed({ timeout: 5000 });
 }
 
+export async function expectTextWithin(ancestorId: string, text: string) {
+  const parent = elementById(ancestorId);
+  await parent.waitForDisplayed();
+
+  const needle = driver.isAndroid
+    ? `.//*[@text='${text}']`
+    : `.//XCUIElementTypeStaticText[@label='${text}' or @value='${text}']`;
+
+  await expect(parent.$(needle)).toExist();
+}
+
 export async function tap(testId: string) {
   const el = await elementById(testId);
   await el.waitForDisplayed();

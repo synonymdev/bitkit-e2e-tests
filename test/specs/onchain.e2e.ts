@@ -9,6 +9,7 @@ import {
   elementById,
   elementByIdWithin,
   elementByText,
+  expectTextWithin,
   getReceiveAddress,
   sleep,
   swipeFullScreen,
@@ -78,6 +79,26 @@ describe('Onchain', () => {
 
       const moneyTextAfter = await elementByIdWithin('-primary', 'MoneyText');
       await expect(moneyTextAfter).not.toHaveText('100 000 000');
+
+      // review activity list      
+      const sentShort = 'ActivityShort-0';
+      const receiveShort = 'ActivityShort-1';
+      await elementById(sentShort).waitForDisplayed();
+      await elementById(receiveShort).waitForDisplayed();
+      await expectTextWithin(sentShort, '-');
+      await expectTextWithin(sentShort, 'Sent');
+      await expectTextWithin(receiveShort, '+');
+      await expectTextWithin(receiveShort, 'Received');
+      await expectTextWithin(receiveShort, '100 000 000');
+      
+      await tap('ActivityShowAll');
+      const sentDetail = 'Activity-1';
+      const receiveDetail = 'Activity-2';
+      await expectTextWithin(sentDetail, '-');
+      await expectTextWithin(sentDetail, 'Sent');
+      await expectTextWithin(receiveDetail, '+');
+      await expectTextWithin(receiveDetail, 'Received');
+      await expectTextWithin(receiveDetail, '100 000 000');
     });
 
     // Test plan
