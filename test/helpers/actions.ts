@@ -209,11 +209,12 @@ export async function confirmInputOnKeyboard(
 ) {
   try {
     await driver.execute('mobile: performEditorAction', { action });
+    return;
+  } catch {
     try {
       await driver.hideKeyboard();
     } catch {}
-    return;
-  } catch {}
+  }
 }
 
 export async function acceptAppNotificationAlert(): Promise<void> {
