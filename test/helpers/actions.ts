@@ -88,7 +88,9 @@ export async function typeText(testId: string, text: string) {
   await el.setValue(text);
 }
 
-export async function swipeFullScreen(direction: 'left' | 'right' | 'up' | 'down') {
+type Direction = 'left' | 'right' | 'up' | 'down';
+
+export async function swipeFullScreen(direction: Direction) {
   const { width, height } = await driver.getWindowSize();
 
   let startX = width / 2;
@@ -130,6 +132,76 @@ export async function swipeFullScreen(direction: 'left' | 'right' | 'up' | 'down
     },
   ]);
   await sleep(500); // Allow time for the swipe to complete
+}
+
+async function elementRect(el: ChainablePromiseElement) {
+  const e = await el;
+  const [loc, size] = await Promise.all([e.getLocation(), e.getSize()]);
+  return {
+    x: Math.round(loc.x),
+    y: Math.round(loc.y),
+    elWidth: Math.round(size.width),
+    elHight: Math.round(size.height),
+  };
+}
+
+export async function dragOnElement(
+  testId: string,
+  direction: Direction = 'right',
+  percent = 0.9, // how far to drag across the screen
+  startXNorm = 0.5, // horizontal center
+  startYNorm = 0.5, // vertical center
+  durationMs = 500, // drag duration
+  holdMs = 120 // slight hold before moving
+) {
+  const el = elementById(testId);
+  await el.waitForDisplayed();
+  await sleep(200); // Allow time for the element to settle
+
+  const { x, y, elWidth, elHight } = await elementRect(el);
+  console.info(`Drag on element "${testId}"`);
+  console.info({ x, y, elWidth, elHight });
+  const startX = Math.round(x + elWidth * startXNorm);
+  const startY = Math.round(y + elHight * startYNorm);
+  console.info(` startX: ${startX}, startY: ${startY}`);
+
+  const { width, height } = await driver.getWindowSize();
+  const dx = Math.round(width * percent);
+  const dy = Math.round(height * percent);
+
+  let endX = startX;
+  let endY = startY;
+
+  switch (direction) {
+    case 'right':
+      endX = startX + dx;
+      break;
+    case 'left':
+      endX = startX - dx;
+      break;
+    case 'down':
+      endY = startY + dy;
+      break;
+    case 'up':
+      endY = startY - dy;
+      break;
+  }
+
+  await driver.performActions([
+    {
+      type: 'pointer',
+      id: 'finger',
+      parameters: { pointerType: 'touch' },
+      actions: [
+        { type: 'pointerMove', duration: 0, x: startX, y: startY },
+        { type: 'pointerDown', button: 0 },
+        { type: 'pause', duration: holdMs },
+        { type: 'pointerMove', duration: durationMs, x: endX, y: endY },
+        { type: 'pointerUp', button: 0 },
+      ],
+    },
+  ]);
+  await driver.releaseActions();
 }
 
 export async function confirmInputOnKeyboard(
