@@ -95,6 +95,7 @@ describe('Onchain', () => {
       await expectTextWithin(receiveShort, 'Received');
       await expectTextWithin(receiveShort, '100 000 000');
 
+      await swipeFullScreen('up');
       await tap('ActivityShowAll');
       const sentDetail = 'Activity-1';
       const receiveDetail = 'Activity-2';
@@ -246,6 +247,7 @@ describe('Onchain', () => {
       await expectTextWithin(receiveShort, 'Received');
       await expectTextWithin(receiveShort, '100 000 000');
 
+      await swipeFullScreen('up');
       await tap('ActivityShowAll');
       const sentDetail = 'Activity-1';
       const receiveDetail = 'Activity-2';
