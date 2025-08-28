@@ -59,7 +59,7 @@ describe('Onchain', () => {
       const moneyText = await elementByIdWithin('-primary', 'MoneyText');
       await expect(moneyText).toHaveText('100 000 000');
 
-      // then send out 5 000
+      // then send out 10 000
       const coreAddress = await rpc.getNewAddress();
       console.info({ coreAddress });
       await tap('Send');
@@ -68,10 +68,10 @@ describe('Onchain', () => {
       await confirmInputOnKeyboard();
       await sleep(1000); // wait for the app to settle
       await tap('AddressContinue');
-      await tap('N5');
-      for (let i = 0; i < 3; i++) {
-        await tap('N0');
-      }
+      await tap('N1');
+      await tap('N000');
+      await tap('N0');
+
       await tap('ContinueAmount');
       await dragOnElement('GRAB', 'right', 0.95);
       await elementById('SendSuccess').waitForDisplayed();
@@ -172,7 +172,6 @@ describe('Onchain', () => {
     });
 
     // https://github.com/synonymdev/bitkit-android/issues/324
-    // https://github.com/synonymdev/bitkit-android/issues/328
     it.skip('Avoids creating a dust output and instead adds it to the fee', async () => {
       // receive some first
       const address = await getReceiveAddress();
