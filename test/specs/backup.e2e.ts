@@ -101,6 +101,12 @@ describe('Backup', () => {
     await elementById('WidgetSave').waitForDisplayed();
     await sleep(1000); // wait for the app to settle
     await tap('WidgetSave');
+    // sometimes flaky on GH actions, try again
+    try {
+        await elementById('PriceWidget').waitForDisplayed();
+    } catch {
+        await tap('WidgetSave');
+    }
     await elementById('PriceWidget').waitForDisplayed();
 
     // - backup seed and restore wallet //

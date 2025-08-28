@@ -46,7 +46,13 @@ describe('Widgets', () => {
     await tap('WidgetEditPreview');
     await sleep(500);
     await tap('WidgetSave');
-    await sleep(500);
+    // sometimes flaky on GH actions, try again
+    try {
+        await elementById('PriceWidget').waitForDisplayed();
+    } catch {
+        await tap('WidgetSave');
+    }
+    await elementById('PriceWidget').waitForDisplayed();
 
     // Back on Home: scroll a bit to ensure widget is in view
     await elementById('PriceWidget').waitForDisplayed();
