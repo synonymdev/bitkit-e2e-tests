@@ -52,6 +52,9 @@ describe('Onchain', () => {
       await rpc.sendToAddress(address, '1');
       await rpc.generateToAddress(1, await rpc.getNewAddress());
       await electrum?.waitForSync();
+      // https://github.com/synonymdev/bitkit-android/issues/268
+      // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
+      // await elementById('ReceivedTransaction').waitForDisplayed();
       await swipeFullScreen('down');
       const moneyText = await elementByIdWithin('-primary', 'MoneyText');
       await expect(moneyText).toHaveText('100 000 000');
@@ -80,7 +83,7 @@ describe('Onchain', () => {
       const moneyTextAfter = await elementByIdWithin('-primary', 'MoneyText');
       await expect(moneyTextAfter).not.toHaveText('100 000 000');
 
-      // review activity list      
+      // review activity list
       const sentShort = 'ActivityShort-0';
       const receiveShort = 'ActivityShort-1';
       await elementById(sentShort).waitForDisplayed();
@@ -90,7 +93,7 @@ describe('Onchain', () => {
       await expectTextWithin(receiveShort, '+');
       await expectTextWithin(receiveShort, 'Received');
       await expectTextWithin(receiveShort, '100 000 000');
-      
+
       await tap('ActivityShowAll');
       const sentDetail = 'Activity-1';
       const receiveDetail = 'Activity-2';
@@ -166,6 +169,90 @@ describe('Onchain', () => {
       await dragOnElement('GRAB', 'right', 0.95);
 
       await sleep(10_000);
+    });
+
+    // https://github.com/synonymdev/bitkit-android/issues/324
+    // https://github.com/synonymdev/bitkit-android/issues/328
+    it.skip('Avoids creating a dust output and instead adds it to the fee', async () => {
+      // receive some first
+      const address = await getReceiveAddress();
+      await rpc.sendToAddress(address, '1');
+      await rpc.generateToAddress(1, await rpc.getNewAddress());
+      await electrum?.waitForSync();
+      // https://github.com/synonymdev/bitkit-android/issues/268
+      // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
+      // await elementById('ReceivedTransaction').waitForDisplayed();
+      await swipeFullScreen('down');
+      const moneyText = await elementByIdWithin('-primary', 'MoneyText');
+      await expect(moneyText).toHaveText('100 000 000');
+
+      // enable warning for sending over 100$ to test multiple warning dialogs
+      await tap('HeaderMenu');
+      await tap('DrawerSettings');
+      await tap('SecuritySettings');
+      await tap('SendAmountWarning');
+      await tap('NavigationClose');
+
+      const coreAddress = await rpc.getNewAddress();
+      console.info({ coreAddress });
+
+      await tap('Send');
+      await tap('RecipientManual');
+      await typeText('RecipientInput', coreAddress);
+      await confirmInputOnKeyboard();
+      await sleep(1000); // wait for the app to settle
+      await tap('AddressContinue');
+
+      // enter amount that would leave dust
+      let amountStr = await (await elementByIdWithin('AvailableAmount', 'MoneyText')).getText();
+      amountStr = amountStr.replace('₿', '').replace(/\s/g, '');
+      let amount = parseInt(amountStr, 10);
+      amount = amount - 300; // = 99 999 700
+      for (const num of String(amount)) {
+        await sleep(200);
+        await tap(`N${num}`);
+      }
+      await tap('ContinueAmount');
+
+      // Review & Send
+      await dragOnElement('GRAB', 'right', 0.95);
+
+      // sending over 50% of balance warning
+      await elementById('SendDialog2').waitForDisplayed();
+      await tap('DialogConfirm');
+
+      // sending over 100$ warning
+      await elementById('SendDialog1').waitForDisplayed();
+      await tap('DialogConfirm');
+
+      await elementById('SendSuccess').waitForDisplayed();
+      await tap('Close');
+
+      await rpc.generateToAddress(1, await rpc.getNewAddress());
+      await electrum?.waitForSync();
+
+      const moneyTextAfter = await elementByIdWithin('-primary', 'MoneyText');
+      await expect(moneyTextAfter).toHaveText('0');
+
+      // review activity list
+      const sentShort = 'ActivityShort-0';
+      const receiveShort = 'ActivityShort-1';
+      await elementById(sentShort).waitForDisplayed();
+      await elementById(receiveShort).waitForDisplayed();
+      await expectTextWithin(sentShort, '-');
+      await expectTextWithin(sentShort, 'Sent');
+      await expectTextWithin(receiveShort, '+');
+      await expectTextWithin(receiveShort, 'Received');
+      await expectTextWithin(receiveShort, '100 000 000');
+
+      await tap('ActivityShowAll');
+      const sentDetail = 'Activity-1';
+      const receiveDetail = 'Activity-2';
+      await expectTextWithin(sentDetail, '-');
+      await expectTextWithin(sentDetail, 'Sent');
+      await expectTextWithin(receiveDetail, '+');
+      await expectTextWithin(receiveDetail, 'Received');
+      await expectTextWithin(receiveDetail, '100 000 000');
     });
   });
 });
