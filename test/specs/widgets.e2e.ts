@@ -6,7 +6,7 @@ import {
   tap,
   swipeFullScreen,
   completeOnboarding,
-  toggleWidgets,
+  deleteAllDefaultWidgets,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 
@@ -17,8 +17,8 @@ describe('Widgets', () => {
   });
 
   it('Can add/edit/remove a widget', async () => {
-    // Enable widgets
-    await toggleWidgets();
+	// delete all default widgets
+    await deleteAllDefaultWidgets();
 
     // Add a widget
     await tap('WidgetsAdd');
@@ -44,7 +44,15 @@ describe('Widgets', () => {
 
     // Preview and save
     await tap('WidgetEditPreview');
+    await sleep(500);
     await tap('WidgetSave');
+    // sometimes flaky on GH actions, try again
+    try {
+        await elementById('PriceWidget').waitForDisplayed();
+    } catch {
+        await tap('WidgetSave');
+    }
+    await elementById('PriceWidget').waitForDisplayed();
 
     // Back on Home: scroll a bit to ensure widget is in view
     await elementById('PriceWidget').waitForDisplayed();

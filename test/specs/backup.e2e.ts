@@ -4,6 +4,7 @@ import initElectrum from '../helpers/electrum';
 import { reinstallApp } from '../helpers/setup';
 import {
   completeOnboarding,
+  deleteAllDefaultWidgets,
   elementById,
   elementByIdWithin,
   elementByText,
@@ -13,7 +14,6 @@ import {
   sleep,
   swipeFullScreen,
   tap,
-  toggleWidgets,
   typeText,
 } from '../helpers/actions';
 
@@ -94,13 +94,19 @@ describe('Backup', () => {
     await tap('NavigationClose');
 
     // - add widgets (add PriceWidget) //
-    await toggleWidgets();
+    await deleteAllDefaultWidgets();
     await tap('WidgetsAdd');
     await tap('WidgetsOnboarding-button');
     await tap('WidgetListItem-price');
     await elementById('WidgetSave').waitForDisplayed();
     await sleep(1000); // wait for the app to settle
     await tap('WidgetSave');
+    // sometimes flaky on GH actions, try again
+    try {
+        await elementById('PriceWidget').waitForDisplayed();
+    } catch {
+        await tap('WidgetSave');
+    }
     await elementById('PriceWidget').waitForDisplayed();
 
     // - backup seed and restore wallet //
