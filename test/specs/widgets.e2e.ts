@@ -30,6 +30,7 @@ describe('Widgets', () => {
     await elementByText('Default').waitForDisplayed();
     // Open edit options
     await tap('WidgetEdit');
+    await elementById('WidgetEditPreview').waitForDisplayed();
     // Select BTC/EUR row
     await tap('WidgetEditField-BTC/EUR');
     await sleep(1000); // Wait for the UI to settle

@@ -84,6 +84,7 @@ describe('Onchain', () => {
       await expect(moneyTextAfter).not.toHaveText('100 000 000');
 
       // review activity list
+      await swipeFullScreen('up');
       const sentShort = 'ActivityShort-0';
       const receiveShort = 'ActivityShort-1';
       await elementById(sentShort).waitForDisplayed();
@@ -234,6 +235,7 @@ describe('Onchain', () => {
       await expect(moneyTextAfter).toHaveText('0');
 
       // review activity list
+      await swipeFullScreen('up');
       const sentShort = 'ActivityShort-0';
       const receiveShort = 'ActivityShort-1';
       await elementById(sentShort).waitForDisplayed();
