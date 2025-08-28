@@ -292,6 +292,21 @@ export async function toggleWidgets() {
   await tap('NavigationClose');
 }
 
+export async function deleteAllDefaultWidgets() {
+  await tap('WidgetsEdit');
+  for (const w of ['Bitcoin Price', 'Bitcoin Blocks', 'Bitcoin Headlines']) {
+      tap(w + '_WidgetActionDelete');
+      await elementByText('Yes, Delete').waitForDisplayed();
+      await elementByText('Yes, Delete').click();
+      await elementById(w).waitForDisplayed({ reverse: true, timeout: 5000 });
+      await sleep(500);
+  }
+  await tap('WidgetsEdit');
+  await elementById('PriceWidget').waitForDisplayed({ reverse: true });
+  await elementById('NewsWidget').waitForDisplayed({ reverse: true });
+  await elementById('BlocksWidget').waitForDisplayed({ reverse: true });
+}
+
 export async function waitForBackup() {
   await tap('HeaderMenu');
   await tap('DrawerSettings');
@@ -300,3 +315,4 @@ export async function waitForBackup() {
   await allSynced.waitForDisplayed();
   await tap('NavigationClose');
 }
+
