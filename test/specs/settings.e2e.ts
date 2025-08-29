@@ -7,6 +7,7 @@ import {
   elementById,
   typeText,
   swipeFullScreen,
+  dragOnElement,
 } from '../helpers/actions';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 
@@ -167,6 +168,48 @@ describe('Settings', () => {
       await tap('DrawerSettings');
       await tap('About');
       await elementById('AboutLogo').waitForDisplayed();
+    });
+  });
+
+  describe('Security and Privacy', () => {
+    it('Can swipe to hide balance', async () => {
+      // test plan:
+      // - swipe to hide balance
+      // - disable 'swipe to hide balance'
+      // - enable 'hide balance on open'
+
+      // Balance should be visible
+      await elementById('ShowBalance').waitForDisplayed({ reverse: true });
+      // Swipe to hide balance
+      await dragOnElement('TotalBalance', 'right', 0.5);
+      // Balance should be hidden
+      await elementById('ShowBalance').waitForDisplayed();
+
+      // Disable 'swipe to hide balance'
+      await tap('HeaderMenu');
+      await tap('DrawerSettings');
+      await tap('SecuritySettings');
+      await tap('SwipeBalanceToHide');
+      await tap('NavigationClose');
+
+      // Balance should be visible
+      await elementById('ShowBalance').waitForDisplayed({ reverse: true });
+      // Should not be able to hide balance
+      await dragOnElement('TotalBalance', 'right', 0.5);
+      // Balance should still be visible
+      await elementById('ShowBalance').waitForDisplayed({ reverse: true });
+
+      // Enable 'hide balance on open'
+      await tap('HeaderMenu');
+      await tap('DrawerSettings');
+      await tap('SecuritySettings');
+      await tap('SwipeBalanceToHide');
+      await tap('HideBalanceOnOpen');
+
+      // Restart the app
+      await launchFreshApp();
+      // Balance should be hidden
+      await elementById('ShowBalance').waitForDisplayed();
     });
   });
 });
