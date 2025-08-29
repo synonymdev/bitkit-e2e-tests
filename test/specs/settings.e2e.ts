@@ -9,6 +9,7 @@ import {
   swipeFullScreen,
   dragOnElement,
   elementsById,
+  getReceiveAddress,
 } from '../helpers/actions';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 
@@ -248,6 +249,46 @@ describe('Settings', () => {
       await tap('OK');
       await tap('OK');
       await tap('OK');
+      await sleep(1000);
+    });
+  });
+
+  describe('Advanced', () => {
+    // not available in ldk-node
+    it.skip('Can switch address types', async () => {
+      // wallet be in regtest mode by default
+      // at first check if it is Native segwit by default
+      const address = await getReceiveAddress();
+      await swipeFullScreen('down');
+      if (!address.startsWith('bcrt1')) {
+        throw new Error(`Wrong default receiving address: ${address}`);
+      }
+      await sleep(1000);
+
+      // switch to Legacy
+      await tap('HeaderMenu');
+      await tap('DrawerSettings');
+      await tap('AdvancedSettings');
+      await tap('AddressTypePreference');
+      await tap('p2pkh');
+      await sleep(1000); // We need a second after switching address types.
+      await tap('NavigationClose');
+
+      // check address on Receiving screen
+      const addressNew = await getReceiveAddress();
+      await swipeFullScreen('down');
+      if (!addressNew.startsWith('m') && !addressNew.startsWith('n')) {
+        throw new Error(`Wrong receiving address for Legacy: ${addressNew}`);
+      }
+      await sleep(1000);
+
+      // switch back to Native segwit
+      await tap('HeaderMenu');
+      await tap('DrawerSettings');
+      await tap('AdvancedSettings');
+      await tap('AddressTypePreference');
+      await tap('p2wpkh');
+      await tap('NavigationClose');
       await sleep(1000);
     });
   });
