@@ -94,5 +94,29 @@ describe('Settings', () => {
       await tap('NavigationClose');
       expect(balance).toHaveText('0.00000000');
     });
+
+    it('Can switch transaction speed', async () => {
+      await tap('HeaderMenu');
+      await tap('DrawerSettings');
+      await tap('GeneralSettings');
+
+      // switch to Fast
+      await tap('TransactionSpeedSettings');
+      await tap('fast');
+      expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText('Fast');
+
+      // switch to Custom
+      await tap('TransactionSpeedSettings');
+      await tap('custom');
+      (await elementByIdWithin('CustomFee', 'N1')).click();
+      await tap('Continue');
+      await tap('NavigationBack');
+      expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText('Custom');
+
+      // switch back to Normal
+      await tap('TransactionSpeedSettings');
+      await tap('normal');
+      expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText('Normal');
+    });
   });
 });

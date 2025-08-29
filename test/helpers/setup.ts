@@ -1,4 +1,4 @@
-import { elementByIdWithin, elementByText, sleep, tap } from './actions';
+import { elementByIdWithin, sleep, tap } from './actions';
 import { getAppId, getAppPath } from './constants';
 
 export async function launchFreshApp() {
@@ -9,7 +9,7 @@ export async function launchFreshApp() {
   // workaround to get rid of "Bitkit is running in background" alert
   await tap('TotalBalance');
   const moneyFiatSymbol = await elementByIdWithin('-primary', 'MoneyFiatSymbol');
-  if (await moneyFiatSymbol.getText() !== '₿') {
+  if ((await moneyFiatSymbol.getText()) !== '₿') {
     await tap('TotalBalance');
   }
   await sleep(500);
