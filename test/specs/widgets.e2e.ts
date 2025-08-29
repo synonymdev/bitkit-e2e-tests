@@ -1,4 +1,3 @@
-// e2e/specs/widgets.e2e.ts
 import {
   elementById,
   elementByText,
@@ -17,7 +16,7 @@ describe('Widgets', () => {
   });
 
   it('Can add/edit/remove a widget', async () => {
-	// delete all default widgets
+    // delete all default widgets
     await deleteAllDefaultWidgets();
 
     // Add a widget
@@ -49,9 +48,9 @@ describe('Widgets', () => {
     await tap('WidgetSave');
     // sometimes flaky on GH actions, try again
     try {
-        await elementById('PriceWidget').waitForDisplayed();
+      await elementById('PriceWidget').waitForDisplayed();
     } catch {
-        await tap('WidgetSave');
+      await tap('WidgetSave');
     }
     await elementById('PriceWidget').waitForDisplayed();
 
