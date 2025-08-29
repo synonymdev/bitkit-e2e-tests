@@ -238,7 +238,7 @@ describe('Settings', () => {
       for (const w of seed.split(' ')) {
         const word = await elementsById('Word-' + w);
         // in case there are a few same words in the seed phrase
-        const idxToClick = words_used.filter(x => x === w).length;
+        const idxToClick = words_used.filter((x) => x === w).length;
         word[idxToClick].click();
         words_used.push(w);
       }
