@@ -4,6 +4,9 @@ import {
   elementByIdWithin,
   elementByText,
   sleep,
+  elementById,
+  typeText,
+  swipeFullScreen,
 } from '../helpers/actions';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 
@@ -117,6 +120,53 @@ describe('Settings', () => {
       await tap('TransactionSpeedSettings');
       await tap('normal');
       expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText('Normal');
+    });
+
+    it('Can remove last used tags', async () => {
+      // no tags, menu entry should be hidden
+      await tap('HeaderMenu');
+      await tap('DrawerSettings');
+      await tap('GeneralSettings');
+      await elementById('TagsSettings').waitForDisplayed({ reverse: true });
+      await tap('NavigationClose');
+
+      // open receive tags, add a tag
+      const tag = 'test123';
+      await tap('Receive');
+      await tap('SpecifyInvoiceButton');
+      (await elementByText(tag)).waitForDisplayed({ reverse: true });
+
+      await tap('TagsAdd');
+      (await elementByText(tag)).waitForDisplayed({ reverse: true });
+      await typeText('TagInputReceive', tag);
+      await tap('ReceiveTagsSubmit');
+      await sleep(300);
+      (await elementByText(tag)).waitForDisplayed();
+      await swipeFullScreen('down');
+      await sleep(1000); // wait for the app to settle
+
+      // open tag manager, delete tag
+      await tap('HeaderMenu');
+      await tap('DrawerSettings');
+      await tap('GeneralSettings');
+      await tap('TagsSettings');
+      (await elementByText(tag)).waitForDisplayed();
+      await tap(`Tag-${tag}-delete`);
+      await tap('NavigationClose');
+
+      // open receive tags, check tags are gone
+      await tap('Receive');
+      await tap('SpecifyInvoiceButton');
+      (await elementByText(tag)).waitForDisplayed({ reverse: true });
+      await tap('TagsAdd');
+      (await elementByText(tag)).waitForDisplayed({ reverse: true });
+    });
+
+    it('Can show About screen', async () => {
+      await tap('HeaderMenu');
+      await tap('DrawerSettings');
+      await tap('About');
+      await elementById('AboutLogo').waitForDisplayed();
     });
   });
 });
