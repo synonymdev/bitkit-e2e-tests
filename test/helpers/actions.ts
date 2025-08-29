@@ -215,16 +215,11 @@ export async function dragOnElement(
   await driver.releaseActions();
 }
 
-export async function confirmInputOnKeyboard(
-  action: 'done' | 'go' | 'send' | 'search' | 'next' = 'done'
-) {
+export async function confirmInputOnKeyboard() {
   try {
-    await driver.execute('mobile: performEditorAction', { action });
-    return;
+    await driver.hideKeyboard();
   } catch {
-    try {
-      await driver.hideKeyboard();
-    } catch {}
+    // ignore if keyboard not open
   }
 }
 
@@ -393,4 +388,3 @@ export async function waitForBackup() {
   await allSynced.waitForDisplayed();
   await tap('NavigationClose');
 }
-
