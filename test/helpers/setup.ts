@@ -7,6 +7,7 @@ export async function launchFreshApp() {
   await driver.terminateApp(appId);
   await driver.activateApp(appId);
   // workaround to get rid of "Bitkit is running in background" alert
+  await sleep(1000);
   await tap('TotalBalance');
   const moneyFiatSymbol = await elementByIdWithin('-primary', 'MoneyFiatSymbol');
   if ((await moneyFiatSymbol.getText()) !== '₿') {

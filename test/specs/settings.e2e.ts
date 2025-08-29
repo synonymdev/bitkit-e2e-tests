@@ -8,6 +8,7 @@ import {
   typeText,
   swipeFullScreen,
   dragOnElement,
+  elementsById,
 } from '../helpers/actions';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 
@@ -210,6 +211,44 @@ describe('Settings', () => {
       await launchFreshApp();
       // Balance should be hidden
       await elementById('ShowBalance').waitForDisplayed();
+    });
+  });
+
+  describe('Backup or restore', () => {
+    it('Can show backup and validate it', async () => {
+      await tap('HeaderMenu');
+      await tap('DrawerSettings');
+      await tap('BackupSettings');
+      await tap('ResetAndRestore');
+      await tap('NavigationBack');
+      await tap('BackupWallet');
+      await sleep(1000); // animation
+
+      // get the seed from SeedContainer
+      const seedElement = await elementById('SeedContainer');
+      const attr = driver.isAndroid ? 'contentDescription' : 'label';
+      const seed = await seedElement.getAttribute(attr);
+      console.info({ seed });
+      await tap('TapToReveal');
+      await sleep(1000); // animation
+      await tap('ContinueShowMnemonic');
+
+      // enter the seed
+      const words_used: string[] = [];
+      for (const w of seed.split(' ')) {
+        const word = await elementsById('Word-' + w);
+        // in case there are a few same words in the seed phrase
+        const idxToClick = words_used.filter(x => x === w).length;
+        word[idxToClick].click();
+        words_used.push(w);
+      }
+      await sleep(1000);
+      await tap('ContinueConfirmMnemonic');
+      await tap('OK');
+      await tap('OK');
+      await tap('OK');
+      await tap('OK');
+      await sleep(1000);
     });
   });
 });
