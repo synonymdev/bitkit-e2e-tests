@@ -1,3 +1,4 @@
+import { elementByIdWithin, sleep, tap } from './actions';
 import { getAppId, getAppPath } from './constants';
 
 export async function launchFreshApp() {
@@ -5,6 +6,24 @@ export async function launchFreshApp() {
 
   await driver.terminateApp(appId);
   await driver.activateApp(appId);
+  // workaround to get rid of "Bitkit is running in background" alert
+  await sleep(1000);
+  try {
+    await tap('TotalBalance');
+    const moneyFiatSymbol = await elementByIdWithin('-primary', 'MoneyFiatSymbol');
+    moneyFiatSymbol.waitForDisplayed();
+    if ((await moneyFiatSymbol.getText()) !== '₿') {
+      await tap('TotalBalance');
+    }
+  } catch {
+    await tap('TotalBalance');
+    const moneyFiatSymbol = await elementByIdWithin('-primary', 'MoneyFiatSymbol');
+    moneyFiatSymbol.waitForDisplayed();
+    if ((await moneyFiatSymbol.getText()) !== '₿') {
+      await tap('TotalBalance');
+    }
+  }
+  await sleep(500);
 }
 
 /**
