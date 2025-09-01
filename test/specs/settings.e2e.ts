@@ -291,5 +291,31 @@ describe('Settings', () => {
       await tap('NavigationClose');
       await sleep(1000);
     });
+
+    it('Can open LN settings screens', async () => {
+      await tap('HeaderMenu');
+      await tap('DrawerSettings');
+      // LDKDebug, CopyNodeId, RefreshLDK, RestartLDK and RebroadcastLDKTXS N/A in DevSettings
+      //   for (let i = 1; i <= 5; i++) {
+      //     await tap('DevOptions');
+      //   }
+      //   await tap('DevSettings');
+      //   await tap('LDKDebug');
+      //   await tap('CopyNodeId');
+      //   await tap('RefreshLDK');
+      //   await tap('RestartLDK');
+      //   await tap('RebroadcastLDKTXS');
+      //   await tap('NavigationBack');
+      //   await tap('NavigationBack');
+      await tap('AdvancedSettings');
+      await tap('LightningNodeInfo');
+      await elementById('LDKNodeID').waitForDisplayed();
+      await tap('NavigationBack');
+      await tap('NavigationBack');
+      //   for (let i = 1; i <= 5; i++) {
+      //     await tap('DevOptions');
+      //   }
+      await sleep(1000);
+    });
   });
 });
