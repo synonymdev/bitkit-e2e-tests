@@ -96,6 +96,8 @@ export async function tap(testId: string) {
 
 export async function typeText(testId: string, text: string) {
   const el = await elementById(testId);
+  await el.waitForDisplayed();
+  await sleep(500); // Allow time for the element to settle
   await el.setValue(text);
 }
 
@@ -223,11 +225,11 @@ export async function confirmInputOnKeyboard() {
   }
 }
 
-export async function acceptAppNotificationAlert(): Promise<void> {
+export async function acceptAppNotificationAlert(button:string = 'permission_allow_button'): Promise<void> {
   if (driver.isAndroid) {
     // Android: system permission dialog is handled via UiSelector
     try {
-      await tap('com.android.permissioncontroller:id/permission_allow_button');
+      await tap('com.android.permissioncontroller:id/' + button);
     } catch (err) {
       console.warn('⚠ Could not find or tap Android App Notification alert allow button:', err);
     }

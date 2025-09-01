@@ -10,7 +10,9 @@ import {
   dragOnElement,
   elementsById,
   getReceiveAddress,
+  acceptAppNotificationAlert,
 } from '../helpers/actions';
+import { electrumHost, electrumPort } from '../helpers/constants';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 
 describe('Settings', () => {
@@ -315,6 +317,90 @@ describe('Settings', () => {
       //   for (let i = 1; i <= 5; i++) {
       //     await tap('DevOptions');
       //   }
+      await sleep(1000);
+    });
+
+    it('Can enter wrong Electrum server and get an error message', async () => {
+      await tap('HeaderMenu');
+      await tap('DrawerSettings');
+      await tap('AdvancedSettings');
+      await tap('ElectrumConfig');
+
+      // enter wrong electrum server address
+      await typeText('HostInput', 'google.com');
+      await typeText('PortInput', '31337');
+      await tap('ElectrumStatus'); // close keyboard
+      await tap('ConnectToHost');
+
+      // disconnected warning should appear
+      await elementById('Disconnected').waitForDisplayed();
+      await sleep(1000);
+
+      // scanner - check all possible connection formats
+      // Umbrel format
+      const umbrel1 = {
+        url: `${electrumHost}:${electrumPort}:t`,
+        expectedHost: electrumHost,
+        expectedPort: electrumPort.toString(),
+        expectedProtocol: 'TCP',
+      };
+      const umbrel2 = {
+        url: `${electrumHost}:${electrumPort}:s`,
+        expectedHost: electrumHost,
+        expectedPort: electrumPort.toString(),
+        expectedProtocol: 'TLS',
+      };
+
+      // should detect protocol for common ports
+      const noProto1 = {
+        url: `${electrumHost}:50001`,
+        expectedHost: electrumHost,
+        expectedPort: '50001',
+        expectedProtocol: 'TCP',
+      };
+      const noProto2 = {
+        url: `${electrumHost}:50002`,
+        expectedHost: electrumHost,
+        expectedPort: '50002',
+        expectedProtocol: 'TLS',
+      };
+
+      // HTTP URL
+      const http1 = {
+        url: `http://${electrumHost}:${electrumPort}`,
+        expectedHost: electrumHost,
+        expectedPort: electrumPort.toString(),
+        expectedProtocol: 'TCP',
+      };
+      const http2 = {
+        url: `https://${electrumHost}:${electrumPort}`,
+        expectedHost: electrumHost,
+        expectedPort: electrumPort.toString(),
+        expectedProtocol: 'TLS',
+      };
+
+      const conns = [umbrel1, umbrel2, noProto1, noProto2, http1, http2];
+      let i = 0;
+      for (const conn of conns) {
+        await sleep(1000);
+        await tap('NavigationAction');
+        // on the first time we need to accept the notifications permission dialog to use camera
+        if (i === 0) {
+            await acceptAppNotificationAlert('permission_allow_foreground_only_button');
+        }
+        await tap('ScanPrompt');
+        await typeText('QRInput', conn.url);
+        await tap('DialogConfirm');
+        expect(await elementById('HostInput')).toHaveText(conn.expectedHost);
+        expect(await elementById('PortInput')).toHaveText(conn.expectedPort);
+        // await expectTextWithin('ElectrumProtocol', conn.expectedProtocol);
+        i++;
+      }
+
+      // switch back to default
+      await tap('ResetToDefault');
+      await tap('ConnectToHost');
+      await elementById('Connected').waitForDisplayed();
       await sleep(1000);
     });
   });
