@@ -222,6 +222,7 @@ describe('Settings', () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('BackupSettings');
+      await sleep(1000);
       await tap('ResetAndRestore');
       await tap('NavigationBack');
       await tap('BackupWallet');
