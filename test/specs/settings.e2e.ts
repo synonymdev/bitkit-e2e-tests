@@ -465,6 +465,7 @@ describe('Settings', () => {
         await tap('DevOptions');
       }
       await tap('DevSettings');
+      await sleep(1000);
       await tap('NavigationBack');
 
       for (let i = 1; i <= 5; i++) {
