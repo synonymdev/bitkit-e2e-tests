@@ -231,7 +231,7 @@ export async function acceptAppNotificationAlert(
   if (driver.isAndroid) {
     // Android: system permission dialog is handled via UiSelector
     try {
-      await tap('com.android.permissioncontroller:id/' + button);
+      await tap(`com.android.permissioncontroller:id/${button}`);
     } catch (err) {
       console.warn('⚠ Could not find or tap Android App Notification alert allow button:', err);
     }
