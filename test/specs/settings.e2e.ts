@@ -454,4 +454,40 @@ describe('Settings', () => {
       await elementById('Suggestion-lightning').waitForDisplayed();
     });
   });
+
+  describe('Dev Settings', () => {
+    it('Can show Dev Settings', async () => {
+      await tap('HeaderMenu');
+      await tap('DrawerSettings');
+      await elementById('DevSettings').waitForDisplayed({ reverse: true });
+
+      for (let i = 1; i <= 5; i++) {
+        await tap('DevOptions');
+      }
+      await tap('DevSettings');
+      await tap('NavigationBack');
+
+      for (let i = 1; i <= 5; i++) {
+        await tap('DevOptions');
+      }
+      await elementById('DevSettings').waitForDisplayed({ reverse: true });
+    });
+  });
+
+  describe('Support', () => {
+    it('Can see app status', async () => {
+      await tap('HeaderMenu');
+      await tap('DrawerSettings');
+      await tap('Support');
+      await tap('AppStatus');
+
+      await elementById('Status-internet').waitForDisplayed();
+      await elementById('Status-electrum').waitForDisplayed();
+      await elementById('Status-lightning_node').waitForDisplayed();
+      await elementById('Status-lightning_connection').waitForDisplayed();
+      await elementById('Status-backup').waitForDisplayed();
+
+      await tap('NavigationClose');
+    });
+  });
 });
