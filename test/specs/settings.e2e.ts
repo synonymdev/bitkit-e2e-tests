@@ -434,5 +434,24 @@ describe('Settings', () => {
       const resetUrl = await (await elementById('ConnectedUrl')).getText();
       expect(resetUrl).toBe(rgsUrl);
     });
+
+    it('Can reset suggestions', async () => {
+      await elementById('Suggestions').waitForDisplayed();
+
+      // hide lightningTodo suggestion card
+      await (await elementByIdWithin('Suggestion-lightning', 'SuggestionDismiss')).click();
+      await elementById('Suggestion-lightning').waitForDisplayed({ reverse: true });
+
+      // reset suggestions
+      await tap('HeaderMenu');
+      await tap('DrawerSettings');
+      await tap('AdvancedSettings');
+      await tap('ResetSuggestions');
+      await tap('DialogConfirm');
+
+      // lightning should be visible again
+      await sleep(1000);
+      await elementById('Suggestion-lightning').waitForDisplayed();
+    });
   });
 });
