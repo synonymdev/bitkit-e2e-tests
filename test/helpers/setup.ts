@@ -9,21 +9,20 @@ export async function launchFreshApp() {
   // workaround to get rid of "Bitkit is running in background" alert
   await sleep(1000);
   try {
-    await tap('TotalBalance');
-    const moneyFiatSymbol = await elementByIdWithin('-primary', 'MoneyFiatSymbol');
-    moneyFiatSymbol.waitForDisplayed();
-    if ((await moneyFiatSymbol.getText()) !== '₿') {
-      await tap('TotalBalance');
-    }
+    await tapBalanceToReset();
   } catch {
-    await tap('TotalBalance');
-    const moneyFiatSymbol = await elementByIdWithin('-primary', 'MoneyFiatSymbol');
-    moneyFiatSymbol.waitForDisplayed();
-    if ((await moneyFiatSymbol.getText()) !== '₿') {
-      await tap('TotalBalance');
-    }
+    await tapBalanceToReset();
   }
   await sleep(500);
+}
+
+async function tapBalanceToReset() {
+  await tap('TotalBalance');
+  const moneyFiatSymbol = await elementByIdWithin('-primary', 'MoneyFiatSymbol');
+  moneyFiatSymbol.waitForDisplayed();
+  if ((await moneyFiatSymbol.getText()) !== '₿') {
+    await tap('TotalBalance');
+  }
 }
 
 /**
