@@ -225,7 +225,9 @@ export async function confirmInputOnKeyboard() {
   }
 }
 
-export async function acceptAppNotificationAlert(button:string = 'permission_allow_button'): Promise<void> {
+export async function acceptAppNotificationAlert(
+  button: string = 'permission_allow_button'
+): Promise<void> {
   if (driver.isAndroid) {
     // Android: system permission dialog is handled via UiSelector
     try {

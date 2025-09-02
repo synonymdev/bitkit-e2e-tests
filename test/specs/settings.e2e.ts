@@ -11,6 +11,7 @@ import {
   elementsById,
   getReceiveAddress,
   acceptAppNotificationAlert,
+  confirmInputOnKeyboard,
 } from '../helpers/actions';
 import { electrumHost, electrumPort } from '../helpers/constants';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
@@ -387,7 +388,7 @@ describe('Settings', () => {
         await tap('NavigationAction');
         // on the first time we need to accept the notifications permission dialog to use camera
         if (i === 0) {
-            await acceptAppNotificationAlert('permission_allow_foreground_only_button');
+          await acceptAppNotificationAlert('permission_allow_foreground_only_button');
         }
         await tap('ScanPrompt');
         await typeText('QRInput', conn.url);
@@ -403,6 +404,35 @@ describe('Settings', () => {
       await tap('ConnectToHost');
       await elementById('Connected').waitForDisplayed();
       await sleep(1000);
+    });
+
+    // https://github.com/synonymdev/bitkit-android/issues/337
+    it.skip('Can connect to different Rapid Gossip Sync Server', async () => {
+      await tap('HeaderMenu');
+      await tap('DrawerSettings');
+      await tap('AdvancedSettings');
+      await tap('RGSServer');
+      await sleep(1000);
+
+      // add slash at the end
+      const rgsUrl = await (await elementById('RGSUrl')).getText();
+      console.info({ rgsUrl });
+      const newUrl = `${rgsUrl}/`;
+
+      // url should be updated
+      await typeText('RGSUrl', newUrl);
+      await confirmInputOnKeyboard();
+      await tap('ConnectToHost');
+      await sleep(1000);
+      const updatedUrl = await (await elementById('ConnectedUrl')).getText();
+      expect(updatedUrl).toBe(newUrl);
+
+      // switch back to default
+      await tap('ResetToDefault');
+      await tap('ConnectToHost');
+
+      const resetUrl = await (await elementById('ConnectedUrl')).getText();
+      expect(resetUrl).toBe(rgsUrl);
     });
   });
 });
