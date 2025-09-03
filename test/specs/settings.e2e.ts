@@ -30,7 +30,7 @@ describe('Settings', () => {
     it('Can switch local currency', async () => {
       // switch to local currency
       await tap('TotalBalance');
-      expect(await elementByIdWithin('-primary', 'MoneyFiatSymbol')).toHaveText('$');
+      await expect(await elementByIdWithin('-primary', 'MoneyFiatSymbol')).toHaveText('$');
 
       // - change settings (currency to EUR) //
       await tap('HeaderMenu');
@@ -42,12 +42,12 @@ describe('Settings', () => {
       await eur_opt.click();
       await tap('NavigationClose');
 
-      expect(await elementByIdWithin('-primary', 'MoneyFiatSymbol')).toHaveText('€');
+      await expect(await elementByIdWithin('-primary', 'MoneyFiatSymbol')).toHaveText('€');
 
       // switch back to sats
       await tap('TotalBalance');
       await sleep(500);
-      expect(await elementByIdWithin('-primary', 'MoneyFiatSymbol')).toHaveText('₿');
+      await expect(await elementByIdWithin('-primary', 'MoneyFiatSymbol')).toHaveText('₿');
 
       // switch to USD
       await tap('HeaderMenu');
@@ -69,16 +69,16 @@ describe('Settings', () => {
       await tap('DrawerSettings');
       await tap('GeneralSettings');
       // check default unit
-      expect(unitRow).toHaveText('Bitcoin');
+      await expect(unitRow).toHaveText('Bitcoin');
 
       // switch to USD
       await tap('UnitSettings');
       await tap('USD');
       await tap('NavigationBack');
-      expect(unitRow).toHaveText('USD');
+      await expect(unitRow).toHaveText('USD');
       await tap('NavigationClose');
-      expect(fiatSymbol).toHaveText('$');
-      expect(balance).toHaveText('0.00');
+      await expect(fiatSymbol).toHaveText('$');
+      await expect(balance).toHaveText('0.00');
 
       // switch back to BTC
       await tap('HeaderMenu');
@@ -87,9 +87,9 @@ describe('Settings', () => {
       await tap('UnitSettings');
       await tap('Bitcoin');
       await tap('NavigationBack');
-      expect(unitRow).toHaveText('Bitcoin');
+      await expect(unitRow).toHaveText('Bitcoin');
       await tap('NavigationClose');
-      expect(balance).toHaveText('0');
+      await expect(balance).toHaveText('0');
 
       // switch to classic denomination
       await tap('HeaderMenu');
@@ -99,9 +99,9 @@ describe('Settings', () => {
       await tap('UnitSettings');
       await tap('DenominationClassic');
       await tap('NavigationBack');
-      expect(unitRow).toHaveText('Bitcoin');
+      await expect(unitRow).toHaveText('Bitcoin');
       await tap('NavigationClose');
-      expect(balance).toHaveText('0.00000000');
+      await expect(balance).toHaveText('0.00000000');
     });
 
     it('Can switch transaction speed', async () => {
@@ -112,7 +112,7 @@ describe('Settings', () => {
       // switch to Fast
       await tap('TransactionSpeedSettings');
       await tap('fast');
-      expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText('Fast');
+      await expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText('Fast');
 
       // switch to Custom
       await tap('TransactionSpeedSettings');
@@ -120,12 +120,12 @@ describe('Settings', () => {
       (await elementByIdWithin('CustomFee', 'N1')).click();
       await tap('Continue');
       await tap('NavigationBack');
-      expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText('Custom');
+      await expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText('Custom');
 
       // switch back to Normal
       await tap('TransactionSpeedSettings');
       await tap('normal');
-      expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText('Normal');
+      await expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText('Normal');
     });
 
     it('Can remove last used tags', async () => {
@@ -333,16 +333,18 @@ describe('Settings', () => {
       const port = '31337';
       try {
         await typeText('HostInput', host);
-        expect(await elementById('HostInput')).toHaveText(host);
+        await expect(await elementById('HostInput')).toHaveText(host);
       } catch {
         await typeText('HostInput', host);
       }
+      await sleep(1000);
       try {
         await typeText('PortInput', port);
-        expect(await elementById('HostInput')).toHaveText(port);
+        await expect(await elementById('PortInput')).toHaveText(host);
       } catch {
         await typeText('PortInput', port);
       }
+      await sleep(1000);
       await tap('ElectrumStatus'); // close keyboard
       await tap('ConnectToHost');
 
@@ -405,8 +407,8 @@ describe('Settings', () => {
         await tap('ScanPrompt');
         await typeText('QRInput', conn.url);
         await tap('DialogConfirm');
-        expect(await elementById('HostInput')).toHaveText(conn.expectedHost);
-        expect(await elementById('PortInput')).toHaveText(conn.expectedPort);
+        await expect(await elementById('HostInput')).toHaveText(conn.expectedHost);
+        await expect(await elementById('PortInput')).toHaveText(conn.expectedPort);
         // await expectTextWithin('ElectrumProtocol', conn.expectedProtocol);
         i++;
       }
@@ -437,14 +439,14 @@ describe('Settings', () => {
       await tap('ConnectToHost');
       await sleep(1000);
       const updatedUrl = await (await elementById('ConnectedUrl')).getText();
-      expect(updatedUrl).toBe(newUrl);
+      await expect(updatedUrl).toBe(newUrl);
 
       // switch back to default
       await tap('ResetToDefault');
       await tap('ConnectToHost');
 
       const resetUrl = await (await elementById('ConnectedUrl')).getText();
-      expect(resetUrl).toBe(rgsUrl);
+      await expect(resetUrl).toBe(rgsUrl);
     });
 
     it('Can reset suggestions', async () => {

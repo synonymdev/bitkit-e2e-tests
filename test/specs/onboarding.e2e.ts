@@ -101,7 +101,7 @@ describe('Onboarding', () => {
     const address1Text = (await address1Element.getText()).split(':')[1].trim();
     console.info({ address0Text, address1Text });
     // Verify that the addresses match
-    expect(address0).toEqual(address0Text);
-    expect(address1).toEqual(address1Text);
+    await expect(address0).toEqual(address0Text);
+    await expect(address1).toEqual(address1Text);
   });
 });
