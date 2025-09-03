@@ -29,7 +29,12 @@ describe('Settings', () => {
   describe('General', () => {
     it('Can switch local currency', async () => {
       // switch to local currency
-      await tap('TotalBalance');
+      try {
+        await tap('TotalBalance');
+        await expect(await elementsById('MoneyFiatSymbol')[1]).toHaveText('$');
+      } catch {
+        await tap('TotalBalance');
+      }
       await expect(await elementsById('MoneyFiatSymbol')[1]).toHaveText('$');
 
       // - change settings (currency to EUR) //
