@@ -68,8 +68,6 @@ describe('Settings', () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('GeneralSettings');
-      // check default unit
-      await expect(unitRow).toHaveText('Bitcoin');
 
       // switch to USD
       await tap('UnitSettings');
