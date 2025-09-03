@@ -113,7 +113,7 @@ describe('Backup', () => {
     // - backup seed and restore wallet //
     const seed = await getSeed();
     // await waitForBackup();
-    await sleep(7000); //temp wait (until we have a proper event for backup completion)
+    await sleep(10_000); //temp wait (until we have a proper event for backup completion)
     await restoreWallet(seed);
 
     // - check if everything was restored
