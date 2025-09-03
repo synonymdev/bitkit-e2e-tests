@@ -8,6 +8,7 @@ import {
   elementById,
   elementByIdWithin,
   elementByText,
+  elementsById,
   getReceiveAddress,
   getSeed,
   restoreWallet,
@@ -67,7 +68,7 @@ describe('Backup', () => {
     await swipeFullScreen('down');
     await sleep(1000); // wait for the app to settle
 
-    const moneyText = await elementByIdWithin('-primary', 'MoneyText');
+    const moneyText = (await elementsById('MoneyText'))[1];
     await expect(moneyText).toHaveText('100 000 000');
 
     // - set tag //

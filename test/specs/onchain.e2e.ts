@@ -9,6 +9,7 @@ import {
   elementById,
   elementByIdWithin,
   elementByText,
+  elementsById,
   expectTextWithin,
   getReceiveAddress,
   sleep,
@@ -56,7 +57,7 @@ describe('Onchain', () => {
       // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
       // await elementById('ReceivedTransaction').waitForDisplayed();
       await swipeFullScreen('down');
-      const moneyText = await elementByIdWithin('-primary', 'MoneyText');
+      const moneyText = (await elementsById('MoneyText'))[1];
       await expect(moneyText).toHaveText('100 000 000');
 
       // then send out 10 000
@@ -80,7 +81,7 @@ describe('Onchain', () => {
       await rpc.generateToAddress(1, await rpc.getNewAddress());
       await electrum?.waitForSync();
 
-      const moneyTextAfter = await elementByIdWithin('-primary', 'MoneyText');
+      const moneyTextAfter = (await elementsById('MoneyText'))[1];
       await expect(moneyTextAfter).not.toHaveText('100 000 000');
 
       // review activity list
@@ -139,7 +140,7 @@ describe('Onchain', () => {
         await sleep(1000); // wait for the app to settle
 
         // - shows correct total balance
-        const moneyText = await elementByIdWithin('-primary', 'MoneyText');
+        const moneyText = (await elementsById('MoneyText'))[1];
         const expected = `${i}00 000 000`;
         await expect(moneyText).toHaveText(expected);
       }
@@ -184,7 +185,7 @@ describe('Onchain', () => {
       // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
       // await elementById('ReceivedTransaction').waitForDisplayed();
       await swipeFullScreen('down');
-      const moneyText = await elementByIdWithin('-primary', 'MoneyText');
+      const moneyText = (await elementsById('MoneyText'))[1];
       await expect(moneyText).toHaveText('100 000 000');
 
       // enable warning for sending over 100$ to test multiple warning dialogs
@@ -232,7 +233,7 @@ describe('Onchain', () => {
       await rpc.generateToAddress(1, await rpc.getNewAddress());
       await electrum?.waitForSync();
 
-      const moneyTextAfter = await elementByIdWithin('-primary', 'MoneyText');
+      const moneyTextAfter = (await elementsById('MoneyText'))[1];
       await expect(moneyTextAfter).toHaveText('0');
 
       // review activity list

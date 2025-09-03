@@ -1,4 +1,4 @@
-import { elementByIdWithin, sleep, tap } from './actions';
+import { elementsById, sleep, tap } from './actions';
 import { getAppId, getAppPath } from './constants';
 
 export async function launchFreshApp() {
@@ -18,9 +18,10 @@ export async function launchFreshApp() {
 
 async function tapBalanceToReset() {
   await tap('TotalBalance');
-  const moneyFiatSymbol = await elementByIdWithin('-primary', 'MoneyFiatSymbol');
-  moneyFiatSymbol.waitForDisplayed();
-  if ((await moneyFiatSymbol.getText()) !== '₿') {
+  const moneyFiatSymbols = await elementsById('MoneyFiatSymbol');
+  moneyFiatSymbols[0].waitForDisplayed();
+  moneyFiatSymbols[1].waitForDisplayed();
+  if ((await moneyFiatSymbols[1].getText()) !== '₿') {
     await tap('TotalBalance');
   }
 }
