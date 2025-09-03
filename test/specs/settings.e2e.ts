@@ -120,12 +120,16 @@ describe('Settings', () => {
       (await elementByIdWithin('CustomFee', 'N1')).click();
       await tap('Continue');
       await tap('NavigationBack');
-      await expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText('Custom');
+      await expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText(
+        'Custom'
+      );
 
       // switch back to Normal
       await tap('TransactionSpeedSettings');
       await tap('normal');
-      await expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText('Normal');
+      await expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText(
+        'Normal'
+      );
     });
 
     it('Can remove last used tags', async () => {
@@ -340,7 +344,7 @@ describe('Settings', () => {
       await sleep(1000);
       try {
         await typeText('PortInput', port);
-        await expect(await elementById('PortInput')).toHaveText(host);
+        await expect(await elementById('PortInput')).toHaveText(port);
       } catch {
         await typeText('PortInput', port);
       }
