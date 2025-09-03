@@ -329,8 +329,20 @@ describe('Settings', () => {
       await tap('ElectrumConfig');
 
       // enter wrong electrum server address
-      await typeText('HostInput', 'google.com');
-      await typeText('PortInput', '31337');
+      const host = 'google.com';
+      const port = '31337';
+      try {
+        await typeText('HostInput', host);
+        expect(await elementById('HostInput')).toHaveText(host);
+      } catch {
+        await typeText('HostInput', host);
+      }
+      try {
+        await typeText('PortInput', port);
+        expect(await elementById('HostInput')).toHaveText(port);
+      } catch {
+        await typeText('PortInput', port);
+      }
       await tap('ElectrumStatus'); // close keyboard
       await tap('ConnectToHost');
 
