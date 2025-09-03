@@ -289,9 +289,7 @@ export async function restoreWallet(seed: string, passphrase?: string) {
 
   // Seed
   await typeText('Word-0', seed);
-
-  await elementById('WordIndex-4');
-
+  await sleep(500); // wait for the app to settle
   // Passphrase
   if (passphrase) {
     await tap('AdvancedButton');
