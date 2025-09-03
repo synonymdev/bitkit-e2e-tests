@@ -436,7 +436,12 @@ describe('Settings', () => {
     });
 
     it('Can reset suggestions', async () => {
-      await elementById('Suggestions').waitForDisplayed();
+      try {
+        await elementById('Suggestions').waitForDisplayed();
+      } catch {
+        await tap('WalletOnboardingClose');
+        await elementById('Suggestions').waitForDisplayed();
+      }
 
       // hide lightningTodo suggestion card
       await (await elementByIdWithin('Suggestion-lightning', 'SuggestionDismiss')).click();
