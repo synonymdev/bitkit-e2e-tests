@@ -190,6 +190,7 @@ describe('Settings', () => {
       // Balance should be visible
       await elementById('ShowBalance').waitForDisplayed({ reverse: true });
       // Swipe to hide balance
+      await sleep(1000);
       await dragOnElement('TotalBalance', 'right', 0.5);
       // Balance should be hidden
       await elementById('ShowBalance').waitForDisplayed();
@@ -216,6 +217,7 @@ describe('Settings', () => {
       await tap('HideBalanceOnOpen');
 
       // Restart the app
+      await sleep(3000);
       await launchFreshApp();
       // Balance should be hidden
       await elementById('ShowBalance').waitForDisplayed();
