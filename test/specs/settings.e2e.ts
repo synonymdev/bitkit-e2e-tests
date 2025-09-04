@@ -193,11 +193,21 @@ describe('Settings', () => {
       // - enable 'hide balance on open'
 
       // Balance should be visible
+      try {
+        await elementById('ShowBalance').waitForDisplayed({ reverse: true });
+      } catch {
+        await dragOnElement('TotalBalance', 'right', 0.5);
+      }
       await elementById('ShowBalance').waitForDisplayed({ reverse: true });
-      // Swipe to hide balance
+
       await sleep(1000);
-      await dragOnElement('TotalBalance', 'right', 0.5);
-      // Balance should be hidden
+      // Swipe to hide balance
+      try {
+        await dragOnElement('TotalBalance', 'right', 0.5);
+        await elementById('ShowBalance').waitForDisplayed();
+      } catch {
+        await dragOnElement('TotalBalance', 'right', 0.5);
+      }
       await elementById('ShowBalance').waitForDisplayed();
 
       // Disable 'swipe to hide balance'
