@@ -96,6 +96,8 @@ export async function tap(testId: string) {
 
 export async function typeText(testId: string, text: string) {
   const el = await elementById(testId);
+  await el.waitForDisplayed();
+  await sleep(500); // Allow time for the element to settle
   await el.setValue(text);
 }
 
@@ -223,11 +225,13 @@ export async function confirmInputOnKeyboard() {
   }
 }
 
-export async function acceptAppNotificationAlert(): Promise<void> {
+export async function acceptAppNotificationAlert(
+  button: string = 'permission_allow_button'
+): Promise<void> {
   if (driver.isAndroid) {
     // Android: system permission dialog is handled via UiSelector
     try {
-      await tap('com.android.permissioncontroller:id/permission_allow_button');
+      await tap(`com.android.permissioncontroller:id/${button}`);
     } catch (err) {
       console.warn('⚠ Could not find or tap Android App Notification alert allow button:', err);
     }
@@ -285,9 +289,7 @@ export async function restoreWallet(seed: string, passphrase?: string) {
 
   // Seed
   await typeText('Word-0', seed);
-
-  await elementById('WordIndex-4');
-
+  await sleep(500); // wait for the app to settle
   // Passphrase
   if (passphrase) {
     await tap('AdvancedButton');
@@ -368,11 +370,11 @@ export async function toggleWidgets() {
 export async function deleteAllDefaultWidgets() {
   await tap('WidgetsEdit');
   for (const w of ['Bitcoin Price', 'Bitcoin Blocks', 'Bitcoin Headlines']) {
-      tap(w + '_WidgetActionDelete');
-      await elementByText('Yes, Delete').waitForDisplayed();
-      await elementByText('Yes, Delete').click();
-      await elementById(w).waitForDisplayed({ reverse: true, timeout: 5000 });
-      await sleep(500);
+    tap(w + '_WidgetActionDelete');
+    await elementByText('Yes, Delete').waitForDisplayed();
+    await elementByText('Yes, Delete').click();
+    await elementById(w).waitForDisplayed({ reverse: true, timeout: 5000 });
+    await sleep(500);
   }
   await tap('WidgetsEdit');
   await elementById('PriceWidget').waitForDisplayed({ reverse: true });

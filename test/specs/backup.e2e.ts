@@ -8,6 +8,7 @@ import {
   elementById,
   elementByIdWithin,
   elementByText,
+  elementsById,
   getReceiveAddress,
   getSeed,
   restoreWallet,
@@ -67,7 +68,7 @@ describe('Backup', () => {
     await swipeFullScreen('down');
     await sleep(1000); // wait for the app to settle
 
-    const moneyText = await elementByIdWithin('-primary', 'MoneyText');
+    const moneyText = (await elementsById('MoneyText'))[1];
     await expect(moneyText).toHaveText('100 000 000');
 
     // - set tag //
@@ -103,16 +104,16 @@ describe('Backup', () => {
     await tap('WidgetSave');
     // sometimes flaky on GH actions, try again
     try {
-        await elementById('PriceWidget').waitForDisplayed();
+      await elementById('PriceWidget').waitForDisplayed();
     } catch {
-        await tap('WidgetSave');
+      await tap('WidgetSave');
     }
     await elementById('PriceWidget').waitForDisplayed();
 
     // - backup seed and restore wallet //
     const seed = await getSeed();
     // await waitForBackup();
-    await sleep(7000); //temp wait (until we have a proper event for backup completion)
+    await sleep(10_000); //temp wait (until we have a proper event for backup completion)
     await restoreWallet(seed);
 
     // - check if everything was restored
