@@ -12,13 +12,13 @@ import {
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 
-describe('Receive', () => {
+describe('@receive - Receive', () => {
   before(async () => {
     await reinstallApp();
     await completeOnboarding();
   });
 
-  it('Basic functionality', async () => {
+  it('@receive_1 - Basic functionality', async () => {
     const address = await getReceiveAddress();
     if (!address.startsWith('bcrt1')) {
       throw new Error(`Wrong default receiving address: ${address}`);

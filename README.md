@@ -34,6 +34,7 @@ npm install
 ```
 artifacts/              # screenshots and (optionally) videos of failed tests
 aut/                    # Place your .apk / .ipa files here
+docker/                 # docker compose regtest based backend for Bitkit wallet
 test/
   ├── specs/            # Test suites (e.g., onboarding.e2e.ts)
   ├── helpers/          # Test helpers: selectors, setup, actions
@@ -63,6 +64,33 @@ To run a **specific test case**:
 
 ```bash
 npm run e2e:android -- --mochaOpts.grep "Can pass onboarding correctly"
+```
+
+---
+
+### 🏷️ Tags
+
+Test suites (and some individual tests) are tagged using a simple `@tag` convention in the `describe` / `it` titles:
+
+```typescript
+describe('@backup - Backup', () => {
+  it('@backup_1 - Can backup metadata, widget, settings and restore them', async () => {
+    // ...
+  });
+});
+```
+
+You can use Mocha’s `--grep` option to run only the tests that match a given tag (regex supported). For example:
+
+```bash
+# Run only backup tests
+npm run e2e:android -- --mochaOpts.grep "@backup"
+
+# Run backup OR onboarding OR onchain tests
+npm run e2e:android -- --mochaOpts.grep "@onchain|@backup|@onboarding"
+
+# Run everything except backup tests
+npm run e2e:android -- --mochaOpts.grep "@backup" --mochaOpts.invert
 ```
 
 ---

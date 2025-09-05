@@ -18,7 +18,7 @@ import {
   typeText,
 } from '../helpers/actions';
 
-describe('Backup', () => {
+describe('@backup - Backup', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
   const rpc = new BitcoinJsonRpc(bitcoinURL);
 
@@ -46,7 +46,7 @@ describe('Backup', () => {
     await electrum?.stop();
   });
 
-  it('Can backup metadata, widget, settings and restore them', async () => {
+  it('@backup_1 - Can backup metadata, widget, settings and restore them', async () => {
     // testplan:
     // - receive some money and set tag
     // - change settings
