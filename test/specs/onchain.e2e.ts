@@ -172,6 +172,8 @@ describe('Onchain', () => {
       await dragOnElement('GRAB', 'right', 0.95);
 
       await sleep(10_000);
+
+      // TODO: verifications of tags in review screen
     });
 
     // https://github.com/synonymdev/bitkit-android/issues/324

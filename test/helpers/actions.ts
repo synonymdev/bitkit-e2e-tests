@@ -70,12 +70,16 @@ export async function elementsByText(text: string, timeout = 8000): Promise<Chai
   return $$(sel);
 }
 
-export async function expectTextVisible(text: string) {
+export async function expectTextVisible(text: string, visible = true) {
   const el = await elementByText(text);
+  if (!visible) {
+    await el.waitForDisplayed({ reverse: true, timeout: 5000 });
+    return;
+  }
   await el.waitForDisplayed({ timeout: 5000 });
 }
 
-export async function expectTextWithin(ancestorId: string, text: string) {
+export async function expectTextWithin(ancestorId: string, text: string, visible = true) {
   const parent = elementById(ancestorId);
   await parent.waitForDisplayed();
 
@@ -83,7 +87,11 @@ export async function expectTextWithin(ancestorId: string, text: string) {
     ? `.//*[@text='${text}']`
     : `.//XCUIElementTypeStaticText[@label='${text}' or @value='${text}']`;
 
-  await expect(parent.$(needle)).toExist();
+  if (!visible) {
+    await parent.$(needle).waitForDisplayed({ reverse: true });
+    return;
+  }
+  await parent.$(needle).waitForDisplayed();
 }
 
 export async function tap(testId: string) {
