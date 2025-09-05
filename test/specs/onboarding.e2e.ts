@@ -12,12 +12,12 @@ import {
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 
-describe('Onboarding', () => {
+describe('@onboarding - Onboarding', () => {
   beforeEach(async () => {
     await reinstallApp();
   });
 
-  it('Can start onboarding', async () => {
+  it('@onboarding_1 - Can start onboarding', async () => {
     // TOS and PP
     await elementById('Check1').waitForDisplayed();
     await sleep(1000); // Wait for the app to settle
@@ -44,7 +44,7 @@ describe('Onboarding', () => {
     await elementByText('TO GET\nSTARTED\nSEND\nBITCOIN\nTO YOUR\nWALLET').waitForDisplayed();
   });
 
-  it('Can pass onboarding correctly', async () => {
+  it('@onboarding_2 - Can pass onboarding correctly', async () => {
     // TOS and PP
     await elementById('Check1').waitForDisplayed();
     await sleep(1000); // Wait for the app to settle

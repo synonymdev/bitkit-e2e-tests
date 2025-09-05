@@ -9,13 +9,13 @@ import {
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 
-describe('Widgets', () => {
+describe('@widgets - Widgets', () => {
   before(async () => {
     await reinstallApp();
     await completeOnboarding();
   });
 
-  it('Can add/edit/remove a widget', async () => {
+  it('@widgets_1 - Can add/edit/remove a widget', async () => {
     // delete all default widgets
     await deleteAllDefaultWidgets();
 

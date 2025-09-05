@@ -17,4 +17,6 @@ trap cleanup EXIT INT TERM
 
 # regtest port
 adb reverse tcp:60001 tcp:60001
-npm run e2e:android
+
+# Pass everything through to WDIO/Mocha
+npm run e2e:android -- "$@"

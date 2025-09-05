@@ -34,6 +34,7 @@ npm install
 ```
 artifacts/              # screenshots and (optionally) videos of failed tests
 aut/                    # Place your .apk / .ipa files here
+docker/                 # docker compose regtest based backend for Bitkit wallet
 test/
   ├── specs/            # Test suites (e.g., onboarding.e2e.ts)
   ├── helpers/          # Test helpers: selectors, setup, actions
@@ -64,6 +65,71 @@ To run a **specific test case**:
 ```bash
 npm run e2e:android -- --mochaOpts.grep "Can pass onboarding correctly"
 ```
+
+---
+
+### 🏷️ Tags
+
+Test suites (and some individual tests) are tagged using a simple `@tag` convention in the `describe` / `it` titles:
+
+```typescript
+describe('@backup - Backup', () => {
+  it('@backup_1 - Can backup metadata, widget, settings and restore them', async () => {
+    // ...
+  });
+});
+```
+
+You can use Mocha’s `--grep` option to run only the tests that match a given tag (regex supported). For example:
+
+```bash
+# Run only backup tests
+npm run e2e:android -- --mochaOpts.grep "@backup"
+
+# Run backup OR onboarding OR onchain tests
+npm run e2e:android -- --mochaOpts.grep "@onchain|@backup|@onboarding"
+
+# Run everything except backup tests
+npm run e2e:android -- --mochaOpts.grep "@backup" --mochaOpts.invert
+```
+
+---
+
+### 🤖 CI Helper Scripts
+
+These helper scripts wrap the regular `npm run e2e:*` commands and add CI-friendly extras such as log capture and artifact collection. You can also run them locally when debugging.
+
+#### Android (`ci_run_android.sh`)
+
+The Android script will:
+
+- Clear and capture `adb logcat` output into `./artifacts/logcat.txt`.
+- Reverse the regtest port (`60001`).
+- Run the Android E2E tests.
+- Forward any arguments directly to Mocha/WebdriverIO.
+
+**Usage examples:**
+
+```bash
+# Run all Android tests (with logcat capture)
+./ci_run_android.sh
+
+# Run only @backup tests
+./ci_run_android.sh --mochaOpts.grep "@backup"
+
+# Run backup OR onboarding OR onchain tests
+./ci_run_android.sh --mochaOpts.grep "@backup|@onboarding|@onchain"
+
+# Run everything except @backup
+./ci_run_android.sh --mochaOpts.grep "@backup" --mochaOpts.invert
+
+# Run a specific spec file
+./ci_run_android.sh --spec ./test/specs/onboarding.e2e.ts
+```
+
+#### iOS (`ci_run_ios.sh`)
+
+TBD 🚧
 
 ---
 

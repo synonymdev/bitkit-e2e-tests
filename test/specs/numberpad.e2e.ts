@@ -8,7 +8,7 @@ import {
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 
 // Skip due to issues bitkit-android#309,#310
-describe.skip('NumberPad', () => {
+describe.skip('@numberpad - NumberPad', () => {
   before(async () => {
     await reinstallApp();
     await completeOnboarding();
@@ -18,7 +18,7 @@ describe.skip('NumberPad', () => {
     await launchFreshApp();
   });
 
-  it('Can enter amounts in modern denomination', async () => {
+  it('@numberpad_1 - Can enter amounts in modern denomination', async () => {
     await tap('Receive');
     await tap('SpecifyInvoiceButton');
     await tap('ReceiveNumberPadTextField');
@@ -55,7 +55,7 @@ describe.skip('NumberPad', () => {
     await tap('ReceiveNumberPadUnit');
   });
 
-  it('Can enter amounts in classic denomination', async () => {
+  it('@numberpad_2 - Can enter amounts in classic denomination', async () => {
     // switch to classic denomination
     await tap('Receive');
     await sleep(5000);
