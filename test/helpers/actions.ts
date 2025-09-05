@@ -88,10 +88,10 @@ export async function expectTextWithin(ancestorId: string, text: string, visible
     : `.//XCUIElementTypeStaticText[@label='${text}' or @value='${text}']`;
 
   if (!visible) {
-    await expect(parent.$(needle)).not.toExist();
+    await parent.$(needle).waitForDisplayed({ reverse: true });
     return;
   }
-  await expect(parent.$(needle)).toExist();
+  await parent.$(needle).waitForDisplayed();
 }
 
 export async function tap(testId: string) {
