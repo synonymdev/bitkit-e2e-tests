@@ -95,6 +95,44 @@ npm run e2e:android -- --mochaOpts.grep "@backup" --mochaOpts.invert
 
 ---
 
+### 🤖 CI Helper Scripts
+
+These helper scripts wrap the regular `npm run e2e:*` commands and add CI-friendly extras such as log capture and artifact collection. You can also run them locally when debugging.
+
+#### Android (`ci_run_android.sh`)
+
+The Android script will:
+
+- Clear and capture `adb logcat` output into `./artifacts/logcat.txt`.
+- Reverse the regtest port (`60001`).
+- Run the Android E2E tests.
+- Forward any arguments directly to Mocha/WebdriverIO.
+
+**Usage examples:**
+
+```bash
+# Run all Android tests (with logcat capture)
+./ci_run_android.sh
+
+# Run only @backup tests
+./ci_run_android.sh --mochaOpts.grep "@backup"
+
+# Run backup OR onboarding OR onchain tests
+./ci_run_android.sh --mochaOpts.grep "@backup|@onboarding|@onchain"
+
+# Run everything except @backup
+./ci_run_android.sh --mochaOpts.grep "@backup" --mochaOpts.invert
+
+# Run a specific spec file
+./ci_run_android.sh --spec ./test/specs/onboarding.e2e.ts
+```
+
+#### iOS (`ci_run_ios.sh`)
+
+TBD 🚧
+
+---
+
 ### 💡 Tips
 
 - Use `elementById()` and `tap()` helpers to write cross-platform tests.
