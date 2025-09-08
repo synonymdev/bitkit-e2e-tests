@@ -350,6 +350,59 @@ export async function receiveOnchainFunds(rpc: any) {
   await expect(moneyText).toHaveText('100 000');
 }
 
+export async function waitForPeerConnection(
+  lnd: { listPeers: () => PromiseLike<{ peers: any }> | { peers: any } },
+  nodeId: string,
+  maxRetries = 2000
+) {
+  let retries = 0;
+
+  while (retries < maxRetries) {
+    await sleep(1000);
+    const { peers } = await lnd.listPeers();
+    console.info({ peers });
+    if (peers?.some((p: { pubKey: any }) => p.pubKey === nodeId)) {
+      break;
+    }
+    retries++;
+  }
+
+  if (retries === maxRetries) {
+    throw new Error('Peer not connected');
+  }
+}
+
+export async function waitForActiveChannel(
+  lnd: {
+    listChannels: (arg0: {
+      peer: Buffer;
+      activeOnly: boolean;
+    }) => PromiseLike<{ channels: any }> | { channels: any };
+  },
+  nodeId: string,
+  maxRetries = 20
+) {
+  let retries = 0;
+
+  while (retries < maxRetries) {
+    await sleep(1000);
+    const { channels } = await lnd.listChannels({
+      peer: Buffer.from(nodeId, 'hex'),
+      activeOnly: true,
+    });
+
+    if (channels?.length > 0) {
+      break;
+    }
+
+    retries++;
+  }
+
+  if (retries === maxRetries) {
+    throw new Error('Channel not active');
+  }
+}
+
 export async function completeOnboarding({ isFirstTime = true } = {}) {
   // TOS and PP
   await elementById('Check1').waitForDisplayed();
