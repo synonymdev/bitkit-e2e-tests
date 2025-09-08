@@ -30,6 +30,8 @@
     "webdriverio": "^9.18.1"
   },
   "dependencies": {
+    "@radar/lnrpc": "^0.11.1-beta.1",
+    "bip21": "^3.0.0",
     "bitcoin-json-rpc": "^1.4.1",
     "rn-electrum-client": "^0.0.22"
   }
