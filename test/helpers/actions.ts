@@ -337,6 +337,19 @@ export async function getReceiveAddress(): Promise<string> {
   return address;
 }
 
+export async function receiveOnchainFunds(rpc: any) {
+  // receive some first
+  const address = await getReceiveAddress();
+  await rpc.sendToAddress(address, '0.001');
+  await rpc.generateToAddress(1, await rpc.getNewAddress());
+  // https://github.com/synonymdev/bitkit-android/issues/268
+  // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
+  // await elementById('ReceivedTransaction').waitForDisplayed();
+  await swipeFullScreen('down');
+  const moneyText = (await elementsById('MoneyText'))[1];
+  await expect(moneyText).toHaveText('100 000');
+}
+
 export async function completeOnboarding({ isFirstTime = true } = {}) {
   // TOS and PP
   await elementById('Check1').waitForDisplayed();
