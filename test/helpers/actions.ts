@@ -324,7 +324,7 @@ export async function restoreWallet(seed: string, passphrase?: string) {
 }
 
 type addressType = 'bitcoin' | 'lightning';
-export async function getReceiveAddress(which:addressType = 'bitcoin' ): Promise<string> {
+export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise<string> {
   await tap('Receive');
 
   const qrCode = await elementById('QRCode');

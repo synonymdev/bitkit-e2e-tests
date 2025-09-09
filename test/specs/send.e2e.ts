@@ -4,16 +4,18 @@ import { encode } from 'bip21';
 
 import initElectrum from '../helpers/electrum';
 import {
-  // lndConfig,
   completeOnboarding,
+  dragOnElement,
   elementById,
+  elementByIdWithin,
+  elementsById,
+  expectTextWithin,
+  getReceiveAddress,
   receiveOnchainFunds,
   sleep,
   swipeFullScreen,
   waitForActiveChannel,
   waitForPeerConnection,
-  // waitForActiveChannel,
-  // waitForPeerConnection,
 } from '../helpers/actions';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
 import { reinstallApp } from '../helpers/setup';
@@ -21,6 +23,7 @@ import { confirmInputOnKeyboard, tap, typeText } from '../helpers/actions';
 
 async function enterAddress(address: string) {
   await tap('Send');
+  await sleep(700);
   await tap('RecipientManual');
   await typeText('RecipientInput', address);
   await confirmInputOnKeyboard();
@@ -186,156 +189,188 @@ describe('@send - Send', () => {
       localFundingAmount: '100000',
       private: true,
     });
+    console.info('Channel opening...');
     await rpc.generateToAddress(6, await rpc.getNewAddress());
     await electrum?.waitForSync();
 
     // wait for channel to be active
     await waitForActiveChannel(lnd, ldkNodeId);
+    console.info('Channel is active!');
 
-    // // check channel status
-    // await element(by.id('HeaderMenu')).tap();
-    // await element(by.id('DrawerSettings')).tap();
-    // await element(by.id('AdvancedSettings')).atIndex(0).tap();
-    // await element(by.id('Channels')).tap();
-    // await element(by.id('Channel')).atIndex(0).tap();
-    // await expect(element(by.id('MoneyText').withAncestor(by.id('TotalSize')))).toHaveText(
-    //   '100 000'
-    // );
-    // await element(by.id('ChannelScrollView')).scrollTo('bottom', Number.NaN, 0.1);
-    // await expect(element(by.id('IsUsableYes'))).toBeVisible();
-    // await element(by.id('NavigationClose')).atIndex(0).tap();
-    // await sleep(500);
+    // workaround for: https://github.com/synonymdev/bitkit-android/issues/359
+    await elementById('ReceivedTransaction').waitForDisplayed();
+    await tap('ReceivedTransactionButton');
 
-    // // receive lightning funds
-    // await element(by.id('Receive')).tap();
-    // let { label: receive } = await element(by.id('QRCode')).getAttributes();
-    // receive = receive.replaceAll(/bitcoin.*=/gi, '').toLowerCase();
-    // await lnd.sendPaymentSync({ paymentRequest: receive, amt: 50000 });
-    // await waitFor(element(by.id('ReceivedTransaction')))
-    //   .toBeVisible()
-    //   .withTimeout(10000);
-    // await element(by.id('ReceivedTransaction')).swipe('down');
+    // check channel status
+    await tap('HeaderMenu');
+    await tap('DrawerSettings');
+    await tap('AdvancedSettings');
+    await tap('Channels');
+    await tap('Channel');
+    await expectTextWithin('TotalSize', '₿ 100 000');
+    await swipeFullScreen('up');
+    await elementById('IsUsableYes').waitForDisplayed();
+    await tap('NavigationClose');
+    await sleep(500);
 
-    // await waitFor(element(by.id('MoneyText').withAncestor(by.id('TotalBalance'))))
-    //   .toHaveText('150 000')
-    //   .withTimeout(10000);
+    // receive lightning funds
+    const receive = await getReceiveAddress('lightning');
+    await swipeFullScreen('down');
 
-    // // send to onchain address
-    // const { address: onchainAddress } = await lnd.newAddress();
-    // await enterAddress(onchainAddress);
-    // await expect(element(by.id('AssetButton-savings'))).toBeVisible();
-    // await element(by.id('N1').withAncestor(by.id('SendAmountNumberPad'))).tap();
-    // await element(by.id('N0').withAncestor(by.id('SendAmountNumberPad'))).multiTap(4);
-    // await element(by.id('ContinueAmount')).tap();
-    // await element(by.id('GRAB')).swipe('right', 'slow', 0.95, 0.5, 0.5); // Swipe to confirm
-    // await waitFor(element(by.id('SendSuccess')))
-    //   .toBeVisible()
-    //   .withTimeout(10000);
-    // await element(by.id('Close')).tap();
-    // await waitFor(element(by.id('MoneyText').withAncestor(by.id('TotalBalance'))))
-    //   .toHaveText('139 502')
-    //   .withTimeout(10000);
+    // const dec = await lnd.decodePayReq({ payReq: receive });
+    // console.info(JSON.stringify(dec, null, 2));
+    const response = await lnd.sendPaymentSync({ paymentRequest: receive, amt: '10000' });
+    console.info({ response });
+    await elementById('ReceivedTransaction').waitForDisplayed();
+    await tap('ReceivedTransactionButton');
+    await sleep(500);
 
-    // // send to lightning invoice
-    // const { paymentRequest: invoice1 } = await lnd.addInvoice();
-    // await enterAddress(invoice1);
-    // await expect(element(by.id('AssetButton-spending'))).toBeVisible();
-    // await element(by.id('N1').withAncestor(by.id('SendAmountNumberPad'))).tap();
-    // await element(by.id('N0').withAncestor(by.id('SendAmountNumberPad'))).multiTap(4);
-    // await element(by.id('ContinueAmount')).tap();
-    // await element(by.id('GRAB')).swipe('right', 'slow', 0.95, 0.5, 0.5); // Swipe to confirm
-    // await waitFor(element(by.id('SendSuccess')))
-    //   .toBeVisible()
-    //   .withTimeout(10000);
-    // await element(by.id('Close')).tap();
-    // await waitFor(element(by.id('MoneyText').withAncestor(by.id('TotalBalance'))))
-    //   .toHaveText('129 502')
-    //   .withTimeout(10000);
+    const moneyText = (await elementsById('MoneyText'))[1];
+    await expect(moneyText).toHaveText('110 000'); // 100k onchain + 10k lightning
+    await expectTextWithin('ActivitySpending', '10 000');
 
-    // // can edit invoice on the review screen
-    // const { paymentRequest: invoice2 } = await lnd.addInvoice({ value: 10000 });
-    // await enterAddress(invoice2);
-    // let attributes = await element(by.id('ReviewAmount-primary')).getAttributes();
-    // let amount = attributes.label;
-    // jestExpect(amount).toBe('10 000');
-    // await element(by.id('ReviewUri')).tap();
-    // await element(by.id('RecipientInput')).replaceText(onchainAddress);
-    // await element(by.id('RecipientInput')).tapReturnKey();
-    // await element(by.id('AddressContinue')).tap();
-    // await expect(element(by.id('AssetButton-savings'))).toBeVisible();
-    // await element(by.id('N2').withAncestor(by.id('SendAmountNumberPad'))).tap();
-    // await element(by.id('N0').withAncestor(by.id('SendAmountNumberPad'))).multiTap(4);
-    // await element(by.id('ContinueAmount')).tap();
-    // attributes = await element(by.id('ReviewAmount-primary')).getAttributes();
-    // amount = attributes.label;
-    // jestExpect(amount).toBe('20 000');
-    // await element(by.id('SendSheet')).swipe('down');
+    // send to onchain address
+    console.info('Sending to onchain address...');
+    const { address: onchainAddress } = await lnd.newAddress();
+    console.info({ onchainAddress });
+    await enterAddress(onchainAddress);
+    await elementById('AssetButton-savings').waitForDisplayed();
+    await tap('N1');
+    for (let i = 1; i <= 4; i++) {
+      await tap('N0');
+    }
+    await tap('ContinueAmount');
+    await dragOnElement('GRAB', 'right', 0.95);
+    await elementById('SendSuccess').waitForDisplayed();
+    await tap('Close');
+    await expect(moneyText).not.toHaveText('110 000');
+    const amtAfterOnchain = await moneyText.getText();
+    await expectTextWithin('ActivitySpending', '10 000');
 
-    // // send to unified invoice w/ amount
-    // const { paymentRequest: invoice3 } = await lnd.addInvoice({ value: 10000 });
-    // const unified1 = encode(onchainAddress, {
-    //   lightning: invoice3,
-    //   amount: 10000,
-    // });
+    // send to lightning invoice
+    console.info('Sending to lightning invoice...');
+    const { paymentRequest: invoice1 } = await lnd.addInvoice({});
+    console.info({ invoice1 });
+    await sleep(1000);
+    await enterAddress(invoice1);
+    await elementById('AssetButton-spending').waitForDisplayed();
+    await tap('N1');
+    for (let i = 1; i <= 3; i++) {
+      await tap('N0');
+    }
+    await tap('ContinueAmount');
+    await dragOnElement('GRAB', 'right', 0.95);
+    await elementById('SendSuccess').waitForDisplayed();
+    await tap('Close');
+    await expect(moneyText).not.toHaveText(amtAfterOnchain);
+    const amtAfterLightning = await moneyText.getText();
+    await expectTextWithin('ActivitySpending', '9 000');
 
-    // await enterAddress(unified1);
-    // await element(by.id('GRAB')).swipe('right', 'slow', 0.95, 0.5, 0.5); // Swipe to confirm
-    // await waitFor(element(by.id('SendSuccess')))
-    //   .toBeVisible()
-    //   .withTimeout(10000);
-    // await element(by.id('Close')).tap();
-    // await waitFor(element(by.id('MoneyText').withAncestor(by.id('TotalBalance'))))
-    //   .toHaveText('119 502')
-    //   .withTimeout(10000);
+    // can edit invoice on the review screen
+    console.info('Editing invoice on review screen...');
+    const { paymentRequest: invoice2 } = await lnd.addInvoice({ value: '1000' });
+    await enterAddress(invoice2);
+    const amt_el = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
+    await amt_el.waitForDisplayed();
+    await expect(amt_el).toHaveText('1 000');
+    await tap('ReviewUri');
+    await sleep(1500);
+    await elementById('RecipientInput').waitForDisplayed();
+    await typeText('RecipientInput', onchainAddress);
+    await confirmInputOnKeyboard();
+    await sleep(500);
+    await tap('AddressContinue');
+    await elementById('AssetButton-savings').waitForDisplayed();
+    await tap('N2');
+    for (let i = 1; i <= 4; i++) {
+      await tap('N0');
+    }
+    await tap('ContinueAmount');
+    await amt_el.waitForDisplayed();
+    await expect(amt_el).toHaveText('20 000');
+    await swipeFullScreen('down');
 
-    // // send to unified invoice w/ amount exceeding balance(s)
-    // const { paymentRequest: invoice4 } = await lnd.addInvoice({
-    //   value: 200000,
-    // });
-    // const unified2 = encode(onchainAddress, {
-    //   lightning: invoice4,
-    //   amount: 200000,
-    // });
+    // send to unified invoice w/ amount
+    console.info('Sending to unified invoice w/ amount...');
+    const { paymentRequest: invoice3 } = await lnd.addInvoice({ value: '1000' });
+    const unified1 = encode(onchainAddress, {
+      lightning: invoice3,
+      amount: 0.00001,
+    });
+    console.info({ unified1 });
+    await sleep(1000);
+    await enterAddress(unified1);
+    await expect(moneyText).toHaveText('1 000'); // invoice amount
+    await dragOnElement('GRAB', 'right', 0.95);
+    await elementById('SendSuccess').waitForDisplayed();
+    await tap('Close');
+    await expect(moneyText).not.toHaveText(amtAfterLightning);
+    const amtAfterUnified = await moneyText.getText();
+    await expectTextWithin('ActivitySpending', '8 000');
 
-    // await enterAddress(unified2);
-    // // should only allow spending from savings and sets invoice amount to 0
-    // await expect(element(by.id('AssetButton-savings'))).toBeVisible();
-    // await element(by.id('N1').withAncestor(by.id('SendAmountNumberPad'))).tap();
-    // await element(by.id('N0').withAncestor(by.id('SendAmountNumberPad'))).multiTap(4);
-    // await element(by.id('ContinueAmount')).tap();
-    // await element(by.id('GRAB')).swipe('right', 'slow', 0.95, 0.5, 0.5); // Swipe to confirm
-    // await waitFor(element(by.id('SendSuccess')))
-    //   .toBeVisible()
-    //   .withTimeout(10000);
-    // await element(by.id('Close')).tap();
-    // await waitFor(element(by.id('MoneyText').withAncestor(by.id('TotalBalance'))))
-    //   .toHaveText('109 004')
-    //   .withTimeout(10000);
+    // send to unified invoice w/ amount exceeding balance(s)
+    console.info('Sending to unified invoice w/ amount exceeding balance(s)...');
+    const { paymentRequest: invoice4 } = await lnd.addInvoice({
+      value: '200000',
+    });
+    const unified2 = encode(onchainAddress, {
+      lightning: invoice4,
+      amount: 0.0002,
+    });
+    console.info({ unified2 });
+    await sleep(1000);
+    await enterAddress(unified2);
+    // should only allow spending from savings
+    await elementById('AssetButton-savings').waitForDisplayed();
+    await sleep(500);
+    await tap('ContinueAmount');
+    await amt_el.waitForDisplayed();
+    await expect(amt_el).toHaveText('20 000');
+    await dragOnElement('GRAB', 'right', 0.95);
+    await elementById('SendSuccess').waitForDisplayed();
+    await tap('Close');
+    await expect(moneyText).not.toHaveText(amtAfterUnified);
+    const amtAfterUnified2 = await moneyText.getText();
+    await expectTextWithin('ActivitySpending', '8 000');
 
-    // // send to unified invoice w/ expired invoice
-    // const unified3 =
-    //   'bitcoin:bcrt1qaytrqsrgg75rtxrtr7ur6k75la8p3v95mey48z?lightning=LNBCRT1PN33T20DQQNP4QTNTQ4D2DHDYQ420HAUQF5TS7X32TNW9WGYEPQZQ6R9G69QPHW4RXPP5QU7UYXJYJA9PJV7H6JPEYEFFNZ98N686JDEAAK8AUD5AGC5X70HQSP54V5LEFATCQDEU8TLKAF6MDK3ZLU6MWUA52J4JEMD5XA85KGKMTTQ9QYYSGQCQPCXQRRSSRZJQWU6G4HMGH26EXXQYPQD8XHVWLARA66PL53V7S9CV2EE808UGDRN4APYQQQQQQQGRCQQQQLGQQQQQQGQ2QX7F74RT5SQE0KEYCU47LYMSVY2LM4QA4KLR65PPSY55M0H4VR8AN7WVM9EFVSPYJ5R8EFGVXTGVATAGFTC372VRJ3HEPSEELFZ7FQFCQ9XDU9X';
+    // send to unified invoice w/ expired invoice
+    console.info('Sending to unified invoice w/ expired invoice...');
+    const unified3 =
+      'bitcoin:bcrt1qaytrqsrgg75rtxrtr7ur6k75la8p3v95mey48z?lightning=LNBCRT1PN33T20DQQNP4QTNTQ4D2DHDYQ420HAUQF5TS7X32TNW9WGYEPQZQ6R9G69QPHW4RXPP5QU7UYXJYJA9PJV7H6JPEYEFFNZ98N686JDEAAK8AUD5AGC5X70HQSP54V5LEFATCQDEU8TLKAF6MDK3ZLU6MWUA52J4JEMD5XA85KGKMTTQ9QYYSGQCQPCXQRRSSRZJQWU6G4HMGH26EXXQYPQD8XHVWLARA66PL53V7S9CV2EE808UGDRN4APYQQQQQQQGRCQQQQLGQQQQQQGQ2QX7F74RT5SQE0KEYCU47LYMSVY2LM4QA4KLR65PPSY55M0H4VR8AN7WVM9EFVSPYJ5R8EFGVXTGVATAGFTC372VRJ3HEPSEELFZ7FQFCQ9XDU9X';
+    console.info({ unified3 });
 
-    // await enterAddress(unified3);
-    // await expect(element(by.id('AssetButton-savings'))).toBeVisible();
-    // await element(by.id('N1').withAncestor(by.id('SendAmountNumberPad'))).tap();
-    // await element(by.id('N0').withAncestor(by.id('SendAmountNumberPad'))).multiTap(4);
-    // await element(by.id('ContinueAmount')).tap();
-    // await element(by.id('GRAB')).swipe('right', 'slow', 0.95, 0.5, 0.5); // Swipe to confirm
-    // await waitFor(element(by.id('SendSuccess')))
-    //   .toBeVisible()
-    //   .withTimeout(10000);
-    // await element(by.id('Close')).tap();
-    // await waitFor(element(by.id('MoneyText').withAncestor(by.id('TotalBalance'))))
-    //   .toHaveText('98 506')
-    //   .withTimeout(10000);
+    const ln =
+      'LNBCRT1PN33T20DQQNP4QTNTQ4D2DHDYQ420HAUQF5TS7X32TNW9WGYEPQZQ6R9G69QPHW4RXPP5QU7UYXJYJA9PJV7H6JPEYEFFNZ98N686JDEAAK8AUD5AGC5X70HQSP54V5LEFATCQDEU8TLKAF6MDK3ZLU6MWUA52J4JEMD5XA85KGKMTTQ9QYYSGQCQPCXQRRSSRZJQWU6G4HMGH26EXXQYPQD8XHVWLARA66PL53V7S9CV2EE808UGDRN4APYQQQQQQQGRCQQQQLGQQQQQQGQ2QX7F74RT5SQE0KEYCU47LYMSVY2LM4QA4KLR65PPSY55M0H4VR8AN7WVM9EFVSPYJ5R8EFGVXTGVATAGFTC372VRJ3HEPSEELFZ7FQFCQ9XDU9X';
+    const dec = await lnd.decodePayReq({ payReq: ln });
+    console.info(JSON.stringify(dec, null, 2));
 
-    // // send to unified invoice w/o amount (lightning)
-    // const { paymentRequest: invoice5 } = await lnd.addInvoice();
-    // const unified4 = encode(onchainAddress, { lightning: invoice5 });
+    await sleep(1000);
+    await enterAddress(unified3);
+    await elementById('AssetButton-savings').waitForDisplayed();
+    await tap('N1');
+    for (let i = 1; i <= 4; i++) {
+      await tap('N0');
+    }
+    await tap('ContinueAmount');
+    await amt_el.waitForDisplayed();
+    await expect(amt_el).toHaveText('10 000');
+    await dragOnElement('GRAB', 'right', 0.95);
+    await elementById('SendSuccess').waitForDisplayed();
+    await tap('Close');
+    await expect(moneyText).not.toHaveText(amtAfterUnified2);
+    const amtAfterUnified3 = await moneyText.getText();
+    await expectTextWithin('ActivitySpending', '8 000');
 
-    // await enterAddress(unified4);
-    // // max amount (lightning)
+    // send to unified invoice w/o amount (lightning)
+    console.info('Sending to unified invoice w/o amount (lightning)...');
+    const { paymentRequest: invoice5 } = await lnd.addInvoice({});
+    const unified4 = encode(onchainAddress, { lightning: invoice5 });
+    console.info({ unified4 });
+    await sleep(1000);
+    await enterAddress(unified4);
+
+    // max amount (lightning)
+    await sleep(100000);
     // await expect(element(by.text('28 900'))).toBeVisible();
     // await element(by.id('AssetButton-switch')).tap();
     // // max amount (onchain)
