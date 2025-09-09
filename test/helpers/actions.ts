@@ -323,7 +323,8 @@ export async function restoreWallet(seed: string, passphrase?: string) {
   await suggestions.waitForDisplayed();
 }
 
-export async function getReceiveAddress(): Promise<string> {
+type addressType = 'bitcoin' | 'lightning';
+export async function getReceiveAddress(which:addressType = 'bitcoin' ): Promise<string> {
   await tap('Receive');
 
   const qrCode = await elementById('QRCode');
@@ -331,7 +332,22 @@ export async function getReceiveAddress(): Promise<string> {
 
   const attr = driver.isAndroid ? 'contentDescription' : 'label';
   const uri = await qrCode.getAttribute(attr);
-  const address = uri.replace(/^bitcoin:/, '').replace(/\?.*$/, '');
+
+  let address = '';
+  if (which === 'bitcoin') {
+    address = uri.replace(/^bitcoin:/, '').replace(/\?.*$/, '');
+  } else if (which === 'lightning') {
+    const query = uri.split('?')[1] ?? '';
+    const params = new URLSearchParams(query);
+    const ln = params.get('lightning');
+    if (!ln) {
+      throw new Error(`No lightning invoice found in uri: ${uri}`);
+    }
+    address = ln;
+  } else {
+    throw new Error(`Unknown address type: ${which}`);
+  }
+
   console.info({ address });
 
   return address;
@@ -353,7 +369,7 @@ export async function receiveOnchainFunds(rpc: any) {
 export async function waitForPeerConnection(
   lnd: { listPeers: () => PromiseLike<{ peers: any }> | { peers: any } },
   nodeId: string,
-  maxRetries = 2000
+  maxRetries = 20
 ) {
   let retries = 0;
 
