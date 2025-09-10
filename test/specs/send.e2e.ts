@@ -296,9 +296,17 @@ describe('@send - Send', () => {
     await sleep(2000);
     await elementById('RecipientInput').waitForDisplayed();
     await sleep(500);
-    await typeText('RecipientInput', onchainAddress);
-    await confirmInputOnKeyboard();
-    await sleep(500);
+    try {
+      await typeText('RecipientInput', onchainAddress);
+      await confirmInputOnKeyboard();
+      await elementById('AddressContinue').waitForEnabled();
+      await sleep(500);
+    } catch {
+      await typeText('RecipientInput', onchainAddress);
+      await confirmInputOnKeyboard();
+      await elementById('AddressContinue').waitForEnabled();
+      await sleep(500);
+    }
     await tap('AddressContinue');
     await elementById('AssetButton-savings').waitForDisplayed();
     await tap('N2');
