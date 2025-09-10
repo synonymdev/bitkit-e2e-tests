@@ -264,6 +264,7 @@ describe('@send - Send', () => {
     await tap('Close');
     await expect(moneyText).not.toHaveText('110 000');
     const amtAfterOnchain = await moneyText.getText();
+    console.info({ amtAfterOnchain });
     await expectTextWithin('ActivitySpending', '10 000');
 
     // send to lightning invoice
@@ -283,6 +284,7 @@ describe('@send - Send', () => {
     await tap('Close');
     await expect(moneyText).not.toHaveText(amtAfterOnchain);
     const amtAfterLightning = await moneyText.getText();
+    console.info({ amtAfterLightning });
     await expectTextWithin('ActivitySpending', '9 000');
 
     // can edit invoice on the review screen
@@ -334,6 +336,7 @@ describe('@send - Send', () => {
     await tap('Close');
     await expect(moneyText).not.toHaveText(amtAfterLightning);
     const amtAfterUnified = await moneyText.getText();
+    console.info({ amtAfterUnified });
     await expectTextWithin('ActivitySpending', '8 000');
 
     // send to unified invoice w/ amount exceeding balance(s)
@@ -359,6 +362,7 @@ describe('@send - Send', () => {
     await tap('Close');
     await expect(moneyText).not.toHaveText(amtAfterUnified);
     const amtAfterUnified2 = await moneyText.getText();
+    console.info({ amtAfterUnified2 });
     await expectTextWithin('ActivitySpending', '8 000');
 
     //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/366 ---//
@@ -394,8 +398,10 @@ describe('@send - Send', () => {
     // await expectTextWithin('ActivitySpending', '8 000');
 
     //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/366 ---//
-    const amtAfterUnified3 = amtAfterUnified2;
+    const amtAfterUnified3 = await moneyText.getText();;
+    console.info({ amtAfterUnified3 });
     const amtSavingsAfterUnified3 = await getTextUnder('ActivitySavings');
+    console.info({ amtSavingsAfterUnified3 });
 
     // send to unified invoice w/o amount (lightning)
     console.info('Sending to unified invoice w/o amount (lightning)...');
@@ -422,7 +428,9 @@ describe('@send - Send', () => {
     await tap('Close');
     await expect(moneyText).not.toHaveText(amtAfterUnified3);
     const amtAfterUnified4 = await moneyText.getText();
+    console.info({ amtAfterUnified4 });
     const amtSavingsAfterUnified4 = await getTextUnder('ActivitySavings');
+    console.info({ amtSavingsAfterUnified4 });
     await expectTextWithin('ActivitySpending', '7 000');
 
     // send to unified invoice w/o amount (switch to onchain)
@@ -457,6 +465,7 @@ describe('@send - Send', () => {
     await tap('Close');
     await expect(moneyText).not.toHaveText(amtAfterUnified4);
     const amtAfterUnified5 = await moneyText.getText();
+    console.info({ amtAfterUnified5 });
     await expectTextWithin('ActivitySpending', '7 000');
 
     // send to lightning invoice w/ amount (quickpay)
@@ -480,6 +489,7 @@ describe('@send - Send', () => {
     await tap('Close');
     await expect(moneyText).not.toHaveText(amtAfterUnified5);
     const amtAfterLightning2 = await moneyText.getText();
+    console.info({ amtAfterLightning2 });
     await expectTextWithin('ActivitySpending', '6 000');
 
     // send to unified invoice w/ amount (quickpay)
