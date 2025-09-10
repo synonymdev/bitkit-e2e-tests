@@ -218,7 +218,16 @@ describe('@send - Send', () => {
     // receive lightning funds
     // TODO: receive 50 000 instead of 10 000 after fixing https://github.com/synonymdev/bitkit-android/issues/364
     console.info('Receiving lightning funds...');
-    const receive = await getReceiveAddress('lightning');
+    await sleep(2000);
+    let receive: string;
+    try {
+      receive = await getReceiveAddress('lightning');
+    } catch {
+      await sleep(5000);
+      await swipeFullScreen('down');
+      receive = await getReceiveAddress('lightning');
+    }
+    if (!receive) throw new Error('No lightning invoice received');
     await swipeFullScreen('down');
 
     // const dec = await lnd.decodePayReq({ payReq: receive });
