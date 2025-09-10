@@ -223,8 +223,8 @@ describe('@send - Send', () => {
     try {
       receive = await getReceiveAddress('lightning');
     } catch {
-      await sleep(5000);
       await swipeFullScreen('down');
+      await sleep(20_000);
       receive = await getReceiveAddress('lightning');
     }
     if (!receive) throw new Error('No lightning invoice received');
