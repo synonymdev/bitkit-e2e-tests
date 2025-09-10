@@ -435,6 +435,7 @@ describe('@settings - Settings', () => {
       }
 
       // switch back to default
+      await elementById('ResetToDefault').waitForEnabled();
       await tap('ResetToDefault');
       await tap('ConnectToHost');
       await elementById('Connected').waitForDisplayed();
