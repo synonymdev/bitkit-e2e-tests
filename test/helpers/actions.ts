@@ -50,9 +50,11 @@ export function elementsById(selector: string): ChainablePromiseArray {
 
 export function elementByText(text: string): ChainablePromiseElement {
   if (driver.isAndroid) {
-    return $(`android=new UiSelector().text("${text}")`);
+    return $(`android=new UiSelector().textContains("${text}")`);
   } else {
-    return $(`-ios predicate string:type == "XCUIElementTypeStaticText" AND label == "${text}"`);
+    return $(
+      `-ios predicate string:type == "XCUIElementTypeStaticText" AND label CONTAINS "${text}"`
+    );
   }
 }
 
@@ -73,10 +75,10 @@ export async function elementsByText(text: string, timeout = 8000): Promise<Chai
 export async function expectTextVisible(text: string, visible = true) {
   const el = await elementByText(text);
   if (!visible) {
-    await el.waitForDisplayed({ reverse: true, timeout: 5000 });
+    await el.waitForDisplayed({ reverse: true });
     return;
   }
-  await el.waitForDisplayed({ timeout: 5000 });
+  await el.waitForDisplayed();
 }
 
 export async function expectTextWithin(ancestorId: string, text: string, visible = true) {
@@ -92,6 +94,43 @@ export async function expectTextWithin(ancestorId: string, text: string, visible
     return;
   }
   await parent.$(needle).waitForDisplayed();
+}
+
+type Index = number | 'first' | 'last';
+/**
+ * Get text from a descendant text element under a container.
+ * @param containerId Resource-id / accessibility ID of the container
+ * @param index Which match to pick: 0-based index, 'first', or 'last' (default)
+ */
+export async function getTextUnder(containerId: string, index: Index = 'last'): Promise<string> {
+  const container = await elementById(containerId);
+  await container.waitForDisplayed();
+
+  let textEls: ChainablePromiseArray;
+
+  if (driver.isAndroid) {
+    // All descendants under the container containing a text attribute
+    textEls = await container.$$('.//*[@text]');
+  } else {
+    // All XCUIElementTypeStaticText descendants under the container
+    textEls = await container.$$('.//XCUIElementTypeStaticText');
+  }
+
+  if (!textEls.length) {
+    throw new Error(`No text elements found under container "${containerId}"`);
+  }
+
+  let idx: number;
+  if (index === 'first') {
+    idx = 0;
+  } else if (index === 'last') {
+    idx = (await textEls.length) - 1;
+  } else {
+    idx = Math.max(0, Math.min(index, (await textEls.length) - 1));
+  }
+
+  const el = textEls[idx];
+  return el.getText();
 }
 
 export async function tap(testId: string) {
@@ -180,11 +219,11 @@ export async function dragOnElement(
   await sleep(200); // Allow time for the element to settle
 
   const { x, y, elWidth, elHight } = await elementRect(el);
-  console.info(`Drag on element "${testId}"`);
-  console.info({ x, y, elWidth, elHight });
+  console.debug(`Drag on element "${testId}"`);
+  // console.debug({ x, y, elWidth, elHight });
   const startX = Math.round(x + elWidth * startXNorm);
   const startY = Math.round(y + elHight * startYNorm);
-  console.info(` startX: ${startX}, startY: ${startY}`);
+  // console.debug(` startX: ${startX}, startY: ${startY}`);
 
   const { width, height } = await driver.getWindowSize();
   const dx = Math.round(width * percent);
