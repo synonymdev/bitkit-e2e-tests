@@ -4,6 +4,7 @@ import { encode } from 'bip21';
 
 import initElectrum from '../helpers/electrum';
 import {
+    attemptRefreshOnHomeScreen,
   completeOnboarding,
   dragOnElement,
   elementById,
@@ -226,9 +227,9 @@ describe('@send - Send', () => {
       console.warn('No lightning invoice received yet, swiping down and trying again...');
       await swipeFullScreen('down');
       await sleep(10000);
-      await dragOnElement('ActivitySavings', 'down', 0.9); // refresh
+      await attemptRefreshOnHomeScreen();
       await sleep(10000);
-      await dragOnElement('ActivitySavings', 'down', 0.9); // refresh
+      await attemptRefreshOnHomeScreen();
       await sleep(1000);
       receive = await getReceiveAddress('lightning');
     }

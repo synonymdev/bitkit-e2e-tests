@@ -15,6 +15,7 @@ import {
   elementByIdWithin,
   getTextUnder,
   mineBlocks,
+  attemptRefreshOnHomeScreen,
 } from '../helpers/actions';
 import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
@@ -173,6 +174,15 @@ describe('@boost - Boost', () => {
     await mineBlocks(rpc, 1);
 
     // check activity item after mine
+    // TEMP: refresh until proper events available
+    await tap('NavigationClose');
+    await sleep(500);
+    await swipeFullScreen('down');
+    await attemptRefreshOnHomeScreen();
+    await swipeFullScreen('up');
+    await elementById('ActivityShort-0').waitForDisplayed();
+    await tap('ActivityShort-0');
+    // TEMP: refresh until proper events available
     await elementById('StatusConfirmed').waitForDisplayed();
   });
 });

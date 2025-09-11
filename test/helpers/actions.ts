@@ -517,6 +517,13 @@ export async function deleteAllDefaultWidgets() {
   await elementById('BlocksWidget').waitForDisplayed({ reverse: true });
 }
 
+export async function attemptRefreshOnHomeScreen() {
+  await swipeFullScreen('down');
+  await sleep(2000); // wait for the app to settle
+  await dragOnElement('ActivitySavings', 'down', 0.8);
+  await sleep(2000); // wait for the app to settle
+}
+
 export async function waitForBackup() {
   await tap('HeaderMenu');
   await tap('DrawerSettings');
