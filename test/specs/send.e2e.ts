@@ -398,7 +398,7 @@ describe('@send - Send', () => {
     // await expectTextWithin('ActivitySpending', '8 000');
 
     //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/366 ---//
-    const amtAfterUnified3 = await moneyText.getText();;
+    const amtAfterUnified3 = await moneyText.getText();
     console.info({ amtAfterUnified3 });
     const amtSavingsAfterUnified3 = await getTextUnder('ActivitySavings');
     console.info({ amtSavingsAfterUnified3 });
