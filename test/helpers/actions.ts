@@ -392,11 +392,17 @@ export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise
   return address;
 }
 
-export async function receiveOnchainFunds(rpc: any) {
+export async function mineBlocks(rpc: any, blocks: number = 1) {
+  for (let i = 0; i < blocks; i++) {
+    await rpc.generateToAddress(1, await rpc.getNewAddress());
+  }
+}
+
+export async function receiveOnchainFunds(rpc: any, blocksToMine: number = 1) {
   // receive some first
   const address = await getReceiveAddress();
   await rpc.sendToAddress(address, '0.001');
-  await rpc.generateToAddress(1, await rpc.getNewAddress());
+  await mineBlocks(rpc, blocksToMine);
   // https://github.com/synonymdev/bitkit-android/issues/268
   // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
   // await elementById('ReceivedTransaction').waitForDisplayed();
