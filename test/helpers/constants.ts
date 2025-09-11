@@ -21,3 +21,9 @@ export function getAppPath(): string {
 export const bitcoinURL = 'http://polaruser:polarpass@127.0.0.1:43782';
 export const electrumHost = '127.0.0.1';
 export const electrumPort = 60001;
+
+export const lndConfig = {
+  server: 'localhost:10009',
+  tls: `${__dirname}/../../docker/lnd/tls.cert`,
+  macaroonPath: `${__dirname}/../../docker/lnd/data/chain/bitcoin/regtest/admin.macaroon`,
+};

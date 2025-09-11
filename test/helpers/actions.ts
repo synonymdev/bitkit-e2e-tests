@@ -50,9 +50,11 @@ export function elementsById(selector: string): ChainablePromiseArray {
 
 export function elementByText(text: string): ChainablePromiseElement {
   if (driver.isAndroid) {
-    return $(`android=new UiSelector().text("${text}")`);
+    return $(`android=new UiSelector().textContains("${text}")`);
   } else {
-    return $(`-ios predicate string:type == "XCUIElementTypeStaticText" AND label == "${text}"`);
+    return $(
+      `-ios predicate string:type == "XCUIElementTypeStaticText" AND label CONTAINS "${text}"`
+    );
   }
 }
 
@@ -73,10 +75,10 @@ export async function elementsByText(text: string, timeout = 8000): Promise<Chai
 export async function expectTextVisible(text: string, visible = true) {
   const el = await elementByText(text);
   if (!visible) {
-    await el.waitForDisplayed({ reverse: true, timeout: 5000 });
+    await el.waitForDisplayed({ reverse: true });
     return;
   }
-  await el.waitForDisplayed({ timeout: 5000 });
+  await el.waitForDisplayed();
 }
 
 export async function expectTextWithin(ancestorId: string, text: string, visible = true) {
@@ -92,6 +94,43 @@ export async function expectTextWithin(ancestorId: string, text: string, visible
     return;
   }
   await parent.$(needle).waitForDisplayed();
+}
+
+type Index = number | 'first' | 'last';
+/**
+ * Get text from a descendant text element under a container.
+ * @param containerId Resource-id / accessibility ID of the container
+ * @param index Which match to pick: 0-based index, 'first', or 'last' (default)
+ */
+export async function getTextUnder(containerId: string, index: Index = 'last'): Promise<string> {
+  const container = await elementById(containerId);
+  await container.waitForDisplayed();
+
+  let textEls: ChainablePromiseArray;
+
+  if (driver.isAndroid) {
+    // All descendants under the container containing a text attribute
+    textEls = await container.$$('.//*[@text]');
+  } else {
+    // All XCUIElementTypeStaticText descendants under the container
+    textEls = await container.$$('.//XCUIElementTypeStaticText');
+  }
+
+  if (!textEls.length) {
+    throw new Error(`No text elements found under container "${containerId}"`);
+  }
+
+  let idx: number;
+  if (index === 'first') {
+    idx = 0;
+  } else if (index === 'last') {
+    idx = (await textEls.length) - 1;
+  } else {
+    idx = Math.max(0, Math.min(index, (await textEls.length) - 1));
+  }
+
+  const el = textEls[idx];
+  return el.getText();
 }
 
 export async function tap(testId: string) {
@@ -180,11 +219,11 @@ export async function dragOnElement(
   await sleep(200); // Allow time for the element to settle
 
   const { x, y, elWidth, elHight } = await elementRect(el);
-  console.info(`Drag on element "${testId}"`);
-  console.info({ x, y, elWidth, elHight });
+  console.debug(`Drag on element "${testId}"`);
+  // console.debug({ x, y, elWidth, elHight });
   const startX = Math.round(x + elWidth * startXNorm);
   const startY = Math.round(y + elHight * startYNorm);
-  console.info(` startX: ${startX}, startY: ${startY}`);
+  // console.debug(` startX: ${startX}, startY: ${startY}`);
 
   const { width, height } = await driver.getWindowSize();
   const dx = Math.round(width * percent);
@@ -323,7 +362,8 @@ export async function restoreWallet(seed: string, passphrase?: string) {
   await suggestions.waitForDisplayed();
 }
 
-export async function getReceiveAddress(): Promise<string> {
+type addressType = 'bitcoin' | 'lightning';
+export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise<string> {
   await tap('Receive');
 
   const qrCode = await elementById('QRCode');
@@ -331,10 +371,91 @@ export async function getReceiveAddress(): Promise<string> {
 
   const attr = driver.isAndroid ? 'contentDescription' : 'label';
   const uri = await qrCode.getAttribute(attr);
-  const address = uri.replace(/^bitcoin:/, '').replace(/\?.*$/, '');
+
+  let address = '';
+  if (which === 'bitcoin') {
+    address = uri.replace(/^bitcoin:/, '').replace(/\?.*$/, '');
+  } else if (which === 'lightning') {
+    const query = uri.split('?')[1] ?? '';
+    const params = new URLSearchParams(query);
+    const ln = params.get('lightning');
+    if (!ln) {
+      throw new Error(`No lightning invoice found in uri: ${uri}`);
+    }
+    address = ln;
+  } else {
+    throw new Error(`Unknown address type: ${which}`);
+  }
+
   console.info({ address });
 
   return address;
+}
+
+export async function receiveOnchainFunds(rpc: any) {
+  // receive some first
+  const address = await getReceiveAddress();
+  await rpc.sendToAddress(address, '0.001');
+  await rpc.generateToAddress(1, await rpc.getNewAddress());
+  // https://github.com/synonymdev/bitkit-android/issues/268
+  // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
+  // await elementById('ReceivedTransaction').waitForDisplayed();
+  await swipeFullScreen('down');
+  const moneyText = (await elementsById('MoneyText'))[1];
+  await expect(moneyText).toHaveText('100 000');
+}
+
+export async function waitForPeerConnection(
+  lnd: { listPeers: () => PromiseLike<{ peers: any }> | { peers: any } },
+  nodeId: string,
+  maxRetries = 20
+) {
+  let retries = 0;
+
+  while (retries < maxRetries) {
+    await sleep(1000);
+    const { peers } = await lnd.listPeers();
+    console.info({ peers });
+    if (peers?.some((p: { pubKey: any }) => p.pubKey === nodeId)) {
+      break;
+    }
+    retries++;
+  }
+
+  if (retries === maxRetries) {
+    throw new Error('Peer not connected');
+  }
+}
+
+export async function waitForActiveChannel(
+  lnd: {
+    listChannels: (arg0: {
+      peer: Buffer;
+      activeOnly: boolean;
+    }) => PromiseLike<{ channels: any }> | { channels: any };
+  },
+  nodeId: string,
+  maxRetries = 20
+) {
+  let retries = 0;
+
+  while (retries < maxRetries) {
+    await sleep(1000);
+    const { channels } = await lnd.listChannels({
+      peer: Buffer.from(nodeId, 'hex'),
+      activeOnly: true,
+    });
+
+    if (channels?.length > 0) {
+      break;
+    }
+
+    retries++;
+  }
+
+  if (retries === maxRetries) {
+    throw new Error('Channel not active');
+  }
 }
 
 export async function completeOnboarding({ isFirstTime = true } = {}) {
