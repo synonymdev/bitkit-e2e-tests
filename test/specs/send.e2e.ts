@@ -4,7 +4,7 @@ import { encode } from 'bip21';
 
 import initElectrum from '../helpers/electrum';
 import {
-    attemptRefreshOnHomeScreen,
+  attemptRefreshOnHomeScreen,
   completeOnboarding,
   dragOnElement,
   elementById,
