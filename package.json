@@ -1,8 +1,7 @@
 {
   "name": "bitkit-e2e-tests",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "type": "module",
   "scripts": {
     "e2e:android": "PLATFORM=android wdio run ./wdio.conf.ts",
     "e2e:ios": "PLATFORM=ios wdio run ./wdio.conf.ts",
@@ -26,6 +25,7 @@
     "eslint": "^9.31.0",
     "prettier": "^3.6.2",
     "typescript": "^5.8.3",
+    "typescript-eslint": "^8.43.0",
     "wdio-wait-for": "^3.1.0",
     "webdriverio": "^9.18.1"
   },
