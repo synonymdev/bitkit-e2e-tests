@@ -1,7 +1,6 @@
 {
   "name": "bitkit-e2e-tests",
   "version": "1.0.0",
-  "type": "module",
   "scripts": {
     "e2e:android": "PLATFORM=android wdio run ./wdio.conf.ts",
     "e2e:ios": "PLATFORM=ios wdio run ./wdio.conf.ts",
