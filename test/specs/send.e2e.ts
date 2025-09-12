@@ -8,6 +8,7 @@ import {
   completeOnboarding,
   dragOnElement,
   elementById,
+  enterAddress,
   elementByIdWithin,
   elementsById,
   expectTextVisible,
@@ -23,17 +24,6 @@ import {
 import { bitcoinURL, lndConfig } from '../helpers/constants';
 import { reinstallApp } from '../helpers/setup';
 import { confirmInputOnKeyboard, tap, typeText } from '../helpers/actions';
-
-async function enterAddress(address: string) {
-  await tap('Send');
-  await sleep(700);
-  await tap('RecipientManual');
-  await typeText('RecipientInput', address);
-  await confirmInputOnKeyboard();
-  // wait for keyboard to hide
-  await sleep(1000);
-  await tap('AddressContinue');
-}
 
 describe('@send - Send', () => {
   let electrum: { waitForSync: any; stop: any };
