@@ -327,7 +327,7 @@ export const config: WebdriverIO.Config = {
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const testNameRaw = `${test.parent || 'unknown'}_${test.title}`;
-    const testName = testNameRaw.replace(/\s+/g, '_').replace(/[^\w\-]/g, '');
+    const testName = testNameRaw.replace(/\s+/g, '_').replace(/[^\w-]/g, '');
     const testDir = path.join(__dirname, 'artifacts', testName);
 
     // Ensure per-test directory exists
