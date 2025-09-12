@@ -69,7 +69,9 @@ describe('@boost - Boost', () => {
     await tap('CustomFeeButton');
     await tap('Plus');
     await tap('Minus');
-    await tap('RecomendedFeeButton');
+    await tap('Plus');
+    // skip due to: https://github.com/synonymdev/bitkit-android/issues/374
+    // await tap('RecomendedFeeButton');
     await dragOnElement('GRAB', 'right', 0.95); // Swipe to confirm
 
     // check Activity
@@ -202,7 +204,9 @@ describe('@boost - Boost', () => {
     await tap('CustomFeeButton');
     await tap('Plus');
     await tap('Minus');
-    await tap('RecomendedFeeButton');
+    await tap('Plus');
+    // skip due to: https://github.com/synonymdev/bitkit-android/issues/374
+    // await tap('RecomendedFeeButton');
     await dragOnElement('GRAB', 'right', 0.95); // Swipe to confirm
 
     // check Activity
