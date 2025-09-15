@@ -502,6 +502,17 @@ export async function toggleWidgets() {
   await tap('NavigationClose');
 }
 
+export async function enterAddress(address: string) {
+  await tap('Send');
+  await sleep(700);
+  await tap('RecipientManual');
+  await typeText('RecipientInput', address);
+  await confirmInputOnKeyboard();
+  // wait for keyboard to hide
+  await sleep(1000);
+  await tap('AddressContinue');
+}
+
 export async function deleteAllDefaultWidgets() {
   await tap('WidgetsEdit');
   for (const w of ['Bitcoin Price', 'Bitcoin Blocks', 'Bitcoin Headlines']) {

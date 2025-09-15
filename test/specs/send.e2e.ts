@@ -8,6 +8,7 @@ import {
   completeOnboarding,
   dragOnElement,
   elementById,
+  enterAddress,
   elementByIdWithin,
   elementsById,
   expectTextVisible,
@@ -23,17 +24,6 @@ import {
 import { bitcoinURL, lndConfig } from '../helpers/constants';
 import { reinstallApp } from '../helpers/setup';
 import { confirmInputOnKeyboard, tap, typeText } from '../helpers/actions';
-
-async function enterAddress(address: string) {
-  await tap('Send');
-  await sleep(700);
-  await tap('RecipientManual');
-  await typeText('RecipientInput', address);
-  await confirmInputOnKeyboard();
-  // wait for keyboard to hide
-  await sleep(1000);
-  await tap('AddressContinue');
-}
 
 describe('@send - Send', () => {
   let electrum: { waitForSync: any; stop: any };
@@ -479,8 +469,7 @@ describe('@send - Send', () => {
     await tap('DrawerSettings');
     await tap('GeneralSettings');
     await tap('QuickpaySettings');
-    // TODO: uncomment after: https://github.com/synonymdev/bitkit-android/issues/367
-    // await tap('QuickpayIntro-button');
+    await tap('QuickpayIntro-button');
     await tap('QuickpayToggle');
     await tap('NavigationClose');
 

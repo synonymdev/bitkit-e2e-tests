@@ -1,10 +1,10 @@
 // eslint.config.js (ESM, ESLint v9)
-import js from "@eslint/js";
-import tseslint from "typescript-eslint";
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
 
 export default [
   // Ignore junk
-  { ignores: ["node_modules/", "dist/", "build/", ".git/", ".cache/"] },
+  { ignores: ['node_modules/', 'dist/', 'build/', '.git/', '.cache/'] },
 
   // Base JS rules
   js.configs.recommended,
@@ -15,7 +15,7 @@ export default [
 
   // Project-specific tweaks
   {
-    files: ["**/*.{ts,tsx}"],
+    files: ['**/*.{ts,tsx}'],
     languageOptions: {
       // For type-aware rules, uncomment and configure:
       // parserOptions: {
@@ -24,7 +24,7 @@ export default [
       // },
     },
     rules: {
-      "@typescript-eslint/no-explicit-any": "off",
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
 ];
