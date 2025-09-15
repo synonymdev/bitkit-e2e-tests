@@ -70,8 +70,7 @@ async function modernDenominationChecks(mode: NumberpadMode) {
   for (let i = 0; i < 8; i++) {
     await tap('NRemove');
   }
-  await expectTextVisible('0');
-  await expectTextVisible('.00');
+  await expectTextVisible('0.00');
 
   await tap('N0');
   await tap('N0');
@@ -90,17 +89,14 @@ async function modernDenominationChecks(mode: NumberpadMode) {
 async function classicDenominationChecks(mode: NumberpadMode) {
   // Unit set to BTC
   await tap('N1');
-  await expectTextVisible('1');
-  await expectTextVisible('.00000000');
+  await expectTextVisible('1.00000000');
 
   // can only enter one decimal symbol
   await tap('NDecimal');
   await tap('NDecimal');
-  await expectTextVisible('1.');
-  await expectTextVisible('00000000');
+  await expectTextVisible('1.00000000');
   await tap('NRemove');
-  await expectTextVisible('1');
-  await expectTextVisible('.00000000');
+  await expectTextVisible('1.00000000');
   await tap('NDecimal');
 
   // reset to 0
@@ -114,8 +110,7 @@ async function classicDenominationChecks(mode: NumberpadMode) {
   await tap('N0');
   await tap('N6');
   await tap('N9');
-  await expectTextVisible('4.2069');
-  await expectTextVisible('0000');
+  await expectTextVisible('4.20690000');
 
   // Switch to USD and back
   await tap(`${mode}NumberPadUnit`);
@@ -123,8 +118,7 @@ async function classicDenominationChecks(mode: NumberpadMode) {
   await tap(`${mode}NumberPadUnit`);
 
   // still there
-  await expectTextVisible('4.2069');
-  await expectTextVisible('0000');
+  await expectTextVisible('4.20690000');
 }
 async function switchToClassicDenomination() {
   await tap('HeaderMenu');
