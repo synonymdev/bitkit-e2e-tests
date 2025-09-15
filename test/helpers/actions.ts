@@ -141,6 +141,13 @@ export async function tap(testId: string) {
   await sleep(50);
 }
 
+export async function multiTap(testId: string, count: number) {
+  for (let i = 1; i <= count; i++) {
+    await tap(testId);
+    await sleep(50);
+  }
+}
+
 export async function typeText(testId: string, text: string) {
   const el = await elementById(testId);
   await el.waitForDisplayed();
