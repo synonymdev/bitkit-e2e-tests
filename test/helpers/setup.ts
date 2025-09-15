@@ -1,7 +1,7 @@
 import { elementsById, sleep, tap } from './actions';
 import { getAppId, getAppPath } from './constants';
 
-export async function launchFreshApp({tryHandleAlert = true} = {}) {
+export async function launchFreshApp({ tryHandleAlert = true } = {}) {
   const appId = getAppId();
 
   await driver.terminateApp(appId);
