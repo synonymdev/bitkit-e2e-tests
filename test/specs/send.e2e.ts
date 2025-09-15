@@ -469,8 +469,7 @@ describe('@send - Send', () => {
     await tap('DrawerSettings');
     await tap('GeneralSettings');
     await tap('QuickpaySettings');
-    // TODO: uncomment after: https://github.com/synonymdev/bitkit-android/issues/367
-    // await tap('QuickpayIntro-button');
+    await tap('QuickpayIntro-button');
     await tap('QuickpayToggle');
     await tap('NavigationClose');
 
