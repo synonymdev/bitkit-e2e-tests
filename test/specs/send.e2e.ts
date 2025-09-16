@@ -20,6 +20,7 @@ import {
   swipeFullScreen,
   waitForActiveChannel,
   waitForPeerConnection,
+  multiTap,
 } from '../helpers/actions';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
 import { reinstallApp } from '../helpers/setup';
@@ -246,9 +247,7 @@ describe('@send - Send', () => {
     await enterAddress(onchainAddress);
     await elementById('AssetButton-savings').waitForDisplayed();
     await tap('N1');
-    for (let i = 1; i <= 4; i++) {
-      await tap('N0');
-    }
+    await multiTap('N0', 4);
     await tap('ContinueAmount');
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
@@ -266,9 +265,7 @@ describe('@send - Send', () => {
     await enterAddress(invoice1);
     await elementById('AssetButton-spending').waitForDisplayed();
     await tap('N1');
-    for (let i = 1; i <= 3; i++) {
-      await tap('N0');
-    }
+    await multiTap('N0', 3);
     await tap('ContinueAmount');
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
@@ -303,9 +300,7 @@ describe('@send - Send', () => {
     await tap('AddressContinue');
     await elementById('AssetButton-savings').waitForDisplayed();
     await tap('N2');
-    for (let i = 1; i <= 4; i++) {
-      await tap('N0');
-    }
+    await multiTap('N0', 4);
     await tap('ContinueAmount');
     await amt_el.waitForDisplayed();
     await expect(amt_el).toHaveText('20 000');
@@ -375,9 +370,7 @@ describe('@send - Send', () => {
     // await enterAddress(unified3);
     // await elementById('AssetButton-savings').waitForDisplayed();
     // await tap('N1');
-    // for (let i = 1; i <= 4; i++) {
-    //   await tap('N0');
-    // }
+    // await multiTap('N0', 4);
     // await tap('ContinueAmount');
     // await amt_el.waitForDisplayed();
     // await expect(amt_el).toHaveText('10 000');
@@ -408,9 +401,7 @@ describe('@send - Send', () => {
     await expectTextVisible(amtSavingsAfterUnified3);
     await tap('AssetButton-switch');
     await tap('N1');
-    for (let i = 1; i <= 3; i++) {
-      await tap('N0');
-    }
+    await multiTap('N0', 3);
     await tap('ContinueAmount');
     await amt_el.waitForDisplayed();
     await expect(amt_el).toHaveText('1 000');
@@ -443,13 +434,9 @@ describe('@send - Send', () => {
     await tap('ContinueAmount');
     await expectTextVisible(amtSavingsAfterUnified4);
     await tap('NavigationBack');
-    for (let i = 1; i <= 5; i++) {
-      await tap('NRemove');
-    }
+    await multiTap('NRemove', 5);
     await tap('N1');
-    for (let i = 1; i <= 4; i++) {
-      await tap('N0');
-    }
+    await multiTap('N0', 4);
     await tap('ContinueAmount');
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();

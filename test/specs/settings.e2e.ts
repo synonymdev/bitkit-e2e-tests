@@ -12,6 +12,7 @@ import {
   getReceiveAddress,
   acceptAppNotificationAlert,
   confirmInputOnKeyboard,
+  multiTap,
 } from '../helpers/actions';
 import { electrumHost, electrumPort } from '../helpers/constants';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
@@ -502,16 +503,12 @@ describe('@settings - Settings', () => {
       await tap('DrawerSettings');
       await elementById('DevSettings').waitForDisplayed({ reverse: true });
 
-      for (let i = 1; i <= 5; i++) {
-        await tap('DevOptions');
-      }
+      await multiTap('DevOptions', 5);
       await tap('DevSettings');
       await sleep(1000);
       await tap('NavigationBack');
 
-      for (let i = 1; i <= 5; i++) {
-        await tap('DevOptions');
-      }
+      await multiTap('DevOptions', 5);
       await elementById('DevSettings').waitForDisplayed({ reverse: true });
     });
   });

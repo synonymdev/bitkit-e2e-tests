@@ -79,6 +79,7 @@ describe('@boost - Boost', () => {
     await expect(elementById('ActivityShort-2')).not.toBeDisplayed();
 
     // orig tx still there
+    await swipeFullScreen('up');
     await tap('ActivityShort-1');
     await expectTextVisible('100 000');
     await elementById('BoostedButton').waitForDisplayed();
