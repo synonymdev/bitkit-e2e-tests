@@ -22,12 +22,14 @@ describe('@numberpad - NumberPad', () => {
       await tap('Receive');
       await tap('SpecifyInvoiceButton');
       await tap('ReceiveNumberPadTextField');
+      await sleep(700);
       await modernDenominationChecks('Receive');
     });
 
     it('@numberpad_2 - Send: Can enter amounts in modern denomination', async () => {
       const address = 'bcrt1q4jjfydszdxw8wpk69cyzkd77tm32uvfs0dvsfs';
       await enterAddress(address);
+      await sleep(700);
       await modernDenominationChecks('Send');
     });
   });
@@ -41,12 +43,14 @@ describe('@numberpad - NumberPad', () => {
       await tap('Receive');
       await tap('SpecifyInvoiceButton');
       await tap('ReceiveNumberPadTextField');
+      await sleep(700);
       await classicDenominationChecks('Receive');
     });
 
     it('@numberpad_4 - Send: Can enter amounts in classic denomination', async () => {
       const address = 'bcrt1q4jjfydszdxw8wpk69cyzkd77tm32uvfs0dvsfs';
       await enterAddress(address);
+      await sleep(700);
       await classicDenominationChecks('Send');
     });
   });
