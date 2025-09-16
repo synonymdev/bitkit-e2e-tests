@@ -10,7 +10,6 @@ import {
   elementById,
   enterAddress,
   elementByIdWithin,
-  elementsById,
   expectTextVisible,
   expectTextWithin,
   getReceiveAddress,
@@ -235,7 +234,7 @@ describe('@send - Send', () => {
     await tap('ReceivedTransactionButton');
     await sleep(500);
 
-    const totalBalance = await elementByIdWithin('TotalBalance-primary','MoneyText');
+    const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     await expect(totalBalance).toHaveText('110 000'); // 100k onchain + 10k lightning
     await expectTextWithin('ActivitySpending', '10 000');
 
