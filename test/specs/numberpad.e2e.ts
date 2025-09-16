@@ -2,6 +2,7 @@ import {
   completeOnboarding,
   enterAddress,
   expectTextVisible,
+  multiTap,
   sleep,
   tap,
 } from '../helpers/actions';
@@ -71,9 +72,7 @@ async function modernDenominationChecks(mode: NumberpadMode) {
   // Switch to USD
   await tap(`${mode}NumberPadUnit`);
   // reset to 0
-  for (let i = 0; i < 8; i++) {
-    await tap('NRemove');
-  }
+  await multiTap('NRemove', 8);
   await expectTextVisible('0.00');
 
   await tap('N0');
@@ -104,9 +103,7 @@ async function classicDenominationChecks(mode: NumberpadMode) {
   await tap('NDecimal');
 
   // reset to 0
-  for (let i = 0; i < 2; i++) {
-    await tap('NRemove');
-  }
+  await multiTap('NRemove', 2);
   await expectTextVisible('0.00000000');
   await tap('N4');
   await tap('NDecimal');
