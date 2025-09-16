@@ -142,9 +142,11 @@ export async function tap(testId: string) {
 }
 
 export async function multiTap(testId: string, count: number) {
+  await elementById(testId).waitForDisplayed();
+  await sleep(200); // Allow time for the element to settle
   for (let i = 1; i <= count; i++) {
     await tap(testId);
-    await sleep(50);
+    await sleep(200);
   }
 }
 

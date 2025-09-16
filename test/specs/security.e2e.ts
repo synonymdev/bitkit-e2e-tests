@@ -42,6 +42,9 @@ describe('@security - Security And Privacy', () => {
     await electrum?.waitForSync();
   });
 
+  const MAX_ATTEMPTS_BEFORE_LAST = 7;
+  const PIN_LENGTH = 4;
+
   it('@security_1 - Can setup PIN', async () => {
     // test plan:
     // - set up PIN
@@ -57,11 +60,11 @@ describe('@security - Security And Privacy', () => {
     await tap('SecuritySettings');
     await tap('PINCode');
     await tap('SecureWallet-button-continue');
-    await multiTap('N1', 4); // enter PIN
-    await multiTap('N2', 4); // retype wrong PIN
+    await multiTap('N1', PIN_LENGTH); // enter PIN
+    await multiTap('N2', PIN_LENGTH); // retype wrong PIN
     await elementById('WrongPIN').waitForDisplayed(); // WrongPIN warning should appear
     await sleep(1000);
-    await multiTap('N1', 4); // enter PIN
+    await multiTap('N1', PIN_LENGTH); // enter PIN
     await tap('SkipButton'); // skip Biometrics for now
     await tap('ToggleBioForPayments');
     await tap('OK');
@@ -70,8 +73,8 @@ describe('@security - Security And Privacy', () => {
     // - login with PIN
     await launchFreshApp({ tryHandleAlert: false });
     await elementById('PinPad').waitForDisplayed();
-    await sleep(1000); 
-    await multiTap('N1', 4);
+    await sleep(1000);
+    await multiTap('N1', PIN_LENGTH);
     await elementById('TotalBalance').waitForDisplayed();
 
     // receive
@@ -86,7 +89,7 @@ describe('@security - Security And Privacy', () => {
     await dragOnElement('GRAB', 'right', 0.95);
     await expectTextVisible('Enter PIN Code');
     await sleep(1000);
-    await multiTap('N1', 4);
+    await multiTap('N1', PIN_LENGTH);
     await elementById('SendSuccess').waitForDisplayed();
     await tap('Close');
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
@@ -97,21 +100,22 @@ describe('@security - Security And Privacy', () => {
     await tap('DrawerSettings');
     await tap('SecuritySettings');
     await tap('PINChange');
-    await multiTap('N3', 4);
+    await multiTap('N3', PIN_LENGTH);
     await elementById('AttemptsRemaining').waitForDisplayed();
     await sleep(1000);
-    await multiTap('N1', 4);
-    await multiTap('N2', 4);
-    await multiTap('N9', 4); // wrong new pin in the confirmation
+    await multiTap('N1', PIN_LENGTH); // correct current PIN
+    await multiTap('N2', PIN_LENGTH); // new pin
+    await sleep(1000);
+    await multiTap('N9', PIN_LENGTH); // wrong new pin in the confirmation
     await elementById('WrongPIN').waitForDisplayed();
     await sleep(1000);
-    await multiTap('N2', 4); // correct new pin in the confirmation
+    await multiTap('N2', PIN_LENGTH); // correct new pin in the confirmation
     await tap('OK');
 
     await launchFreshApp({ tryHandleAlert: false });
     await elementById('PinPad').waitForDisplayed();
     await sleep(1000);
-    await multiTap('N2', 4);
+    await multiTap('N2', PIN_LENGTH);
     await elementById('TotalBalance').waitForDisplayed();
 
     // disable PIN, restart the app, it should not ask for it
@@ -120,7 +124,7 @@ describe('@security - Security And Privacy', () => {
     await tap('SecuritySettings');
     await tap('PINCode');
     await tap('DisablePin');
-    await multiTap('N2', 4);
+    await multiTap('N2', PIN_LENGTH);
     await sleep(1000);
     await launchFreshApp({ tryHandleAlert: false });
     await elementById('TotalBalance').waitForDisplayed();
@@ -131,8 +135,8 @@ describe('@security - Security And Privacy', () => {
     await tap('SecuritySettings');
     await tap('PINCode');
     await tap('SecureWallet-button-continue');
-    await multiTap('N1', 4); // enter PIN
-    await multiTap('N1', 4); // retype PIN
+    await multiTap('N1', PIN_LENGTH); // enter PIN
+    await multiTap('N1', PIN_LENGTH); // retype PIN
     await tap('SkipButton'); // skip Biometrics for now
     await tap('OK');
     await tap('NavigationClose');
@@ -141,15 +145,16 @@ describe('@security - Security And Privacy', () => {
     // now lets restart the app and fail to enter correct PIN 8 times
     await launchFreshApp({ tryHandleAlert: false });
     await elementById('PinPad').waitForDisplayed();
-    for (let i = 1; i <= 6; i++) {
-      await multiTap('N9', 4); // wrong PIN
-      await elementById('AttemptsRemaining').waitForDisplayed();
+    for (let i = 1; i <= MAX_ATTEMPTS_BEFORE_LAST; i++) {
+      await multiTap('N9', PIN_LENGTH); // wrong PIN
+      if (i < MAX_ATTEMPTS_BEFORE_LAST) {
+        await elementById('AttemptsRemaining').waitForDisplayed();
+      } else {
+        await elementById('LastAttempt').waitForDisplayed();
+      }
       await sleep(1000);
     }
-    await multiTap('N5', 4); // wrong PIN
-    await elementById('LastAttempt').waitForDisplayed();
-    await sleep(1000);
-    await multiTap('N7', 4); // wrong PIN
+    await multiTap('N7', PIN_LENGTH); // wrong PIN on the last attempt
     await sleep(1000);
     // app should reset itself and show onboarding
     await elementById('TOS').waitForDisplayed();
