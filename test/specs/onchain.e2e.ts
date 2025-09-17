@@ -12,6 +12,7 @@ import {
   elementsById,
   expectTextWithin,
   getReceiveAddress,
+  receiveOnchainFunds,
   sleep,
   swipeFullScreen,
   tap,
@@ -48,16 +49,7 @@ describe('@onchain - Onchain', () => {
 
   it('@onchain_1 - Receive and send some out', async () => {
     // receive some first
-    const address = await getReceiveAddress();
-    await rpc.sendToAddress(address, '1');
-    await rpc.generateToAddress(1, await rpc.getNewAddress());
-    await electrum?.waitForSync();
-    // https://github.com/synonymdev/bitkit-android/issues/268
-    // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
-    // await elementById('ReceivedTransaction').waitForDisplayed();
-    await swipeFullScreen('down');
-    const moneyText = (await elementsById('MoneyText'))[1];
-    await expect(moneyText).toHaveText('100 000 000');
+    await receiveOnchainFunds(rpc, { sats: 100_000_000, expect_high_value_warning: true });
 
     // then send out 10 000
     const coreAddress = await rpc.getNewAddress();

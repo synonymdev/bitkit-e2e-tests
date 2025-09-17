@@ -414,9 +414,11 @@ export async function receiveOnchainFunds(
   {
     sats = 100_000,
     blocksToMine = 1,
+    expect_high_value_warning = false,
   }: {
     sats?: number;
     blocksToMine?: number;
+    expect_high_value_warning?: boolean;
   } = {}
 ) {
   // convert sats → btc string
@@ -428,9 +430,17 @@ export async function receiveOnchainFunds(
   const address = await getReceiveAddress();
   await rpc.sendToAddress(address, btc);
   await mineBlocks(rpc, blocksToMine);
+
   // https://github.com/synonymdev/bitkit-android/issues/268
   // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
   // await elementById('ReceivedTransaction').waitForDisplayed();
+
+  if (expect_high_value_warning) {
+    // acknowledge high value warning
+    await elementById('high_balance_image').waitForDisplayed();
+    await tap('understood_button');
+  }
+
   await swipeFullScreen('down');
   const moneyText = (await elementsById('MoneyText'))[1];
   await expect(moneyText).toHaveText(formattedSats);
