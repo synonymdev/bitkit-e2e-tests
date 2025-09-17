@@ -86,6 +86,10 @@ export const config: WebdriverIO.Config = {
           'appium:autoLaunch': false,
           'appium:noReset': true,
           'appium:fullReset': false,
+          'appium:wdaStartupRetries': 3,
+          'appium:wdaStartupRetryInterval': 10000,
+          'appium:skipLogCapture': false,
+          'appium:shouldTerminateApp': true,
         },
   ],
 
