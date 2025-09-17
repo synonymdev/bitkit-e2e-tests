@@ -1,6 +1,12 @@
 import BitcoinJsonRpc from 'bitcoin-json-rpc';
 import initElectrum from '../helpers/electrum';
-import { elementById, tap, completeOnboarding, receiveOnchainFunds } from '../helpers/actions';
+import {
+  elementById,
+  tap,
+  completeOnboarding,
+  receiveOnchainFunds,
+  expectTextVisible,
+} from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
 import {
@@ -71,9 +77,8 @@ describe('@lightning - Lightning', () => {
     // wait for channel to be active
     await waitForActiveChannel(lnd, ldkNodeId);
 
-    // workaround for: https://github.com/synonymdev/bitkit-android/issues/359
-    await elementById('ReceivedTransaction').waitForDisplayed();
-    await tap('ReceivedTransactionButton');
+    // Toast message
+    await expectTextVisible('Spending Balance Ready');
 
     // check channel status
     await checkChannelStatus();
