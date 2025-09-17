@@ -69,12 +69,13 @@ function parseArgs(argv) {
       args.electrumHost = argv[++i];
     } else if (a === '--electrum-port') {
       args.electrumPort = parseInt(argv[++i], 10);
-    } else if (!args.address && a && !a.startsWith('--')) {
-      // Positional address fallback
-      args.address = a;
-    } else if (args.amount === '1' && a && !a.startsWith('--')) {
-      // Positional amount fallback
-      args.amount = String(a);
+    } else if (a && !a.startsWith('--')) {
+      // Positional argument fallback: first is address, second is amount
+      if (!args.address) {
+        args.address = a;
+      } else if (args.amount === '1') {
+        args.amount = String(a);
+      }
     }
   }
 
