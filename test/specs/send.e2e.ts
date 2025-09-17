@@ -1,4 +1,3 @@
-import createLndRpc from '@radar/lnrpc';
 import BitcoinJsonRpc from 'bitcoin-json-rpc';
 import { encode } from 'bip21';
 
@@ -17,14 +16,21 @@ import {
   receiveOnchainFunds,
   sleep,
   swipeFullScreen,
-  waitForActiveChannel,
-  waitForPeerConnection,
   multiTap,
   typeAddressAndVerifyContinue,
 } from '../helpers/actions';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
 import { reinstallApp } from '../helpers/setup';
 import { confirmInputOnKeyboard, tap, typeText } from '../helpers/actions';
+import {
+  connectToLND,
+  getLDKNodeID,
+  setupLND,
+  waitForPeerConnection,
+  waitForActiveChannel,
+  openLNDAndSync,
+  checkChannelStatus,
+} from '../helpers/lnd';
 
 describe('@send - Send', () => {
   let electrum: { waitForSync: any; stop: any };
@@ -131,70 +137,31 @@ describe('@send - Send', () => {
     await receiveOnchainFunds(rpc);
 
     // send funds to LND node and open a channel
-    const lnd = await createLndRpc(lndConfig);
-    const { address: lndAddress } = await lnd.newAddress();
-    await rpc.sendToAddress(lndAddress, '1');
-    await rpc.generateToAddress(1, await rpc.getNewAddress());
+    const { lnd, lndNodeID } = await setupLND(rpc, lndConfig);
     await electrum?.waitForSync();
-    const { identityPubkey: lndNodeID } = await lnd.getInfo();
-    console.info({ lndNodeID });
 
     // get LDK Node id
-    await tap('HeaderMenu');
-    await tap('DrawerSettings');
-    await tap('AdvancedSettings');
-    // wait for LDK to start
-    await sleep(5000);
-    await tap('LightningNodeInfo');
-    await elementById('LDKNodeID').waitForDisplayed({ timeout: 60_000 });
-    const ldkNodeId = (await elementById('LDKNodeID').getText()).trim();
-    console.info({ ldkNodeId });
-    await tap('NavigationBack');
+    const ldkNodeId = await getLDKNodeID();
 
     // connect to LND
-    await tap('Channels');
-    await tap('NavigationAction');
-    await tap('FundCustom');
-    await tap('FundManual');
-    await typeText('NodeIdInput', lndNodeID);
-    await typeText('HostInput', '0.0.0.0');
-    await typeText('PortInput', '9735');
-    await confirmInputOnKeyboard();
-    await tap('ExternalContinue');
-    await tap('NavigationClose');
+    await connectToLND(lndNodeID);
 
     // wait for peer to be connected
     await waitForPeerConnection(lnd, ldkNodeId);
 
     // open a channel
-    await lnd.openChannelSync({
-      nodePubkeyString: ldkNodeId,
-      localFundingAmount: '100000',
-      private: true,
-    });
-    console.info('Channel opening...');
-    await rpc.generateToAddress(6, await rpc.getNewAddress());
+    await openLNDAndSync(lnd, rpc, ldkNodeId);
     await electrum?.waitForSync();
 
     // wait for channel to be active
     await waitForActiveChannel(lnd, ldkNodeId);
-    console.info('Channel is active!');
 
     // workaround for: https://github.com/synonymdev/bitkit-android/issues/359
     await elementById('ReceivedTransaction').waitForDisplayed();
     await tap('ReceivedTransactionButton');
 
     // check channel status
-    await tap('HeaderMenu');
-    await tap('DrawerSettings');
-    await tap('AdvancedSettings');
-    await tap('Channels');
-    await tap('Channel');
-    await expectTextWithin('TotalSize', '₿ 100 000');
-    await swipeFullScreen('up');
-    await elementById('IsUsableYes').waitForDisplayed();
-    await tap('NavigationClose');
-    await sleep(500);
+    await checkChannelStatus();
 
     // receive lightning funds
     // TODO: receive 50 000 instead of 10 000 after fixing https://github.com/synonymdev/bitkit-android/issues/364
