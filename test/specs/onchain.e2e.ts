@@ -18,7 +18,8 @@ import {
   swipeFullScreen,
   tap,
   typeText,
-  receiveOnchainFunds
+  receiveOnchainFunds,
+  acknowledgeHighBalanceWarning,
 } from '../helpers/actions';
 
 describe('@onchain - Onchain', () => {
@@ -50,7 +51,7 @@ describe('@onchain - Onchain', () => {
 
   it('@onchain_1 - Receive and send some out', async () => {
     // receive some first
-    await receiveOnchainFunds(rpc, { sats: 100_000_000, expect_high_value_warning: true });
+    await receiveOnchainFunds(rpc, { sats: 100_000_000, expect_high_balance_warning: true });
 
     // then send out 10 000
     const coreAddress = await rpc.getNewAddress();
@@ -126,6 +127,11 @@ describe('@onchain - Onchain', () => {
       // https://github.com/synonymdev/bitkit-android/issues/268
       // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
       // await elementById('ReceivedTransaction').waitForDisplayed();
+
+      // acknowledge high balance warning for the first tx only
+      if (i === 1) {
+        await acknowledgeHighBalanceWarning();
+      }
 
       await swipeFullScreen('down');
       await sleep(1000); // wait for the app to settle

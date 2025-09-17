@@ -1,8 +1,6 @@
 import BitcoinJsonRpc from 'bitcoin-json-rpc';
 import initElectrum from '../helpers/electrum';
 import {
-  elementById,
-  tap,
   completeOnboarding,
   receiveOnchainFunds,
   expectTextVisible,
