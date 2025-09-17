@@ -156,9 +156,8 @@ describe('@send - Send', () => {
     // wait for channel to be active
     await waitForActiveChannel(lnd, ldkNodeId);
 
-    // workaround for: https://github.com/synonymdev/bitkit-android/issues/359
-    await elementById('ReceivedTransaction').waitForDisplayed();
-    await tap('ReceivedTransactionButton');
+    // Toast message
+    await expectTextVisible('Spending Balance Ready');
 
     // check channel status
     await checkChannelStatus();
