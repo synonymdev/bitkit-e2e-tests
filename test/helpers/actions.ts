@@ -1,5 +1,6 @@
 import type { ChainablePromiseElement } from 'webdriverio';
 import { reinstallApp } from './setup';
+import BitcoinJsonRpc from 'bitcoin-json-rpc';
 
 export const sleep = (ms: number) => browser.pause(ms);
 
@@ -402,76 +403,37 @@ export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise
   return address;
 }
 
-export async function mineBlocks(rpc: any, blocks: number = 1) {
+export async function mineBlocks(rpc: BitcoinJsonRpc, blocks: number = 1) {
   for (let i = 0; i < blocks; i++) {
     await rpc.generateToAddress(1, await rpc.getNewAddress());
   }
 }
 
-export async function receiveOnchainFunds(rpc: any, blocksToMine: number = 1) {
+export async function receiveOnchainFunds(
+  rpc: BitcoinJsonRpc,
+  {
+    sats = 100_000,
+    blocksToMine = 1,
+  }: {
+    sats?: number;
+    blocksToMine?: number;
+  } = {}
+) {
+  // convert sats → btc string
+  const btc = (sats / 100_000_000).toString();
+  // format sats with spaces every 3 digits
+  const formattedSats = sats.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+
   // receive some first
   const address = await getReceiveAddress();
-  await rpc.sendToAddress(address, '0.001');
+  await rpc.sendToAddress(address, btc);
   await mineBlocks(rpc, blocksToMine);
   // https://github.com/synonymdev/bitkit-android/issues/268
   // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
   // await elementById('ReceivedTransaction').waitForDisplayed();
   await swipeFullScreen('down');
   const moneyText = (await elementsById('MoneyText'))[1];
-  await expect(moneyText).toHaveText('100 000');
-}
-
-export async function waitForPeerConnection(
-  lnd: { listPeers: () => PromiseLike<{ peers: any }> | { peers: any } },
-  nodeId: string,
-  maxRetries = 20
-) {
-  let retries = 0;
-
-  while (retries < maxRetries) {
-    await sleep(1000);
-    const { peers } = await lnd.listPeers();
-    console.info({ peers });
-    if (peers?.some((p: { pubKey: any }) => p.pubKey === nodeId)) {
-      break;
-    }
-    retries++;
-  }
-
-  if (retries === maxRetries) {
-    throw new Error('Peer not connected');
-  }
-}
-
-export async function waitForActiveChannel(
-  lnd: {
-    listChannels: (arg0: {
-      peer: Buffer;
-      activeOnly: boolean;
-    }) => PromiseLike<{ channels: any }> | { channels: any };
-  },
-  nodeId: string,
-  maxRetries = 20
-) {
-  let retries = 0;
-
-  while (retries < maxRetries) {
-    await sleep(1000);
-    const { channels } = await lnd.listChannels({
-      peer: Buffer.from(nodeId, 'hex'),
-      activeOnly: true,
-    });
-
-    if (channels?.length > 0) {
-      break;
-    }
-
-    retries++;
-  }
-
-  if (retries === maxRetries) {
-    throw new Error('Channel not active');
-  }
+  await expect(moneyText).toHaveText(formattedSats);
 }
 
 export async function completeOnboarding({ isFirstTime = true } = {}) {

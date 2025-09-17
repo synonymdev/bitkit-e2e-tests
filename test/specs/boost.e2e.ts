@@ -48,7 +48,7 @@ describe('@boost - Boost', () => {
 
   it('@boost_1 - Can do CPFP', async () => {
     // fund the wallet (100 000), don't mine blocks so tx is unconfirmed
-    await receiveOnchainFunds(rpc, 0);
+    await receiveOnchainFunds(rpc, { sats: 100_000, blocksToMine: 0 });
 
     // check Activity
     await swipeFullScreen('up');
