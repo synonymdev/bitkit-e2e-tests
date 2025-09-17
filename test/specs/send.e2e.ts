@@ -10,7 +10,6 @@ import {
   elementById,
   enterAddress,
   elementByIdWithin,
-  elementsById,
   expectTextVisible,
   expectTextWithin,
   getReceiveAddress,
@@ -21,6 +20,7 @@ import {
   waitForActiveChannel,
   waitForPeerConnection,
   multiTap,
+  typeAddressAndVerifyContinue,
 } from '../helpers/actions';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
 import { reinstallApp } from '../helpers/setup';
@@ -60,35 +60,23 @@ describe('@send - Send', () => {
     await elementById('AddressContinue').waitForEnabled({ reverse: true });
 
     // check validation for invalid data
-    await typeText('RecipientInput', 'test123');
-    await confirmInputOnKeyboard();
-    await sleep(1000);
-    await elementById('AddressContinue').waitForEnabled({ reverse: true });
+    await typeAddressAndVerifyContinue({ address: 'test123', reverse: true });
 
     //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/354 ---//
 
     // // check validation for invalid address (network mismatch)
     // const mainnetAddress = 'bc1qnc8at2e2navahnz7lvtl39r4dnfzxv3cc9e7ax';
-    // await typeText('RecipientInput', mainnetAddress);
-    // await confirmInputOnKeyboard();
-    // await sleep(1000);
-    // await elementById('AddressContinue').waitForEnabled({reverse: true});
+    // await typeAddressAndVerifyContinue({ address: mainnetAddress, reverse: true })
 
     // // check validation for address when balance is 0
     // const address = await rpc.getNewAddress();
     // console.info({ address });
-    // await typeText('RecipientInput', address);
-    // await confirmInputOnKeyboard();
-    // await sleep(1000);
-    // await elementById('AddressContinue').waitForEnabled({reverse: true});
+    // await typeAddressAndVerifyContinue({ address: address, reverse: true })
 
     // // check validation for expired invoice
     // const invoice =
     //   'lnbcrt1pn3zpqpdqqnp4qfh2x8nyvvzq4kf8j9wcaau2chr580l93pnyrh5027l8f7qtm48h6pp5lmwkulnpze4ek4zqwfepguahcr2ma3vfhwa6uepxfd378xlldprssp5wnq34d553g50suuvfy387csx5hx6mdv8zezem6f4tky7rhezycas9qyysgqcqpcxqrrssrzjqtr7pzpunxgwjddwdqucegdphm6776xcarz60gw9gxva0rhal5ntmapyqqqqqqqqpqqqqqlgqqqqqqgq2ql9zpeakxvff9cz5rd6ssc3cngl256u8htm860qv3r28vqkwy9xe3wp0l9ms3zcqvys95yf3r34ytmegz6zynuthh5s0kh7cueunm3mspg3uwpt';
-    // await typeText('RecipientInput', invoice);
-    // await confirmInputOnKeyboard();
-    // await sleep(1000);
-    // await elementById('AddressContinue').waitForEnabled({reverse: true});
+    // await typeAddressAndVerifyContinue({ address: invoice, reverse: true })
 
     //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/354 ---//
 
@@ -101,26 +89,27 @@ describe('@send - Send', () => {
 
     // check validation for address
     const address2 = await rpc.getNewAddress();
-    await typeText('RecipientInput', address2);
-    await confirmInputOnKeyboard();
-    await sleep(1000);
-    await elementById('AddressContinue').waitForEnabled();
+    try {
+      await typeAddressAndVerifyContinue({ address: address2 });
+    } catch {
+      console.warn('Address2 input failed, trying again...');
+      await typeAddressAndVerifyContinue({ address: address2 });
+    }
 
     // check validation for unified invoice when balance is enough
     const unified1 = 'bitcoin:bcrt1q07x3wl76zdxvdsz3qzzkvxrjg3n6t4tz2vnsx8?amount=0.0001';
-    await typeText('RecipientInput', unified1);
-    await confirmInputOnKeyboard();
-    await sleep(1000);
-    await elementById('AddressContinue').waitForEnabled();
+    try {
+      await typeAddressAndVerifyContinue({ address: unified1 });
+    } catch {
+      console.warn('Unified1 input failed, trying again...');
+      await typeAddressAndVerifyContinue({ address: unified1 });
+    }
 
     //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/354 ---//
 
     // // check validation for unified invoice when balance is too low
     // const unified2 = 'bitcoin:bcrt1q07x3wl76zdxvdsz3qzzkvxrjg3n6t4tz2vnsx8?amount=0.002';
-    // await typeText('RecipientInput', unified2);
-    // await confirmInputOnKeyboard();
-    // await sleep(1000);
-    // await elementById('AddressContinue').waitForEnabled({ reverse: true });
+    // await typeAddressAndVerifyContinue({ address: unified2, reverse: true });
 
     //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/354 ---//
   });
@@ -235,8 +224,8 @@ describe('@send - Send', () => {
     await tap('ReceivedTransactionButton');
     await sleep(500);
 
-    const moneyText = (await elementsById('MoneyText'))[1];
-    await expect(moneyText).toHaveText('110 000'); // 100k onchain + 10k lightning
+    const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
+    await expect(totalBalance).toHaveText('110 000'); // 100k onchain + 10k lightning
     await expectTextWithin('ActivitySpending', '10 000');
 
     // send to onchain address
@@ -252,8 +241,8 @@ describe('@send - Send', () => {
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
     await tap('Close');
-    await expect(moneyText).not.toHaveText('110 000');
-    const amtAfterOnchain = await moneyText.getText();
+    await expect(totalBalance).not.toHaveText('110 000');
+    const amtAfterOnchain = await totalBalance.getText();
     console.info({ amtAfterOnchain });
     await expectTextWithin('ActivitySpending', '10 000');
 
@@ -270,8 +259,8 @@ describe('@send - Send', () => {
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
     await tap('Close');
-    await expect(moneyText).not.toHaveText(amtAfterOnchain);
-    const amtAfterLightning = await moneyText.getText();
+    await expect(totalBalance).not.toHaveText(amtAfterOnchain);
+    const amtAfterLightning = await totalBalance.getText();
     console.info({ amtAfterLightning });
     await expectTextWithin('ActivitySpending', '9 000');
 
@@ -279,9 +268,9 @@ describe('@send - Send', () => {
     console.info('Editing invoice on review screen...');
     const { paymentRequest: invoice2 } = await lnd.addInvoice({ value: '1000' });
     await enterAddress(invoice2);
-    const amt_el = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
-    await amt_el.waitForDisplayed();
-    await expect(amt_el).toHaveText('1 000');
+    const reviewAmt = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
+    await reviewAmt.waitForDisplayed();
+    await expect(reviewAmt).toHaveText('1 000');
     await tap('ReviewUri');
     await sleep(2000);
     await elementById('RecipientInput').waitForDisplayed();
@@ -302,8 +291,8 @@ describe('@send - Send', () => {
     await tap('N2');
     await multiTap('N0', 4);
     await tap('ContinueAmount');
-    await amt_el.waitForDisplayed();
-    await expect(amt_el).toHaveText('20 000');
+    await reviewAmt.waitForDisplayed();
+    await expect(reviewAmt).toHaveText('20 000');
     await swipeFullScreen('down');
 
     // send to unified invoice w/ amount
@@ -316,12 +305,12 @@ describe('@send - Send', () => {
     console.info({ unified1 });
     await sleep(1000);
     await enterAddress(unified1);
-    await expect(moneyText).toHaveText('1 000'); // invoice amount
+    await expect(reviewAmt).toHaveText('1 000'); // invoice amount
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
     await tap('Close');
-    await expect(moneyText).not.toHaveText(amtAfterLightning);
-    const amtAfterUnified = await moneyText.getText();
+    await expect(totalBalance).not.toHaveText(amtAfterLightning);
+    const amtAfterUnified = await totalBalance.getText();
     console.info({ amtAfterUnified });
     await expectTextWithin('ActivitySpending', '8 000');
 
@@ -341,13 +330,13 @@ describe('@send - Send', () => {
     await elementById('AssetButton-savings').waitForDisplayed();
     await sleep(500);
     await tap('ContinueAmount');
-    await amt_el.waitForDisplayed();
-    await expect(amt_el).toHaveText('20 000');
+    await reviewAmt.waitForDisplayed();
+    await expect(reviewAmt).toHaveText('20 000');
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
     await tap('Close');
-    await expect(moneyText).not.toHaveText(amtAfterUnified);
-    const amtAfterUnified2 = await moneyText.getText();
+    await expect(totalBalance).not.toHaveText(amtAfterUnified);
+    const amtAfterUnified2 = await totalBalance.getText();
     console.info({ amtAfterUnified2 });
     await expectTextWithin('ActivitySpending', '8 000');
 
@@ -382,7 +371,7 @@ describe('@send - Send', () => {
     // await expectTextWithin('ActivitySpending', '8 000');
 
     //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/366 ---//
-    const amtAfterUnified3 = await moneyText.getText();
+    const amtAfterUnified3 = await totalBalance.getText();
     console.info({ amtAfterUnified3 });
     const amtSavingsAfterUnified3 = await getTextUnder('ActivitySavings');
     console.info({ amtSavingsAfterUnified3 });
@@ -403,13 +392,13 @@ describe('@send - Send', () => {
     await tap('N1');
     await multiTap('N0', 3);
     await tap('ContinueAmount');
-    await amt_el.waitForDisplayed();
-    await expect(amt_el).toHaveText('1 000');
+    await reviewAmt.waitForDisplayed();
+    await expect(reviewAmt).toHaveText('1 000');
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
     await tap('Close');
-    await expect(moneyText).not.toHaveText(amtAfterUnified3);
-    const amtAfterUnified4 = await moneyText.getText();
+    await expect(totalBalance).not.toHaveText(amtAfterUnified3);
+    const amtAfterUnified4 = await totalBalance.getText();
     console.info({ amtAfterUnified4 });
     const amtSavingsAfterUnified4 = await getTextUnder('ActivitySavings');
     console.info({ amtSavingsAfterUnified4 });
@@ -441,8 +430,8 @@ describe('@send - Send', () => {
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
     await tap('Close');
-    await expect(moneyText).not.toHaveText(amtAfterUnified4);
-    const amtAfterUnified5 = await moneyText.getText();
+    await expect(totalBalance).not.toHaveText(amtAfterUnified4);
+    const amtAfterUnified5 = await totalBalance.getText();
     console.info({ amtAfterUnified5 });
     await expectTextWithin('ActivitySpending', '7 000');
 
@@ -464,8 +453,8 @@ describe('@send - Send', () => {
     await enterAddress(invoice7);
     await elementById('SendSuccess').waitForDisplayed();
     await tap('Close');
-    await expect(moneyText).not.toHaveText(amtAfterUnified5);
-    const amtAfterLightning2 = await moneyText.getText();
+    await expect(totalBalance).not.toHaveText(amtAfterUnified5);
+    const amtAfterLightning2 = await totalBalance.getText();
     console.info({ amtAfterLightning2 });
     await expectTextWithin('ActivitySpending', '6 000');
 
@@ -480,7 +469,7 @@ describe('@send - Send', () => {
     await enterAddress(unified7);
     await elementById('SendSuccess').waitForDisplayed();
     await tap('Close');
-    await expect(moneyText).not.toHaveText(amtAfterLightning2);
+    await expect(totalBalance).not.toHaveText(amtAfterLightning2);
     await expectTextWithin('ActivitySpending', '5 000');
 
     // send to lightning invoice w/ amount (skip quickpay for large amounts)

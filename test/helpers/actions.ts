@@ -154,6 +154,7 @@ export async function typeText(testId: string, text: string) {
   const el = await elementById(testId);
   await el.waitForDisplayed();
   await sleep(500); // Allow time for the element to settle
+  await el.clearValue();
   await el.setValue(text);
 }
 
@@ -511,14 +512,24 @@ export async function toggleWidgets() {
   await tap('NavigationClose');
 }
 
+export async function typeAddressAndVerifyContinue({
+  address,
+  reverse = false,
+}: {
+  address: string;
+  reverse?: boolean;
+}) {
+  await typeText('RecipientInput', address);
+  await confirmInputOnKeyboard();
+  await sleep(1000);
+  await elementById('AddressContinue').waitForEnabled({ reverse });
+}
+
 export async function enterAddress(address: string) {
   await tap('Send');
   await sleep(700);
   await tap('RecipientManual');
-  await typeText('RecipientInput', address);
-  await confirmInputOnKeyboard();
-  // wait for keyboard to hide
-  await sleep(1000);
+  await typeAddressAndVerifyContinue({ address });
   await tap('AddressContinue');
 }
 
