@@ -411,8 +411,13 @@ export async function mineBlocks(rpc: BitcoinJsonRpc, blocks: number = 1) {
 
 export async function receiveOnchainFunds(
   rpc: BitcoinJsonRpc,
-  sats: number = 100_000,
-  blocksToMine: number = 1
+  {
+    sats = 100_000,
+    blocksToMine = 1,
+  }: {
+    sats?: number;
+    blocksToMine?: number;
+  } = {}
 ) {
   // convert sats → btc string
   const btc = (sats / 100_000_000).toString();
