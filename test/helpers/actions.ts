@@ -49,10 +49,22 @@ export function elementsById(selector: string): ChainablePromiseArray {
   }
 }
 
-export function elementByText(text: string): ChainablePromiseElement {
+type RetrieveStrategy = 'exact' | 'contains';
+export function elementByText(
+  text: string,
+  strategy: RetrieveStrategy = 'contains'
+): ChainablePromiseElement {
   if (driver.isAndroid) {
+    if (strategy === 'exact') {
+      return $(`android=new UiSelector().text("${text}")`);
+    }
     return $(`android=new UiSelector().textContains("${text}")`);
   } else {
+    if (strategy === 'exact') {
+      return $(
+        `-ios predicate string:type == "XCUIElementTypeStaticText" AND (label == "${text}" OR value == "${text}")`
+      );
+    }
     return $(
       `-ios predicate string:type == "XCUIElementTypeStaticText" AND label CONTAINS "${text}"`
     );
