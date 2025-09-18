@@ -337,6 +337,39 @@ export async function getSeed(): Promise<string> {
   return seed;
 }
 
+export async function waitForSetupWalletScreenFinish(timeout: number = 150_000) {
+  // Wait until text "SETTING UP YOUR WALLET" is no longer displayed
+  const settingUpWallet = await elementByText('SETTING UP\nYOUR WALLET');
+  await settingUpWallet.waitForDisplayed({ reverse: true, timeout, interval: 100 });
+}
+
+export async function completeOnboarding({ isFirstTime = true } = {}) {
+  // TOS and PP
+  await elementById('Check1').waitForDisplayed();
+  await sleep(1000); // Wait for the app to settle
+  await tap('Check1');
+  await tap('Check2');
+  await tap('Continue');
+  await tap('SkipIntro');
+  await sleep(500); // Wait for the app to settle
+  await tap('NewWallet');
+  await waitForSetupWalletScreenFinish();
+
+  if (isFirstTime) {
+    await acceptAppNotificationAlert();
+  }
+
+  // Wait for wallet to be created
+  for (let i = 1; i <= 3; i++) {
+    try {
+      await tap('WalletOnboardingClose');
+      break;
+    } catch {
+      if (i === 3) throw new Error('Tapping "WalletOnboardingClose" timeout');
+    }
+  }
+}
+
 export async function restoreWallet(seed: string, passphrase?: string) {
   console.info('→ Restoring wallet with seed:', seed);
   // Let cloud state flush - carried over from Detox
@@ -369,9 +402,7 @@ export async function restoreWallet(seed: string, passphrase?: string) {
 
   // Restore wallet
   await tap('RestoreButton');
-  // Wait until text "SETTING UP YOUR WALLET" is no longer displayed
-  const settingUpWallet = await elementByText('SETTING UP\nYOUR WALLET');
-  await settingUpWallet.waitForDisplayed({ reverse: true, timeout: 300_000, interval: 100 }); // 5 minutes
+  await waitForSetupWalletScreenFinish();
 
   await acceptAppNotificationAlert();
 
@@ -461,32 +492,6 @@ export async function acknowledgeHighBalanceWarning() {
   await tap('understood_button');
   await elementById('high_balance_image').waitForDisplayed({ reverse: true });
   await sleep(500);
-}
-
-export async function completeOnboarding({ isFirstTime = true } = {}) {
-  // TOS and PP
-  await elementById('Check1').waitForDisplayed();
-  await sleep(1000); // Wait for the app to settle
-  await tap('Check1');
-  await tap('Check2');
-  await tap('Continue');
-  await tap('SkipIntro');
-  await sleep(500); // Wait for the app to settle
-  await tap('NewWallet');
-
-  if (isFirstTime) {
-    await acceptAppNotificationAlert();
-  }
-
-  // Wait for wallet to be created
-  for (let i = 1; i <= 3; i++) {
-    try {
-      await tap('WalletOnboardingClose');
-      break;
-    } catch {
-      if (i === 3) throw new Error('Tapping "WalletOnboardingClose" timeout');
-    }
-  }
 }
 
 // enable/disable widgets in settings

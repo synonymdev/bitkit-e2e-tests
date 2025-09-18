@@ -9,6 +9,7 @@ import {
   swipeFullScreen,
   tap,
   typeText,
+  waitForSetupWalletScreenFinish,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 
@@ -39,6 +40,7 @@ describe('@onboarding - Onboarding', () => {
     await elementById('NewWallet').waitForDisplayed();
     await sleep(1000); // Wait for the app to settle
     await tap('NewWallet');
+    await waitForSetupWalletScreenFinish();
 
     await acceptAppNotificationAlert();
     await elementByText('TO GET\nSTARTED\nSEND\nBITCOIN\nTO YOUR\nWALLET').waitForDisplayed();
@@ -67,6 +69,7 @@ describe('@onboarding - Onboarding', () => {
     await tap('Passphrase');
     await typeText('PassphraseInput', passphrase);
     await tap('CreateNewWallet');
+    await waitForSetupWalletScreenFinish();
 
     await acceptAppNotificationAlert();
 
