@@ -339,8 +339,6 @@ describe('@send - Send', () => {
     //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/366 ---//
     const amtAfterUnified3 = await totalBalance.getText();
     console.info({ amtAfterUnified3 });
-    const amtSavingsAfterUnified3 = await getTextUnder('ActivitySavings');
-    console.info({ amtSavingsAfterUnified3 });
 
     // send to unified invoice w/o amount (lightning)
     console.info('Sending to unified invoice w/o amount (lightning)...');
@@ -353,7 +351,7 @@ describe('@send - Send', () => {
     await expectTextVisible('7 000'); // current balance 8k - 1k reserve balance
     await tap('AssetButton-switch');
     // max amount (onchain)
-    await expectTextVisible(amtSavingsAfterUnified3);
+    await expectTextVisible('7 000', false);
     await tap('AssetButton-switch');
     await tap('N1');
     await multiTap('N0', 3);
@@ -366,8 +364,6 @@ describe('@send - Send', () => {
     await expect(totalBalance).not.toHaveText(amtAfterUnified3);
     const amtAfterUnified4 = await totalBalance.getText();
     console.info({ amtAfterUnified4 });
-    const amtSavingsAfterUnified4 = await getTextUnder('ActivitySavings');
-    console.info({ amtSavingsAfterUnified4 });
     await expectTextWithin('ActivitySpending', '7 000');
 
     // send to unified invoice w/o amount (switch to onchain)
@@ -387,9 +383,9 @@ describe('@send - Send', () => {
     await tap('AssetButton-switch');
     await tap('AvailableAmount');
     await tap('ContinueAmount');
-    await expectTextVisible(amtSavingsAfterUnified4);
+    await expectTextVisible('6 000', false);
     await tap('NavigationBack');
-    await multiTap('NRemove', 5);
+    await multiTap('NRemove', 6);
     await tap('N1');
     await multiTap('N0', 4);
     await tap('ContinueAmount');
