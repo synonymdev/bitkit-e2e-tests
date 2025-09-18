@@ -4,6 +4,7 @@ import initElectrum from '../helpers/electrum';
 import { reinstallApp } from '../helpers/setup';
 import {
   completeOnboarding,
+  confirmInputOnKeyboard,
   deleteAllDefaultWidgets,
   elementById,
   elementByIdWithin,
@@ -62,9 +63,9 @@ describe('@backup - Backup', () => {
     await tap('Activity-1');
     await tap('ActivityTag');
     await typeText('TagInput', tag);
-    await tap('ActivityTagsSubmit');
     // workaround for Android keyboard not hiding (only in emulator)
-    await driver.hideKeyboard().catch(() => {});
+    await confirmInputOnKeyboard();
+    await tap('ActivityTagsSubmit');
     await sleep(200);
     await tap('NavigationClose');
     await tap('NavigationBack');
