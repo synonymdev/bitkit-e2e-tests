@@ -552,3 +552,15 @@ export async function waitForBackup() {
   await allSynced.waitForDisplayed();
   await tap('NavigationClose');
 }
+
+export function getFormattedDate(offset: number = 0): string {
+  const date = new Date();
+  date.setDate(date.getDate() + offset);
+
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(date);
+}

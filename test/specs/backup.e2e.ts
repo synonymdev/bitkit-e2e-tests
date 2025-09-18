@@ -41,7 +41,7 @@ describe('@backup - Backup', () => {
     await electrum?.waitForSync();
   });
 
-  afterEach(async () => {
+  after(async () => {
     await electrum?.stop();
   });
 

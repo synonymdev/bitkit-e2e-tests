@@ -20,6 +20,7 @@ import {
   typeText,
   receiveOnchainFunds,
   acknowledgeHighBalanceWarning,
+  getFormattedDate,
 } from '../helpers/actions';
 
 describe('@onchain - Onchain', () => {
@@ -117,6 +118,8 @@ describe('@onchain - Onchain', () => {
       await tap('TagsAdd');
       await typeText('TagInputReceive', `rtag${i}`);
       await tap('ReceiveTagsSubmit');
+      await elementById(`Tag-rtag${i}`).waitForDisplayed();
+      await elementById(`Tag-rtag${i}-delete`).waitForDisplayed();
       await sleep(300);
       await tap('ShowQrReceive');
 
@@ -227,42 +230,41 @@ describe('@onchain - Onchain', () => {
     // await elementById('Activity-2').waitForDisplayed({ reverse: true });
     // await tap('Tag-stag-delete');
 
-    // // calendar, previous month, 0 transactions
-    // await tap('DatePicker');
-    // today date in the form of 'Sunday, September 28, 2025'
+    // calendar, 0 transactions
+    await tap('DatePicker');
+    await elementById('CalendarApplyButton').waitForDisplayed();
+    await sleep(1000); // wait for the app to settle
+    const tomorrow = await elementByText(getFormattedDate(1), 'exact');
+    const dayAfterTomorrow = await elementByText(getFormattedDate(2), 'exact');
+    await tomorrow.waitForDisplayed();
+    await dayAfterTomorrow.waitForDisplayed();
+    await tomorrow.click();
+    await dayAfterTomorrow.click();
+    await tap('CalendarApplyButton');
+    await elementById('Activity-1').waitForDisplayed({ reverse: true });
 
-    // await elementById('Today').waitForDisplayed();
-    // await tap('PrevMonth');
-    // await elementById('Today').waitForDisplayed({ reverse: true });
-    // await tap('Day-1');
-    // await tap('Day-28');
-    // await tap('CalendarApplyButton');
-    // await elementById('Activity-1').waitForDisplayed({ reverse: true });
+    // calendar, clear, 3 transactions
+    await tap('DatePicker');
+    await tap('CalendarClearButton');
+    await elementById('Activity-1').waitForDisplayed();
+    await elementById('Activity-2').waitForDisplayed();
+    await elementById('Activity-3').waitForDisplayed();
 
-    // // calendar, current date, 3 transactions
-    // await tap('DatePicker');
-    // await tap('CalendarClearButton');
-    // await tap('NextMonth');
-    // await tap('Today');
-    // await tap('CalendarApplyButton');
-    // await elementById('Activity-1').waitForDisplayed();
-    // await elementById('Activity-2').waitForDisplayed();
-    // await elementById('Activity-3').waitForDisplayed();
+    // calendar, current date, 3 transactions
+    await tap('DatePicker');
+    const today = await elementByText('Today', 'contains');
+    await today.waitForDisplayed();
+    await today.click();
+    await tap('CalendarApplyButton');
+    await elementById('Activity-1').waitForDisplayed();
+    await elementById('Activity-2').waitForDisplayed();
+    await elementById('Activity-3').waitForDisplayed();
   });
 
   // https://github.com/synonymdev/bitkit-android/issues/324
   it.skip('@onchain_3 - Avoids creating a dust output and instead adds it to the fee', async () => {
     // receive some first
-    const address = await getReceiveAddress();
-    await rpc.sendToAddress(address, '1');
-    await rpc.generateToAddress(1, await rpc.getNewAddress());
-    await electrum?.waitForSync();
-    // https://github.com/synonymdev/bitkit-android/issues/268
-    // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
-    // await elementById('ReceivedTransaction').waitForDisplayed();
-    await swipeFullScreen('down');
-    const moneyText = (await elementsById('MoneyText'))[1];
-    await expect(moneyText).toHaveText('100 000 000');
+    await receiveOnchainFunds(rpc, { sats: 100_000_000, expect_high_balance_warning: true });
 
     // enable warning for sending over 100$ to test multiple warning dialogs
     await tap('HeaderMenu');
