@@ -90,6 +90,7 @@ export const config: WebdriverIO.Config = {
           'appium:wdaStartupRetryInterval': 10000,
           'appium:skipLogCapture': false,
           'appium:shouldTerminateApp': true,
+          'appium:bundleId': 'to.bitkit-regtest',
         },
   ],
 
