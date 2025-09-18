@@ -45,7 +45,7 @@ describe('@onchain - Onchain', () => {
     await electrum?.waitForSync();
   });
 
-  afterEach(async () => {
+  after(async () => {
     await electrum?.stop();
   });
 
@@ -71,7 +71,7 @@ describe('@onchain - Onchain', () => {
     await elementById('SendSuccess').waitForDisplayed();
     await tap('Close');
 
-    await rpc.generateToAddress(1, await rpc.getNewAddress());
+    await mineBlocks(rpc, 1);
     await electrum?.waitForSync();
 
     const moneyTextAfter = (await elementsById('MoneyText'))[1];
@@ -121,7 +121,7 @@ describe('@onchain - Onchain', () => {
       await tap('ShowQrReceive');
 
       await rpc.sendToAddress(address, '1');
-      await rpc.generateToAddress(1, await rpc.getNewAddress());
+      await mineBlocks(rpc, 1);
       await electrum?.waitForSync();
 
       // https://github.com/synonymdev/bitkit-android/issues/268
