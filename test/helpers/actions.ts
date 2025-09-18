@@ -426,11 +426,11 @@ export async function receiveOnchainFunds(
   {
     sats = 100_000,
     blocksToMine = 1,
-    expect_high_balance_warning = false,
+    expectHighBalanceWarning = false,
   }: {
     sats?: number;
     blocksToMine?: number;
-    expect_high_balance_warning?: boolean;
+    expectHighBalanceWarning?: boolean;
   } = {}
 ) {
   // convert sats → btc string
@@ -447,7 +447,7 @@ export async function receiveOnchainFunds(
   // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
   // await elementById('ReceivedTransaction').waitForDisplayed();
 
-  if (expect_high_balance_warning) {
+  if (expectHighBalanceWarning) {
     await acknowledgeHighBalanceWarning();
   }
 

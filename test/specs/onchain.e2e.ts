@@ -52,7 +52,7 @@ describe('@onchain - Onchain', () => {
 
   it('@onchain_1 - Receive and send some out', async () => {
     // receive some first
-    await receiveOnchainFunds(rpc, { sats: 100_000_000, expect_high_balance_warning: true });
+    await receiveOnchainFunds(rpc, { sats: 100_000_000, expectHighBalanceWarning: true });
 
     // then send out 10 000
     const coreAddress = await rpc.getNewAddress();
@@ -264,7 +264,7 @@ describe('@onchain - Onchain', () => {
   // https://github.com/synonymdev/bitkit-android/issues/324
   it.skip('@onchain_3 - Avoids creating a dust output and instead adds it to the fee', async () => {
     // receive some first
-    await receiveOnchainFunds(rpc, { sats: 100_000_000, expect_high_balance_warning: true });
+    await receiveOnchainFunds(rpc, { sats: 100_000_000, expectHighBalanceWarning: true });
 
     // enable warning for sending over 100$ to test multiple warning dialogs
     await tap('HeaderMenu');
