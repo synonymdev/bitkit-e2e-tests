@@ -261,8 +261,7 @@ describe('@onchain - Onchain', () => {
     await elementById('Activity-3').waitForDisplayed();
   });
 
-  // https://github.com/synonymdev/bitkit-android/issues/324
-  it.skip('@onchain_3 - Avoids creating a dust output and instead adds it to the fee', async () => {
+  it('@onchain_3 - Avoids creating a dust output and instead adds it to the fee', async () => {
     // receive some first
     await receiveOnchainFunds(rpc, { sats: 100_000_000, expectHighBalanceWarning: true });
 
@@ -287,7 +286,7 @@ describe('@onchain - Onchain', () => {
     let amountStr = await (await elementByIdWithin('AvailableAmount', 'MoneyText')).getText();
     amountStr = amountStr.replace('₿', '').replace(/\s/g, '');
     let amount = parseInt(amountStr, 10);
-    amount = amount - 300; // = 99 999 700
+    amount = amount - 300; // = 99 999 588
     for (const num of String(amount)) {
       await sleep(200);
       await tap(`N${num}`);
@@ -308,11 +307,11 @@ describe('@onchain - Onchain', () => {
     await elementById('SendSuccess').waitForDisplayed();
     await tap('Close');
 
-    await rpc.generateToAddress(1, await rpc.getNewAddress());
+    await mineBlocks(rpc, 1);
     await electrum?.waitForSync();
 
-    const moneyTextAfter = (await elementsById('MoneyText'))[1];
-    await expect(moneyTextAfter).toHaveText('0');
+    const totalBalanceAfter = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
+    await expect(totalBalanceAfter).toHaveText('0');
 
     // review activity list
     await swipeFullScreen('up');
@@ -335,5 +334,12 @@ describe('@onchain - Onchain', () => {
     await expectTextWithin(receiveDetail, '+');
     await expectTextWithin(receiveDetail, 'Received');
     await expectTextWithin(receiveDetail, '100 000 000');
+
+    await tap(sentDetail);
+    await tap('ActivityTxDetails');
+    // only 1 output -> no dust
+    // TODO: missing inputs/outputs in transaction details
+    // await elementByText('OUTPUT').waitForDisplayed();
+    // await elementByText('OUTPUT (2)').waitForDisplayed({ reverse: true });
   });
 });
