@@ -8,12 +8,10 @@ import {
   elementById,
   elementByIdWithin,
   elementByText,
-  elementsById,
-  getReceiveAddress,
   getSeed,
+  receiveOnchainFunds,
   restoreWallet,
   sleep,
-  swipeFullScreen,
   tap,
   typeText,
 } from '../helpers/actions';
@@ -56,20 +54,7 @@ describe('@backup - Backup', () => {
     // - check if everything was restored
 
     // - receive some money //
-    const address = await getReceiveAddress();
-    await rpc.sendToAddress(address, '1');
-    await rpc.generateToAddress(1, await rpc.getNewAddress());
-    await electrum?.waitForSync();
-
-    // https://github.com/synonymdev/bitkit-android/issues/268
-    // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
-    // await elementById('ReceivedTransaction').waitForDisplayed();
-
-    await swipeFullScreen('down');
-    await sleep(1000); // wait for the app to settle
-
-    const moneyText = (await elementsById('MoneyText'))[1];
-    await expect(moneyText).toHaveText('100 000 000');
+    await receiveOnchainFunds(rpc, { sats: 100_000_000, expect_high_balance_warning: true });
 
     // - set tag //
     const tag = 'testtag';

@@ -459,6 +459,7 @@ export async function receiveOnchainFunds(
 export async function acknowledgeHighBalanceWarning() {
   await elementById('high_balance_image').waitForDisplayed();
   await tap('understood_button');
+  await elementById('high_balance_image').waitForDisplayed({ reverse: true });
   await sleep(500);
 }
 
