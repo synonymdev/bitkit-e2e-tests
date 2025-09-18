@@ -41,7 +41,7 @@ describe('@backup - Backup', () => {
     await electrum?.waitForSync();
   });
 
-  afterEach(async () => {
+  after(async () => {
     await electrum?.stop();
   });
 
@@ -55,7 +55,7 @@ describe('@backup - Backup', () => {
     // - check if everything was restored
 
     // - receive some money //
-    await receiveOnchainFunds(rpc, { sats: 100_000_000, expect_high_balance_warning: true });
+    await receiveOnchainFunds(rpc, { sats: 100_000_000, expectHighBalanceWarning: true });
 
     // - set tag //
     const tag = 'testtag';
