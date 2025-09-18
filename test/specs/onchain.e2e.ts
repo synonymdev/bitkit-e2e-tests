@@ -12,11 +12,14 @@ import {
   elementsById,
   expectTextWithin,
   getReceiveAddress,
-  receiveOnchainFunds,
+  mineBlocks,
+  multiTap,
   sleep,
   swipeFullScreen,
   tap,
   typeText,
+  receiveOnchainFunds,
+  acknowledgeHighBalanceWarning,
 } from '../helpers/actions';
 
 describe('@onchain - Onchain', () => {
@@ -24,9 +27,6 @@ describe('@onchain - Onchain', () => {
   const rpc = new BitcoinJsonRpc(bitcoinURL);
 
   before(async () => {
-    await reinstallApp();
-    await completeOnboarding();
-
     // ensure we have at least 10 BTC on regtest
     let balance = await rpc.getBalance();
     const address = await rpc.getNewAddress();
@@ -40,16 +40,18 @@ describe('@onchain - Onchain', () => {
   });
 
   beforeEach(async () => {
+    await reinstallApp();
+    await completeOnboarding();
     await electrum?.waitForSync();
   });
 
-  afterEach(async () => {
+  after(async () => {
     await electrum?.stop();
   });
 
   it('@onchain_1 - Receive and send some out', async () => {
     // receive some first
-    await receiveOnchainFunds(rpc, { sats: 100_000_000, expect_high_value_warning: true });
+    await receiveOnchainFunds(rpc, { sats: 100_000_000, expect_high_balance_warning: true });
 
     // then send out 10 000
     const coreAddress = await rpc.getNewAddress();
@@ -69,7 +71,7 @@ describe('@onchain - Onchain', () => {
     await elementById('SendSuccess').waitForDisplayed();
     await tap('Close');
 
-    await rpc.generateToAddress(1, await rpc.getNewAddress());
+    await mineBlocks(rpc, 1);
     await electrum?.waitForSync();
 
     const moneyTextAfter = (await elementsById('MoneyText'))[1];
@@ -106,8 +108,7 @@ describe('@onchain - Onchain', () => {
   // - shows warnings for sending over 100$ or 50% of total
   // - avoid creating dust output
 
-  // https://github.com/synonymdev/bitkit-android/issues/324
-  it.skip('@onchain_2 - Can receive 2 transactions and send them all at once', async () => {
+  it('@onchain_2 - Can receive 2 transactions and send them all at once', async () => {
     // - can receive to 2 addresses and tag them //
     for (let i = 1; i <= 2; i++) {
       const address = await getReceiveAddress();
@@ -120,20 +121,25 @@ describe('@onchain - Onchain', () => {
       await tap('ShowQrReceive');
 
       await rpc.sendToAddress(address, '1');
-      await rpc.generateToAddress(1, await rpc.getNewAddress());
+      await mineBlocks(rpc, 1);
       await electrum?.waitForSync();
 
       // https://github.com/synonymdev/bitkit-android/issues/268
       // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
       // await elementById('ReceivedTransaction').waitForDisplayed();
 
+      // acknowledge high balance warning for the first tx only
+      if (i === 1) {
+        await acknowledgeHighBalanceWarning();
+      }
+
       await swipeFullScreen('down');
       await sleep(1000); // wait for the app to settle
 
       // - shows correct total balance
-      const moneyText = (await elementsById('MoneyText'))[1];
+      const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
       const expected = `${i}00 000 000`;
-      await expect(moneyText).toHaveText(expected);
+      await expect(totalBalance).toHaveText(expected);
     }
 
     // - can send total balance and tag the tx //
@@ -147,10 +153,8 @@ describe('@onchain - Onchain', () => {
 
     // Amount / NumberPad
     await tap('AvailableAmount');
-    await tap('NRemove');
-    await tap('NRemove');
-    await tap('NRemove');
-    await elementByText('200 000').waitForDisplayed();
+    await multiTap('NRemove', 3);
+    await elementByText('199 999').waitForDisplayed();
 
     await tap('AvailableAmount');
     await tap('ContinueAmount');
@@ -159,12 +163,91 @@ describe('@onchain - Onchain', () => {
     await elementById('TagsAddSend').waitForDisplayed();
     await tap('TagsAddSend');
     await typeText('TagInputSend', 'stag');
-    await elementByText('Add').click();
+    await elementByText('Add', 'exact').click();
     await dragOnElement('GRAB', 'right', 0.95);
 
-    await sleep(10_000);
+    await sleep(1000);
+    await elementById('SendDialog2').waitForDisplayed(); // sending over 50% of balance warning
+    await tap('DialogConfirm');
+    await elementById('SendSuccess').waitForDisplayed();
+    await tap('Close');
 
-    // TODO: verifications of tags in review screen
+    await mineBlocks(rpc, 1);
+
+    const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
+    await expect(totalBalance).toHaveText('0');
+
+    // Check Activity
+    await swipeFullScreen('up');
+    await elementById('ActivityShort-0').waitForDisplayed();
+    await elementById('ActivityShort-1').waitForDisplayed();
+    await elementById('ActivityShort-2').waitForDisplayed();
+
+    await tap('ActivityShowAll');
+    // All 3 transactions should be present
+    await elementById('Activity-1').waitForDisplayed();
+    await elementById('Activity-2').waitForDisplayed();
+    await elementById('Activity-3').waitForDisplayed();
+    await elementById('Activity-4').waitForDisplayed({ reverse: true });
+    await expectTextWithin('Activity-1', '-');
+    await expectTextWithin('Activity-2', '+');
+    await expectTextWithin('Activity-3', '+');
+
+    // Sent, 1 transaction
+    await tap('Tab-sent');
+    await expectTextWithin('Activity-1', '-');
+    await elementById('Activity-2').waitForDisplayed({ reverse: true });
+
+    // Received, 2 transactions
+    await tap('Tab-received');
+    await expectTextWithin('Activity-1', '+');
+    await expectTextWithin('Activity-2', '+');
+    await elementById('Activity-3').waitForDisplayed({ reverse: true });
+
+    // Other, 0 transactions
+    await tap('Tab-other');
+    await elementById('Activity-1').waitForDisplayed({ reverse: true });
+    await tap('Tab-all');
+
+    // TODO: receive tag does not work in local regtest for some reason
+    // https://github.com/synonymdev/bitkit-android/issues/322
+    // // filter by receive tag
+    // await tap('TagsPrompt');
+    // await tap('Tag-rtag1');
+    // await expectTextWithin('Activity-1', '+');
+    // await elementById('Activity-2').waitForDisplayed({ reverse: true });
+    // await tap('Tag-rtag1-delete');
+
+    // https://github.com/synonymdev/bitkit-android/issues/386
+    // filter by send tag
+    // await tap('TagsPrompt');
+    // await tap('Tag-stag');
+    // await elementByText('Apply','exact').click();
+    // await expectTextWithin('Activity-1', '-');
+    // await elementById('Activity-2').waitForDisplayed({ reverse: true });
+    // await tap('Tag-stag-delete');
+
+    // // calendar, previous month, 0 transactions
+    // await tap('DatePicker');
+    // today date in the form of 'Sunday, September 28, 2025'
+
+    // await elementById('Today').waitForDisplayed();
+    // await tap('PrevMonth');
+    // await elementById('Today').waitForDisplayed({ reverse: true });
+    // await tap('Day-1');
+    // await tap('Day-28');
+    // await tap('CalendarApplyButton');
+    // await elementById('Activity-1').waitForDisplayed({ reverse: true });
+
+    // // calendar, current date, 3 transactions
+    // await tap('DatePicker');
+    // await tap('CalendarClearButton');
+    // await tap('NextMonth');
+    // await tap('Today');
+    // await tap('CalendarApplyButton');
+    // await elementById('Activity-1').waitForDisplayed();
+    // await elementById('Activity-2').waitForDisplayed();
+    // await elementById('Activity-3').waitForDisplayed();
   });
 
   // https://github.com/synonymdev/bitkit-android/issues/324
