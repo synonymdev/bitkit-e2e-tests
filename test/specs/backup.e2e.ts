@@ -22,9 +22,6 @@ describe('@backup - Backup', () => {
   const rpc = new BitcoinJsonRpc(bitcoinURL);
 
   before(async () => {
-    await reinstallApp();
-    await completeOnboarding();
-
     // ensure we have at least 10 BTC on regtest
     let balance = await rpc.getBalance();
     const address = await rpc.getNewAddress();
@@ -38,6 +35,8 @@ describe('@backup - Backup', () => {
   });
 
   beforeEach(async () => {
+    await reinstallApp();
+    await completeOnboarding();
     await electrum?.waitForSync();
   });
 
