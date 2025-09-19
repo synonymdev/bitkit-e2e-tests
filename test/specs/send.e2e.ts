@@ -12,7 +12,6 @@ import {
   expectTextVisible,
   expectTextWithin,
   getReceiveAddress,
-  getTextUnder,
   receiveOnchainFunds,
   sleep,
   swipeFullScreen,

@@ -21,6 +21,7 @@ import {
   receiveOnchainFunds,
   acknowledgeHighBalanceWarning,
   getFormattedDate,
+  enterAddress,
 } from '../helpers/actions';
 
 describe('@onchain - Onchain', () => {
@@ -57,12 +58,7 @@ describe('@onchain - Onchain', () => {
     // then send out 10 000
     const coreAddress = await rpc.getNewAddress();
     console.info({ coreAddress });
-    await tap('Send');
-    await tap('RecipientManual');
-    await typeText('RecipientInput', coreAddress);
-    await confirmInputOnKeyboard();
-    await sleep(1000); // wait for the app to settle
-    await tap('AddressContinue');
+    await enterAddress(coreAddress);
     await tap('N1');
     await tap('N000');
     await tap('N0');
@@ -147,12 +143,7 @@ describe('@onchain - Onchain', () => {
 
     // - can send total balance and tag the tx //
     const coreAddress = await rpc.getNewAddress();
-    await tap('Send');
-    await tap('RecipientManual');
-    await typeText('RecipientInput', coreAddress);
-    await confirmInputOnKeyboard();
-    await sleep(1000); // wait for the app to settle
-    await tap('AddressContinue');
+    await enterAddress(coreAddress);
 
     // Amount / NumberPad
     await tap('AvailableAmount');
@@ -274,13 +265,7 @@ describe('@onchain - Onchain', () => {
 
     const coreAddress = await rpc.getNewAddress();
     console.info({ coreAddress });
-
-    await tap('Send');
-    await tap('RecipientManual');
-    await typeText('RecipientInput', coreAddress);
-    await confirmInputOnKeyboard();
-    await sleep(1000); // wait for the app to settle
-    await tap('AddressContinue');
+    await enterAddress(coreAddress);
 
     // enter amount that would leave dust
     let amountStr = await (await elementByIdWithin('AvailableAmount', 'MoneyText')).getText();
