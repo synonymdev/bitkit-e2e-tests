@@ -177,6 +177,8 @@ describe('@onchain - Onchain', () => {
     await elementById('ActivityShort-1').waitForDisplayed();
     await elementById('ActivityShort-2').waitForDisplayed();
 
+    await swipeFullScreen('up');
+    await sleep(1000); // wait for the app to settle
     await tap('ActivityShowAll');
     // All 3 transactions should be present
     await elementById('Activity-1').waitForDisplayed();
