@@ -64,6 +64,7 @@ describe('@backup - Backup', () => {
     await typeText('TagInput', tag);
     // workaround for Android keyboard not hiding (only in emulator)
     await confirmInputOnKeyboard();
+    await sleep(500);
     await tap('ActivityTagsSubmit');
     await sleep(200);
     await tap('NavigationClose');
