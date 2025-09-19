@@ -22,9 +22,6 @@ describe('@backup - Backup', () => {
   const rpc = new BitcoinJsonRpc(bitcoinURL);
 
   before(async () => {
-    await reinstallApp();
-    await completeOnboarding();
-
     // ensure we have at least 10 BTC on regtest
     let balance = await rpc.getBalance();
     const address = await rpc.getNewAddress();
@@ -38,6 +35,8 @@ describe('@backup - Backup', () => {
   });
 
   beforeEach(async () => {
+    await reinstallApp();
+    await completeOnboarding();
     await electrum?.waitForSync();
   });
 
@@ -63,9 +62,9 @@ describe('@backup - Backup', () => {
     await tap('Activity-1');
     await tap('ActivityTag');
     await typeText('TagInput', tag);
+    await tap('ActivityTagsSubmit');
     // workaround for Android keyboard not hiding (only in emulator)
     await confirmInputOnKeyboard();
-    await tap('ActivityTagsSubmit');
     await sleep(200);
     await tap('NavigationClose');
     await tap('NavigationBack');
