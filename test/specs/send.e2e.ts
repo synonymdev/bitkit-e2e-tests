@@ -90,6 +90,7 @@ describe('@send - Send', () => {
     await receiveOnchainFunds(rpc);
 
     await tap('Send');
+    await sleep(500);
     await tap('RecipientManual');
 
     // check validation for address
