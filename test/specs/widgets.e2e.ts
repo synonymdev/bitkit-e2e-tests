@@ -7,20 +7,16 @@ import {
   completeOnboarding,
   deleteAllDefaultWidgets,
 } from '../helpers/actions';
-import { checkComplete, markComplete, reinstallApp } from '../helpers/setup';
+import { reinstallApp } from '../helpers/setup';
+import { ciIt } from '../helpers/suite';
 
-const d = checkComplete(['widgets_1']) ? describe.skip : describe;
-
-d('@widgets - Widgets', () => {
+describe('@widgets - Widgets', () => {
   before(async () => {
     await reinstallApp();
     await completeOnboarding();
   });
 
-  it('@widgets_1 - Can add/edit/remove a widget', async () => {
-    if (checkComplete(['widgets_1'])) {
-      return;
-    }
+  ciIt('@widgets_1 - Can add/edit/remove a widget', async () => {
     // delete all default widgets
     await deleteAllDefaultWidgets();
 
@@ -111,6 +107,5 @@ d('@widgets - Widgets', () => {
     await elementByText('Yes, Delete').waitForDisplayed();
     await elementByText('Yes, Delete').click();
     await elementById('WidgetsAdd').waitForDisplayed();
-    markComplete('widgets_1');
   });
 });

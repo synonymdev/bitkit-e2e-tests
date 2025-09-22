@@ -11,19 +11,15 @@ import {
   typeText,
   waitForSetupWalletScreenFinish,
 } from '../helpers/actions';
-import { checkComplete, markComplete, reinstallApp } from '../helpers/setup';
+import { reinstallApp } from '../helpers/setup';
+import { ciIt } from '../helpers/suite';
 
-const d = checkComplete(['onboarding_1', 'onboarding_2']) ? describe.skip : describe;
-
-d('@onboarding - Onboarding', () => {
+describe('@onboarding - Onboarding', () => {
   beforeEach(async () => {
     await reinstallApp();
   });
 
-  it('@onboarding_1 - Can start onboarding', async () => {
-    if (checkComplete(['onboarding_1'])) {
-      return;
-    }
+  ciIt('@onboarding_1 - Can start onboarding', async () => {
     // TOS and PP
     await elementById('Check1').waitForDisplayed();
     await sleep(1000); // Wait for the app to settle
@@ -49,13 +45,9 @@ d('@onboarding - Onboarding', () => {
 
     await acceptAppNotificationAlert();
     await elementByText('TO GET\nSTARTED\nSEND\nBITCOIN\nTO YOUR\nWALLET').waitForDisplayed();
-    markComplete('onboarding_1');
   });
 
-  it('@onboarding_2 - Can pass onboarding correctly', async () => {
-    if (checkComplete(['onboarding_2'])) {
-      return;
-    }
+  ciIt('@onboarding_2 - Can pass onboarding correctly', async () => {
     // TOS and PP
     await elementById('Check1').waitForDisplayed();
     await sleep(1000); // Wait for the app to settle
@@ -115,6 +107,5 @@ d('@onboarding - Onboarding', () => {
     // Verify that the addresses match
     await expect(address0).toEqual(address0Text);
     await expect(address1).toEqual(address1Text);
-    markComplete('onboarding_2');
   });
 });

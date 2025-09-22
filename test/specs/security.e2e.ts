@@ -14,11 +14,10 @@ import {
 } from '../helpers/actions';
 import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
-import { checkComplete, launchFreshApp, markComplete, reinstallApp } from '../helpers/setup';
+import { launchFreshApp, reinstallApp } from '../helpers/setup';
+import { ciIt } from '../helpers/suite';
 
-const d = checkComplete(['security_1']) ? describe.skip : describe;
-
-d('@security - Security And Privacy', () => {
+describe('@security - Security And Privacy', () => {
   let electrum: { waitForSync: any; stop: any };
   const rpc = new BitcoinJsonRpc(bitcoinURL);
 
@@ -47,10 +46,7 @@ d('@security - Security And Privacy', () => {
   const MAX_ATTEMPTS_BEFORE_LAST = 7;
   const PIN_LENGTH = 4;
 
-  it('@security_1 - Can setup PIN', async () => {
-    if (checkComplete(['security_1'])) {
-      return;
-    }
+  ciIt('@security_1 - Can setup PIN', async () => {
     // test plan:
     // - set up PIN
     // - login with PIN
@@ -165,6 +161,5 @@ d('@security - Security And Privacy', () => {
     await elementById('TOS').waitForDisplayed();
     await elementById('Check1').waitForDisplayed();
     await elementById('Check2').waitForDisplayed();
-    markComplete('security_1');
   });
 });

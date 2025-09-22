@@ -19,11 +19,10 @@ import {
 } from '../helpers/actions';
 import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
-import { checkComplete, markComplete, reinstallApp } from '../helpers/setup';
+import { reinstallApp } from '../helpers/setup';
+import { ciIt } from '../helpers/suite';
 
-const d = checkComplete(['boost_1', 'boost_2']) ? describe.skip : describe;
-
-d('@boost - Boost', () => {
+describe('@boost - Boost', () => {
   let electrum: { waitForSync: any; stop: any };
   const rpc = new BitcoinJsonRpc(bitcoinURL);
 
@@ -48,10 +47,7 @@ d('@boost - Boost', () => {
     await completeOnboarding();
   });
 
-  it('@boost_1 - Can do CPFP', async () => {
-    if (checkComplete(['boost_1'])) {
-      return;
-    }
+  ciIt('@boost_1 - Can do CPFP', async () => {
     // fund the wallet (100 000), don't mine blocks so tx is unconfirmed
     await receiveOnchainFunds(rpc, { sats: 100_000, blocksToMine: 0 });
 
@@ -146,14 +142,9 @@ d('@boost - Boost', () => {
     await tap('NavigationClose');
     await tap('ActivityShort-1');
     await elementById('StatusConfirmed').waitForDisplayed();
-
-    markComplete('boost_1');
   });
 
-  it('@boost_2 - Can do RBF', async () => {
-    if (checkComplete(['boost_2'])) {
-      return;
-    }
+  ciIt('@boost_2 - Can do RBF', async () => {
     // fund the wallet (100 000)
     await receiveOnchainFunds(rpc);
 
@@ -270,7 +261,5 @@ d('@boost - Boost', () => {
     await tap('ActivityShort-0');
     // TEMP: refresh until proper events available
     await elementById('StatusConfirmed').waitForDisplayed();
-
-    markComplete('boost_2');
   });
 });

@@ -7,13 +7,10 @@ import {
   sleep,
   tap,
 } from '../helpers/actions';
-import { checkComplete, launchFreshApp, markComplete, reinstallApp } from '../helpers/setup';
+import { launchFreshApp, reinstallApp } from '../helpers/setup';
+import { ciIt } from '../helpers/suite';
 
-const d = checkComplete(['numberpad_1', 'numberpad_2', 'numberpad_3', 'numberpad_4'])
-  ? describe.skip
-  : describe;
-
-d('@numberpad - NumberPad', () => {
+describe('@numberpad - NumberPad', () => {
   before(async () => {
     await reinstallApp();
     await completeOnboarding();
@@ -24,27 +21,19 @@ d('@numberpad - NumberPad', () => {
   });
 
   describe('Modern denomination', () => {
-    it('@numberpad_1 - Receive: Can enter amounts in modern denomination', async () => {
-      if (checkComplete(['numberpad_1'])) {
-        return;
-      }
+    ciIt('@numberpad_1 - Receive: Can enter amounts in modern denomination', async () => {
       await tap('Receive');
       await tap('SpecifyInvoiceButton');
       await tap('ReceiveNumberPadTextField');
       await sleep(700);
       await modernDenominationChecks('Receive');
-      markComplete('numberpad_1');
     });
 
-    it('@numberpad_2 - Send: Can enter amounts in modern denomination', async () => {
-      if (checkComplete(['numberpad_2'])) {
-        return;
-      }
+    ciIt('@numberpad_2 - Send: Can enter amounts in modern denomination', async () => {
       const address = 'bcrt1q4jjfydszdxw8wpk69cyzkd77tm32uvfs0dvsfs';
       await enterAddress(address);
       await sleep(700);
       await modernDenominationChecks('Send');
-      markComplete('numberpad_2');
     });
   });
 
@@ -53,27 +42,19 @@ d('@numberpad - NumberPad', () => {
       await switchToClassicDenomination();
     });
 
-    it('@numberpad_3 - Receive: Can enter amounts in classic denomination', async () => {
-      if (checkComplete(['numberpad_3'])) {
-        return;
-      }
+    ciIt('@numberpad_3 - Receive: Can enter amounts in classic denomination', async () => {
       await tap('Receive');
       await tap('SpecifyInvoiceButton');
       await tap('ReceiveNumberPadTextField');
       await sleep(700);
       await classicDenominationChecks('Receive');
-      markComplete('numberpad_3');
     });
 
-    it('@numberpad_4 - Send: Can enter amounts in classic denomination', async () => {
-      if (checkComplete(['numberpad_4'])) {
-        return;
-      }
+    ciIt('@numberpad_4 - Send: Can enter amounts in classic denomination', async () => {
       const address = 'bcrt1q4jjfydszdxw8wpk69cyzkd77tm32uvfs0dvsfs';
       await enterAddress(address);
       await sleep(700);
       await classicDenominationChecks('Send');
-      markComplete('numberpad_4');
     });
   });
 });

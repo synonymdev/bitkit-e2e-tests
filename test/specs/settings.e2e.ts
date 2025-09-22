@@ -15,28 +15,10 @@ import {
   multiTap,
 } from '../helpers/actions';
 import { electrumHost, electrumPort } from '../helpers/constants';
-import { checkComplete, launchFreshApp, markComplete, reinstallApp } from '../helpers/setup';
+import { launchFreshApp, reinstallApp } from '../helpers/setup';
+import { ciIt } from '../helpers/suite';
 
-const allTags = [
-  'settings_1',
-  'settings_2',
-  'settings_3',
-  'settings_4',
-  'settings_5',
-  'settings_6',
-  'settings_7',
-  // 'settings_8',
-  'settings_9',
-  'settings_10',
-  // 'settings_11',
-  'settings_12',
-  'settings_13',
-  'settings_14',
-];
-
-const d = checkComplete(allTags) ? describe.skip : describe;
-
-d('@settings - Settings', () => {
+describe('@settings - Settings', () => {
   before(async () => {
     await reinstallApp();
     await completeOnboarding();
@@ -47,10 +29,7 @@ d('@settings - Settings', () => {
   });
 
   describe('General', () => {
-    it('@settings_1 - Can switch local currency', async () => {
-      if (checkComplete(['settings_1'])) {
-        return;
-      }
+    ciIt('@settings_1 - Can switch local currency', async () => {
       // switch to local currency
       try {
         await tap('TotalBalance');
@@ -86,13 +65,9 @@ d('@settings - Settings', () => {
       await usd_opt.waitForDisplayed();
       await usd_opt.click();
       await tap('NavigationClose');
-      markComplete('settings_1');
     });
 
-    it('@settings_2 - Can switch Bitcoin Unit', async () => {
-      if (checkComplete(['settings_2'])) {
-        return;
-      }
+    ciIt('@settings_2 - Can switch Bitcoin Unit', async () => {
       const fiatSymbol = (await elementsById('MoneyFiatSymbol'))[1];
       const balance = (await elementsById('MoneyText'))[1];
       const unitRow = await elementByIdWithin('UnitSettings', 'Value');
@@ -134,13 +109,9 @@ d('@settings - Settings', () => {
       //   https://github.com/synonymdev/bitkit-android/issues/342
       //   await expect(balance).toHaveText('0.00000000');
       await expect(balance).toHaveText('0');
-      markComplete('settings_2');
     });
 
-    it('@settings_3 - Can switch transaction speed', async () => {
-      if (checkComplete(['settings_3'])) {
-        return;
-      }
+    ciIt('@settings_3 - Can switch transaction speed', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('GeneralSettings');
@@ -166,13 +137,9 @@ d('@settings - Settings', () => {
       await expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText(
         'Normal'
       );
-      markComplete('settings_3');
     });
 
-    it('@settings_4 - Can remove last used tags', async () => {
-      if (checkComplete(['settings_4'])) {
-        return;
-      }
+    ciIt('@settings_4 - Can remove last used tags', async () => {
       // no tags, menu entry should be hidden
       await tap('HeaderMenu');
       await tap('DrawerSettings');
@@ -210,26 +177,18 @@ d('@settings - Settings', () => {
       (await elementByText(tag)).waitForDisplayed({ reverse: true });
       await tap('TagsAdd');
       (await elementByText(tag)).waitForDisplayed({ reverse: true });
-      markComplete('settings_4');
     });
 
-    it('@settings_5 - Can show About screen', async () => {
-      if (checkComplete(['settings_5'])) {
-        return;
-      }
+    ciIt('@settings_5 - Can show About screen', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('About');
       await elementById('AboutLogo').waitForDisplayed();
-      markComplete('settings_5');
     });
   });
 
   describe('Security and Privacy', () => {
-    it('@settings_6 - Can swipe to hide balance', async () => {
-      if (checkComplete(['settings_6'])) {
-        return;
-      }
+    ciIt('@settings_6 - Can swipe to hide balance', async () => {
       // test plan:
       // - swipe to hide balance
       // - disable 'swipe to hide balance'
@@ -279,15 +238,11 @@ d('@settings - Settings', () => {
       await launchFreshApp();
       // Balance should be hidden
       await elementById('ShowBalance').waitForDisplayed();
-      markComplete('settings_6');
     });
   });
 
   describe('Backup or restore', () => {
-    it('@settings_7 - Can show backup and validate it', async () => {
-      if (checkComplete(['settings_7'])) {
-        return;
-      }
+    ciIt('@settings_7 - Can show backup and validate it', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('BackupSettings');
@@ -322,16 +277,12 @@ d('@settings - Settings', () => {
       await tap('OK');
       await tap('OK');
       await sleep(1000);
-      markComplete('settings_7');
     });
   });
 
   describe('Advanced', () => {
     // not available in ldk-node
-    it.skip('@settings_8 - Can switch address types', async () => {
-      if (checkComplete(['settings_8'])) {
-        return;
-      }
+    ciIt.skip('@settings_8 - Can switch address types', async () => {
       // wallet be in regtest mode by default
       // at first check if it is Native segwit by default
       const address = await getReceiveAddress();
@@ -366,13 +317,9 @@ d('@settings - Settings', () => {
       await tap('p2wpkh');
       await tap('NavigationClose');
       await sleep(1000);
-      markComplete('settings_8');
     });
 
-    it('@settings_9 - Can open LN settings screens', async () => {
-      if (checkComplete(['settings_9'])) {
-        return;
-      }
+    ciIt('@settings_9 - Can open LN settings screens', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       // LDKDebug, CopyNodeId, RefreshLDK, RestartLDK and RebroadcastLDKTXS N/A in DevSettings
@@ -396,13 +343,9 @@ d('@settings - Settings', () => {
       //     await tap('DevOptions');
       //   }
       await sleep(1000);
-      markComplete('settings_9');
     });
 
-    it('@settings_10 - Can enter wrong Electrum server and get an error message', async () => {
-      if (checkComplete(['settings_10'])) {
-        return;
-      }
+    ciIt('@settings_10 - Can enter wrong Electrum server and get an error message', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('AdvancedSettings');
@@ -499,14 +442,10 @@ d('@settings - Settings', () => {
       await tap('ConnectToHost');
       await elementById('Connected').waitForDisplayed();
       await sleep(1000);
-      markComplete('settings_10');
     });
 
     // https://github.com/synonymdev/bitkit-android/issues/337
-    it.skip('@settings_11 - Can connect to different Rapid Gossip Sync Server', async () => {
-      if (checkComplete(['settings_11'])) {
-        return;
-      }
+    ciIt.skip('@settings_11 - Can connect to different Rapid Gossip Sync Server', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('AdvancedSettings');
@@ -532,13 +471,9 @@ d('@settings - Settings', () => {
 
       const resetUrl = await (await elementById('ConnectedUrl')).getText();
       await expect(resetUrl).toBe(rgsUrl);
-      markComplete('settings_11');
     });
 
-    it('@settings_12 - Can reset suggestions', async () => {
-      if (checkComplete(['settings_12'])) {
-        return;
-      }
+    ciIt('@settings_12 - Can reset suggestions', async () => {
       try {
         await elementById('Suggestions').waitForDisplayed();
       } catch {
@@ -560,15 +495,11 @@ d('@settings - Settings', () => {
       // lightning should be visible again
       await sleep(1000);
       await elementById('Suggestion-lightning').waitForDisplayed();
-      markComplete('settings_12');
     });
   });
 
   describe('Dev Settings', () => {
-    it('@settings_13 - Can show Dev Settings', async () => {
-      if (checkComplete(['settings_13'])) {
-        return;
-      }
+    ciIt('@settings_13 - Can show Dev Settings', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await elementById('DevSettings').waitForDisplayed({ reverse: true });
@@ -580,15 +511,11 @@ d('@settings - Settings', () => {
 
       await multiTap('DevOptions', 5);
       await elementById('DevSettings').waitForDisplayed({ reverse: true });
-      markComplete('settings_13');
     });
   });
 
   describe('Support', () => {
-    it('@settings_14 - Can see app status', async () => {
-      if (checkComplete(['settings_14'])) {
-        return;
-      }
+    ciIt('@settings_14 - Can see app status', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('Support');
@@ -601,7 +528,6 @@ d('@settings - Settings', () => {
       await elementById('Status-backup').waitForDisplayed();
 
       await tap('NavigationClose');
-      markComplete('settings_14');
     });
   });
 });
