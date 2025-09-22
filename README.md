@@ -139,3 +139,4 @@ TBD 🚧
 - Use `confirmInputOnKeyboard()` to handle keyboard actions across Android/iOS.
 - Tests are designed to work identically on both platforms where possible.
 - To debug, add `console.info()` or enable `wdio` debug logs.
+- Use `ciIt()` instead of `it()` on CI to automatically skip tests that already passed in a previous run.
