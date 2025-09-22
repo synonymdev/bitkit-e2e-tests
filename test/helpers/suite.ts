@@ -25,7 +25,7 @@ export function ciIt(name: string, fn: () => Promise<void>) {
     return it.skip(name, fn);
   }
 
-  return ciIt(name, async () => {
+  return it(name, async () => {
     await fn();
     markComplete(name);
   });
