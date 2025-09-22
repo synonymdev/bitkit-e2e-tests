@@ -2,6 +2,7 @@ import {
   completeOnboarding,
   enterAddress,
   expectTextVisible,
+  getTextUnder,
   multiTap,
   sleep,
   tap,
@@ -58,8 +59,8 @@ describe('@numberpad - NumberPad', () => {
 });
 
 type NumberpadMode = 'Send' | 'Receive';
-
 async function modernDenominationChecks(mode: NumberpadMode) {
+  await makeSureIsBitcoinInput(mode);
   // Unit set to sats
   await tap('N1');
   await tap('N2');
@@ -90,6 +91,7 @@ async function modernDenominationChecks(mode: NumberpadMode) {
   await tap(`${mode}NumberPadUnit`);
 }
 async function classicDenominationChecks(mode: NumberpadMode) {
+  await makeSureIsBitcoinInput(mode);
   // Unit set to BTC
   await tap('N1');
   await expectTextVisible('1.00000000');
@@ -121,6 +123,15 @@ async function classicDenominationChecks(mode: NumberpadMode) {
   // still there
   await expectTextVisible('4.20690000');
 }
+
+async function makeSureIsBitcoinInput(mode: NumberpadMode) {
+  await sleep(500);
+  const currentUnit = await getTextUnder(`${mode}NumberPadUnit`);
+  if (currentUnit !== 'BITCOIN') {
+    await tap(`${mode}NumberPadUnit`);
+  }
+}
+
 async function switchToClassicDenomination() {
   await tap('HeaderMenu');
   await tap('DrawerSettings');

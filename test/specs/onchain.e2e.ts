@@ -4,7 +4,6 @@ import initElectrum from '../helpers/electrum';
 import { reinstallApp } from '../helpers/setup';
 import {
   completeOnboarding,
-  confirmInputOnKeyboard,
   dragOnElement,
   elementById,
   elementByIdWithin,
