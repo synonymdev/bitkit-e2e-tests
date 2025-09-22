@@ -19,7 +19,7 @@ import {
   typeAddressAndVerifyContinue,
 } from '../helpers/actions';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
-import { reinstallApp } from '../helpers/setup';
+import { checkComplete, markComplete, reinstallApp } from '../helpers/setup';
 import { confirmInputOnKeyboard, tap, typeText } from '../helpers/actions';
 import {
   connectToLND,
@@ -31,7 +31,9 @@ import {
   checkChannelStatus,
 } from '../helpers/lnd';
 
-describe('@send - Send', () => {
+const d = checkComplete(['send_1', 'send_2']) ? describe.skip : describe;
+
+d('@send - Send', () => {
   let electrum: { waitForSync: any; stop: any };
   const rpc = new BitcoinJsonRpc(bitcoinURL);
 
@@ -58,6 +60,9 @@ describe('@send - Send', () => {
   });
 
   it('@send_1 - Validates payment data in the manual input', async () => {
+    if (checkComplete(['send_1'])) {
+      return;
+    }
     await tap('Send');
     await tap('RecipientManual');
 
@@ -118,9 +123,13 @@ describe('@send - Send', () => {
     // await typeAddressAndVerifyContinue({ address: unified2, reverse: true });
 
     //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/354 ---//
+    markComplete('send_1');
   });
 
   it('@send_2 - Can receive funds and send to different invoices', async () => {
+    if (checkComplete(['send_2'])) {
+      return;
+    }
     // Test plan:
     // Prepare
     // - receive onchain funds
@@ -454,5 +463,6 @@ describe('@send - Send', () => {
     await enterAddress(invoice9);
     await elementById('ReviewAmount').waitForDisplayed();
     await swipeFullScreen('down');
+    markComplete('send_2');
   });
 });

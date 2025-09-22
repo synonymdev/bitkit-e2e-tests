@@ -7,9 +7,13 @@ import {
   sleep,
   tap,
 } from '../helpers/actions';
-import { launchFreshApp, reinstallApp } from '../helpers/setup';
+import { checkComplete, launchFreshApp, markComplete, reinstallApp } from '../helpers/setup';
 
-describe('@numberpad - NumberPad', () => {
+const d = checkComplete(['numberpad_1', 'numberpad_2', 'numberpad_3', 'numberpad_4'])
+  ? describe.skip
+  : describe;
+
+d('@numberpad - NumberPad', () => {
   before(async () => {
     await reinstallApp();
     await completeOnboarding();
@@ -21,18 +25,26 @@ describe('@numberpad - NumberPad', () => {
 
   describe('Modern denomination', () => {
     it('@numberpad_1 - Receive: Can enter amounts in modern denomination', async () => {
+      if (checkComplete(['numberpad_1'])) {
+        return;
+      }
       await tap('Receive');
       await tap('SpecifyInvoiceButton');
       await tap('ReceiveNumberPadTextField');
       await sleep(700);
       await modernDenominationChecks('Receive');
+      markComplete('numberpad_1');
     });
 
     it('@numberpad_2 - Send: Can enter amounts in modern denomination', async () => {
+      if (checkComplete(['numberpad_2'])) {
+        return;
+      }
       const address = 'bcrt1q4jjfydszdxw8wpk69cyzkd77tm32uvfs0dvsfs';
       await enterAddress(address);
       await sleep(700);
       await modernDenominationChecks('Send');
+      markComplete('numberpad_2');
     });
   });
 
@@ -42,18 +54,26 @@ describe('@numberpad - NumberPad', () => {
     });
 
     it('@numberpad_3 - Receive: Can enter amounts in classic denomination', async () => {
+      if (checkComplete(['numberpad_3'])) {
+        return;
+      }
       await tap('Receive');
       await tap('SpecifyInvoiceButton');
       await tap('ReceiveNumberPadTextField');
       await sleep(700);
       await classicDenominationChecks('Receive');
+      markComplete('numberpad_3');
     });
 
     it('@numberpad_4 - Send: Can enter amounts in classic denomination', async () => {
+      if (checkComplete(['numberpad_4'])) {
+        return;
+      }
       const address = 'bcrt1q4jjfydszdxw8wpk69cyzkd77tm32uvfs0dvsfs';
       await enterAddress(address);
       await sleep(700);
       await classicDenominationChecks('Send');
+      markComplete('numberpad_4');
     });
   });
 });

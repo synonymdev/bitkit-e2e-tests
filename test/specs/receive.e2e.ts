@@ -10,15 +10,20 @@ import {
   tap,
   typeText,
 } from '../helpers/actions';
-import { reinstallApp } from '../helpers/setup';
+import { checkComplete, markComplete, reinstallApp } from '../helpers/setup';
 
-describe('@receive - Receive', () => {
+const d = checkComplete(['receive_1']) ? describe.skip : describe;
+
+d('@receive - Receive', () => {
   before(async () => {
     await reinstallApp();
     await completeOnboarding();
   });
 
   it('@receive_1 - Basic functionality', async () => {
+    if (checkComplete(['receive_1'])) {
+      return;
+    }
     const address = await getReceiveAddress();
     if (!address.startsWith('bcrt1')) {
       throw new Error(`Wrong default receiving address: ${address}`);
@@ -84,5 +89,6 @@ describe('@receive - Receive', () => {
     await expectTextVisible(tag);
     await tap(`Tag-${tag}-delete`);
     await expectTextVisible(tag, false);
+    markComplete('receive_1');
   });
 });

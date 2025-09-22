@@ -14,9 +14,11 @@ import {
 } from '../helpers/actions';
 import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
-import { launchFreshApp, reinstallApp } from '../helpers/setup';
+import { checkComplete, launchFreshApp, markComplete, reinstallApp } from '../helpers/setup';
 
-describe('@security - Security And Privacy', () => {
+const d = checkComplete(['security_1']) ? describe.skip : describe;
+
+d('@security - Security And Privacy', () => {
   let electrum: { waitForSync: any; stop: any };
   const rpc = new BitcoinJsonRpc(bitcoinURL);
 
@@ -46,6 +48,9 @@ describe('@security - Security And Privacy', () => {
   const PIN_LENGTH = 4;
 
   it('@security_1 - Can setup PIN', async () => {
+    if (checkComplete(['security_1'])) {
+      return;
+    }
     // test plan:
     // - set up PIN
     // - login with PIN
@@ -160,5 +165,6 @@ describe('@security - Security And Privacy', () => {
     await elementById('TOS').waitForDisplayed();
     await elementById('Check1').waitForDisplayed();
     await elementById('Check2').waitForDisplayed();
+    markComplete('security_1');
   });
 });

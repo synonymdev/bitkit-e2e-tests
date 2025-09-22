@@ -7,15 +7,20 @@ import {
   completeOnboarding,
   deleteAllDefaultWidgets,
 } from '../helpers/actions';
-import { reinstallApp } from '../helpers/setup';
+import { checkComplete, markComplete, reinstallApp } from '../helpers/setup';
 
-describe('@widgets - Widgets', () => {
+const d = checkComplete(['widgets_1']) ? describe.skip : describe;
+
+d('@widgets - Widgets', () => {
   before(async () => {
     await reinstallApp();
     await completeOnboarding();
   });
 
   it('@widgets_1 - Can add/edit/remove a widget', async () => {
+    if (checkComplete(['widgets_1'])) {
+      return;
+    }
     // delete all default widgets
     await deleteAllDefaultWidgets();
 
@@ -106,5 +111,6 @@ describe('@widgets - Widgets', () => {
     await elementByText('Yes, Delete').waitForDisplayed();
     await elementByText('Yes, Delete').click();
     await elementById('WidgetsAdd').waitForDisplayed();
+    markComplete('widgets_1');
   });
 });

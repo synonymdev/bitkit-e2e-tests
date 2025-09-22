@@ -1,7 +1,7 @@
 import BitcoinJsonRpc from 'bitcoin-json-rpc';
 import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
-import { reinstallApp } from '../helpers/setup';
+import { checkComplete, markComplete, reinstallApp } from '../helpers/setup';
 import {
   completeOnboarding,
   dragOnElement,
@@ -23,7 +23,9 @@ import {
   enterAddress,
 } from '../helpers/actions';
 
-describe('@onchain - Onchain', () => {
+const d = checkComplete(['onchain_1', 'onchain_2', 'onchain_3']) ? describe.skip : describe;
+
+d('@onchain - Onchain', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
   const rpc = new BitcoinJsonRpc(bitcoinURL);
 
@@ -51,6 +53,9 @@ describe('@onchain - Onchain', () => {
   });
 
   it('@onchain_1 - Receive and send some out', async () => {
+    if (checkComplete(['onchain_1'])) {
+      return;
+    }
     // receive some first
     await receiveOnchainFunds(rpc, { sats: 100_000_000, expectHighBalanceWarning: true });
 
@@ -94,6 +99,7 @@ describe('@onchain - Onchain', () => {
     await expectTextWithin(receiveDetail, '+');
     await expectTextWithin(receiveDetail, 'Received');
     await expectTextWithin(receiveDetail, '100 000 000');
+    markComplete('onchain_1');
   });
 
   // Test plan
@@ -105,6 +111,9 @@ describe('@onchain - Onchain', () => {
   // - avoid creating dust output
 
   it('@onchain_2 - Can receive 2 transactions and send them all at once', async () => {
+    if (checkComplete(['onchain_2'])) {
+      return;
+    }
     // - can receive to 2 addresses and tag them //
     for (let i = 1; i <= 2; i++) {
       const address = await getReceiveAddress();
@@ -251,9 +260,13 @@ describe('@onchain - Onchain', () => {
     await elementById('Activity-1').waitForDisplayed();
     await elementById('Activity-2').waitForDisplayed();
     await elementById('Activity-3').waitForDisplayed();
+    markComplete('onchain_2');
   });
 
   it('@onchain_3 - Avoids creating a dust output and instead adds it to the fee', async () => {
+    if (checkComplete(['onchain_3'])) {
+      return;
+    }
     // receive some first
     await receiveOnchainFunds(rpc, { sats: 100_000_000, expectHighBalanceWarning: true });
 
@@ -327,5 +340,6 @@ describe('@onchain - Onchain', () => {
     // TODO: missing inputs/outputs in transaction details
     // await elementByText('OUTPUT').waitForDisplayed();
     // await elementByText('OUTPUT (2)').waitForDisplayed({ reverse: true });
+    markComplete('onchain_3');
   });
 });

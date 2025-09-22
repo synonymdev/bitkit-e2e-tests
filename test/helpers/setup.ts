@@ -1,5 +1,33 @@
+import path from 'node:path';
+import fs from 'node:fs';
 import { elementsById, sleep, tap } from './actions';
 import { getAppId, getAppPath } from './constants';
+
+const LOCK_PATH = '/tmp/lock/';
+
+export function checkComplete(name: Array<string>): boolean {
+  if (!process.env.CI) {
+    return false;
+  }
+
+  for (const n of name) {
+    if (!fs.existsSync(path.join(LOCK_PATH, `lock-${n}`))) {
+      return false;
+    }
+  }
+
+  console.warn('skipping', name, 'as it previously passed on CI');
+  return true;
+}
+
+export function markComplete(name: string) {
+  if (!process.env.CI) {
+    return;
+  }
+
+  fs.mkdirSync(LOCK_PATH, { recursive: true });
+  fs.writeFileSync(path.join(LOCK_PATH, `lock-${name}`), '1');
+}
 
 export async function launchFreshApp({ tryHandleAlert = true } = {}) {
   const appId = getAppId();

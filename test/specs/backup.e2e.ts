@@ -1,7 +1,7 @@
 import BitcoinJsonRpc from 'bitcoin-json-rpc';
 import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
-import { reinstallApp } from '../helpers/setup';
+import { checkComplete, markComplete, reinstallApp } from '../helpers/setup';
 import {
   completeOnboarding,
   confirmInputOnKeyboard,
@@ -17,7 +17,9 @@ import {
   typeText,
 } from '../helpers/actions';
 
-describe('@backup - Backup', () => {
+const d = checkComplete(['backup_1']) ? describe.skip : describe;
+
+d('@backup - Backup', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
   const rpc = new BitcoinJsonRpc(bitcoinURL);
 
@@ -45,6 +47,9 @@ describe('@backup - Backup', () => {
   });
 
   it('@backup_1 - Can backup metadata, widget, settings and restore them', async () => {
+    if (checkComplete(['backup_1'])) {
+      return;
+    }
     // testplan:
     // - receive some money and set tag
     // - change settings
@@ -116,5 +121,6 @@ describe('@backup - Backup', () => {
     // await tap('Activity-1');
     // const tagElement = await elementById('Tag-${tag}');
     // await tagElement.waitForDisplayed();
+    markComplete('backup_1');
   });
 });

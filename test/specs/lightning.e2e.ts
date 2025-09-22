@@ -1,7 +1,7 @@
 import BitcoinJsonRpc from 'bitcoin-json-rpc';
 import initElectrum from '../helpers/electrum';
 import { completeOnboarding, receiveOnchainFunds, expectTextVisible } from '../helpers/actions';
-import { reinstallApp } from '../helpers/setup';
+import { checkComplete, markComplete, reinstallApp } from '../helpers/setup';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
 import {
   connectToLND,
@@ -13,7 +13,9 @@ import {
   checkChannelStatus,
 } from '../helpers/lnd';
 
-describe('@lightning - Lightning', () => {
+const d = checkComplete(['lightning_1']) ? describe.skip : describe;
+
+d('@lightning - Lightning', () => {
   let electrum: { waitForSync: any; stop: any };
   const rpc = new BitcoinJsonRpc(bitcoinURL);
 
@@ -40,6 +42,9 @@ describe('@lightning - Lightning', () => {
   });
 
   it('@lightning_1 - Can receive and send LN payments', async () => {
+    if (checkComplete(['lightning_1'])) {
+      return;
+    }
     // Test plan:
     // - connect to LND node
     // - receive funds
@@ -76,5 +81,7 @@ describe('@lightning - Lightning', () => {
 
     // check channel status
     await checkChannelStatus();
+
+    markComplete('lightning_1');
   });
 });
