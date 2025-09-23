@@ -8,6 +8,7 @@ import {
   deleteAllDefaultWidgets,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
+import { ciIt } from '../helpers/suite';
 
 describe('@widgets - Widgets', () => {
   before(async () => {
@@ -15,7 +16,7 @@ describe('@widgets - Widgets', () => {
     await completeOnboarding();
   });
 
-  it('@widgets_1 - Can add/edit/remove a widget', async () => {
+  ciIt('@widgets_1 - Can add/edit/remove a widget', async () => {
     // delete all default widgets
     await deleteAllDefaultWidgets();
 

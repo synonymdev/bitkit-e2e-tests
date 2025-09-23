@@ -22,6 +22,7 @@ import {
   getFormattedDate,
   enterAddress,
 } from '../helpers/actions';
+import { ciIt } from '../helpers/suite';
 
 describe('@onchain - Onchain', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
@@ -50,7 +51,7 @@ describe('@onchain - Onchain', () => {
     await electrum?.stop();
   });
 
-  it('@onchain_1 - Receive and send some out', async () => {
+  ciIt('@onchain_1 - Receive and send some out', async () => {
     // receive some first
     await receiveOnchainFunds(rpc, { sats: 100_000_000, expectHighBalanceWarning: true });
 
@@ -104,7 +105,7 @@ describe('@onchain - Onchain', () => {
   // - shows warnings for sending over 100$ or 50% of total
   // - avoid creating dust output
 
-  it('@onchain_2 - Can receive 2 transactions and send them all at once', async () => {
+  ciIt('@onchain_2 - Can receive 2 transactions and send them all at once', async () => {
     // - can receive to 2 addresses and tag them //
     for (let i = 1; i <= 2; i++) {
       const address = await getReceiveAddress();
@@ -253,7 +254,7 @@ describe('@onchain - Onchain', () => {
     await elementById('Activity-3').waitForDisplayed();
   });
 
-  it('@onchain_3 - Avoids creating a dust output and instead adds it to the fee', async () => {
+  ciIt('@onchain_3 - Avoids creating a dust output and instead adds it to the fee', async () => {
     // receive some first
     await receiveOnchainFunds(rpc, { sats: 100_000_000, expectHighBalanceWarning: true });
 

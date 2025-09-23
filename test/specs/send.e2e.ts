@@ -30,6 +30,7 @@ import {
   openLNDAndSync,
   checkChannelStatus,
 } from '../helpers/lnd';
+import { ciIt } from '../helpers/suite';
 
 describe('@send - Send', () => {
   let electrum: { waitForSync: any; stop: any };
@@ -57,7 +58,7 @@ describe('@send - Send', () => {
     electrum?.stop();
   });
 
-  it('@send_1 - Validates payment data in the manual input', async () => {
+  ciIt('@send_1 - Validates payment data in the manual input', async () => {
     await tap('Send');
     await tap('RecipientManual');
 
@@ -120,7 +121,7 @@ describe('@send - Send', () => {
     //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/354 ---//
   });
 
-  it('@send_2 - Can receive funds and send to different invoices', async () => {
+  ciIt('@send_2 - Can receive funds and send to different invoices', async () => {
     // Test plan:
     // Prepare
     // - receive onchain funds

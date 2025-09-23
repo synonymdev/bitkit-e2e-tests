@@ -20,6 +20,7 @@ import {
 import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
 import { reinstallApp } from '../helpers/setup';
+import { ciIt } from '../helpers/suite';
 
 describe('@boost - Boost', () => {
   let electrum: { waitForSync: any; stop: any };
@@ -46,7 +47,7 @@ describe('@boost - Boost', () => {
     await completeOnboarding();
   });
 
-  it('@boost_1 - Can do CPFP', async () => {
+  ciIt('@boost_1 - Can do CPFP', async () => {
     // fund the wallet (100 000), don't mine blocks so tx is unconfirmed
     await receiveOnchainFunds(rpc, { sats: 100_000, blocksToMine: 0 });
 
@@ -143,7 +144,7 @@ describe('@boost - Boost', () => {
     await elementById('StatusConfirmed').waitForDisplayed();
   });
 
-  it('@boost_2 - Can do RBF', async () => {
+  ciIt('@boost_2 - Can do RBF', async () => {
     // fund the wallet (100 000)
     await receiveOnchainFunds(rpc);
 

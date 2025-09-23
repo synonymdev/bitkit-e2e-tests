@@ -12,6 +12,7 @@ import {
   openLNDAndSync,
   checkChannelStatus,
 } from '../helpers/lnd';
+import { ciIt } from '../helpers/suite';
 
 describe('@lightning - Lightning', () => {
   let electrum: { waitForSync: any; stop: any };
@@ -39,7 +40,7 @@ describe('@lightning - Lightning', () => {
     electrum?.stop();
   });
 
-  it('@lightning_1 - Can receive and send LN payments', async () => {
+  ciIt('@lightning_1 - Can receive and send LN payments', async () => {
     // Test plan:
     // - connect to LND node
     // - receive funds

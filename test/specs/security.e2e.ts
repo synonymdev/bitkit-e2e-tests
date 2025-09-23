@@ -15,6 +15,7 @@ import {
 import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
+import { ciIt } from '../helpers/suite';
 
 describe('@security - Security And Privacy', () => {
   let electrum: { waitForSync: any; stop: any };
@@ -45,7 +46,7 @@ describe('@security - Security And Privacy', () => {
   const MAX_ATTEMPTS_BEFORE_LAST = 7;
   const PIN_LENGTH = 4;
 
-  it('@security_1 - Can setup PIN', async () => {
+  ciIt('@security_1 - Can setup PIN', async () => {
     // test plan:
     // - set up PIN
     // - login with PIN

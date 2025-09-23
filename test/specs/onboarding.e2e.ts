@@ -12,13 +12,14 @@ import {
   waitForSetupWalletScreenFinish,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
+import { ciIt } from '../helpers/suite';
 
 describe('@onboarding - Onboarding', () => {
   beforeEach(async () => {
     await reinstallApp();
   });
 
-  it('@onboarding_1 - Can start onboarding', async () => {
+  ciIt('@onboarding_1 - Can start onboarding', async () => {
     // TOS and PP
     await elementById('Check1').waitForDisplayed();
     await sleep(1000); // Wait for the app to settle
@@ -46,7 +47,7 @@ describe('@onboarding - Onboarding', () => {
     await elementByText('TO GET\nSTARTED\nSEND\nBITCOIN\nTO YOUR\nWALLET').waitForDisplayed();
   });
 
-  it('@onboarding_2 - Can pass onboarding correctly', async () => {
+  ciIt('@onboarding_2 - Can pass onboarding correctly', async () => {
     // TOS and PP
     await elementById('Check1').waitForDisplayed();
     await sleep(1000); // Wait for the app to settle

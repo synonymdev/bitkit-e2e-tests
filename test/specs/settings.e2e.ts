@@ -16,6 +16,7 @@ import {
 } from '../helpers/actions';
 import { electrumHost, electrumPort } from '../helpers/constants';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
+import { ciIt } from '../helpers/suite';
 
 describe('@settings - Settings', () => {
   before(async () => {
@@ -28,7 +29,7 @@ describe('@settings - Settings', () => {
   });
 
   describe('General', () => {
-    it('@settings_1 - Can switch local currency', async () => {
+    ciIt('@settings_1 - Can switch local currency', async () => {
       // switch to local currency
       try {
         await tap('TotalBalance');
@@ -66,7 +67,7 @@ describe('@settings - Settings', () => {
       await tap('NavigationClose');
     });
 
-    it('@settings_2 - Can switch Bitcoin Unit', async () => {
+    ciIt('@settings_2 - Can switch Bitcoin Unit', async () => {
       const fiatSymbol = (await elementsById('MoneyFiatSymbol'))[1];
       const balance = (await elementsById('MoneyText'))[1];
       const unitRow = await elementByIdWithin('UnitSettings', 'Value');
@@ -110,7 +111,7 @@ describe('@settings - Settings', () => {
       await expect(balance).toHaveText('0');
     });
 
-    it('@settings_3 - Can switch transaction speed', async () => {
+    ciIt('@settings_3 - Can switch transaction speed', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('GeneralSettings');
@@ -138,7 +139,7 @@ describe('@settings - Settings', () => {
       );
     });
 
-    it('@settings_4 - Can remove last used tags', async () => {
+    ciIt('@settings_4 - Can remove last used tags', async () => {
       // no tags, menu entry should be hidden
       await tap('HeaderMenu');
       await tap('DrawerSettings');
@@ -178,7 +179,7 @@ describe('@settings - Settings', () => {
       (await elementByText(tag)).waitForDisplayed({ reverse: true });
     });
 
-    it('@settings_5 - Can show About screen', async () => {
+    ciIt('@settings_5 - Can show About screen', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('About');
@@ -187,7 +188,7 @@ describe('@settings - Settings', () => {
   });
 
   describe('Security and Privacy', () => {
-    it('@settings_6 - Can swipe to hide balance', async () => {
+    ciIt('@settings_6 - Can swipe to hide balance', async () => {
       // test plan:
       // - swipe to hide balance
       // - disable 'swipe to hide balance'
@@ -241,7 +242,7 @@ describe('@settings - Settings', () => {
   });
 
   describe('Backup or restore', () => {
-    it('@settings_7 - Can show backup and validate it', async () => {
+    ciIt('@settings_7 - Can show backup and validate it', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('BackupSettings');
@@ -281,7 +282,7 @@ describe('@settings - Settings', () => {
 
   describe('Advanced', () => {
     // not available in ldk-node
-    it.skip('@settings_8 - Can switch address types', async () => {
+    ciIt.skip('@settings_8 - Can switch address types', async () => {
       // wallet be in regtest mode by default
       // at first check if it is Native segwit by default
       const address = await getReceiveAddress();
@@ -318,7 +319,7 @@ describe('@settings - Settings', () => {
       await sleep(1000);
     });
 
-    it('@settings_9 - Can open LN settings screens', async () => {
+    ciIt('@settings_9 - Can open LN settings screens', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       // LDKDebug, CopyNodeId, RefreshLDK, RestartLDK and RebroadcastLDKTXS N/A in DevSettings
@@ -344,7 +345,7 @@ describe('@settings - Settings', () => {
       await sleep(1000);
     });
 
-    it('@settings_10 - Can enter wrong Electrum server and get an error message', async () => {
+    ciIt('@settings_10 - Can enter wrong Electrum server and get an error message', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('AdvancedSettings');
@@ -444,7 +445,7 @@ describe('@settings - Settings', () => {
     });
 
     // https://github.com/synonymdev/bitkit-android/issues/337
-    it.skip('@settings_11 - Can connect to different Rapid Gossip Sync Server', async () => {
+    ciIt.skip('@settings_11 - Can connect to different Rapid Gossip Sync Server', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('AdvancedSettings');
@@ -472,7 +473,7 @@ describe('@settings - Settings', () => {
       await expect(resetUrl).toBe(rgsUrl);
     });
 
-    it('@settings_12 - Can reset suggestions', async () => {
+    ciIt('@settings_12 - Can reset suggestions', async () => {
       try {
         await elementById('Suggestions').waitForDisplayed();
       } catch {
@@ -498,7 +499,7 @@ describe('@settings - Settings', () => {
   });
 
   describe('Dev Settings', () => {
-    it('@settings_13 - Can show Dev Settings', async () => {
+    ciIt('@settings_13 - Can show Dev Settings', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await elementById('DevSettings').waitForDisplayed({ reverse: true });
@@ -514,7 +515,7 @@ describe('@settings - Settings', () => {
   });
 
   describe('Support', () => {
-    it('@settings_14 - Can see app status', async () => {
+    ciIt('@settings_14 - Can see app status', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('Support');

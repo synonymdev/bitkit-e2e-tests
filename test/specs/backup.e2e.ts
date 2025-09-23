@@ -16,6 +16,7 @@ import {
   tap,
   typeText,
 } from '../helpers/actions';
+import { ciIt } from '../helpers/suite';
 
 describe('@backup - Backup', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
@@ -44,7 +45,7 @@ describe('@backup - Backup', () => {
     await electrum?.stop();
   });
 
-  it('@backup_1 - Can backup metadata, widget, settings and restore them', async () => {
+  ciIt('@backup_1 - Can backup metadata, widget, settings and restore them', async () => {
     // testplan:
     // - receive some money and set tag
     // - change settings

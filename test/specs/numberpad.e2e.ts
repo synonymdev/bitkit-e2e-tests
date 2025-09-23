@@ -8,6 +8,7 @@ import {
   tap,
 } from '../helpers/actions';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
+import { ciIt } from '../helpers/suite';
 
 describe('@numberpad - NumberPad', () => {
   before(async () => {
@@ -20,7 +21,7 @@ describe('@numberpad - NumberPad', () => {
   });
 
   describe('Modern denomination', () => {
-    it('@numberpad_1 - Receive: Can enter amounts in modern denomination', async () => {
+    ciIt('@numberpad_1 - Receive: Can enter amounts in modern denomination', async () => {
       await tap('Receive');
       await tap('SpecifyInvoiceButton');
       await tap('ReceiveNumberPadTextField');
@@ -28,7 +29,7 @@ describe('@numberpad - NumberPad', () => {
       await modernDenominationChecks('Receive');
     });
 
-    it('@numberpad_2 - Send: Can enter amounts in modern denomination', async () => {
+    ciIt('@numberpad_2 - Send: Can enter amounts in modern denomination', async () => {
       const address = 'bcrt1q4jjfydszdxw8wpk69cyzkd77tm32uvfs0dvsfs';
       await enterAddress(address);
       await sleep(700);
@@ -41,7 +42,7 @@ describe('@numberpad - NumberPad', () => {
       await switchToClassicDenomination();
     });
 
-    it('@numberpad_3 - Receive: Can enter amounts in classic denomination', async () => {
+    ciIt('@numberpad_3 - Receive: Can enter amounts in classic denomination', async () => {
       await tap('Receive');
       await tap('SpecifyInvoiceButton');
       await tap('ReceiveNumberPadTextField');
@@ -49,7 +50,7 @@ describe('@numberpad - NumberPad', () => {
       await classicDenominationChecks('Receive');
     });
 
-    it('@numberpad_4 - Send: Can enter amounts in classic denomination', async () => {
+    ciIt('@numberpad_4 - Send: Can enter amounts in classic denomination', async () => {
       const address = 'bcrt1q4jjfydszdxw8wpk69cyzkd77tm32uvfs0dvsfs';
       await enterAddress(address);
       await sleep(700);

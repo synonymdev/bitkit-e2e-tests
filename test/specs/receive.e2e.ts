@@ -11,6 +11,7 @@ import {
   typeText,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
+import { ciIt } from '../helpers/suite';
 
 describe('@receive - Receive', () => {
   before(async () => {
@@ -18,7 +19,7 @@ describe('@receive - Receive', () => {
     await completeOnboarding();
   });
 
-  it('@receive_1 - Basic functionality', async () => {
+  ciIt('@receive_1 - Basic functionality', async () => {
     const address = await getReceiveAddress();
     if (!address.startsWith('bcrt1')) {
       throw new Error(`Wrong default receiving address: ${address}`);
