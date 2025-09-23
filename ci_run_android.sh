@@ -1,10 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ATTEMPT_DIR=""
+if [[ -n "${ATTEMPT:-}" && "${ATTEMPT}" != "" ]]; then
+  ATTEMPT_DIR="attempt-${ATTEMPT}"
+fi
+
+ARTIFACTS_ROOT="./artifacts"
+if [[ -n "$ATTEMPT_DIR" ]]; then
+  ARTIFACTS_DIR="${ARTIFACTS_ROOT}/${ATTEMPT_DIR}"
+else
+  ARTIFACTS_DIR="${ARTIFACTS_ROOT}"
+fi
+
+mkdir -p "${ARTIFACTS_DIR}"
+
 adb logcat -c
-LOGDIR="./artifacts"
-mkdir -p "$LOGDIR"
-LOGFILE="$LOGDIR/logcat.txt"
+LOGFILE="$ARTIFACTS_DIR/logcat.txt"
 
 adb logcat -v threadtime -T 1 -b all > "$LOGFILE" &
 LOGCAT_PID=$!
