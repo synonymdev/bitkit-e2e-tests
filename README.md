@@ -70,15 +70,17 @@ npm run e2e:android -- --mochaOpts.grep "Can pass onboarding correctly"
 
 ### 🏷️ Tags
 
-Test suites (and some individual tests) are tagged using a simple `@tag` convention in the `describe` / `it` titles:
+Test suites (and some individual tests) are tagged using a simple `@tag` convention in the `describe` / `ciIt` titles:
 
 ```typescript
 describe('@backup - Backup', () => {
-  it('@backup_1 - Can backup metadata, widget, settings and restore them', async () => {
+  ciIt('@backup_1 - Can backup metadata, widget, settings and restore them', async () => {
     // ...
   });
 });
 ```
+
+> 💡 Note: Use `ciIt` instead of `it` in specs. Locally it behaves the same, but on CI it automatically skips tests that already passed in previous attempts, making retries faster.
 
 You can use Mocha’s `--grep` option to run only the tests that match a given tag (regex supported). For example:
 
