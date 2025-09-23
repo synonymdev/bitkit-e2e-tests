@@ -42,9 +42,7 @@ ciIt.only = (name: string, fn?: () => Promise<void>) => {
 };
 
 export function checkComplete(name: string): boolean {
-  if (!ON_CI) return false;
-  if (!fs.existsSync(lockFile(name))) return false;
-  return true;
+  return ON_CI && fs.existsSync(lockFile(name));
 }
 
 export function markComplete(name: string) {
