@@ -17,6 +17,7 @@ import {
   swipeFullScreen,
   multiTap,
   typeAddressAndVerifyContinue,
+  mineBlocks,
 } from '../helpers/actions';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
 import { reinstallApp } from '../helpers/setup';
@@ -440,6 +441,7 @@ describe('@send - Send', () => {
 
     // TEMP: receive more funds to be able to pay 10k invoice
     console.info('Receiving lightning funds...');
+    await mineBlocks(rpc, 1);
     const receive2 = await getReceiveAddress('lightning');
     await swipeFullScreen('down');
     const r = await lnd.sendPaymentSync({ paymentRequest: receive2, amt: '10000' });

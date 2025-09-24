@@ -317,7 +317,7 @@ export const config: WebdriverIO.Config = {
   // }
   beforeTest: async function (test) {
     if (process.env.RECORD_VIDEO === 'true') {
-      await driver.startRecordingScreen();
+      await driver.startRecordingScreen({ timeLimit: '600' });
     }
     console.log(`🧪 Start: ${test.parent} - ${test.title}`);
   },
