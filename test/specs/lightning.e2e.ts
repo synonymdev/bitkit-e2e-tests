@@ -20,6 +20,7 @@ import {
   getSeed,
   restoreWallet,
   mineBlocks,
+  elementByText,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
@@ -265,6 +266,8 @@ describe('@lightning - Lightning', () => {
     // close channel
     await tap('CloseConnection');
     await tap('CloseConnectionButton');
+    await elementByText('Transfer Initiated').waitForDisplayed();
+    await elementByText('Transfer Initiated').waitForDisplayed({ reverse: true });
 
     await mineBlocks(rpc, 6);
     await electrum?.waitForSync();
