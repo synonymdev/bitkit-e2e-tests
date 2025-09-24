@@ -171,6 +171,7 @@ describe('@lightning - Lightning', () => {
 
     // check tx history
     await swipeFullScreen('up');
+    await swipeFullScreen('up');
     await expectTextWithin('ActivityShort-0', '1 000');
     await expectTextWithin('ActivityShort-1', '111');
     await expectTextWithin('ActivityShort-2', '111');
@@ -182,6 +183,8 @@ describe('@lightning - Lightning', () => {
     await tap('NavigationClose');
 
     // check activity filters & tags
+    await sleep(500); // wait for the app to settle
+    await swipeFullScreen('up');
     await tap('ActivityShowAll');
     // All transactions
     await expectTextWithin('Activity-1', '-');
