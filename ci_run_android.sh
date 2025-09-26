@@ -31,6 +31,8 @@ trap cleanup EXIT INT TERM
 adb reverse tcp:60001 tcp:60001
 # lnd port
 adb reverse tcp:9735 tcp:9735
+# lnurl port
+adb reverse tcp:30001 tcp:30001
 
 # Pass everything through to WDIO/Mocha
 npm run e2e:android -- "$@"
