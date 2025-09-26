@@ -143,11 +143,13 @@ describe('@lnurl - LNURL', () => {
 
       // lnurl-pay (min != max) with comment
       const payRequest1 = await lnurlServer.generateNewUrl('payRequest', {
-        minSendable: 100_000, // msats
-        maxSendable: 200_000, // msats
-        metadata: '[{"text/plain","lnurl-node1"}]'.replace('{', '[').replace('}', ']'),
+        minSendable: 100000, // msats
+        maxSendable: 200000, // msats
+        metadata: '[["text/plain","lnurl-node1"]]',
         commentAllowed: 12,
       });
+      console.log('payRequest1', payRequest1);
+
       await tap('Scan');
       await tap('ScanPrompt');
       await typeText('QRInput', payRequest1.encoded);
@@ -173,10 +175,12 @@ describe('@lnurl - LNURL', () => {
 
       // lnurl-pay (min == max), no comment
       const payRequest2 = await lnurlServer.generateNewUrl('payRequest', {
-        minSendable: 222_000,
-        maxSendable: 222_000,
-        metadata: '[{"text/plain","lnurl-node2"}]'.replace('{', '[').replace('}', ']'),
+        minSendable: 222000,
+        maxSendable: 222000,
+        metadata: '[["text/plain","lnurl-node2"]]',
       });
+      console.log('payRequest2', payRequest2);
+
       await tap('Scan');
       await tap('ScanPrompt');
       await typeText('QRInput', payRequest2.encoded);
@@ -189,13 +193,15 @@ describe('@lnurl - LNURL', () => {
       await tap('Close');
 
       // lnurl-pay via manual entry
-      const minSendable = 321_000; // msats
+      const minSendable = 321000; // msats
       const minSendableSats = (minSendable / 1000).toString();
       const payRequest3 = await lnurlServer.generateNewUrl('payRequest', {
         minSendable,
-        maxSendable: 350_000,
-        metadata: '[{"text/plain","lnurl-node2"}]'.replace('{', '[').replace('}', ']'),
+        maxSendable: 350000,
+        metadata: '[["text/plain","lnurl-node2"]]',
       });
+      console.log('payRequest3', payRequest3);
+
       await tap('Send');
       await tap('RecipientManual');
       await typeText('RecipientInput', payRequest3.encoded);
@@ -216,10 +222,12 @@ describe('@lnurl - LNURL', () => {
 
       // lnurl-withdraw (min != max)
       const withdrawRequest1 = await lnurlServer.generateNewUrl('withdrawRequest', {
-        minWithdrawable: 102_000,
-        maxWithdrawable: 202_000,
+        minWithdrawable: 102000,
+        maxWithdrawable: 202000,
         defaultDescription: 'lnurl-withdraw1',
       });
+      console.log('withdrawRequest1', withdrawRequest1);
+
       await tap('Scan');
       await tap('ScanPrompt');
       await typeText('QRInput', withdrawRequest1.encoded);
@@ -232,10 +240,12 @@ describe('@lnurl - LNURL', () => {
 
       // lnurl-withdraw (min == max)
       const withdrawRequest2 = await lnurlServer.generateNewUrl('withdrawRequest', {
-        minWithdrawable: 303_000,
-        maxWithdrawable: 303_000,
+        minWithdrawable: 303000,
+        maxWithdrawable: 303000,
         defaultDescription: 'lnurl-withdraw2',
       });
+      console.log('withdrawRequest2', withdrawRequest2);
+
       await tap('Scan');
       await tap('ScanPrompt');
       await typeText('QRInput', withdrawRequest2.encoded);
