@@ -18,6 +18,7 @@ import {
   receiveOnchainFunds,
   expectTextWithin,
   enterAddress,
+  expectTextVisible,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
@@ -167,11 +168,11 @@ describe('@lnurl - LNURL', () => {
       await tap('N0');
       await tap('N1');
       await expectTextWithin('SendNumberField', '201');
-      await elementById('ContinueAmount').waitForEnabled({reverse: true});
+      await elementById('ContinueAmount').waitForEnabled({ reverse: true });
       await multiTap('NRemove', 3); // remove "201"
       await multiTap('N9', 2);
       await expectTextWithin('SendNumberField', '99');
-      await elementById('ContinueAmount').waitForEnabled({reverse: true});
+      await elementById('ContinueAmount').waitForEnabled({ reverse: true });
       await multiTap('NRemove', 2); // remove "99"
       // go with 150
       await tap('N1');
@@ -189,7 +190,10 @@ describe('@lnurl - LNURL', () => {
       await swipeFullScreen('up');
       await swipeFullScreen('up');
       await elementById('ActivityShort-0').waitForDisplayed();
-      
+      await expectTextWithin('ActivityShort-0', '150');
+      await expectTextWithin('ActivityShort-0', '-');
+      await expectTextWithin('ActivityShort-0', 'Sent');
+
       // --- skip due to: https://github.com/synonymdev/bitkit-android/issues/417 ---//
       // await tap('ActivityShort-0');
       // await elementById('InvoiceComment').waitForDisplayed();
@@ -222,6 +226,14 @@ describe('@lnurl - LNURL', () => {
       await elementById('SendSuccess').waitForDisplayed();
       await tap('Close');
       await expectTextWithin('ActivitySpending', '19 629'); // 19 851 - 222 = 19 629
+      await swipeFullScreen('up');
+      await swipeFullScreen('up');
+      await elementById('ActivityShort-0').waitForDisplayed();
+      await expectTextWithin('ActivityShort-0', '222');
+      await expectTextWithin('ActivityShort-0', '-');
+      await expectTextWithin('ActivityShort-0', 'Sent');
+      await sleep(1000);
+      await swipeFullScreen('down');
 
       // lnurl-pay via manual entry
       const minSendable = 321000; // msats
@@ -241,6 +253,14 @@ describe('@lnurl - LNURL', () => {
       await elementById('SendSuccess').waitForDisplayed();
       await tap('Close');
       await expectTextWithin('ActivitySpending', '19 308'); // 19 629 - 321 = 19 308
+      await swipeFullScreen('up');
+      await swipeFullScreen('up');
+      await elementById('ActivityShort-0').waitForDisplayed();
+      await expectTextWithin('ActivityShort-0', '321');
+      await expectTextWithin('ActivityShort-0', '-');
+      await expectTextWithin('ActivityShort-0', 'Sent');
+      await sleep(1000);
+      await swipeFullScreen('down');
 
       // lnurl-withdraw (min != max)
       const withdrawRequest1 = await lnurlServer.generateNewUrl('withdrawRequest', {
@@ -261,6 +281,15 @@ describe('@lnurl - LNURL', () => {
       await elementById('ReceivedTransaction').waitForDisplayed();
       await swipeFullScreen('down');
       await expectTextWithin('ActivitySpending', '19 410'); // 19 308 + 102 = 19 410
+      await swipeFullScreen('up');
+      await swipeFullScreen('up');
+      await elementById('ActivityShort-0').waitForDisplayed();
+      await expectTextWithin('ActivityShort-0', '102');
+      await expectTextWithin('ActivityShort-0', '+');
+      await expectTextWithin('ActivityShort-0', 'lnurl-withdraw1');
+      await expectTextWithin('ActivityShort-0', 'Received');
+      await sleep(1000);
+      await swipeFullScreen('down');
 
       // lnurl-withdraw (min == max)
       const withdrawRequest2 = await lnurlServer.generateNewUrl('withdrawRequest', {
@@ -270,13 +299,24 @@ describe('@lnurl - LNURL', () => {
       });
       console.log('withdrawRequest2', withdrawRequest2);
 
-      await enterAddress(withdrawRequest2.encoded); 
+      // TODO: after https://github.com/synonymdev/bitkit-android/issues/418 is resolved
+      // we should test the scan flow here
+      await enterAddress(withdrawRequest2.encoded);
       const reviewAmtWithdraw = await elementByIdWithin('WithdrawAmount-primary', 'MoneyText');
       await expect(reviewAmtWithdraw).toHaveText('303');
       await tap('WithdrawConfirmButton');
       await elementById('ReceivedTransaction').waitForDisplayed();
       await swipeFullScreen('down');
       await expectTextWithin('ActivitySpending', '19 713'); // 19 410 + 303 = 19 713
+      await swipeFullScreen('up');
+      await swipeFullScreen('up');
+      await elementById('ActivityShort-0').waitForDisplayed();
+      await expectTextWithin('ActivityShort-0', '303');
+      await expectTextWithin('ActivityShort-0', '+');
+      await expectTextWithin('ActivityShort-0', 'lnurl-withdraw2');
+      await expectTextWithin('ActivityShort-0', 'Received');
+      await sleep(1000);
+      await swipeFullScreen('down');
 
       // lnurl-auth
       const loginRequest1 = await lnurlServer.generateNewUrl('login');
@@ -287,7 +327,8 @@ describe('@lnurl - LNURL', () => {
       const loginEvent = new Promise<void>((resolve) => lnurlServer.once('login', resolve));
       await confirmInputOnKeyboard();
       await tap('DialogConfirm');
-   		await tap('continue_button');
+      await tap('continue_button');
+      await expectTextVisible('Signed In');
       await loginEvent;
     }
   );
