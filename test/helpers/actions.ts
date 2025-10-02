@@ -488,6 +488,16 @@ export async function receiveOnchainFunds(
   await swipeFullScreen('down');
   const moneyText = (await elementsById('MoneyText'))[1];
   await expect(moneyText).toHaveText(formattedSats);
+  await dismissBackupTimedSheet();
+}
+
+export async function dismissBackupTimedSheet() {
+  await tap('HeaderMenu');
+  await tap('DrawerSettings');
+  await tap('NavigationClose');
+  await elementById('backup_description').waitForDisplayed();
+  await sleep(500); // wait for the app to settle
+  await tap('later_button');
 }
 
 export async function acknowledgeHighBalanceWarning() {
