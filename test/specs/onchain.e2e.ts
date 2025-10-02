@@ -21,6 +21,7 @@ import {
   acknowledgeHighBalanceWarning,
   getFormattedDate,
   enterAddress,
+  dismissBackupTimedSheet,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
 
@@ -139,6 +140,9 @@ describe('@onchain - Onchain', () => {
       const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
       const expected = `${i}00 000 000`;
       await expect(totalBalance).toHaveText(expected);
+      if (i === 1) {
+        await dismissBackupTimedSheet();
+      }
     }
 
     // - can send total balance and tag the tx //
