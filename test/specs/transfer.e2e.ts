@@ -15,6 +15,10 @@ import {
   elementsById,
   elementById,
   getTextUnder,
+  multiTap,
+  dragOnElement,
+  expectTextWithin,
+  swipeFullScreen,
 } from '../helpers/actions';
 import { waitForActiveChannel, waitForPeerConnection } from '../helpers/lnd';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
@@ -61,7 +65,7 @@ describe('@transfer - Transfer', () => {
   ciIt(
     '@transfer_1 - Can buy a channel from Blocktank with default and custom receive capacity',
     async () => {
-      await receiveOnchainFunds(rpc, { sats: 100_000 });
+      await receiveOnchainFunds(rpc, { sats: 1000_000, expectHighBalanceWarning: true });
 
       // switch to EUR
       await tap('HeaderMenu');
@@ -95,135 +99,141 @@ describe('@transfer - Transfer', () => {
       //await tap('NavigationBack');
       //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/425 ---//
 
+      //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/424 ---//
       // can continue with max client balance
-      await tap('SpendingAmountMax');
+      //await tap('SpendingAmountMax');
+      //await elementById('SpendingAmountContinue').waitForEnabled();
+      //await sleep(500);
+      //await tap('SpendingAmountContinue');
+      //await elementById('SpendingConfirmAdvanced').waitForDisplayed();
+      //await tap('NavigationBack');
+      //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/424 ---//
+
+      // can continue with 25% client balance
+      await tap('SpendingAmountQuarter');
       await elementById('SpendingAmountContinue').waitForEnabled();
       await sleep(500);
       await tap('SpendingAmountContinue');
       await elementById('SpendingConfirmAdvanced').waitForDisplayed();
       await tap('NavigationBack');
+      await tap('NavigationBack');
+      await tap('SpendingIntro-button');
 
-      //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/424 ---//   
-    //   // can continue with 25% client balance
-    //   await tap('SpendingAmountQuarter');
-    //   await elementById('SpendingAmountContinue').waitForEnabled();
-    //   await sleep(500);
-    //   await tap('SpendingAmountContinue');
-    //   await elementById('SpendingConfirmAdvanced').waitForDisplayed();
-    //   await tap('NavigationBack');
-    //   await tap('NavigationBack');
-    //
+      // can change client balance
+      await tap('N2');
+      await multiTap('N0', 5);
+      await tap('SpendingAmountContinue');
+      await expectTextVisible('200 000');
+      await tap('SpendingConfirmMore');
+      await expectTextVisible('200 000');
+      await tap('LiquidityContinue');
+      // Swipe to confirm (set x offset to avoid navigating back)
+      await dragOnElement('GRAB', 'right', 0.95);
+      await elementById('LightningSettingUp').waitForDisplayed();
+      await tap('TransferSuccess-button');
 
-      // // can change client balance
-      // await element(by.id('N2').withAncestor(by.id('SpendingAmount'))).tap();
-      // await element(by.id('N0').withAncestor(by.id('SpendingAmount'))).multiTap(5);
-      // await element(by.id('SpendingAmountContinue')).tap();
-      // await expect(element(by.text('200 000'))).toBeVisible();
-      // await element(by.id('SpendingConfirmMore')).tap();
-      // await expect(element(by.text('200 000'))).toBeVisible();
-      // await element(by.id('LiquidityContinue')).tap();
+      // verify transfer activity on savings
+      await elementById('Activity-1').waitForDisplayed();
+      await expectTextWithin('Activity-1', 'Transfer');
+      await expectTextWithin('Activity-1', '-');
+      await tap('NavigationBack');
+      // transfer in progress
+      //await elementById('Suggestion-lightning_setting_up').waitForDisplayed();
 
-      // // Swipe to confirm (set x offset to avoid navigating back)
-      // await element(by.id('GRAB')).swipe('right', 'slow', 0.95, 0.5, 0.5);
-      // await waitFor(element(by.id('LightningSettingUp')))
-      //   .toBeVisible()
-      //   .withTimeout(10000);
+      // Get another channel with custom receiving capacity
+      await tap('ActivitySavings');
+      await tap('TransferToSpending');
+      await tap('N1');
+      await multiTap('N0', 5);
+      await tap('SpendingAmountContinue');
+      await expectTextVisible('100 000');
+      await tap('SpendingConfirmAdvanced');
 
-      // // Get another channel with custom receiving capacity
-      // await element(by.id('NavigationClose')).tap();
-      // await element(by.id('ActivitySavings')).tap();
-      // await element(by.id('TransferToSpending')).tap();
-      // await element(by.id('N1').withAncestor(by.id('SpendingAmount'))).tap();
-      // await element(by.id('N0').withAncestor(by.id('SpendingAmount'))).multiTap(5);
-      // await element(by.id('SpendingAmountContinue')).tap();
-      // await expect(element(by.text('100 000'))).toBeVisible();
-      // await element(by.id('SpendingConfirmAdvanced')).tap();
+      // Receiving Capacity
+      // can continue with min amount
+      await tap('SpendingAdvancedMin');
+      await expectTextVisible('2 500');
+      await tap('SpendingAdvancedContinue');
+      await tap('SpendingConfirmDefault');
+      await tap('SpendingConfirmAdvanced');
 
-      // // Receiving Capacity
-      // // can continue with min amount
-      // await element(by.id('SpendingAdvancedMin')).tap();
-      // await expect(element(by.text('2 500'))).toBeVisible();
-      // await element(by.id('SpendingAdvancedContinue')).tap();
-      // await element(by.id('SpendingConfirmDefault')).tap();
-      // await element(by.id('SpendingConfirmAdvanced')).tap();
+      // can continue with default amount
+      await tap('SpendingAdvancedDefault');
+      await tap('SpendingAdvancedContinue');
+      await tap('SpendingConfirmDefault');
+      await tap('SpendingConfirmAdvanced');
 
-      // // can continue with default amount
-      // await element(by.id('SpendingAdvancedDefault')).tap();
-      // await element(by.id('SpendingAdvancedContinue')).tap();
-      // await element(by.id('SpendingConfirmDefault')).tap();
-      // await element(by.id('SpendingConfirmAdvanced')).tap();
+      // can continue with max amount
+      await tap('SpendingAdvancedMax');
+      await tap('SpendingAdvancedContinue');
+      await tap('SpendingConfirmDefault');
+      await tap('SpendingConfirmAdvanced');
 
-      // // can continue with max amount
-      // await element(by.id('SpendingAdvancedMax')).tap();
-      // await element(by.id('SpendingAdvancedContinue')).tap();
-      // await element(by.id('SpendingConfirmDefault')).tap();
-      // await element(by.id('SpendingConfirmAdvanced')).tap();
+      // can set custom amount
+      await tap('N1');
+      await tap('N5');
+      await multiTap('N0', 4);
+      await tap('SpendingAdvancedContinue');
+      await expectTextWithin('SpendingConfirmChannel', '100 000');
+      await expectTextWithin('SpendingConfirmChannel', '150 000');
+      // Swipe to confirm (set x offset to avoid navigating back)
+      await dragOnElement('GRAB', 'right', 0.95);
+      await elementById('LightningSettingUp').waitForDisplayed();
+      await tap('TransferSuccess-button');
 
-      // // can set custom amount
-      // await element(by.id('N1').withAncestor(by.id('SpendingAdvanced'))).tap();
-      // await element(by.id('N5').withAncestor(by.id('SpendingAdvanced'))).tap();
-      // await element(by.id('N0').withAncestor(by.id('SpendingAdvanced'))).multiTap(4);
-      // await element(by.id('SpendingAdvancedContinue')).tap();
-      // await expect(
-      //   element(by.text('100 000').withAncestor(by.id('SpendingConfirmChannel')))
-      // ).toBeVisible();
-      // await expect(
-      //   element(by.text('150 000').withAncestor(by.id('SpendingConfirmChannel')))
-      // ).toBeVisible();
+      // verify both transfers activities on savings
+      await elementById('Activity-1').waitForDisplayed();
+      await expectTextWithin('Activity-1', 'Transfer');
+      await expectTextWithin('Activity-1', '-');
+      await elementById('Activity-2').waitForDisplayed();
+      await expectTextWithin('Activity-2', 'Transfer');
+      await expectTextWithin('Activity-2', '-');
+      await tap('NavigationBack');
+      // transfer in progress
+      //await elementById('Suggestion-lightning_setting_up').waitForDisplayed();
 
-      // // Swipe to confirm (set x offset to avoid navigating back)
-      // await element(by.id('GRAB')).swipe('right', 'slow', 0.95, 0.5, 0.5);
-      // await waitFor(element(by.id('LightningSettingUp')))
-      //   .toBeVisible()
-      //   .withTimeout(10000);
+      // check channel status
+      await tap('HeaderMenu');
+      await tap('DrawerSettings');
+      await tap('AdvancedSettings');
+      await tap('Channels');
+      const channels = await elementsById('Channel');
+      channels[1].click();
+      await expectTextWithin('TotalSize', '₿ 250 000');
+      await expectTextVisible('Processing payment');
+      await tap('NavigationClose');
 
-      // // check channel status
-      // await element(by.id('NavigationClose')).tap();
-      // await sleep(1000);
-      // await element(by.id('HeaderMenu')).tap();
-      // await element(by.id('DrawerSettings')).tap();
-      // await element(by.id('AdvancedSettings')).atIndex(0).tap();
-      // await element(by.id('Channels')).tap();
-      // await element(by.id('Channel')).atIndex(0).tap();
-      // await expect(element(by.text('Processing payment'))).toBeVisible();
-      // await expect(element(by.id('MoneyText').withAncestor(by.id('TotalSize')))).toHaveText(
-      //   '250 000'
-      // );
-      // await element(by.id('NavigationClose')).tap();
+      // TODO: enable when boost backup is operational
+      // https://github.com/synonymdev/bitkit-android/issues/321
+      //const seed = await getSeed();
+      //await waitForBackup();
+      //await restoreWallet(seed);
 
-      // const seed = await getSeed();
-      // await waitForBackup();
-      // await restoreWallet(seed);
+      // check transfer card
+      //await elementById('Suggestion-lightning_setting_up').waitForDisplayed();
 
-      // // check transfer card
-      // await expect(element(by.id('Suggestion-lightningSettingUp'))).toBeVisible();
+      // check activity after restore
+      //await swipeFullScreen('up');
+      //await tap('ActivityShort-1');
+      //await elementById('StatusTransfer').waitForDisplayed();
 
-      // // check activity after restore
-      // await element(by.id('HomeScrollView')).scrollTo('bottom', 0);
-      // await element(by.id('ActivityShort-1')).tap();
-      // await expect(element(by.id('StatusTransfer'))).toBeVisible();
+      // boost the transfer
+      //await tap('BoostButton');
+      //await elementById('CPFPBoost').waitForDisplayed();
+      //await dragOnElement('GRAB', 'right', 0.95); // Swipe to confirm
 
-      // // boost the transfer
-      // await element(by.id('BoostButton')).tap();
-      // await waitFor(element(by.id('CPFPBoost')))
-      //   .toBeVisible()
-      //   .withTimeout(30000);
-      // await element(by.id('GRAB')).swipe('right', 'slow', 0.95, 0.5, 0.5); // Swipe to confirm
+      // check Activity
+      //await elementById('BoostingIcon').waitForDisplayed();
 
-      // // check Activity
-      // await waitFor(element(by.id('BoostingIcon')))
-      //   .toBeVisible()
-      //   .withTimeout(30000);
-
-      // // reset & restore again
+      // reset & restore again
       // await waitForBackup();
       // await restoreWallet(seed);
 
       // // check activity after restore
-      // await element(by.id('HomeScrollView')).scrollTo('bottom', 0);
-      // await expect(element(by.id('BoostingIcon'))).toBeVisible();
-      // await element(by.id('ActivityShort-1')).tap();
-      // await expect(element(by.id('StatusBoosting'))).toBeVisible();
+      // await swipeFullScreen('up');
+      // await elementById('BoostingIcon').waitForDisplayed();
+      // await tap('ActivityShort-1');
+      // await elementById('StatusBoosting').waitForDisplayed();
     }
   );
 });
