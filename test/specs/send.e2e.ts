@@ -18,6 +18,7 @@ import {
   multiTap,
   typeAddressAndVerifyContinue,
   mineBlocks,
+  dismissQuickPayIntro,
 } from '../helpers/actions';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
 import { reinstallApp } from '../helpers/setup';
@@ -195,9 +196,9 @@ describe('@send - Send', () => {
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     await expect(totalBalance).toHaveText('110 000'); // 100k onchain + 10k lightning
     await expectTextWithin('ActivitySpending', '10 000');
+    await dismissQuickPayIntro();
 
     // send to onchain address
-
     console.info('Sending to onchain address...');
     const { address: onchainAddress } = await lnd.newAddress();
     console.info({ onchainAddress });
@@ -409,7 +410,7 @@ describe('@send - Send', () => {
     await tap('DrawerSettings');
     await tap('GeneralSettings');
     await tap('QuickpaySettings');
-    await tap('QuickpayIntro-button');
+    // no quickpay intro as we already dismissed it after getting lightning balance
     await tap('QuickpayToggle');
     await tap('NavigationClose');
 
@@ -442,6 +443,7 @@ describe('@send - Send', () => {
     // TEMP: receive more funds to be able to pay 10k invoice
     console.info('Receiving lightning funds...');
     await mineBlocks(rpc, 1);
+    await electrum?.waitForSync();
     const receive2 = await getReceiveAddress('lightning');
     await swipeFullScreen('down');
     const r = await lnd.sendPaymentSync({ paymentRequest: receive2, amt: '10000' });
