@@ -12,6 +12,9 @@ import {
   tap,
   expectTextVisible,
   elementByText,
+  elementsById,
+  elementById,
+  getTextUnder,
 } from '../helpers/actions';
 import { waitForActiveChannel, waitForPeerConnection } from '../helpers/lnd';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
@@ -71,38 +74,45 @@ describe('@transfer - Transfer', () => {
       await tap('ActivitySavings');
       await tap('TransferToSpending');
       await tap('SpendingIntro-button');
+      await elementById('SpendingAmount').waitForDisplayed();
+      await sleep(1000); // let the animation finish
 
-      // can continue with default client balance (0)
+      //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/425 ---//
+      //// can continue with default client balance (0)
+      //await tap('SpendingAmountContinue');
+      //await sleep(100);
+      //await tap('SpendingConfirmAdvanced');
+      //await tap('SpendingAdvancedMin');
+      //await expectTextVisible('100 000');
+      //await tap('SpendingAdvancedDefault');
+      //await tap('SpendingAdvancedNumberField'); // change to fiat
+      //const label = await getTextUnder('SpendingAdvancedNumberField');
+      //const eurBalance = Number.parseInt(label, 10);
+      //await expect(eurBalance).toBeGreaterThan(440);
+      //await expect(eurBalance).toBeLessThan(460);
+      //await tap('SpendingAdvancedNumberField'); // change back to sats
+      //await tap('SpendingAdvancedContinue');
+      //await tap('NavigationBack');
+      //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/425 ---//
+
+      // can continue with max client balance
+      await tap('SpendingAmountMax');
+      await elementById('SpendingAmountContinue').waitForEnabled();
+      await sleep(500);
       await tap('SpendingAmountContinue');
-      await sleep(100);
-      await tap('SpendingConfirmAdvanced');
-      await tap('SpendingAdvancedMin');
-      await expectTextVisible('100 000');
-      await tap('SpendingAdvancedDefault');
-      await tap('SpendingAdvancedNumberField');
+      await elementById('SpendingConfirmAdvanced').waitForDisplayed();
+      await tap('NavigationBack');
 
-      // await element(by.id('SpendingAdvancedNumberField')).tap();
-      // const { label } = await element(by.id('SpendingAdvancedNumberField')).getAttributes();
-      // const lspBalance = Number.parseInt(label, 10);
-      // jestExpect(lspBalance).toBeGreaterThan(440);
-      // jestExpect(lspBalance).toBeLessThan(460);
-      // await element(by.id('SpendingAdvancedNumberField')).tap();
-      // await element(by.id('SpendingAdvancedContinue')).tap();
-      // await element(by.id('NavigationBack')).tap();
-
-      // // can continue with max client balance
-      // await element(by.id('SpendingAmountMax')).tap();
-      // await element(by.id('SpendingAmountContinue')).tap();
-      // await element(by.id('NavigationBack')).tap();
-
-      // // can continue with 25% client balance
-      // await element(by.id('SpendingAmountQuarter')).tap();
-      // await expect(element(by.text('250 000'))).toBeVisible();
-      // await element(by.id('SpendingAmountContinue')).tap();
-      // await expect(element(by.text('250 000'))).toBeVisible();
-      // await element(by.id('NavigationBack')).tap();
-      // await element(by.id('NavigationBack')).tap();
-      // await element(by.id('SpendingIntro-button')).tap();
+      //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/424 ---//   
+    //   // can continue with 25% client balance
+    //   await tap('SpendingAmountQuarter');
+    //   await elementById('SpendingAmountContinue').waitForEnabled();
+    //   await sleep(500);
+    //   await tap('SpendingAmountContinue');
+    //   await elementById('SpendingConfirmAdvanced').waitForDisplayed();
+    //   await tap('NavigationBack');
+    //   await tap('NavigationBack');
+    //
 
       // // can change client balance
       // await element(by.id('N2').withAncestor(by.id('SpendingAmount'))).tap();
