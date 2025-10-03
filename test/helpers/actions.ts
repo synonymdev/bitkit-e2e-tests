@@ -491,17 +491,27 @@ export async function receiveOnchainFunds(
   await dismissBackupTimedSheet();
 }
 
-export async function dismissBackupTimedSheet() {
+export async function doTriggerTimedSheet() {
   await tap('HeaderMenu');
   await tap('DrawerSettings');
   await tap('NavigationClose');
+}
+
+export async function dismissBackupTimedSheet({ triggerTimedSheet = true } = {}) {
+  if (triggerTimedSheet) {
+    await doTriggerTimedSheet();
+  }
   await elementById('backup_description').waitForDisplayed();
   await sleep(500); // wait for the app to settle
   await tap('later_button');
 }
 
-export async function dismissQuickPayIntro() {
+export async function dismissQuickPayIntro({ triggerTimedSheet = true } = {}) {
+  if (triggerTimedSheet) {
+    await doTriggerTimedSheet();
+  }
   await elementById('QuickpayIntro-button').waitForDisplayed();
+  await sleep(500); // wait for the app to settle
   await swipeFullScreen('down');
 }
 
