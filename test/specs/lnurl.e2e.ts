@@ -19,6 +19,7 @@ import {
   expectTextWithin,
   enterAddress,
   expectTextVisible,
+  dismissQuickPayIntro,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
@@ -144,6 +145,7 @@ describe('@lnurl - LNURL', () => {
       await tap('ExternalSuccess-button');
 
       await expectTextWithin('ActivitySpending', '20 001');
+      await dismissQuickPayIntro();
 
       // lnurl-pay (min != max) with comment
       const msats = 100000; // msats

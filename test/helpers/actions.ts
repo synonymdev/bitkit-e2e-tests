@@ -500,6 +500,11 @@ export async function dismissBackupTimedSheet() {
   await tap('later_button');
 }
 
+export async function dismissQuickPayIntro() {
+  await elementById('QuickpayIntro-button').waitForDisplayed();
+  await swipeFullScreen('down');
+}
+
 export async function acknowledgeHighBalanceWarning() {
   await elementById('high_balance_image').waitForDisplayed();
   await tap('understood_button');
