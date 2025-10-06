@@ -87,13 +87,6 @@ describe('@transfer - Transfer', () => {
       await tap('SpendingIntro-button');
       await sleep(1000); // let the animation finish
 
-    //   await sleep(1000_000);
-    //   await tap('ActivitySavings');
-    //   await tap('TransferToSpending');
-    //   await tap('SpendingIntro-button');
-    //   await elementById('SpendingAmount').waitForDisplayed();
-    //   await sleep(1000); // let the animation finish
-
       //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/425 ---//
       //// can continue with default client balance (0)
       //await tap('SpendingAmountContinue');
@@ -292,7 +285,7 @@ describe('@transfer - Transfer', () => {
 
     // Swipe to confirm (set x offset to avoid navigating back)
     await dragOnElement('GRAB', 'right', 0.95);
-    console.log('channel opening...');
+    console.info('channel opening...');
     await sleep(1000);
     await elementById('ExternalSuccess').waitForDisplayed();
     await tap('ExternalSuccess-button');
