@@ -33,6 +33,8 @@ adb reverse tcp:60001 tcp:60001
 adb reverse tcp:9735 tcp:9735
 # lnurl port
 adb reverse tcp:30001 tcp:30001
+# show touches 
+adb shell settings put system show_touches 1
 
 # Pass everything through to WDIO/Mocha
 npm run e2e:android -- "$@"

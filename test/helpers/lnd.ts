@@ -106,7 +106,7 @@ export async function getLDKNodeID(): Promise<string> {
   return ldkNodeId;
 }
 
-export async function connectToLND(lndNodeID: string) {
+export async function connectToLND(lndNodeID: string, { navigationClose = true } = {}) {
   await tap('Channels');
   await tap('NavigationAction');
   await tap('FundCustom');
@@ -116,16 +116,16 @@ export async function connectToLND(lndNodeID: string) {
   await typeText('PortInput', '9735');
   await confirmInputOnKeyboard();
   await tap('ExternalContinue');
-  await tap('NavigationClose');
+  if (navigationClose) await tap('NavigationClose');
 }
 
-export async function checkChannelStatus() {
+export async function checkChannelStatus({ size = '100 000' } = {}) {
   await tap('HeaderMenu');
   await tap('DrawerSettings');
   await tap('AdvancedSettings');
   await tap('Channels');
   await tap('Channel');
-  await expectTextWithin('TotalSize', '₿ 100 000');
+  await expectTextWithin('TotalSize', `₿ ${size}`);
   await swipeFullScreen('up');
   await elementById('IsUsableYes').waitForDisplayed();
   await tap('NavigationClose');
