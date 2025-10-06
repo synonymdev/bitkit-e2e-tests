@@ -1,26 +1,31 @@
-import createLnRpc from '@radar/lnrpc';
 import BitcoinJsonRpc from 'bitcoin-json-rpc';
 
 import initElectrum from '../helpers/electrum';
 import {
   completeOnboarding,
   sleep,
-  getSeed,
-  restoreWallet,
-  waitForBackup,
   receiveOnchainFunds,
   tap,
   expectTextVisible,
   elementByText,
   elementsById,
   elementById,
-  getTextUnder,
   multiTap,
   dragOnElement,
   expectTextWithin,
   swipeFullScreen,
+  mineBlocks,
+  elementByIdWithin,
+  enterAddress,
 } from '../helpers/actions';
-import { waitForActiveChannel, waitForPeerConnection } from '../helpers/lnd';
+import {
+  checkChannelStatus,
+  connectToLND,
+  getLDKNodeID,
+  setupLND,
+  waitForActiveChannel,
+  waitForPeerConnection,
+} from '../helpers/lnd';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
 
 import { reinstallApp } from '../helpers/setup';
@@ -147,6 +152,7 @@ describe('@transfer - Transfer', () => {
       await multiTap('N0', 5);
       await tap('SpendingAmountContinue');
       await expectTextVisible('100 000');
+      await sleep(500);
       await tap('SpendingConfirmAdvanced');
 
       // Receiving Capacity
@@ -203,6 +209,14 @@ describe('@transfer - Transfer', () => {
       await expectTextVisible('Processing payment');
       await tap('NavigationClose');
 
+      // check activities
+      await sleep(1000);
+      await swipeFullScreen('up');
+      await elementById('ActivityShort-0').waitForDisplayed();
+      await expectTextWithin('ActivityShort-0', 'Transfer');
+      await elementById('ActivityShort-1').waitForDisplayed();
+      await expectTextWithin('ActivityShort-1', 'Transfer');
+
       // TODO: enable when boost backup is operational
       // https://github.com/synonymdev/bitkit-android/issues/321
       //const seed = await getSeed();
@@ -236,4 +250,104 @@ describe('@transfer - Transfer', () => {
       // await elementById('StatusBoosting').waitForDisplayed();
     }
   );
+
+  ciIt('@transfer_2 - Can open a channel to external node', async () => {
+    await receiveOnchainFunds(rpc, { sats: 100_000 });
+
+    // send funds to LND node and open a channel
+    const { lnd, lndNodeID } = await setupLND(rpc, lndConfig);
+    await electrum?.waitForSync();
+
+    // get LDK Node id
+    const ldkNodeId = await getLDKNodeID();
+
+    // connect to LND
+    await connectToLND(lndNodeID, { navigationClose: false });
+
+    // wait for peer to be connected
+    await waitForPeerConnection(lnd, ldkNodeId);
+
+    // Set amount
+    await tap('N2');
+    await multiTap('N0', 4);
+    await tap('ExternalAmountContinue');
+
+    // change fee
+    await tap('SetCustomFee');
+    await tap('NRemove');
+    await sleep(1000); // wait for input to register
+    await tap('FeeCustomContinue');
+    await tap('N5');
+    await sleep(1000); // wait for input to register
+    await tap('FeeCustomContinue');
+
+    // Swipe to confirm (set x offset to avoid navigating back)
+    await dragOnElement('GRAB', 'right', 0.95);
+    console.log('channel opening...');
+    await sleep(1000);
+    await elementById('ExternalSuccess').waitForDisplayed();
+    await tap('ExternalSuccess-button');
+    await tap('NavigationBack');
+    await tap('NavigationClose');
+
+    // check transfer card
+    // await elementById('Suggestion-lightning_setting_up').waitForDisplayed();
+
+    const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
+    const totalAmtAfterChannelOpen = await totalBalance.getText();
+    await expect(totalBalance).not.toHaveText('100 000');
+    // await expectTextWithin('ActivitySavings', '100 000', false);
+    // await expectTextWithin('ActivitySpending', '0', false);
+
+    // check activity
+    await swipeFullScreen('up');
+    await elementById('ActivityShort-0').waitForDisplayed();
+    // should be Transfer after https://github.com/synonymdev/bitkit-android/pull/414
+    await expectTextWithin('ActivityShort-0', 'Sent');
+    await elementById('ActivityShort-1').waitForDisplayed();
+    await expectTextWithin('ActivityShort-1', 'Received');
+    await swipeFullScreen('down');
+
+    // Mine 3 blocks
+    await mineBlocks(rpc, 3);
+
+    // wait for channel to be opened
+    await waitForActiveChannel(lnd, ldkNodeId);
+    await expectTextVisible('Spending Balance Ready');
+
+    // check transfer card
+    // await elementById('Suggestion-lightning_setting_up').waitForDisplayed({reverse: true});
+
+    // check channel status
+    await checkChannelStatus({ size: '20 000' });
+
+    // get invoice
+    const { paymentRequest } = await lnd.addInvoice({ memo: 'zero' });
+
+    // send payment
+    await enterAddress(paymentRequest);
+    await multiTap('N1', 3);
+    await tap('ContinueAmount');
+    await dragOnElement('GRAB', 'right', 0.95); // Swipe to confirm
+    await elementById('SendSuccess').waitForDisplayed();
+    await tap('Close');
+    await expect(totalBalance).not.toHaveText(totalAmtAfterChannelOpen);
+
+    // close the channel
+    await tap('ActivitySpending');
+    await tap('TransferToSavings');
+    await tap('SavingsIntro-button');
+    await tap('AvailabilityContinue');
+    await dragOnElement('GRAB', 'right', 0.95);
+    await elementById('TransferSuccess').waitForDisplayed();
+    await tap('TransferSuccess-button');
+    await tap('NavigationBack');
+
+    // check channel is closed
+    await tap('HeaderMenu');
+    await tap('DrawerSettings');
+    await tap('AdvancedSettings');
+    await tap('Channels');
+    await expectTextVisible('Connection 1', false);
+  });
 });

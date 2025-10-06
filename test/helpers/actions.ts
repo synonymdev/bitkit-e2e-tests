@@ -104,9 +104,9 @@ export async function expectTextWithin(ancestorId: string, text: string, visible
 
   if (!visible) {
     await parent.$(needle).waitForDisplayed({ reverse: true });
-    return;
+  } else {
+    await parent.$(needle).waitForDisplayed();
   }
-  await parent.$(needle).waitForDisplayed();
 }
 
 type Index = number | 'first' | 'last';
