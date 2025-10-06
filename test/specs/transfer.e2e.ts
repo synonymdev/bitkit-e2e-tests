@@ -53,7 +53,7 @@ describe('@transfer - Transfer', () => {
     await electrum?.waitForSync();
   });
 
-  afterEach(() => {
+  after(() => {
     electrum?.stop();
   });
 
