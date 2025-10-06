@@ -28,7 +28,7 @@ import {
 } from '../helpers/lnd';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
 
-import { reinstallApp } from '../helpers/setup';
+import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 
 describe('@transfer - Transfer', () => {
@@ -80,11 +80,19 @@ describe('@transfer - Transfer', () => {
       await elementByText('EUR (€)').click();
       await tap('NavigationClose');
 
-      await tap('ActivitySavings');
-      await tap('TransferToSpending');
+      await launchFreshApp();
+      await tap('Suggestion-lightning');
+      await tap('TransferIntro-button');
+      await tap('FundTransfer');
       await tap('SpendingIntro-button');
-      await elementById('SpendingAmount').waitForDisplayed();
       await sleep(1000); // let the animation finish
+
+    //   await sleep(1000_000);
+    //   await tap('ActivitySavings');
+    //   await tap('TransferToSpending');
+    //   await tap('SpendingIntro-button');
+    //   await elementById('SpendingAmount').waitForDisplayed();
+    //   await sleep(1000); // let the animation finish
 
       //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/425 ---//
       //// can continue with default client balance (0)
@@ -138,6 +146,7 @@ describe('@transfer - Transfer', () => {
       await tap('TransferSuccess-button');
 
       // verify transfer activity on savings
+      await tap('ActivitySavings');
       await elementById('Activity-1').waitForDisplayed();
       await expectTextWithin('Activity-1', 'Transfer');
       await expectTextWithin('Activity-1', '-');
