@@ -119,6 +119,7 @@ describe('@onchain - Onchain', () => {
       await elementById(`Tag-rtag${i}-delete`).waitForDisplayed();
       await sleep(300);
       await tap('ShowQrReceive');
+      await swipeFullScreen('down');
 
       await rpc.sendToAddress(address, '1');
       await mineBlocks(rpc, 1);
@@ -128,21 +129,16 @@ describe('@onchain - Onchain', () => {
       // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
       // await elementById('ReceivedTransaction').waitForDisplayed();
 
-      // acknowledge high balance warning for the first tx only
       if (i === 1) {
+        await dismissBackupTimedSheet();
         await acknowledgeHighBalanceWarning();
       }
-
-      await swipeFullScreen('down');
       await sleep(1000); // wait for the app to settle
 
       // - shows correct total balance
       const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
       const expected = `${i}00 000 000`;
       await expect(totalBalance).toHaveText(expected);
-      if (i === 1) {
-        await dismissBackupTimedSheet();
-      }
     }
 
     // - can send total balance and tag the tx //

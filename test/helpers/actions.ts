@@ -474,6 +474,7 @@ export async function receiveOnchainFunds(
 
   // receive some first
   const address = await getReceiveAddress();
+  await swipeFullScreen('down');
   await rpc.sendToAddress(address, btc);
   await mineBlocks(rpc, blocksToMine);
 
@@ -481,29 +482,29 @@ export async function receiveOnchainFunds(
   // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
   // await elementById('ReceivedTransaction').waitForDisplayed();
 
+  await dismissBackupTimedSheet();
   if (expectHighBalanceWarning) {
     await acknowledgeHighBalanceWarning();
   }
-
-  await swipeFullScreen('down');
   const moneyText = (await elementsById('MoneyText'))[1];
   await expect(moneyText).toHaveText(formattedSats);
-  await dismissBackupTimedSheet();
 }
 
 export async function doTriggerTimedSheet() {
   await tap('HeaderMenu');
   await tap('DrawerSettings');
+  await sleep(500); // wait for the app to settle
   await tap('NavigationClose');
 }
 
-export async function dismissBackupTimedSheet({ triggerTimedSheet = true } = {}) {
+export async function dismissBackupTimedSheet({ triggerTimedSheet = false } = {}) {
   if (triggerTimedSheet) {
     await doTriggerTimedSheet();
   }
   await elementById('backup_description').waitForDisplayed();
   await sleep(500); // wait for the app to settle
   await tap('later_button');
+  await sleep(500);
 }
 
 export async function dismissQuickPayIntro({ triggerTimedSheet = true } = {}) {
@@ -513,9 +514,13 @@ export async function dismissQuickPayIntro({ triggerTimedSheet = true } = {}) {
   await elementById('QuickpayIntro-button').waitForDisplayed();
   await sleep(500); // wait for the app to settle
   await swipeFullScreen('down');
+  await sleep(500);
 }
 
-export async function acknowledgeHighBalanceWarning() {
+export async function acknowledgeHighBalanceWarning({ triggerTimedSheet = false } = {}) {
+  if (triggerTimedSheet) {
+    await doTriggerTimedSheet();
+  }
   await elementById('high_balance_image').waitForDisplayed();
   await tap('understood_button');
   await elementById('high_balance_image').waitForDisplayed({ reverse: true });
