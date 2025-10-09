@@ -507,7 +507,7 @@ export async function dismissBackupTimedSheet({ triggerTimedSheet = false } = {}
   await sleep(500);
 }
 
-export async function dismissQuickPayIntro({ triggerTimedSheet = true } = {}) {
+export async function dismissQuickPayIntro({ triggerTimedSheet = false } = {}) {
   if (triggerTimedSheet) {
     await doTriggerTimedSheet();
   }

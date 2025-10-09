@@ -145,7 +145,7 @@ describe('@lnurl - LNURL', () => {
       await tap('ExternalSuccess-button');
 
       await expectTextWithin('ActivitySpending', '20 001');
-      await dismissQuickPayIntro({ triggerTimedSheet: false });
+      await dismissQuickPayIntro();
 
       // lnurl-pay (min != max) with comment
       const msats = 100000; // msats
