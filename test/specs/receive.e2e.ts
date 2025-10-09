@@ -3,7 +3,7 @@ import {
   confirmInputOnKeyboard,
   dragOnElement,
   elementById,
-  expectTextVisible,
+  expectText,
   expectTextWithin,
   getReceiveAddress,
   sleep,
@@ -41,7 +41,7 @@ describe('@receive - Receive', () => {
     await tap('N1');
     await tap('N2');
     await tap('N3');
-    await expectTextVisible('123');
+    await expectText('123');
     await tap('ReceiveNumberPadSubmit');
 
     // Invoice note
@@ -63,9 +63,9 @@ describe('@receive - Receive', () => {
     // Back to ReceiveDetail
     // data should still be there
     await tap('SpecifyInvoiceButton');
-    await expectTextVisible('123');
+    await expectText('123');
     await expectTextWithin('ReceiveNote', note);
-    await expectTextVisible(tag);
+    await expectText(tag);
 
     // Close & reopen
     await dragOnElement('ReceiveScreen', 'down', 0.7);
@@ -75,15 +75,15 @@ describe('@receive - Receive', () => {
 
     // data should be reset
     await tap('SpecifyInvoiceButton');
-    await expectTextVisible('123', false);
+    await expectText('123', false);
     await expectTextWithin('ReceiveNote', note, false);
-    await expectTextVisible(tag, false);
+    await expectText(tag, false);
 
     // check previous tags & delete
     await tap('TagsAdd');
     await tap(`Tag-${tag}`);
-    await expectTextVisible(tag);
+    await expectText(tag);
     await tap(`Tag-${tag}-delete`);
-    await expectTextVisible(tag, false);
+    await expectText(tag, false);
   });
 });

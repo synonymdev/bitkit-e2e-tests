@@ -6,7 +6,7 @@ import {
   sleep,
   receiveOnchainFunds,
   tap,
-  expectTextVisible,
+  expectText,
   elementByText,
   elementsById,
   elementById,
@@ -17,6 +17,7 @@ import {
   mineBlocks,
   elementByIdWithin,
   enterAddress,
+  dismissQuickPayIntro,
 } from '../helpers/actions';
 import {
   checkChannelStatus,
@@ -129,9 +130,9 @@ describe('@transfer - Transfer', () => {
       await tap('N2');
       await multiTap('N0', 5);
       await tap('SpendingAmountContinue');
-      await expectTextVisible('200 000');
+      await expectText('200 000');
       await tap('SpendingConfirmMore');
-      await expectTextVisible('200 000');
+      await expectText('200 000');
       await tap('LiquidityContinue');
       // Swipe to confirm (set x offset to avoid navigating back)
       await dragOnElement('GRAB', 'right', 0.95);
@@ -153,29 +154,45 @@ describe('@transfer - Transfer', () => {
       await tap('N1');
       await multiTap('N0', 5);
       await tap('SpendingAmountContinue');
-      await expectTextVisible('100 000');
+      await expectText('100 000');
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
+      await sleep(500);
 
       // Receiving Capacity
       // can continue with min amount
       await tap('SpendingAdvancedMin');
-      await expectTextVisible('2 500');
+      await sleep(500);
+      await expectText('2 500');
+      await expectText('—', { visible: false });
       await tap('SpendingAdvancedContinue');
+      await sleep(500);
       await tap('SpendingConfirmDefault');
+      await sleep(500);
       await tap('SpendingConfirmAdvanced');
+      await sleep(500);
 
       // can continue with default amount
       await tap('SpendingAdvancedDefault');
+      await sleep(500);
+      await expectText('—', { visible: false });
       await tap('SpendingAdvancedContinue');
+      await sleep(500);
       await tap('SpendingConfirmDefault');
+      await sleep(500);
       await tap('SpendingConfirmAdvanced');
+      await sleep(500);
 
       // can continue with max amount
       await tap('SpendingAdvancedMax');
+      await sleep(500);
+      await expectText('—', { visible: false });
       await tap('SpendingAdvancedContinue');
+      await sleep(500);
       await tap('SpendingConfirmDefault');
+      await sleep(500);
       await tap('SpendingConfirmAdvanced');
+      await sleep(500);
 
       // can set custom amount
       await tap('N1');
@@ -208,7 +225,7 @@ describe('@transfer - Transfer', () => {
       const channels = await elementsById('Channel');
       channels[1].click();
       await expectTextWithin('TotalSize', '₿ 250 000');
-      await expectTextVisible('Processing payment');
+      await expectText('Processing payment');
       await tap('NavigationClose');
 
       // check activities
@@ -276,6 +293,7 @@ describe('@transfer - Transfer', () => {
 
     // change fee
     await tap('SetCustomFee');
+    await sleep(500);
     await tap('NRemove');
     await sleep(1000); // wait for input to register
     await tap('FeeCustomContinue');
@@ -298,6 +316,7 @@ describe('@transfer - Transfer', () => {
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     const totalAmtAfterChannelOpen = await totalBalance.getText();
     await expect(totalBalance).not.toHaveText('100 000');
+    await dismissQuickPayIntro();
     // await expectTextWithin('ActivitySavings', '100 000', false);
     // await expectTextWithin('ActivitySpending', '0', false);
 
@@ -315,7 +334,7 @@ describe('@transfer - Transfer', () => {
 
     // wait for channel to be opened
     await waitForActiveChannel(lnd, ldkNodeId);
-    await expectTextVisible('Spending Balance Ready');
+    await expectText('Spending Balance Ready');
 
     // check transfer card
     // await elementById('Suggestion-lightning_setting_up').waitForDisplayed({reverse: true});
@@ -340,6 +359,7 @@ describe('@transfer - Transfer', () => {
     await tap('TransferToSavings');
     await tap('SavingsIntro-button');
     await tap('AvailabilityContinue');
+    await sleep(1000);
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('TransferSuccess').waitForDisplayed();
     await tap('TransferSuccess-button');
@@ -350,6 +370,6 @@ describe('@transfer - Transfer', () => {
     await tap('DrawerSettings');
     await tap('AdvancedSettings');
     await tap('Channels');
-    await expectTextVisible('Connection 1', false);
+    await expectText('Connection 1', { visible: false });
   });
 });

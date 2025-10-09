@@ -85,8 +85,11 @@ export async function elementsByText(text: string, timeout = 8000): Promise<Chai
   return $$(sel);
 }
 
-export async function expectTextVisible(text: string, visible = true) {
-  const el = await elementByText(text);
+export async function expectText(
+  text: string,
+  { visible = true, strategy = 'exact' }: { visible?: boolean; strategy?: RetrieveStrategy } = {}
+) {
+  const el = await elementByText(text, strategy);
   if (!visible) {
     await el.waitForDisplayed({ reverse: true });
     return;

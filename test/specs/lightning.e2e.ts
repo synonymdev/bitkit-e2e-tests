@@ -3,7 +3,7 @@ import initElectrum from '../helpers/electrum';
 import {
   completeOnboarding,
   receiveOnchainFunds,
-  expectTextVisible,
+  expectText,
   enterAddress,
   multiTap,
   tap,
@@ -95,7 +95,7 @@ describe('@lightning - Lightning', () => {
     await waitForActiveChannel(lnd, ldkNodeId);
 
     // Toast message
-    await expectTextVisible('Spending Balance Ready');
+    await expectText('Spending Balance Ready');
 
     // check channel status
     await checkChannelStatus();
