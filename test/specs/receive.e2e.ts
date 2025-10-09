@@ -75,15 +75,15 @@ describe('@receive - Receive', () => {
 
     // data should be reset
     await tap('SpecifyInvoiceButton');
-    await expectText('123', false);
+    await expectText('123', { visible: false });
     await expectTextWithin('ReceiveNote', note, false);
-    await expectText(tag, false);
+    await expectText(tag, { visible: false });
 
     // check previous tags & delete
     await tap('TagsAdd');
     await tap(`Tag-${tag}`);
     await expectText(tag);
     await tap(`Tag-${tag}-delete`);
-    await expectText(tag, false);
+    await expectText(tag, { visible: false });
   });
 });
