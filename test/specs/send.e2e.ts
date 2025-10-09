@@ -192,11 +192,11 @@ describe('@send - Send', () => {
     await elementById('ReceivedTransaction').waitForDisplayed();
     await tap('ReceivedTransactionButton');
     await sleep(500);
+    await dismissQuickPayIntro();
 
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     await expect(totalBalance).toHaveText('110 000'); // 100k onchain + 10k lightning
     await expectTextWithin('ActivitySpending', '10 000');
-    await dismissQuickPayIntro();
 
     // send to onchain address
     console.info('Sending to onchain address...');

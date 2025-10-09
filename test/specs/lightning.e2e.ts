@@ -108,10 +108,10 @@ describe('@lightning - Lightning', () => {
     await elementById('ReceivedTransaction').waitForDisplayed();
     await tap('ReceivedTransactionButton');
     await sleep(500);
+    await dismissQuickPayIntro();
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     await expect(totalBalance).toHaveText('11 000'); // 1k onchain + 10k lightning
     await expectTextWithin('ActivitySpending', '10 000');
-    await dismissQuickPayIntro();
 
     // send funds to LDK, 111 sats invoice
     await tap('Receive');

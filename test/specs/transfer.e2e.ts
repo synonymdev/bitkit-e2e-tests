@@ -313,10 +313,10 @@ describe('@transfer - Transfer', () => {
     // check transfer card
     // await elementById('Suggestion-lightning_setting_up').waitForDisplayed();
 
+    await dismissQuickPayIntro();
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     const totalAmtAfterChannelOpen = await totalBalance.getText();
     await expect(totalBalance).not.toHaveText('100 000');
-    await dismissQuickPayIntro();
     // await expectTextWithin('ActivitySavings', '100 000', false);
     // await expectTextWithin('ActivitySpending', '0', false);
 
