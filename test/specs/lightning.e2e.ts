@@ -21,6 +21,7 @@ import {
   restoreWallet,
   mineBlocks,
   elementByText,
+  dismissQuickPayIntro,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
@@ -110,6 +111,7 @@ describe('@lightning - Lightning', () => {
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     await expect(totalBalance).toHaveText('11 000'); // 1k onchain + 10k lightning
     await expectTextWithin('ActivitySpending', '10 000');
+    await dismissQuickPayIntro();
 
     // send funds to LDK, 111 sats invoice
     await tap('Receive');
