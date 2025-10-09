@@ -97,7 +97,11 @@ export async function expectText(
   await el.waitForDisplayed();
 }
 
-export async function expectTextWithin(ancestorId: string, text: string, visible = true) {
+export async function expectTextWithin(
+  ancestorId: string,
+  text: string,
+  { visible = true, timeout = 30_000 }: { visible?: boolean; timeout?: number } = {}
+) {
   const parent = elementById(ancestorId);
   await parent.waitForDisplayed();
 
@@ -106,9 +110,9 @@ export async function expectTextWithin(ancestorId: string, text: string, visible
     : `.//XCUIElementTypeStaticText[@label='${text}' or @value='${text}']`;
 
   if (!visible) {
-    await parent.$(needle).waitForDisplayed({ reverse: true });
+    await parent.$(needle).waitForDisplayed({ reverse: true, timeout });
   } else {
-    await parent.$(needle).waitForDisplayed();
+    await parent.$(needle).waitForDisplayed({ timeout });
   }
 }
 

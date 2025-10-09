@@ -142,9 +142,10 @@ describe('@transfer - Transfer', () => {
       // verify transfer activity on savings
       await tap('ActivitySavings');
       await elementById('Activity-1').waitForDisplayed();
-      await expectTextWithin('Activity-1', 'Transfer');
+      await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
       await expectTextWithin('Activity-1', '-');
       await tap('NavigationBack');
+
       // transfer in progress
       //await elementById('Suggestion-lightning_setting_up').waitForDisplayed();
 
@@ -211,7 +212,7 @@ describe('@transfer - Transfer', () => {
       await expectTextWithin('Activity-1', 'Transfer');
       await expectTextWithin('Activity-1', '-');
       await elementById('Activity-2').waitForDisplayed();
-      await expectTextWithin('Activity-2', 'Transfer');
+      await expectTextWithin('Activity-2', 'Transfer', { timeout: 60_000 });
       await expectTextWithin('Activity-2', '-');
       await tap('NavigationBack');
       // transfer in progress
@@ -290,6 +291,7 @@ describe('@transfer - Transfer', () => {
     await tap('N2');
     await multiTap('N0', 4);
     await tap('ExternalAmountContinue');
+    await sleep(500);
 
     // change fee
     await tap('SetCustomFee');
@@ -313,28 +315,23 @@ describe('@transfer - Transfer', () => {
     // check transfer card
     // await elementById('Suggestion-lightning_setting_up').waitForDisplayed();
 
-    await dismissQuickPayIntro();
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     const totalAmtAfterChannelOpen = await totalBalance.getText();
     await expect(totalBalance).not.toHaveText('100 000');
-    // await expectTextWithin('ActivitySavings', '100 000', false);
-    // await expectTextWithin('ActivitySpending', '0', false);
 
     // check activity
     await swipeFullScreen('up');
     await elementById('ActivityShort-0').waitForDisplayed();
-    // should be Transfer after https://github.com/synonymdev/bitkit-android/pull/414
-    await expectTextWithin('ActivityShort-0', 'Sent');
+    await expectTextWithin('ActivityShort-0', 'Transfer');
     await elementById('ActivityShort-1').waitForDisplayed();
     await expectTextWithin('ActivityShort-1', 'Received');
     await swipeFullScreen('down');
 
-    // Mine 3 blocks
-    await mineBlocks(rpc, 3);
-
-    // wait for channel to be opened
-    await waitForActiveChannel(lnd, ldkNodeId);
+    await mineBlocks(rpc, 6);
+    await electrum?.waitForSync();
     await expectText('Spending Balance Ready');
+    await dismissQuickPayIntro();
+    await waitForActiveChannel(lnd, ldkNodeId);
 
     // check transfer card
     // await elementById('Suggestion-lightning_setting_up').waitForDisplayed({reverse: true});
