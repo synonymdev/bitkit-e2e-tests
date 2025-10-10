@@ -209,6 +209,7 @@ describe('@send - Send', () => {
     await tap('ContinueAmount');
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
+    await sleep(500);
     await tap('Close');
     await expect(totalBalance).not.toHaveText('110 000');
     const amtAfterOnchain = await totalBalance.getText();
@@ -227,6 +228,7 @@ describe('@send - Send', () => {
     await tap('ContinueAmount');
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
+    await sleep(500);
     await tap('Close');
     await expect(totalBalance).not.toHaveText(amtAfterOnchain);
     const amtAfterLightning = await totalBalance.getText();
@@ -236,6 +238,7 @@ describe('@send - Send', () => {
     // can edit invoice on the review screen
     console.info('Editing invoice on review screen...');
     const { paymentRequest: invoice2 } = await lnd.addInvoice({ value: '1000' });
+    console.info({ invoice2 });
     await enterAddress(invoice2);
     const reviewAmt = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
     await reviewAmt.waitForDisplayed();
@@ -277,6 +280,7 @@ describe('@send - Send', () => {
     await expect(reviewAmt).toHaveText('1 000'); // invoice amount
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
+    await sleep(500);
     await tap('Close');
     await expect(totalBalance).not.toHaveText(amtAfterLightning);
     const amtAfterUnified = await totalBalance.getText();
@@ -303,6 +307,7 @@ describe('@send - Send', () => {
     await expect(reviewAmt).toHaveText('20 000');
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
+    await sleep(500);
     await tap('Close');
     await expect(totalBalance).not.toHaveText(amtAfterUnified);
     const amtAfterUnified2 = await totalBalance.getText();
@@ -363,6 +368,7 @@ describe('@send - Send', () => {
     await expect(reviewAmt).toHaveText('1 000');
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
+    await sleep(500);
     await tap('Close');
     await expect(totalBalance).not.toHaveText(amtAfterUnified3);
     const amtAfterUnified4 = await totalBalance.getText();
@@ -394,6 +400,7 @@ describe('@send - Send', () => {
     await tap('ContinueAmount');
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
+    await sleep(500);
     await tap('Close');
     await expect(totalBalance).not.toHaveText(amtAfterUnified4);
     const amtAfterUnified5 = await totalBalance.getText();
@@ -417,6 +424,7 @@ describe('@send - Send', () => {
     await sleep(1000);
     await enterAddress(invoice7);
     await elementById('SendSuccess').waitForDisplayed();
+    await sleep(500);
     await tap('Close');
     await expect(totalBalance).not.toHaveText(amtAfterUnified5);
     const amtAfterLightning2 = await totalBalance.getText();
@@ -433,6 +441,7 @@ describe('@send - Send', () => {
     await sleep(1000);
     await enterAddress(unified7);
     await elementById('SendSuccess').waitForDisplayed();
+    await sleep(500);
     await tap('Close');
     await expect(totalBalance).not.toHaveText(amtAfterLightning2);
     await expectTextWithin('ActivitySpending', '5 000');
