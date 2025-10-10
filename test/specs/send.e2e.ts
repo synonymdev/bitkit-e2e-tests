@@ -237,22 +237,25 @@ describe('@send - Send', () => {
 
     // can edit invoice on the review screen
     console.info('Editing invoice on review screen...');
-    const { paymentRequest: invoice2 } = await lnd.addInvoice({ value: '1000' });
+    const { paymentRequest: invoice2 } = await lnd.addInvoice({ value: '2000' });
     console.info({ invoice2 });
     await enterAddress(invoice2);
     const reviewAmt = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
     await reviewAmt.waitForDisplayed();
-    await expect(reviewAmt).toHaveText('1 000');
+    await expect(reviewAmt).toHaveText('2 000');
     await tap('ReviewUri');
     await sleep(2000);
     await elementById('RecipientInput').waitForDisplayed();
     await sleep(500);
     try {
+      console.info('Typing on the RecipientInput...');
+      console.info({ onchainAddress });
       await typeText('RecipientInput', onchainAddress);
       await confirmInputOnKeyboard();
       await elementById('AddressContinue').waitForEnabled();
       await sleep(500);
     } catch {
+      console.warn('Typing on the RecipientInput failed, trying again...');
       await typeText('RecipientInput', onchainAddress);
       await confirmInputOnKeyboard();
       await elementById('AddressContinue').waitForEnabled();
