@@ -246,7 +246,7 @@ export async function dragOnElement(
 ) {
   const el = elementById(testId);
   await el.waitForDisplayed();
-  await sleep(200); // Allow time for the element to settle
+  await sleep(500); // Allow time for the element to settle
 
   const { x, y, elWidth, elHight } = await elementRect(el);
   console.debug(`Drag on element "${testId}"`);

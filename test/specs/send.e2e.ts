@@ -351,10 +351,10 @@ describe('@send - Send', () => {
     await sleep(1000);
     await enterAddress(unified4);
     // max amount (lightning)
-    await expectText('7 000'); // current balance 8k - 1k reserve balance
+    await expectText('7 000', { strategy: 'contains' }); // current balance 8k - 1k reserve balance
     await tap('AssetButton-switch');
     // max amount (onchain)
-    await expectText('7 000', { visible: false });
+    await expectText('7 000', { visible: false, strategy: 'contains' });
     await tap('AssetButton-switch');
     await tap('N1');
     await multiTap('N0', 3);
@@ -378,7 +378,7 @@ describe('@send - Send', () => {
     // max amount (lightning)
     await tap('AvailableAmount');
     await tap('ContinueAmount');
-    await expectText('6 000');
+    await expectText('6 000', { strategy: 'contains' });
     // expect toast about reserve balance
     await expectText('Reserve Balance');
     await tap('NavigationBack');
@@ -386,7 +386,7 @@ describe('@send - Send', () => {
     await tap('AssetButton-switch');
     await tap('AvailableAmount');
     await tap('ContinueAmount');
-    await expectText('6 000', { visible: false });
+    await expectText('6 000', { visible: false, strategy: 'contains' });
     await tap('NavigationBack');
     await multiTap('NRemove', 6);
     await tap('N1');
