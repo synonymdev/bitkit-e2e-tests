@@ -186,6 +186,7 @@ describe('@lightning - Lightning', () => {
     // check activity filters & tags
     await sleep(500); // wait for the app to settle
     await swipeFullScreen('up');
+    await swipeFullScreen('up');
     await tap('ActivityShowAll');
     // All transactions
     await expectTextWithin('Activity-1', '-');
