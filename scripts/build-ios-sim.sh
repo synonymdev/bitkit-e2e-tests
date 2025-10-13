@@ -28,6 +28,7 @@ xcodebuild \
 
 OUT="$E2E_ROOT/aut"
 mkdir -p "$OUT"
+rm -rf "$OUT/Bitkit.app"
 cp -R "$IOS_ROOT/build/Build/Products/Debug-iphonesimulator/Bitkit.app" "$OUT/Bitkit.app"
 rm -rf "$IOS_ROOT/build"
 echo "iOS sim artifact copied to: $OUT/Bitkit.app"
