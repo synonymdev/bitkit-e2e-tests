@@ -18,6 +18,7 @@ on:
 
 jobs:
   determine:
+    name: determine
     runs-on: ubuntu-latest 
     outputs:
       branch: ${{ steps.detect.outputs.branch }}
