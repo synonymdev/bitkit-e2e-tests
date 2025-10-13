@@ -18,7 +18,6 @@ on:
 
 jobs:
   determine:
-    name: Select E2E branch
     runs-on: ubuntu-latest 
     outputs:
       branch: ${{ steps.detect.outputs.branch }}
