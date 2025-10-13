@@ -88,20 +88,20 @@ export async function elementsByText(text: string, timeout = 8000): Promise<Chai
 /**
  * Verifies that text is visible or hidden on the screen.
  * This is a cross-platform helper that works on both Android and iOS.
- * 
+ *
  * @param text - The text string to search for
  * @param options - Configuration options
  * @param options.visible - Whether the text should be visible (default: true)
  * @param options.strategy - How to match the text: 'exact' for exact match, 'contains' for partial match (default: 'exact')
- * 
+ *
  * @example
  * // Check that "Send" button text is visible
  * await expectText('Send');
- * 
+ *
  * @example
  * // Check that error message is NOT visible
  * await expectText('Error occurred', { visible: false });
- * 
+ *
  * @example
  * // Check for partial text match
  * await expectText('Transaction', { strategy: 'contains' });
@@ -122,21 +122,21 @@ export async function expectText(
  * Verifies that text is visible or hidden within a specific container element.
  * This is useful when you need to check for text within a specific UI component
  * to avoid false positives from similar text elsewhere on the screen.
- * 
+ *
  * @param ancestorId - The resource-id or accessibility ID of the container element
  * @param text - The text string to search for within the container
  * @param options - Configuration options
  * @param options.visible - Whether the text should be visible (default: true)
  * @param options.timeout - Maximum time to wait for the element in milliseconds (default: 30000)
- * 
+ *
  * @example
  * // Check that "Confirm" text is visible within a modal
  * await expectTextWithin('ModalContainer', 'Confirm');
- * 
+ *
  * @example
  * // Check that error message is NOT visible within a form
  * await expectTextWithin('FormContainer', 'Invalid input', { visible: false });
- * 
+ *
  * @example
  * // Use custom timeout for slow-loading content
  * await expectTextWithin('LoadingContainer', 'Processing...', { timeout: 60000 });
