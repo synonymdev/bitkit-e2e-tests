@@ -18,7 +18,7 @@ import {
   receiveOnchainFunds,
   expectTextWithin,
   enterAddress,
-  expectTextVisible,
+  expectText,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
@@ -328,7 +328,7 @@ describe('@lnurl - LNURL', () => {
       await confirmInputOnKeyboard();
       await tap('DialogConfirm');
       await tap('continue_button');
-      await expectTextVisible('Signed In');
+      await expectText('Signed In');
       await loginEvent;
     }
   );

@@ -8,7 +8,7 @@ import {
   receiveOnchainFunds,
   typeText,
   confirmInputOnKeyboard,
-  expectTextVisible,
+  expectText,
   dragOnElement,
   swipeFullScreen,
   expectTextWithin,
@@ -58,7 +58,7 @@ describe('@boost - Boost', () => {
 
     // old tx
     await tap('ActivityShort-0');
-    await expectTextVisible('100 000');
+    await expectText('100 000');
     await tap('ActivityTxDetails');
     const origTxId = await getTextUnder('TXID');
     console.info({ oldTxId: origTxId });
@@ -82,7 +82,7 @@ describe('@boost - Boost', () => {
     // orig tx still there
     await swipeFullScreen('up');
     await tap('ActivityShort-1');
-    await expectTextVisible('100 000');
+    await expectText('100 000');
     await elementById('BoostedButton').waitForDisplayed();
     await elementById('StatusBoosting').waitForDisplayed();
     await tap('ActivityTxDetails');
@@ -165,7 +165,7 @@ describe('@boost - Boost', () => {
     await tap('N1');
     await tap('N0');
     await tap('N000');
-    await expectTextVisible('10 000');
+    await expectText('10 000');
     await tap('ContinueAmount');
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();

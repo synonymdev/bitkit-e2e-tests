@@ -9,7 +9,7 @@ import {
   elementById,
   enterAddress,
   elementByIdWithin,
-  expectTextVisible,
+  expectText,
   expectTextWithin,
   getReceiveAddress,
   receiveOnchainFunds,
@@ -159,7 +159,7 @@ describe('@send - Send', () => {
     await waitForActiveChannel(lnd, ldkNodeId);
 
     // Toast message
-    await expectTextVisible('Spending Balance Ready');
+    await expectText('Spending Balance Ready');
 
     // check channel status
     await checkChannelStatus();
@@ -350,10 +350,10 @@ describe('@send - Send', () => {
     await sleep(1000);
     await enterAddress(unified4);
     // max amount (lightning)
-    await expectTextVisible('7 000'); // current balance 8k - 1k reserve balance
+    await expectText('7 000'); // current balance 8k - 1k reserve balance
     await tap('AssetButton-switch');
     // max amount (onchain)
-    await expectTextVisible('7 000', false);
+    await expectText('7 000', { visible: false });
     await tap('AssetButton-switch');
     await tap('N1');
     await multiTap('N0', 3);
@@ -377,15 +377,15 @@ describe('@send - Send', () => {
     // max amount (lightning)
     await tap('AvailableAmount');
     await tap('ContinueAmount');
-    await expectTextVisible('6 000');
+    await expectText('6 000');
     // expect toast about reserve balance
-    await expectTextVisible('Reserve Balance');
+    await expectText('Reserve Balance');
     await tap('NavigationBack');
     // max amount (onchain)
     await tap('AssetButton-switch');
     await tap('AvailableAmount');
     await tap('ContinueAmount');
-    await expectTextVisible('6 000', false);
+    await expectText('6 000', { visible: false });
     await tap('NavigationBack');
     await multiTap('NRemove', 6);
     await tap('N1');

@@ -1,7 +1,7 @@
 import {
   completeOnboarding,
   enterAddress,
-  expectTextVisible,
+  expectText,
   getTextUnder,
   multiTap,
   sleep,
@@ -66,16 +66,16 @@ async function modernDenominationChecks(mode: NumberpadMode) {
   await tap('N1');
   await tap('N2');
   await tap('N3');
-  await expectTextVisible('123');
+  await expectText('123');
 
   await tap('N000');
-  await expectTextVisible('123 000');
+  await expectText('123 000');
 
   // Switch to USD
   await tap(`${mode}NumberPadUnit`);
   // reset to 0
   await multiTap('NRemove', 8);
-  await expectTextVisible('0.00');
+  await expectText('0.00');
 
   await tap('N0');
   await tap('N0');
@@ -86,7 +86,7 @@ async function modernDenominationChecks(mode: NumberpadMode) {
   await tap('N1');
   await tap('NDecimal');
   await tap('N1');
-  await expectTextVisible('1.01');
+  await expectText('1.01');
 
   // Switch back to BTC
   await tap(`${mode}NumberPadUnit`);
@@ -95,26 +95,26 @@ async function classicDenominationChecks(mode: NumberpadMode) {
   await makeSureIsBitcoinInput(mode);
   // Unit set to BTC
   await tap('N1');
-  await expectTextVisible('1.00000000');
+  await expectText('1.00000000');
 
   // can only enter one decimal symbol
   await tap('NDecimal');
   await tap('NDecimal');
-  await expectTextVisible('1.00000000');
+  await expectText('1.00000000');
   await tap('NRemove');
-  await expectTextVisible('1.00000000');
+  await expectText('1.00000000');
   await tap('NDecimal');
 
   // reset to 0
   await multiTap('NRemove', 2);
-  await expectTextVisible('0.00000000');
+  await expectText('0.00000000');
   await tap('N4');
   await tap('NDecimal');
   await tap('N2');
   await tap('N0');
   await tap('N6');
   await tap('N9');
-  await expectTextVisible('4.20690000');
+  await expectText('4.20690000');
 
   // Switch to USD and back
   await tap(`${mode}NumberPadUnit`);
@@ -122,7 +122,7 @@ async function classicDenominationChecks(mode: NumberpadMode) {
   await tap(`${mode}NumberPadUnit`);
 
   // still there
-  await expectTextVisible('4.20690000');
+  await expectText('4.20690000');
 }
 
 async function makeSureIsBitcoinInput(mode: NumberpadMode) {

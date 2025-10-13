@@ -6,7 +6,7 @@ import {
   sleep,
   receiveOnchainFunds,
   tap,
-  expectTextVisible,
+  expectText,
   elementByText,
   elementsById,
   elementById,
@@ -129,9 +129,9 @@ describe('@transfer - Transfer', () => {
       await tap('N2');
       await multiTap('N0', 5);
       await tap('SpendingAmountContinue');
-      await expectTextVisible('200 000');
+      await expectText('200 000');
       await tap('SpendingConfirmMore');
-      await expectTextVisible('200 000');
+      await expectText('200 000');
       await tap('LiquidityContinue');
       // Swipe to confirm (set x offset to avoid navigating back)
       await dragOnElement('GRAB', 'right', 0.95);
@@ -153,14 +153,14 @@ describe('@transfer - Transfer', () => {
       await tap('N1');
       await multiTap('N0', 5);
       await tap('SpendingAmountContinue');
-      await expectTextVisible('100 000');
+      await expectText('100 000');
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
 
       // Receiving Capacity
       // can continue with min amount
       await tap('SpendingAdvancedMin');
-      await expectTextVisible('2 500');
+      await expectText('2 500');
       await tap('SpendingAdvancedContinue');
       await tap('SpendingConfirmDefault');
       await tap('SpendingConfirmAdvanced');
@@ -208,7 +208,7 @@ describe('@transfer - Transfer', () => {
       const channels = await elementsById('Channel');
       channels[1].click();
       await expectTextWithin('TotalSize', '₿ 250 000');
-      await expectTextVisible('Processing payment');
+      await expectText('Processing payment');
       await tap('NavigationClose');
 
       // check activities
@@ -315,7 +315,7 @@ describe('@transfer - Transfer', () => {
 
     // wait for channel to be opened
     await waitForActiveChannel(lnd, ldkNodeId);
-    await expectTextVisible('Spending Balance Ready');
+    await expectText('Spending Balance Ready');
 
     // check transfer card
     // await elementById('Suggestion-lightning_setting_up').waitForDisplayed({reverse: true});
@@ -350,6 +350,6 @@ describe('@transfer - Transfer', () => {
     await tap('DrawerSettings');
     await tap('AdvancedSettings');
     await tap('Channels');
-    await expectTextVisible('Connection 1', false);
+    await expectText('Connection 1', { visible: false });
   });
 });
