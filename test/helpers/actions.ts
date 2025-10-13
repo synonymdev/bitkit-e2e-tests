@@ -85,8 +85,32 @@ export async function elementsByText(text: string, timeout = 8000): Promise<Chai
   return $$(sel);
 }
 
-export async function expectTextVisible(text: string, visible = true) {
-  const el = await elementByText(text);
+/**
+ * Verifies that text is visible or hidden on the screen.
+ * This is a cross-platform helper that works on both Android and iOS.
+ * 
+ * @param text - The text string to search for
+ * @param options - Configuration options
+ * @param options.visible - Whether the text should be visible (default: true)
+ * @param options.strategy - How to match the text: 'exact' for exact match, 'contains' for partial match (default: 'exact')
+ * 
+ * @example
+ * // Check that "Send" button text is visible
+ * await expectText('Send');
+ * 
+ * @example
+ * // Check that error message is NOT visible
+ * await expectText('Error occurred', { visible: false });
+ * 
+ * @example
+ * // Check for partial text match
+ * await expectText('Transaction', { strategy: 'contains' });
+ */
+export async function expectText(
+  text: string,
+  { visible = true, strategy = 'exact' }: { visible?: boolean; strategy?: RetrieveStrategy } = {}
+) {
+  const el = await elementByText(text, strategy);
   if (!visible) {
     await el.waitForDisplayed({ reverse: true });
     return;
@@ -94,7 +118,34 @@ export async function expectTextVisible(text: string, visible = true) {
   await el.waitForDisplayed();
 }
 
-export async function expectTextWithin(ancestorId: string, text: string, visible = true) {
+/**
+ * Verifies that text is visible or hidden within a specific container element.
+ * This is useful when you need to check for text within a specific UI component
+ * to avoid false positives from similar text elsewhere on the screen.
+ * 
+ * @param ancestorId - The resource-id or accessibility ID of the container element
+ * @param text - The text string to search for within the container
+ * @param options - Configuration options
+ * @param options.visible - Whether the text should be visible (default: true)
+ * @param options.timeout - Maximum time to wait for the element in milliseconds (default: 30000)
+ * 
+ * @example
+ * // Check that "Confirm" text is visible within a modal
+ * await expectTextWithin('ModalContainer', 'Confirm');
+ * 
+ * @example
+ * // Check that error message is NOT visible within a form
+ * await expectTextWithin('FormContainer', 'Invalid input', { visible: false });
+ * 
+ * @example
+ * // Use custom timeout for slow-loading content
+ * await expectTextWithin('LoadingContainer', 'Processing...', { timeout: 60000 });
+ */
+export async function expectTextWithin(
+  ancestorId: string,
+  text: string,
+  { visible = true, timeout = 30_000 }: { visible?: boolean; timeout?: number } = {}
+) {
   const parent = elementById(ancestorId);
   await parent.waitForDisplayed();
 
@@ -103,9 +154,9 @@ export async function expectTextWithin(ancestorId: string, text: string, visible
     : `.//XCUIElementTypeStaticText[@label='${text}' or @value='${text}']`;
 
   if (!visible) {
-    await parent.$(needle).waitForDisplayed({ reverse: true });
+    await parent.$(needle).waitForDisplayed({ reverse: true, timeout });
   } else {
-    await parent.$(needle).waitForDisplayed();
+    await parent.$(needle).waitForDisplayed({ timeout });
   }
 }
 
@@ -239,7 +290,7 @@ export async function dragOnElement(
 ) {
   const el = elementById(testId);
   await el.waitForDisplayed();
-  await sleep(200); // Allow time for the element to settle
+  await sleep(500); // Allow time for the element to settle
 
   const { x, y, elWidth, elHight } = await elementRect(el);
   console.debug(`Drag on element "${testId}"`);
@@ -474,6 +525,7 @@ export async function receiveOnchainFunds(
 
   // receive some first
   const address = await getReceiveAddress();
+  await swipeFullScreen('down');
   await rpc.sendToAddress(address, btc);
   await mineBlocks(rpc, blocksToMine);
 
@@ -481,16 +533,99 @@ export async function receiveOnchainFunds(
   // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
   // await elementById('ReceivedTransaction').waitForDisplayed();
 
+  await dismissBackupTimedSheet();
   if (expectHighBalanceWarning) {
     await acknowledgeHighBalanceWarning();
   }
-
-  await swipeFullScreen('down');
   const moneyText = (await elementsById('MoneyText'))[1];
   await expect(moneyText).toHaveText(formattedSats);
 }
 
-export async function acknowledgeHighBalanceWarning() {
+/**
+ * Triggers the timed backup sheet by navigating to settings and back.
+ * Since timed sheets are sometimes triggered by user behavior (when user goes back to home screen),
+ * we need to trigger them manually.
+ * 
+ * @example
+ * // Trigger backup sheet before testing dismissal
+ * await doTriggerTimedSheet();
+ */
+export async function doTriggerTimedSheet() {
+  await tap('HeaderMenu');
+  await tap('DrawerSettings');
+  await sleep(500); // wait for the app to settle
+  await tap('NavigationClose');
+}
+
+/**
+ * Dismisses the backup reminder sheet.
+ * This sheet is triggered by first onchain balance change.
+ * 
+ * @param options - Configuration options
+ * @param options.triggerTimedSheet - Whether to trigger the sheet first (default: false)
+ * 
+ * @example
+ * // Dismiss existing backup sheet
+ * await dismissBackupTimedSheet();
+ * 
+ * @example
+ * // Trigger and then dismiss backup sheet
+ * await dismissBackupTimedSheet({ triggerTimedSheet: true });
+ */
+export async function dismissBackupTimedSheet({ triggerTimedSheet = false }: { triggerTimedSheet?: boolean } = {}) {
+  if (triggerTimedSheet) {
+    await doTriggerTimedSheet();
+  }
+  await elementById('backup_description').waitForDisplayed();
+  await sleep(500); // wait for the app to settle
+  await tap('later_button');
+  await sleep(500);
+}
+
+/**
+ * Dismisses the QuickPay introduction modal t.
+ * This sheet is triggered by first lightning balance change.
+ * 
+ * @param options - Configuration options
+ * @param options.triggerTimedSheet - Whether to trigger the backup sheet first (default: false)
+ * 
+ * @example
+ * // Dismiss existing QuickPay intro
+ * await dismissQuickPayIntro();
+ * 
+ * @example
+ * // Trigger backup sheet and then dismiss QuickPay intro
+ * await dismissQuickPayIntro({ triggerTimedSheet: true });
+ */
+export async function dismissQuickPayIntro({ triggerTimedSheet = false }: { triggerTimedSheet?: boolean } = {}) {
+  if (triggerTimedSheet) {
+    await doTriggerTimedSheet();
+  }
+  await elementById('QuickpayIntro-button').waitForDisplayed();
+  await sleep(500); // wait for the app to settle
+  await swipeFullScreen('down');
+  await sleep(500);
+}
+
+/**
+ * Acknowledges the high balance warning that appears when wallet balance exceeds a threshold (>$500).
+ * This sheet is triggered by onchain balance change if it exceeds a threshold.
+ * 
+ * @param options - Configuration options
+ * @param options.triggerTimedSheet - Whether to trigger the backup sheet first (default: false)
+ * 
+ * @example
+ * // Acknowledge existing high balance warning
+ * await acknowledgeHighBalanceWarning();
+ * 
+ * @example
+ * // Trigger backup sheet and then acknowledge high balance warning
+ * await acknowledgeHighBalanceWarning({ triggerTimedSheet: true });
+ */
+export async function acknowledgeHighBalanceWarning({ triggerTimedSheet = false }: { triggerTimedSheet?: boolean } = {}) {
+  if (triggerTimedSheet) {
+    await doTriggerTimedSheet();
+  }
   await elementById('high_balance_image').waitForDisplayed();
   await tap('understood_button');
   await elementById('high_balance_image').waitForDisplayed({ reverse: true });

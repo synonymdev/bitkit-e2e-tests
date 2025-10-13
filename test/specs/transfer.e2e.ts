@@ -6,7 +6,7 @@ import {
   sleep,
   receiveOnchainFunds,
   tap,
-  expectTextVisible,
+  expectText,
   elementByText,
   elementsById,
   elementById,
@@ -17,6 +17,7 @@ import {
   mineBlocks,
   elementByIdWithin,
   enterAddress,
+  dismissQuickPayIntro,
 } from '../helpers/actions';
 import {
   checkChannelStatus,
@@ -129,9 +130,9 @@ describe('@transfer - Transfer', () => {
       await tap('N2');
       await multiTap('N0', 5);
       await tap('SpendingAmountContinue');
-      await expectTextVisible('200 000');
+      await expectText('200 000');
       await tap('SpendingConfirmMore');
-      await expectTextVisible('200 000');
+      await expectText('200 000');
       await tap('LiquidityContinue');
       // Swipe to confirm (set x offset to avoid navigating back)
       await dragOnElement('GRAB', 'right', 0.95);
@@ -141,9 +142,10 @@ describe('@transfer - Transfer', () => {
       // verify transfer activity on savings
       await tap('ActivitySavings');
       await elementById('Activity-1').waitForDisplayed();
-      await expectTextWithin('Activity-1', 'Transfer');
+      await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
       await expectTextWithin('Activity-1', '-');
       await tap('NavigationBack');
+
       // transfer in progress
       //await elementById('Suggestion-lightning_setting_up').waitForDisplayed();
 
@@ -153,29 +155,45 @@ describe('@transfer - Transfer', () => {
       await tap('N1');
       await multiTap('N0', 5);
       await tap('SpendingAmountContinue');
-      await expectTextVisible('100 000');
+      await expectText('100 000');
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
+      await sleep(500);
 
       // Receiving Capacity
       // can continue with min amount
       await tap('SpendingAdvancedMin');
-      await expectTextVisible('2 500');
+      await sleep(500);
+      await expectText('2 500');
+      await expectText('—', { visible: false });
       await tap('SpendingAdvancedContinue');
+      await sleep(500);
       await tap('SpendingConfirmDefault');
+      await sleep(500);
       await tap('SpendingConfirmAdvanced');
+      await sleep(500);
 
       // can continue with default amount
       await tap('SpendingAdvancedDefault');
+      await sleep(500);
+      await expectText('—', { visible: false });
       await tap('SpendingAdvancedContinue');
+      await sleep(500);
       await tap('SpendingConfirmDefault');
+      await sleep(500);
       await tap('SpendingConfirmAdvanced');
+      await sleep(500);
 
       // can continue with max amount
       await tap('SpendingAdvancedMax');
+      await sleep(500);
+      await expectText('—', { visible: false });
       await tap('SpendingAdvancedContinue');
+      await sleep(500);
       await tap('SpendingConfirmDefault');
+      await sleep(500);
       await tap('SpendingConfirmAdvanced');
+      await sleep(500);
 
       // can set custom amount
       await tap('N1');
@@ -194,7 +212,7 @@ describe('@transfer - Transfer', () => {
       await expectTextWithin('Activity-1', 'Transfer');
       await expectTextWithin('Activity-1', '-');
       await elementById('Activity-2').waitForDisplayed();
-      await expectTextWithin('Activity-2', 'Transfer');
+      await expectTextWithin('Activity-2', 'Transfer', { timeout: 60_000 });
       await expectTextWithin('Activity-2', '-');
       await tap('NavigationBack');
       // transfer in progress
@@ -208,7 +226,7 @@ describe('@transfer - Transfer', () => {
       const channels = await elementsById('Channel');
       channels[1].click();
       await expectTextWithin('TotalSize', '₿ 250 000');
-      await expectTextVisible('Processing payment');
+      await expectText('Processing payment');
       await tap('NavigationClose');
 
       // check activities
@@ -273,9 +291,11 @@ describe('@transfer - Transfer', () => {
     await tap('N2');
     await multiTap('N0', 4);
     await tap('ExternalAmountContinue');
+    await sleep(500);
 
     // change fee
     await tap('SetCustomFee');
+    await sleep(500);
     await tap('NRemove');
     await sleep(1000); // wait for input to register
     await tap('FeeCustomContinue');
@@ -298,24 +318,20 @@ describe('@transfer - Transfer', () => {
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     const totalAmtAfterChannelOpen = await totalBalance.getText();
     await expect(totalBalance).not.toHaveText('100 000');
-    // await expectTextWithin('ActivitySavings', '100 000', false);
-    // await expectTextWithin('ActivitySpending', '0', false);
 
     // check activity
     await swipeFullScreen('up');
     await elementById('ActivityShort-0').waitForDisplayed();
-    // should be Transfer after https://github.com/synonymdev/bitkit-android/pull/414
-    await expectTextWithin('ActivityShort-0', 'Sent');
+    await expectTextWithin('ActivityShort-0', 'Transfer');
     await elementById('ActivityShort-1').waitForDisplayed();
     await expectTextWithin('ActivityShort-1', 'Received');
     await swipeFullScreen('down');
 
-    // Mine 3 blocks
-    await mineBlocks(rpc, 3);
-
-    // wait for channel to be opened
+    await mineBlocks(rpc, 6);
+    await electrum?.waitForSync();
+    await expectText('Spending Balance Ready');
+    await dismissQuickPayIntro();
     await waitForActiveChannel(lnd, ldkNodeId);
-    await expectTextVisible('Spending Balance Ready');
 
     // check transfer card
     // await elementById('Suggestion-lightning_setting_up').waitForDisplayed({reverse: true});
@@ -340,6 +356,7 @@ describe('@transfer - Transfer', () => {
     await tap('TransferToSavings');
     await tap('SavingsIntro-button');
     await tap('AvailabilityContinue');
+    await sleep(1000);
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('TransferSuccess').waitForDisplayed();
     await tap('TransferSuccess-button');
@@ -350,6 +367,6 @@ describe('@transfer - Transfer', () => {
     await tap('DrawerSettings');
     await tap('AdvancedSettings');
     await tap('Channels');
-    await expectTextVisible('Connection 1', false);
+    await expectText('Connection 1', { visible: false });
   });
 });

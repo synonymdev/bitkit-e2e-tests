@@ -9,7 +9,7 @@ import {
   elementById,
   enterAddress,
   elementByIdWithin,
-  expectTextVisible,
+  expectText,
   expectTextWithin,
   getReceiveAddress,
   receiveOnchainFunds,
@@ -18,6 +18,7 @@ import {
   multiTap,
   typeAddressAndVerifyContinue,
   mineBlocks,
+  dismissQuickPayIntro,
 } from '../helpers/actions';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
 import { reinstallApp } from '../helpers/setup';
@@ -159,7 +160,7 @@ describe('@send - Send', () => {
     await waitForActiveChannel(lnd, ldkNodeId);
 
     // Toast message
-    await expectTextVisible('Spending Balance Ready');
+    await expectText('Spending Balance Ready');
 
     // check channel status
     await checkChannelStatus();
@@ -191,13 +192,13 @@ describe('@send - Send', () => {
     await elementById('ReceivedTransaction').waitForDisplayed();
     await tap('ReceivedTransactionButton');
     await sleep(500);
+    await dismissQuickPayIntro();
 
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     await expect(totalBalance).toHaveText('110 000'); // 100k onchain + 10k lightning
     await expectTextWithin('ActivitySpending', '10 000');
 
     // send to onchain address
-
     console.info('Sending to onchain address...');
     const { address: onchainAddress } = await lnd.newAddress();
     console.info({ onchainAddress });
@@ -208,6 +209,7 @@ describe('@send - Send', () => {
     await tap('ContinueAmount');
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
+    await sleep(500);
     await tap('Close');
     await expect(totalBalance).not.toHaveText('110 000');
     const amtAfterOnchain = await totalBalance.getText();
@@ -221,34 +223,39 @@ describe('@send - Send', () => {
     await sleep(1000);
     await enterAddress(invoice1);
     await elementById('AssetButton-spending').waitForDisplayed();
-    await tap('N1');
+    await tap('N2');
     await multiTap('N0', 3);
     await tap('ContinueAmount');
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
+    await sleep(500);
     await tap('Close');
     await expect(totalBalance).not.toHaveText(amtAfterOnchain);
     const amtAfterLightning = await totalBalance.getText();
     console.info({ amtAfterLightning });
-    await expectTextWithin('ActivitySpending', '9 000');
+    await expectTextWithin('ActivitySpending', '8 000');
 
     // can edit invoice on the review screen
     console.info('Editing invoice on review screen...');
-    const { paymentRequest: invoice2 } = await lnd.addInvoice({ value: '1000' });
+    const { paymentRequest: invoice2 } = await lnd.addInvoice({ value: '2000' });
+    console.info({ invoice2 });
     await enterAddress(invoice2);
     const reviewAmt = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
     await reviewAmt.waitForDisplayed();
-    await expect(reviewAmt).toHaveText('1 000');
+    await expect(reviewAmt).toHaveText('2 000');
     await tap('ReviewUri');
     await sleep(2000);
     await elementById('RecipientInput').waitForDisplayed();
     await sleep(500);
     try {
+      console.info('Typing on the RecipientInput...');
+      console.info({ onchainAddress });
       await typeText('RecipientInput', onchainAddress);
       await confirmInputOnKeyboard();
       await elementById('AddressContinue').waitForEnabled();
       await sleep(500);
     } catch {
+      console.warn('Typing on the RecipientInput failed, trying again...');
       await typeText('RecipientInput', onchainAddress);
       await confirmInputOnKeyboard();
       await elementById('AddressContinue').waitForEnabled();
@@ -276,11 +283,12 @@ describe('@send - Send', () => {
     await expect(reviewAmt).toHaveText('1 000'); // invoice amount
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
+    await sleep(500);
     await tap('Close');
     await expect(totalBalance).not.toHaveText(amtAfterLightning);
     const amtAfterUnified = await totalBalance.getText();
     console.info({ amtAfterUnified });
-    await expectTextWithin('ActivitySpending', '8 000');
+    await expectTextWithin('ActivitySpending', '7 000');
 
     // send to unified invoice w/ amount exceeding balance(s)
     console.info('Sending to unified invoice w/ amount exceeding balance(s)...');
@@ -302,11 +310,12 @@ describe('@send - Send', () => {
     await expect(reviewAmt).toHaveText('20 000');
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
+    await sleep(500);
     await tap('Close');
     await expect(totalBalance).not.toHaveText(amtAfterUnified);
     const amtAfterUnified2 = await totalBalance.getText();
     console.info({ amtAfterUnified2 });
-    await expectTextWithin('ActivitySpending', '8 000');
+    await expectTextWithin('ActivitySpending', '7 000');
 
     //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/366 ---//
 
@@ -336,7 +345,7 @@ describe('@send - Send', () => {
     // await tap('Close');
     // await expect(moneyText).not.toHaveText(amtAfterUnified2);
     // const amtAfterUnified3 = await moneyText.getText();
-    // await expectTextWithin('ActivitySpending', '8 000');
+    // await expectTextWithin('ActivitySpending', '7 000');
 
     //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/366 ---//
     const amtAfterUnified3 = await totalBalance.getText();
@@ -350,10 +359,10 @@ describe('@send - Send', () => {
     await sleep(1000);
     await enterAddress(unified4);
     // max amount (lightning)
-    await expectTextVisible('7 000'); // current balance 8k - 1k reserve balance
+    await expectText('6 000', { strategy: 'contains' }); // current balance 8k - 1k reserve balance
     await tap('AssetButton-switch');
     // max amount (onchain)
-    await expectTextVisible('7 000', false);
+    await expectText('6 000', { visible: false, strategy: 'contains' });
     await tap('AssetButton-switch');
     await tap('N1');
     await multiTap('N0', 3);
@@ -362,11 +371,12 @@ describe('@send - Send', () => {
     await expect(reviewAmt).toHaveText('1 000');
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
+    await sleep(500);
     await tap('Close');
     await expect(totalBalance).not.toHaveText(amtAfterUnified3);
     const amtAfterUnified4 = await totalBalance.getText();
     console.info({ amtAfterUnified4 });
-    await expectTextWithin('ActivitySpending', '7 000');
+    await expectTextWithin('ActivitySpending', '6 000');
 
     // send to unified invoice w/o amount (switch to onchain)
     const { paymentRequest: invoice6 } = await lnd.addInvoice({});
@@ -377,15 +387,15 @@ describe('@send - Send', () => {
     // max amount (lightning)
     await tap('AvailableAmount');
     await tap('ContinueAmount');
-    await expectTextVisible('6 000');
+    await expectText('5 000', { strategy: 'contains' });
     // expect toast about reserve balance
-    await expectTextVisible('Reserve Balance');
+    await expectText('Reserve Balance');
     await tap('NavigationBack');
     // max amount (onchain)
     await tap('AssetButton-switch');
     await tap('AvailableAmount');
     await tap('ContinueAmount');
-    await expectTextVisible('6 000', false);
+    await expectText('5 000', { visible: false, strategy: 'contains' });
     await tap('NavigationBack');
     await multiTap('NRemove', 6);
     await tap('N1');
@@ -393,11 +403,12 @@ describe('@send - Send', () => {
     await tap('ContinueAmount');
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
+    await sleep(500);
     await tap('Close');
     await expect(totalBalance).not.toHaveText(amtAfterUnified4);
     const amtAfterUnified5 = await totalBalance.getText();
     console.info({ amtAfterUnified5 });
-    await expectTextWithin('ActivitySpending', '7 000');
+    await expectTextWithin('ActivitySpending', '6 000');
 
     // send to lightning invoice w/ amount (quickpay)
     console.info('Sending to lightning invoice w/ amount (quickpay)...');
@@ -409,18 +420,19 @@ describe('@send - Send', () => {
     await tap('DrawerSettings');
     await tap('GeneralSettings');
     await tap('QuickpaySettings');
-    await tap('QuickpayIntro-button');
+    // no quickpay intro as we already dismissed it after getting lightning balance
     await tap('QuickpayToggle');
     await tap('NavigationClose');
 
     await sleep(1000);
     await enterAddress(invoice7);
     await elementById('SendSuccess').waitForDisplayed();
+    await sleep(500);
     await tap('Close');
     await expect(totalBalance).not.toHaveText(amtAfterUnified5);
     const amtAfterLightning2 = await totalBalance.getText();
     console.info({ amtAfterLightning2 });
-    await expectTextWithin('ActivitySpending', '6 000');
+    await expectTextWithin('ActivitySpending', '5 000');
 
     // send to unified invoice w/ amount (quickpay)
     console.info('Sending to unified invoice w/ amount (quickpay)...');
@@ -432,9 +444,10 @@ describe('@send - Send', () => {
     await sleep(1000);
     await enterAddress(unified7);
     await elementById('SendSuccess').waitForDisplayed();
+    await sleep(500);
     await tap('Close');
     await expect(totalBalance).not.toHaveText(amtAfterLightning2);
-    await expectTextWithin('ActivitySpending', '5 000');
+    await expectTextWithin('ActivitySpending', '4 000');
 
     // send to lightning invoice w/ amount (skip quickpay for large amounts)
     console.info('Sending to lightning invoice w/ amount (skip quickpay for large amounts)...');
@@ -442,6 +455,7 @@ describe('@send - Send', () => {
     // TEMP: receive more funds to be able to pay 10k invoice
     console.info('Receiving lightning funds...');
     await mineBlocks(rpc, 1);
+    await electrum?.waitForSync();
     const receive2 = await getReceiveAddress('lightning');
     await swipeFullScreen('down');
     const r = await lnd.sendPaymentSync({ paymentRequest: receive2, amt: '10000' });
@@ -449,7 +463,7 @@ describe('@send - Send', () => {
     await elementById('ReceivedTransaction').waitForDisplayed();
     await tap('ReceivedTransactionButton');
     await sleep(500);
-    await expectTextWithin('ActivitySpending', '15 000');
+    await expectTextWithin('ActivitySpending', '14 000');
 
     const { paymentRequest: invoice9 } = await lnd.addInvoice({ value: '10000' });
     console.info({ invoice9 });

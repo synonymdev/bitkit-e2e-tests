@@ -3,7 +3,7 @@ import initElectrum from '../helpers/electrum';
 import {
   completeOnboarding,
   receiveOnchainFunds,
-  expectTextVisible,
+  expectText,
   enterAddress,
   multiTap,
   tap,
@@ -21,6 +21,7 @@ import {
   restoreWallet,
   mineBlocks,
   elementByText,
+  dismissQuickPayIntro,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
@@ -94,7 +95,7 @@ describe('@lightning - Lightning', () => {
     await waitForActiveChannel(lnd, ldkNodeId);
 
     // Toast message
-    await expectTextVisible('Spending Balance Ready');
+    await expectText('Spending Balance Ready');
 
     // check channel status
     await checkChannelStatus();
@@ -107,6 +108,7 @@ describe('@lightning - Lightning', () => {
     await elementById('ReceivedTransaction').waitForDisplayed();
     await tap('ReceivedTransactionButton');
     await sleep(500);
+    await dismissQuickPayIntro();
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     await expect(totalBalance).toHaveText('11 000'); // 1k onchain + 10k lightning
     await expectTextWithin('ActivitySpending', '10 000');
@@ -185,6 +187,7 @@ describe('@lightning - Lightning', () => {
 
     // check activity filters & tags
     await sleep(500); // wait for the app to settle
+    await swipeFullScreen('up');
     await swipeFullScreen('up');
     await tap('ActivityShowAll');
     // All transactions

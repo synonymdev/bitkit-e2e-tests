@@ -37,6 +37,8 @@ describe('@widgets - Widgets', () => {
 
     // Scroll the edit view
     await swipeFullScreen('up');
+    await swipeFullScreen('up');
+    await sleep(500);
 
     // Set timeframe and show source
     await tap('WidgetEditField-1W');

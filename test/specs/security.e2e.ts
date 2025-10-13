@@ -10,7 +10,7 @@ import {
   receiveOnchainFunds,
   enterAddress,
   dragOnElement,
-  expectTextVisible,
+  expectText,
 } from '../helpers/actions';
 import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
@@ -88,7 +88,7 @@ describe('@security - Security And Privacy', () => {
     await tap('N000');
     await tap('ContinueAmount');
     await dragOnElement('GRAB', 'right', 0.95);
-    await expectTextVisible('Enter PIN Code');
+    await expectText('Enter PIN Code');
     await sleep(1000);
     await multiTap('N1', PIN_LENGTH);
     await elementById('SendSuccess').waitForDisplayed();
