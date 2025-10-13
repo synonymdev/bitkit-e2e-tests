@@ -1,0 +1,57 @@
+name: Determine E2E branch
+on:
+  workflow_call:
+    inputs:
+      app_branch:
+        description: "Branch name from the app repo"
+        required: true
+        type: string
+      e2e_branch_input:
+        description: "Input override (main | default-feature-branch | custom)"
+        required: false
+        default: "default-feature-branch"
+        type: string
+    outputs:
+      branch:
+        description: "Resolved E2E branch"
+        value: ${{ jobs.determine.outputs.branch }}
+
+jobs:
+  determine:
+    name: Select E2E branch
+    runs-on: ubuntu-latest 
+    outputs:
+      branch: ${{ steps.detect.outputs.branch }}
+    steps:
+      - name: Detect branch to use
+        id: detect
+        shell: bash
+        run: |
+          APP_BRANCH="${{ inputs.app_branch }}"
+          INPUT_BRANCH="${{ inputs.e2e_branch_input }}"
+          TEST_REPO="synonymdev/bitkit-e2e-tests"
+
+          echo "🧭 App branch: $APP_BRANCH"
+          echo "🧭 Input branch: $INPUT_BRANCH"
+          echo "🧭 Checking repo: $TEST_REPO"
+
+          if [[ "$INPUT_BRANCH" == "main" ]]; then
+            BRANCH="main"
+          elif [[ "$INPUT_BRANCH" == "default-feature-branch" ]]; then
+            if git ls-remote --exit-code https://github.com/$TEST_REPO.git "refs/heads/$APP_BRANCH" >/dev/null 2>&1; then
+              BRANCH="$APP_BRANCH"
+              echo "✅ Found matching branch: $BRANCH"
+            else
+              BRANCH="main"
+              echo "⚠️ No '$APP_BRANCH' branch in $TEST_REPO, using 'main'."
+            fi
+          else
+            if git ls-remote --exit-code https://github.com/$TEST_REPO.git "refs/heads/$INPUT_BRANCH" >/dev/null 2>&1; then
+              BRANCH="$INPUT_BRANCH"
+            else
+              echo "::error title=Invalid e2e_branch::Branch '$INPUT_BRANCH' not found in $TEST_REPO"
+              exit 1
+            fi
+          fi
+
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
