@@ -71,8 +71,8 @@ export const config: WebdriverIO.Config = {
       : {
           platformName: 'iOS',
           'appium:automationName': 'XCUITest',
-          'appium:deviceName': 'iPhone 16',
-          'appium:platformVersion': '18.5',
+          'appium:deviceName': 'iPhone 17',
+          'appium:platformVersion': '26.0',
           'appium:app': path.join(__dirname, 'aut', 'bitkit.app'),
           'appium:autoAcceptAlerts': true,
           'appium:udid': 'D1CE9A39-FD24-4854-975C-2CA4A6D41565',
