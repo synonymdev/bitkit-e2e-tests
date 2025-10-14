@@ -483,12 +483,18 @@ export async function getAddressFromQRCode(which: addressType): Promise<string> 
   let address = '';
   if (which === 'bitcoin') {
     address = uri.replace(/^bitcoin:/, '').replace(/\?.*$/, '');
+    if (!address.startsWith('bcrt')) {
+      throw new Error(`Invalid Bitcoin address: ${address}`);
+    }
   } else if (which === 'lightning') {
     const query = uri.split('?')[1] ?? '';
     const params = new URLSearchParams(query);
     const ln = params.get('lightning');
     if (!ln) {
       throw new Error(`No lightning invoice found in uri: ${uri}`);
+    }
+    if (!ln.startsWith('lnbcrt')) {
+      throw new Error(`Invalid lightning invoice: ${ln}`);
     }
     address = ln;
   } else {
