@@ -483,8 +483,13 @@ export async function getAddressFromQRCode(which: addressType): Promise<string> 
   let address = '';
   if (which === 'bitcoin') {
     address = uri.replace(/^bitcoin:/, '').replace(/\?.*$/, '');
-    if (!address.startsWith('bcrt')) {
-      throw new Error(`Invalid Bitcoin address: ${address}`);
+    // Accept Bech32 HRPs across networks: mainnet (bc1), testnet/signet (tb1), regtest (bcrt1)
+    const allowedBitcoinHrp = ['bc1', 'tb1', 'bcrt1'];
+    const addrLower = address.toLowerCase();
+    if (!allowedBitcoinHrp.some((p) => addrLower.startsWith(p))) {
+      throw new Error(
+        `Invalid Bitcoin address HRP: ${address}. Expected one of: ${allowedBitcoinHrp.join(', ')}`
+      );
     }
   } else if (which === 'lightning') {
     const query = uri.split('?')[1] ?? '';
@@ -493,8 +498,13 @@ export async function getAddressFromQRCode(which: addressType): Promise<string> 
     if (!ln) {
       throw new Error(`No lightning invoice found in uri: ${uri}`);
     }
-    if (!ln.startsWith('lnbcrt')) {
-      throw new Error(`Invalid lightning invoice: ${ln}`);
+    // Accept BOLT11 HRPs across networks: mainnet (lnbc), testnet (lntb), signet (lntbs), regtest (lnbcrt)
+    const allowedLightningHrp = ['lnbc', 'lntb', 'lntbs', 'lnbcrt'];
+    const lnLower = ln.toLowerCase();
+    if (!allowedLightningHrp.some((p) => lnLower.startsWith(p))) {
+      throw new Error(
+        `Invalid lightning invoice HRP: ${ln}. Expected one of: ${allowedLightningHrp.join(', ')}`
+      );
     }
     address = ln;
   } else {
