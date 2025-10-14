@@ -8,11 +8,15 @@ End-to-end tests for the [Bitkit-android](https://github.com/synonymdev/bitkit-a
 
 ### 📦 Requirements
 
+| Platform             | Tools                                                                                                                                                     |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Android**          | - **Android SDK** (API 33 – 35)<br>- **Emulator or real device**                                                                                          |
+| **iOS (macOS only)** | - **Xcode** (with Command Line Tools)<br>- **FFmpeg** – used for video recordings and screenshots<br>  → Install via Homebrew:<br>  `brew install ffmpeg` |
+
+**General requirements**
+
 - **Node.js** (≥ 22)
-- **Android SDK** (with at least API 33–35)
-- **Xcode** (for iOS, macOS only)
-- Appium server installed locally or started via WebdriverIO
-- Emulator or real device running
+- **Appium server** (installed locally or started via WebdriverIO)
 
 ---
 
