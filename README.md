@@ -135,7 +135,25 @@ The Android script will:
 
 #### iOS (`ci_run_ios.sh`)
 
-TBD 🚧
+The iOS helper mirrors the Android workflow but tailors it for the Apple Simulator:
+
+- Ensures a simulator is booted (boots an `iPhone 17*` fallback if none is running).
+- Captures Bitkit-specific `log stream` output to `./artifacts/simulator.log`, restarting automatically if the simulator restarts or the keychain is reset.
+- Cleans up the background log task when the script exits.
+- Passes any extra flags straight through to WebdriverIO/Mocha.
+
+**Usage examples:**
+
+```bash
+# Run all iOS tests (with simulator log capture)
+./ci_run_ios.sh
+
+# Run only @onboarding-tagged tests
+./ci_run_ios.sh --mochaOpts.grep "@onboarding"
+
+# Run a specific spec file
+./ci_run_ios.sh --spec ./test/specs/onboarding.e2e.ts
+```
 
 ---
 
