@@ -28,7 +28,7 @@ ensure_booted_simulator() {
   fi
 
   local fallback_udid
-  fallback_udid=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone 17/ {print $2; exit}')
+  fallback_udid=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone 17 \(/ {print $2; exit}')
   if [[ -z "$fallback_udid" ]]; then
     echo "No booted iOS simulator and unable to locate fallback device (iPhone 17*)" >&2
     exit 1
