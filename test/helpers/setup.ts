@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import { elementsById, sleep, tap } from './actions';
 import { getAppId, getAppPath } from './constants';
 
@@ -37,6 +38,23 @@ export async function reinstallApp() {
   const appPath = getAppPath();
 
   await driver.removeApp(appId);
+  resetBootedIOSKeychain();
   await driver.installApp(appPath);
   await driver.activateApp(appId);
+}
+
+/**
+ * Resets iOS simulator to remove stored data between app reinstall cycles.
+ * (Wallet data is stored in iOS Keychain and persists even after app uninstall
+ *  unless the whole simulator is reset or keychain is reset specifically)
+ */
+function resetBootedIOSKeychain() {
+  if (driver.isIOS) {
+    try {
+      execSync('xcrun simctl keychain booted reset', { stdio: 'ignore' });
+      console.info('→ Reset iOS simulator keychain');
+    } catch (error) {
+      console.warn('⚠ Failed to reset iOS simulator keychain', error);
+    }
+  }
 }
