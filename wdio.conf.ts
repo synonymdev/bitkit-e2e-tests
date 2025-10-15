@@ -320,7 +320,16 @@ export const config: WebdriverIO.Config = {
   // }
   beforeTest: async function (test) {
     if (process.env.RECORD_VIDEO === 'true') {
-      await driver.startRecordingScreen({ timeLimit: '600' });
+      const recordingOptions = isAndroid
+        ? { timeLimit: '600' }
+        : {
+            timeLimit: '600',
+            videoQuality: 'low',
+            videoType: 'libx264',
+            videoFps: 8,
+            videoFilters: 'scale=480:-2',
+          };
+      await driver.startRecordingScreen(recordingOptions);
     }
     console.log(`🧪 Start: ${test.parent} - ${test.title}`);
   },
