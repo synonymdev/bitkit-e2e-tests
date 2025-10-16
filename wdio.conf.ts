@@ -380,11 +380,7 @@ export const config: WebdriverIO.Config = {
   beforeTest: async function (test) {
     if (process.env.RECORD_VIDEO === 'true') {
       const recordingOptions = isAndroid
-        ? {
-            timeLimit: '600',
-            bitRate: 1500000,
-            videoSize: '720x1280',
-          }
+        ? { timeLimit: '600' }
         : {
             timeLimit: '600',
             videoQuality: 'low',
