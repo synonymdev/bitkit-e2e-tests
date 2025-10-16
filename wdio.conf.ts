@@ -1,66 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs';
-import { spawn } from 'node:child_process';
 
 const isAndroid = process.env.PLATFORM === 'android';
-
-/**
- * Re-encode Android screen recordings via ffmpeg so they stay lightweight and play nicely in QuickTime.
- */
-async function reencodeWithFfmpeg(videoPath: string) {
-  const ffmpegBinary = process.env.FFMPEG_BIN || 'ffmpeg';
-  const tmpOutput = videoPath.replace(/\.mp4$/, '') + '-qt.mp4';
-
-  // Re-encode to H.264 to shrink file size and ensure broad player compatibility
-  await new Promise<void>((resolve) => {
-    const ffmpeg = spawn(
-      ffmpegBinary,
-      [
-        '-y',
-        '-i',
-        videoPath,
-        '-c:v',
-        'libx264',
-        '-preset',
-        'superfast',
-        '-crf',
-        '30',
-        '-pix_fmt',
-        'yuv420p',
-        '-movflags',
-        '+faststart',
-        tmpOutput,
-      ],
-      { stdio: ['ignore', 'ignore', 'pipe'] }
-    );
-
-    let stderrData = '';
-    ffmpeg.stderr?.on('data', (chunk) => {
-      stderrData += chunk.toString();
-    });
-
-    ffmpeg.once('error', (err) => {
-      console.warn(`⚠️ Failed to spawn ${ffmpegBinary}: ${err.message}`);
-      resolve();
-    });
-
-    ffmpeg.once('close', (code) => {
-      if (code === 0) {
-        try {
-          fs.renameSync(tmpOutput, videoPath);
-        } catch (err) {
-          console.warn(`⚠️ Could not replace recorded video with QuickTime-friendly version: ${(err as Error).message}`);
-        }
-      } else {
-        console.warn(`⚠️ ${ffmpegBinary} exited with code ${code}. Output: ${stderrData.split('\n').slice(-5).join(' ')}`);
-        if (fs.existsSync(tmpOutput)) {
-          fs.rmSync(tmpOutput, { force: true });
-        }
-      }
-      resolve();
-    });
-  });
-}
 
 export const config: WebdriverIO.Config = {
   //
@@ -380,7 +321,7 @@ export const config: WebdriverIO.Config = {
   beforeTest: async function (test) {
     if (process.env.RECORD_VIDEO === 'true') {
       const recordingOptions = isAndroid
-        ? { timeLimit: '600' }
+        ? { timeLimit: '600', bitRate: '4000000' }
         : {
             timeLimit: '600',
             videoQuality: 'low',
@@ -419,9 +360,6 @@ export const config: WebdriverIO.Config = {
       const videoBase64 = await driver.stopRecordingScreen();
       const videoPath = path.join(testDir, `${testName}-${timestamp}.mp4`);
       fs.writeFileSync(videoPath, videoBase64, 'base64');
-      if (isAndroid) {
-        await reencodeWithFfmpeg(videoPath);
-      }
       console.log(`🎥 Saved test video: ${videoPath}`);
     }
   },
