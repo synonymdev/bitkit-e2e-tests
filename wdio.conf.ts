@@ -71,10 +71,13 @@ export const config: WebdriverIO.Config = {
       : {
           platformName: 'iOS',
           'appium:automationName': 'XCUITest',
-          'appium:deviceName': 'iPhone 15',
-          'appium:platformVersion': '17.0',
-          'appium:app': path.join(__dirname, 'aut', 'bitkit.ipa'),
+          'appium:deviceName': 'iPhone 17',
+          'appium:platformVersion': '26.0',
+          'appium:app': path.join(__dirname, 'aut', 'Bitkit.app'),
+          'appium:autoGrantPermissions': true,
           'appium:autoAcceptAlerts': true,
+          // 'appium:fullReset': true,
+          'appium:noReset': false,
         },
   ],
 
@@ -317,7 +320,16 @@ export const config: WebdriverIO.Config = {
   // }
   beforeTest: async function (test) {
     if (process.env.RECORD_VIDEO === 'true') {
-      await driver.startRecordingScreen({ timeLimit: '600' });
+      const recordingOptions = isAndroid
+        ? { timeLimit: '600', bitRate: '4000000' }
+        : {
+            timeLimit: '600',
+            videoQuality: 'low',
+            videoType: 'libx264',
+            videoFps: 8,
+            videoFilters: 'scale=480:-2',
+          };
+      await driver.startRecordingScreen(recordingOptions);
     }
     console.log(`🧪 Start: ${test.parent} - ${test.title}`);
   },

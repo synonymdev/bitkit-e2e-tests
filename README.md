@@ -8,11 +8,15 @@ End-to-end tests for the [Bitkit-android](https://github.com/synonymdev/bitkit-a
 
 ### 📦 Requirements
 
+| Platform             | Tools                                                                                                                                                     |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Android**          | - **Android SDK** (API 33 – 35)<br>- **Emulator or real device**                                                                                          |
+| **iOS (macOS only)** | - **Xcode** (with Command Line Tools)<br>- **FFmpeg** – used for video recordings and screenshots<br>  → Install via Homebrew:<br>  `brew install ffmpeg` |
+
+**General requirements**
+
 - **Node.js** (≥ 22)
-- **Android SDK** (with at least API 33–35)
-- **Xcode** (for iOS, macOS only)
-- Appium server installed locally or started via WebdriverIO
-- Emulator or real device running
+- **Appium server** (installed locally or started via WebdriverIO)
 
 ---
 
@@ -131,7 +135,25 @@ The Android script will:
 
 #### iOS (`ci_run_ios.sh`)
 
-TBD 🚧
+The iOS helper mirrors the Android workflow but tailors it for the Apple Simulator:
+
+- Ensures a simulator is booted (boots an `iPhone 17*` fallback if none is running).
+- Captures Bitkit-specific `log stream` output to `./artifacts/simulator.log`, restarting automatically if the simulator restarts or the keychain is reset.
+- Cleans up the background log task when the script exits.
+- Passes any extra flags straight through to WebdriverIO/Mocha.
+
+**Usage examples:**
+
+```bash
+# Run all iOS tests (with simulator log capture)
+./ci_run_ios.sh
+
+# Run only @onboarding-tagged tests
+./ci_run_ios.sh --mochaOpts.grep "@onboarding"
+
+# Run a specific spec file
+./ci_run_ios.sh --spec ./test/specs/onboarding.e2e.ts
+```
 
 ---
 
