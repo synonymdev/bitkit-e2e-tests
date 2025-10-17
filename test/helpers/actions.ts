@@ -62,11 +62,11 @@ export function elementByText(
   } else {
     if (strategy === 'exact') {
       return $(
-        `-ios predicate string:type == "XCUIElementTypeStaticText" AND (label == "${text}" OR value == "${text}")`
+        `-ios predicate string:(type == "XCUIElementTypeStaticText" OR type == "XCUIElementTypeButton") AND (label == "${text}" OR value == "${text}")`
       );
     }
     return $(
-      `-ios predicate string:type == "XCUIElementTypeStaticText" AND label CONTAINS "${text}"`
+      `-ios predicate string:(type == "XCUIElementTypeStaticText" OR type == "XCUIElementTypeButton") AND label CONTAINS "${text}"`
     );
   }
 }
@@ -339,10 +339,16 @@ export async function dragOnElement(
 }
 
 export async function confirmInputOnKeyboard() {
-  try {
-    await driver.hideKeyboard();
-  } catch {
-    // ignore if keyboard not open
+  if (driver.isAndroid) {
+    try {
+      await driver.hideKeyboard();
+    } catch {}
+  } else {
+    try {
+      await elementByText('return').click();
+    } catch {
+      // Swallow the error; keyboard might already be closed
+    }
   }
 }
 
@@ -355,13 +361,6 @@ export async function acceptAppNotificationAlert(
       await tap(`com.android.permissioncontroller:id/${button}`);
     } catch (err) {
       console.warn('⚠ Could not find or tap Android App Notification alert allow button:', err);
-    }
-  } else {
-    // iOS: handled as system alert
-    try {
-      await driver.acceptAlert();
-    } catch (err) {
-      console.warn('⚠ No iOS App Notification alert to accept or failed to accept:', err);
     }
   }
 }
@@ -383,8 +382,12 @@ export async function getSeed(): Promise<string> {
   // close the modal
   await swipeFullScreen('down');
 
-  await tap('NavigationClose');
-
+  if (driver.isAndroid) {
+    await tap('NavigationClose');
+  } else {
+    await tap('HeaderMenu');
+    await tap('DrawerWallet');
+  }
   return seed;
 }
 
@@ -430,10 +433,12 @@ export async function restoreWallet(seed: string, passphrase?: string) {
   await reinstallApp();
 
   // Terms of service
-  await elementById('Check1').waitForDisplayed();
+  await elementById('Continue').waitForDisplayed();
   await sleep(1000); // Wait for the app to settle
-  await tap('Check1');
-  await tap('Check2');
+  if (driver.isAndroid) {
+    await tap('Check1');
+    await tap('Check2');
+  }
   await tap('Continue');
 
   // Skip intro
@@ -443,7 +448,7 @@ export async function restoreWallet(seed: string, passphrase?: string) {
 
   // Seed
   await typeText('Word-0', seed);
-  await sleep(500); // wait for the app to settle
+  await sleep(1500); // wait for the app to settle
   // Passphrase
   if (passphrase) {
     await tap('AdvancedButton');
