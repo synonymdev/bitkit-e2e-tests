@@ -214,6 +214,26 @@ export async function multiTap(testId: string, count: number) {
   }
 }
 
+async function pasteIOSText(testId: string, text: string) {
+  if (!driver.isIOS) {
+    throw new Error('pasteIOSText can only be used on iOS devices');
+  }
+  await driver.execute('mobile: setPasteboard', {
+    content: text,
+    encoding: 'utf8',
+  });
+  const el = await elementById(testId);
+  await el.waitForDisplayed();
+  await sleep(500); // Allow time for the element to settle
+  await el.click(); // focus the field
+  await sleep(200);
+  await el.click(); // trigger the paste menu
+  const pasteButton = await elementByText('Paste', 'exact');
+  await pasteButton.waitForDisplayed();
+  await pasteButton.click();
+  await sleep(200); // Allow time for the paste action to propagate
+}
+
 export async function typeText(testId: string, text: string) {
   const el = await elementById(testId);
   await el.waitForDisplayed();
@@ -447,7 +467,11 @@ export async function restoreWallet(seed: string, passphrase?: string) {
   await tap('MultipleDevices-button');
 
   // Seed
-  await typeText('Word-0', seed);
+  if (driver.isIOS) {
+    await pasteIOSText('Word-0', seed);
+  } else {
+    await typeText('Word-0', seed);
+  }
   await sleep(1500); // wait for the app to settle
   // Passphrase
   if (passphrase) {
