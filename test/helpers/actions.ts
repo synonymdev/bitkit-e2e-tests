@@ -383,6 +383,9 @@ export async function acceptAppNotificationAlert(
       console.warn('⚠ Could not find or tap Android App Notification alert allow button:', err);
     }
   }
+
+  // iOS: update notification alert handling
+  if (driver.isIOS) await elementByText('Cancel').click();
 }
 
 export async function getSeed(): Promise<string> {

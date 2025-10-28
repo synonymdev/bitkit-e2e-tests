@@ -52,7 +52,6 @@ describe('@onboarding - Onboarding', () => {
 
     await acceptAppNotificationAlert();
 
-    if (driver.isIOS) await elementByText('Cancel').click();
     await elementByText('TO GET').waitForDisplayed();
   });
 
@@ -89,7 +88,6 @@ describe('@onboarding - Onboarding', () => {
     await waitForSetupWalletScreenFinish();
 
     await acceptAppNotificationAlert();
-    if (driver.isIOS) await elementByText('Cancel').click();
 
     // Wait for wallet to be created
     for (let i = 1; i <= 3; i++) {
