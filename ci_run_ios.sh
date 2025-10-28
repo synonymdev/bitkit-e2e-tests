@@ -20,13 +20,15 @@ fi
 mkdir -p "${ARTIFACTS_DIR}"
 
 ensure_booted_simulator() {
+  # Check for already booted iPhone 17 simulator
   local booted_udid
-  booted_udid=$(xcrun simctl list devices booted 2>/dev/null | awk -F '[()]' '/Booted/ {print $2; exit}')
+  booted_udid=$(xcrun simctl list devices booted 2>/dev/null | awk -F '[()]' '/iPhone 17 \(/{print $2; exit}')
   if [[ -n "$booted_udid" ]]; then
     echo "$booted_udid"
     return
   fi
 
+  # Otherwise, boot iPhone 17 simulator 
   local fallback_udid
   fallback_udid=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone 17 \(/ {print $2; exit}')
   if [[ -z "$fallback_udid" ]]; then
@@ -52,6 +54,8 @@ ensure_booted_simulator() {
 }
 
 SIMULATOR_UDID="$(ensure_booted_simulator)"
+export SIMULATOR_UDID
+echo "[ci_run_ios] Using iOS Simulator UDID: ${SIMULATOR_UDID}" >&2
 
 # iOS Simulator logs
 LOGFILE_SYS="$ARTIFACTS_DIR/simulator.log"
