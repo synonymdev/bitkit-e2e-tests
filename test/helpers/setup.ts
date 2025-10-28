@@ -61,7 +61,9 @@ function resetBootedIOSKeychain() {
   } catch {}
 
   if (!udid) {
-    console.warn('⚠ Could not determine iOS simulator UDID; trying to reset booted simulator keychain');
+    console.warn(
+      '⚠ Could not determine iOS simulator UDID; trying to reset booted simulator keychain'
+    );
     try {
       execSync(`xcrun simctl keychain booted reset`, { stdio: 'ignore' });
       console.info(`→ Reset iOS simulator keychain for booted simulator`);

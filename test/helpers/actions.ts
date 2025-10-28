@@ -383,9 +383,6 @@ export async function acceptAppNotificationAlert(
       console.warn('⚠ Could not find or tap Android App Notification alert allow button:', err);
     }
   }
-
-  // iOS: update notification alert handling
-  if (driver.isIOS) await elementByText('Cancel').click();
 }
 
 export async function getSeed(): Promise<string> {
@@ -493,6 +490,8 @@ export async function restoreWallet(seed: string, passphrase?: string) {
   const getStarted = await elementById('GetStartedButton');
   await getStarted.waitForDisplayed();
   await tap('GetStartedButton');
+
+  await dismissUpdateSheet();
 
   // Wait for Suggestions Label to appear
   const suggestions = await elementById('Suggestions');
@@ -684,6 +683,11 @@ export async function acknowledgeHighBalanceWarning({
   await tap('understood_button');
   await elementById('high_balance_image').waitForDisplayed({ reverse: true });
   await sleep(500);
+}
+
+export async function dismissUpdateSheet() {
+  // iOS: update notification alert handling
+  if (driver.isIOS) await elementByText('Cancel').click();
 }
 
 // enable/disable widgets in settings
