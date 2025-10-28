@@ -71,6 +71,7 @@ export const config: WebdriverIO.Config = {
       : {
           platformName: 'iOS',
           'appium:automationName': 'XCUITest',
+          'appium:udid': process.env.SIMULATOR_UDID || 'auto',
           'appium:deviceName': 'iPhone 17',
           'appium:platformVersion': '26.0',
           'appium:app': path.join(__dirname, 'aut', 'Bitkit.app'),
@@ -78,6 +79,13 @@ export const config: WebdriverIO.Config = {
           'appium:autoAcceptAlerts': true,
           // 'appium:fullReset': true,
           'appium:noReset': false,
+
+          // 🩹 Stability improvements
+          'appium:newCommandTimeout': 300,
+          'appium:wdaLaunchTimeout': 120000,
+          'appium:wdaConnectionTimeout': 120000,
+          'appium:wdaStartupRetries': 3,
+          'appium:wdaStartupRetryInterval': 5000,
         },
   ],
 

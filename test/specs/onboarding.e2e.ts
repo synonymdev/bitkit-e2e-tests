@@ -1,5 +1,7 @@
 import {
   acceptAppNotificationAlert,
+  confirmInputOnKeyboard,
+  dismissUpdateSheet,
   elementById,
   elementByText,
   getReceiveAddress,
@@ -21,19 +23,25 @@ describe('@onboarding - Onboarding', () => {
 
   ciIt('@onboarding_1 - Can start onboarding', async () => {
     // TOS and PP
-    await elementById('Check1').waitForDisplayed();
+    await elementById('Continue').waitForDisplayed();
     await sleep(1000); // Wait for the app to settle
-    await tap('Check1');
-    await tap('Check2');
+    if (driver.isAndroid) {
+      await tap('Check1');
+      await tap('Check2');
+    }
     await tap('Continue');
     await tap('GetStarted');
-    await elementById('Slide0');
+    await elementById('Slide0').waitForDisplayed();
     await swipeFullScreen('left');
-    await elementById('Slide1');
+    await elementById('Slide1').waitForDisplayed();
     await swipeFullScreen('left');
-    await elementById('Slide2');
-    await swipeFullScreen('left');
-    await elementById('Slide3');
+    if (driver.isAndroid) {
+      await elementById('Slide2').waitForDisplayed();
+      await swipeFullScreen('left');
+      await elementById('Slide3').waitForDisplayed();
+    } else {
+      await elementById('Slide3').waitForDisplayed();
+    }
     await swipeFullScreen('right');
     await tap('SkipButton');
 
@@ -44,24 +52,32 @@ describe('@onboarding - Onboarding', () => {
     await waitForSetupWalletScreenFinish();
 
     await acceptAppNotificationAlert();
-    await elementByText('TO GET\nSTARTED\nSEND\nBITCOIN\nTO YOUR\nWALLET').waitForDisplayed();
+    await dismissUpdateSheet();
+
+    await elementByText('TO GET').waitForDisplayed();
   });
 
   ciIt('@onboarding_2 - Can pass onboarding correctly', async () => {
     // TOS and PP
-    await elementById('Check1').waitForDisplayed();
+    await elementById('Continue').waitForDisplayed();
     await sleep(1000); // Wait for the app to settle
-    await tap('Check1');
-    await tap('Check2');
+    if (driver.isAndroid) {
+      await tap('Check1');
+      await tap('Check2');
+    }
     await tap('Continue');
     await tap('GetStarted');
-    await elementById('Slide0');
+    await elementById('Slide0').waitForDisplayed();
     await swipeFullScreen('left');
-    await elementById('Slide1');
+    await elementById('Slide1').waitForDisplayed();
     await swipeFullScreen('left');
-    await elementById('Slide2');
-    await swipeFullScreen('left');
-    await elementById('Slide3');
+    if (driver.isAndroid) {
+      await elementById('Slide2').waitForDisplayed();
+      await swipeFullScreen('left');
+      await elementById('Slide3').waitForDisplayed();
+    } else {
+      await elementById('Slide3').waitForDisplayed();
+    }
     await swipeFullScreen('right');
     await tap('SkipButton');
 
@@ -69,10 +85,12 @@ describe('@onboarding - Onboarding', () => {
     const passphrase = 'supersecret';
     await tap('Passphrase');
     await typeText('PassphraseInput', passphrase);
+    await confirmInputOnKeyboard();
     await tap('CreateNewWallet');
     await waitForSetupWalletScreenFinish();
 
     await acceptAppNotificationAlert();
+    await dismissUpdateSheet();
 
     // Wait for wallet to be created
     for (let i = 1; i <= 3; i++) {

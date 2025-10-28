@@ -62,11 +62,11 @@ export function elementByText(
   } else {
     if (strategy === 'exact') {
       return $(
-        `-ios predicate string:type == "XCUIElementTypeStaticText" AND (label == "${text}" OR value == "${text}")`
+        `-ios predicate string:(type == "XCUIElementTypeStaticText" OR type == "XCUIElementTypeButton") AND (label == "${text}" OR value == "${text}")`
       );
     }
     return $(
-      `-ios predicate string:type == "XCUIElementTypeStaticText" AND label CONTAINS "${text}"`
+      `-ios predicate string:(type == "XCUIElementTypeStaticText" OR type == "XCUIElementTypeButton") AND label CONTAINS "${text}"`
     );
   }
 }
@@ -214,6 +214,26 @@ export async function multiTap(testId: string, count: number) {
   }
 }
 
+async function pasteIOSText(testId: string, text: string) {
+  if (!driver.isIOS) {
+    throw new Error('pasteIOSText can only be used on iOS devices');
+  }
+  await driver.execute('mobile: setPasteboard', {
+    content: text,
+    encoding: 'utf8',
+  });
+  const el = await elementById(testId);
+  await el.waitForDisplayed();
+  await sleep(500); // Allow time for the element to settle
+  await el.click(); // focus the field
+  await sleep(200);
+  await el.click(); // trigger the paste menu
+  const pasteButton = await elementByText('Paste', 'exact');
+  await pasteButton.waitForDisplayed();
+  await pasteButton.click();
+  await sleep(200); // Allow time for the paste action to propagate
+}
+
 export async function typeText(testId: string, text: string) {
   const el = await elementById(testId);
   await el.waitForDisplayed();
@@ -339,10 +359,16 @@ export async function dragOnElement(
 }
 
 export async function confirmInputOnKeyboard() {
-  try {
-    await driver.hideKeyboard();
-  } catch {
-    // ignore if keyboard not open
+  if (driver.isAndroid) {
+    try {
+      await driver.hideKeyboard();
+    } catch {}
+  } else {
+    try {
+      await elementByText('return').click();
+    } catch {
+      // Swallow the error; keyboard might already be closed
+    }
   }
 }
 
@@ -355,13 +381,6 @@ export async function acceptAppNotificationAlert(
       await tap(`com.android.permissioncontroller:id/${button}`);
     } catch (err) {
       console.warn('⚠ Could not find or tap Android App Notification alert allow button:', err);
-    }
-  } else {
-    // iOS: handled as system alert
-    try {
-      await driver.acceptAlert();
-    } catch (err) {
-      console.warn('⚠ No iOS App Notification alert to accept or failed to accept:', err);
     }
   }
 }
@@ -383,8 +402,12 @@ export async function getSeed(): Promise<string> {
   // close the modal
   await swipeFullScreen('down');
 
-  await tap('NavigationClose');
-
+  if (driver.isAndroid) {
+    await tap('NavigationClose');
+  } else {
+    await tap('HeaderMenu');
+    await tap('DrawerWallet');
+  }
   return seed;
 }
 
@@ -430,10 +453,12 @@ export async function restoreWallet(seed: string, passphrase?: string) {
   await reinstallApp();
 
   // Terms of service
-  await elementById('Check1').waitForDisplayed();
+  await elementById('Continue').waitForDisplayed();
   await sleep(1000); // Wait for the app to settle
-  await tap('Check1');
-  await tap('Check2');
+  if (driver.isAndroid) {
+    await tap('Check1');
+    await tap('Check2');
+  }
   await tap('Continue');
 
   // Skip intro
@@ -442,8 +467,12 @@ export async function restoreWallet(seed: string, passphrase?: string) {
   await tap('MultipleDevices-button');
 
   // Seed
-  await typeText('Word-0', seed);
-  await sleep(500); // wait for the app to settle
+  if (driver.isIOS) {
+    await pasteIOSText('Word-0', seed);
+  } else {
+    await typeText('Word-0', seed);
+  }
+  await sleep(1500); // wait for the app to settle
   // Passphrase
   if (passphrase) {
     await tap('AdvancedButton');
@@ -461,6 +490,8 @@ export async function restoreWallet(seed: string, passphrase?: string) {
   const getStarted = await elementById('GetStartedButton');
   await getStarted.waitForDisplayed();
   await tap('GetStartedButton');
+
+  await dismissUpdateSheet();
 
   // Wait for Suggestions Label to appear
   const suggestions = await elementById('Suggestions');
@@ -652,6 +683,11 @@ export async function acknowledgeHighBalanceWarning({
   await tap('understood_button');
   await elementById('high_balance_image').waitForDisplayed({ reverse: true });
   await sleep(500);
+}
+
+export async function dismissUpdateSheet() {
+  // iOS: update notification alert handling
+  if (driver.isIOS) await elementByText('Cancel').click();
 }
 
 // enable/disable widgets in settings

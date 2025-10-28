@@ -49,12 +49,34 @@ export async function reinstallApp() {
  *  unless the whole simulator is reset or keychain is reset specifically)
  */
 function resetBootedIOSKeychain() {
-  if (driver.isIOS) {
+  if (!driver.isIOS) return;
+
+  let udid = '';
+  try {
+    udid =
+      (driver.capabilities as Record<string, unknown>)['appium:udid']?.toString() ??
+      (driver.capabilities as Record<string, unknown>).udid?.toString() ??
+      (driver.capabilities as Record<string, unknown>).deviceUDID?.toString() ??
+      '';
+  } catch {}
+
+  if (!udid) {
+    console.warn(
+      '⚠ Could not determine iOS simulator UDID; trying to reset booted simulator keychain'
+    );
     try {
-      execSync('xcrun simctl keychain booted reset', { stdio: 'ignore' });
-      console.info('→ Reset iOS simulator keychain');
+      execSync(`xcrun simctl keychain booted reset`, { stdio: 'ignore' });
+      console.info(`→ Reset iOS simulator keychain for booted simulator`);
     } catch (error) {
-      console.warn('⚠ Failed to reset iOS simulator keychain', error);
+      console.warn(`⚠ Failed to reset iOS simulator keychain for booted simulator`, error);
     }
+    return;
+  }
+
+  try {
+    execSync(`xcrun simctl keychain ${udid} reset`, { stdio: 'ignore' });
+    console.info(`→ Reset iOS simulator keychain for ${udid}`);
+  } catch (error) {
+    console.warn(`⚠ Failed to reset iOS simulator keychain for ${udid}`, error);
   }
 }
