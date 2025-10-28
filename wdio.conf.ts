@@ -78,6 +78,13 @@ export const config: WebdriverIO.Config = {
           'appium:autoAcceptAlerts': true,
           // 'appium:fullReset': true,
           'appium:noReset': false,
+          
+          // 🩹 Stability improvements
+          'appium:newCommandTimeout': 300,
+          'appium:wdaLaunchTimeout': 120000,
+          'appium:wdaConnectionTimeout': 120000,
+          'appium:wdaStartupRetries': 3,
+          'appium:wdaStartupRetryInterval': 5000,
         },
   ],
 
