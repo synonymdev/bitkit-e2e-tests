@@ -5,6 +5,32 @@ import BitcoinJsonRpc from 'bitcoin-json-rpc';
 export const sleep = (ms: number) => browser.pause(ms);
 
 /**
+ * Retrieves the most reliable accessibility text/value from an element across platforms.
+ * Some Appium drivers expose either `contentDescription`, `content-desc`, `label`, or `name`.
+ */
+export async function getAccessibleText(element: ChainablePromiseElement): Promise<string> {
+  const candidates = driver.isAndroid
+    ? ['contentDescription', 'content-desc', 'name', 'text']
+    : ['label', 'value', 'name', 'text'];
+
+  for (const attribute of candidates) {
+    try {
+      const value = await element.getAttribute(attribute);
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed.length > 0) {
+          return trimmed;
+        }
+      }
+    } catch {
+      console.debug(`Attribute "${attribute}" not found on element.`);
+    }
+  }
+
+  return '';
+}
+
+/**
  * Returns an element selector compatible with both Android and iOS.
  * - Android: uses resource-id
  * - iOS: uses accessibility ID
@@ -507,9 +533,24 @@ export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise
 export async function getAddressFromQRCode(which: addressType): Promise<string> {
   const qrCode = await elementById('QRCode');
   await qrCode.waitForDisplayed();
-
-  const attr = driver.isAndroid ? 'contentDescription' : 'label';
-  const uri = await qrCode.getAttribute(attr);
+  let uri = '';
+  const waitTimeoutMs = 15_000;
+  await browser.waitUntil(
+    async () => {
+      uri = await getAccessibleText(qrCode);
+      if (!uri) {
+        return false;
+      } else {
+        return true;
+      }
+    },
+    {
+      timeout: waitTimeoutMs,
+      interval: 300,
+      timeoutMsg: `Timed out after ${waitTimeoutMs}ms waiting for QR code URI`,
+    }
+  );
+  console.info({ uri });
 
   let address = '';
   if (which === 'bitcoin') {
