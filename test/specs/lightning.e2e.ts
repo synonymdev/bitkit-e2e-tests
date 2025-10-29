@@ -235,7 +235,7 @@ describe('@lightning - Lightning', () => {
     const seed = await getSeed();
     // await waitForBackup();
     await sleep(10_000); //temp wait (until we have a proper event for backup completion)
-    await restoreWallet(seed, { expectQuickPayTimedSheet: true });
+    await restoreWallet(seed);
 
     // check balance
     await expect(totalBalance).toHaveText('10 000'); // 1k onchain + 9k lightning
