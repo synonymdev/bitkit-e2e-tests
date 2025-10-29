@@ -419,9 +419,9 @@ export async function getSeed(): Promise<string> {
 
   // get seed from SeedContainer
   const seedElement = await elementById('SeedContainer');
-  const attr = driver.isAndroid ? 'contentDescription' : 'label';
-  const seed = await seedElement.getAttribute(attr);
+  const seed = await getAccessibleText(seedElement);
   console.info({ seed });
+  if (!seed) throw new Error('Could not read seed from "SeedContainer"');
 
   await tap('TapToReveal');
 

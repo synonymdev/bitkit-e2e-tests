@@ -13,6 +13,7 @@ import {
   acceptAppNotificationAlert,
   confirmInputOnKeyboard,
   multiTap,
+  getAccessibleText,
 } from '../helpers/actions';
 import { electrumHost, electrumPort } from '../helpers/constants';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
@@ -254,9 +255,10 @@ describe('@settings - Settings', () => {
 
       // get the seed from SeedContainer
       const seedElement = await elementById('SeedContainer');
-      const attr = driver.isAndroid ? 'contentDescription' : 'label';
-      const seed = await seedElement.getAttribute(attr);
+      const seed = await getAccessibleText(seedElement);
       console.info({ seed });
+      if (!seed) throw new Error('Could not read seed from "SeedContainer"');
+
       await tap('TapToReveal');
       await sleep(1000); // animation
       await tap('ContinueShowMnemonic');
