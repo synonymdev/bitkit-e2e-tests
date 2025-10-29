@@ -214,22 +214,20 @@ describe('@lightning - Lightning', () => {
     await tap('Tab-other');
     await elementById('Activity-1').waitForDisplayed({ reverse: true });
 
-    //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/386 ---//
-    // // filter by receive tag
-    // await tap('Tab-all');
-    // await tap('TagsPrompt');
-    // await tap('Tag-rtag');
-    // await expectTextWithin('Activity-1', '+');
-    // await elementById('Activity-2').waitForDisplayed({reverse:true});
-    // await tap('Tag-rtag-delete');
+    // filter by receive tag
+    await tap('Tab-all');
+    await tap('TagsPrompt');
+    await tap('Tag-rtag');
+    await expectTextWithin('Activity-1', '+');
+    await elementById('Activity-2').waitForDisplayed({ reverse: true });
+    await tap('Tag-rtag-delete');
 
-    // // filter by send tag
-    // await tap('TagsPrompt');
-    // await tap('Tag-stag');
-    // await expectTextWithin('Activity-1', '+');
-    // await elementById('Activity-2').waitForDisplayed({reverse:true});
-    // await tap('Tag-stag-delete');
-    //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/386 ---//
+    // filter by send tag
+    await tap('TagsPrompt');
+    await tap('Tag-stag');
+    await expectTextWithin('Activity-1', '-');
+    await elementById('Activity-2').waitForDisplayed({ reverse: true });
+    await tap('Tag-stag-delete');
 
     await tap('NavigationBack');
 

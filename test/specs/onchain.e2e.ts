@@ -214,14 +214,12 @@ describe('@onchain - Onchain', () => {
     // await elementById('Activity-2').waitForDisplayed({ reverse: true });
     // await tap('Tag-rtag1-delete');
 
-    // https://github.com/synonymdev/bitkit-android/issues/386
     // filter by send tag
-    // await tap('TagsPrompt');
-    // await tap('Tag-stag');
-    // await elementByText('Apply','exact').click();
-    // await expectTextWithin('Activity-1', '-');
-    // await elementById('Activity-2').waitForDisplayed({ reverse: true });
-    // await tap('Tag-stag-delete');
+    await tap('TagsPrompt');
+    await tap('Tag-stag');
+    await expectTextWithin('Activity-1', '-');
+    await elementById('Activity-2').waitForDisplayed({ reverse: true });
+    await tap('Tag-stag-delete');
 
     // calendar, 0 transactions
     await tap('DatePicker');

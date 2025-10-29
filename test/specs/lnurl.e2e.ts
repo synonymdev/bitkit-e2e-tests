@@ -141,11 +141,11 @@ describe('@lnurl - LNURL', () => {
       await waitForActiveChannel(lnd as any, ldkNodeID);
 
       // Success toast/flow
+      await dismissQuickPayIntro();
       await elementById('ExternalSuccess').waitForDisplayed({ timeout: 30_000 });
       await tap('ExternalSuccess-button');
 
       await expectTextWithin('ActivitySpending', '20 001');
-      await dismissQuickPayIntro();
 
       // lnurl-pay (min != max) with comment
       const msats = 100000; // msats
@@ -205,6 +205,7 @@ describe('@lnurl - LNURL', () => {
 
       await sleep(1000);
       await swipeFullScreen('down');
+      await swipeFullScreen('down');
 
       // lnurl-pay (min == max), no comment
       const payRequest2 = await lnurlServer.generateNewUrl('payRequest', {
@@ -236,6 +237,7 @@ describe('@lnurl - LNURL', () => {
       await expectTextWithin('ActivityShort-0', 'Sent');
       await sleep(1000);
       await swipeFullScreen('down');
+      await swipeFullScreen('down');
 
       // lnurl-pay via manual entry
       const minSendable = 321000; // msats
@@ -262,6 +264,7 @@ describe('@lnurl - LNURL', () => {
       await expectTextWithin('ActivityShort-0', '-');
       await expectTextWithin('ActivityShort-0', 'Sent');
       await sleep(1000);
+      await swipeFullScreen('down');
       await swipeFullScreen('down');
 
       // lnurl-withdraw (min != max)
@@ -292,6 +295,7 @@ describe('@lnurl - LNURL', () => {
       await expectTextWithin('ActivityShort-0', 'Received');
       await sleep(1000);
       await swipeFullScreen('down');
+      await swipeFullScreen('down');
 
       // lnurl-withdraw (min == max)
       const withdrawRequest2 = await lnurlServer.generateNewUrl('withdrawRequest', {
@@ -318,6 +322,7 @@ describe('@lnurl - LNURL', () => {
       await expectTextWithin('ActivityShort-0', 'lnurl-withdraw2');
       await expectTextWithin('ActivityShort-0', 'Received');
       await sleep(1000);
+      await swipeFullScreen('down');
       await swipeFullScreen('down');
 
       // lnurl-auth

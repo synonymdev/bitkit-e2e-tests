@@ -106,7 +106,7 @@ describe('@onboarding - Onboarding', () => {
 
     const address0 = await getReceiveAddress();
 
-    await restoreWallet(seed, passphrase);
+    await restoreWallet(seed, { passphrase });
 
     const address1 = await getReceiveAddress();
 

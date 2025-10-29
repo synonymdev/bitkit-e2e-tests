@@ -5,6 +5,32 @@ import BitcoinJsonRpc from 'bitcoin-json-rpc';
 export const sleep = (ms: number) => browser.pause(ms);
 
 /**
+ * Retrieves the most reliable accessibility text/value from an element across platforms.
+ * Some Appium drivers expose either `contentDescription`, `content-desc`, `label`, or `name`.
+ */
+export async function getAccessibleText(element: ChainablePromiseElement): Promise<string> {
+  const candidates = driver.isAndroid
+    ? ['contentDescription', 'content-desc', 'name', 'text']
+    : ['label', 'value', 'name', 'text'];
+
+  for (const attribute of candidates) {
+    try {
+      const value = await element.getAttribute(attribute);
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed.length > 0) {
+          return trimmed;
+        }
+      }
+    } catch {
+      console.debug(`Attribute "${attribute}" not found on element.`);
+    }
+  }
+
+  return '';
+}
+
+/**
  * Returns an element selector compatible with both Android and iOS.
  * - Android: uses resource-id
  * - iOS: uses accessibility ID
@@ -393,9 +419,9 @@ export async function getSeed(): Promise<string> {
 
   // get seed from SeedContainer
   const seedElement = await elementById('SeedContainer');
-  const attr = driver.isAndroid ? 'contentDescription' : 'label';
-  const seed = await seedElement.getAttribute(attr);
+  const seed = await getAccessibleText(seedElement);
   console.info({ seed });
+  if (!seed) throw new Error('Could not read seed from "SeedContainer"');
 
   await tap('TapToReveal');
 
@@ -444,7 +470,13 @@ export async function completeOnboarding({ isFirstTime = true } = {}) {
   }
 }
 
-export async function restoreWallet(seed: string, passphrase?: string) {
+export async function restoreWallet(
+  seed: string,
+  {
+    passphrase,
+    expectQuickPayTimedSheet = false,
+  }: { passphrase?: string; expectQuickPayTimedSheet?: boolean } = {}
+) {
   console.info('→ Restoring wallet with seed:', seed);
   // Let cloud state flush - carried over from Detox
   await sleep(5000);
@@ -492,6 +524,9 @@ export async function restoreWallet(seed: string, passphrase?: string) {
   await tap('GetStartedButton');
 
   await dismissUpdateSheet();
+  if (expectQuickPayTimedSheet) {
+    await dismissQuickPayIntro();
+  }
 
   // Wait for Suggestions Label to appear
   const suggestions = await elementById('Suggestions');
@@ -507,9 +542,24 @@ export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise
 export async function getAddressFromQRCode(which: addressType): Promise<string> {
   const qrCode = await elementById('QRCode');
   await qrCode.waitForDisplayed();
-
-  const attr = driver.isAndroid ? 'contentDescription' : 'label';
-  const uri = await qrCode.getAttribute(attr);
+  let uri = '';
+  const waitTimeoutMs = 15_000;
+  await browser.waitUntil(
+    async () => {
+      uri = await getAccessibleText(qrCode);
+      if (!uri) {
+        return false;
+      } else {
+        return true;
+      }
+    },
+    {
+      timeout: waitTimeoutMs,
+      interval: 300,
+      timeoutMsg: `Timed out after ${waitTimeoutMs}ms waiting for QR code URI`,
+    }
+  );
+  console.info({ uri });
 
   let address = '';
   if (which === 'bitcoin') {
@@ -584,7 +634,7 @@ export async function receiveOnchainFunds(
   if (expectHighBalanceWarning) {
     await acknowledgeHighBalanceWarning();
   }
-  const moneyText = (await elementsById('MoneyText'))[1];
+  const moneyText = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
   await expect(moneyText).toHaveText(formattedSats);
 }
 
