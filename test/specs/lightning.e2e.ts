@@ -219,14 +219,14 @@ describe('@lightning - Lightning', () => {
     await tap('TagsPrompt');
     await tap('Tag-rtag');
     await expectTextWithin('Activity-1', '+');
-    await elementById('Activity-2').waitForDisplayed({reverse:true});
+    await elementById('Activity-2').waitForDisplayed({ reverse: true });
     await tap('Tag-rtag-delete');
 
     // filter by send tag
     await tap('TagsPrompt');
     await tap('Tag-stag');
     await expectTextWithin('Activity-1', '-');
-    await elementById('Activity-2').waitForDisplayed({reverse:true});
+    await elementById('Activity-2').waitForDisplayed({ reverse: true });
     await tap('Tag-stag-delete');
 
     await tap('NavigationBack');
