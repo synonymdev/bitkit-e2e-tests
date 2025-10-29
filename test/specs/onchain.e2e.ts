@@ -19,7 +19,6 @@ import {
   typeText,
   receiveOnchainFunds,
   acknowledgeHighBalanceWarning,
-  getFormattedDate,
   enterAddress,
   dismissBackupTimedSheet,
 } from '../helpers/actions';
@@ -224,18 +223,19 @@ describe('@onchain - Onchain', () => {
     // calendar, 0 transactions
     await tap('DatePicker');
     await elementById('CalendarApplyButton').waitForDisplayed();
-    await sleep(1000); // wait for the app to settle
-    const tomorrow = await elementByText(getFormattedDate(1), 'exact');
-    const dayAfterTomorrow = await elementByText(getFormattedDate(2), 'exact');
-    await tomorrow.waitForDisplayed();
-    await dayAfterTomorrow.waitForDisplayed();
-    await tomorrow.click();
-    await dayAfterTomorrow.click();
+    await sleep(1000);
+    await tap('NextMonth');
+    await sleep(500);
+    await tap('Day-10');
+    await tap('Day-12');
+    await sleep(500);
     await tap('CalendarApplyButton');
     await elementById('Activity-1').waitForDisplayed({ reverse: true });
 
     // calendar, clear, 3 transactions
     await tap('DatePicker');
+    await elementById('CalendarApplyButton').waitForDisplayed();
+    await sleep(1000);
     await tap('CalendarClearButton');
     await elementById('Activity-1').waitForDisplayed();
     await elementById('Activity-2').waitForDisplayed();
@@ -243,9 +243,10 @@ describe('@onchain - Onchain', () => {
 
     // calendar, current date, 3 transactions
     await tap('DatePicker');
-    const today = await elementByText('Today', 'contains');
-    await today.waitForDisplayed();
-    await today.click();
+    await elementById('CalendarApplyButton').waitForDisplayed();
+    await sleep(1000);
+    await tap('Today');
+    await sleep(500);
     await tap('CalendarApplyButton');
     await elementById('Activity-1').waitForDisplayed();
     await elementById('Activity-2').waitForDisplayed();
