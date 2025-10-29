@@ -141,11 +141,11 @@ describe('@lnurl - LNURL', () => {
       await waitForActiveChannel(lnd as any, ldkNodeID);
 
       // Success toast/flow
+      await dismissQuickPayIntro();
       await elementById('ExternalSuccess').waitForDisplayed({ timeout: 30_000 });
       await tap('ExternalSuccess-button');
 
       await expectTextWithin('ActivitySpending', '20 001');
-      await dismissQuickPayIntro();
 
       // lnurl-pay (min != max) with comment
       const msats = 100000; // msats
