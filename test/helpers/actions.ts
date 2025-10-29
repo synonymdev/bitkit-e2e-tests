@@ -470,7 +470,13 @@ export async function completeOnboarding({ isFirstTime = true } = {}) {
   }
 }
 
-export async function restoreWallet(seed: string, passphrase?: string) {
+export async function restoreWallet(
+  seed: string,
+  {
+    passphrase,
+    expectQuickPayTimedSheet = false,
+  }: { passphrase?: string; expectQuickPayTimedSheet?: boolean } = {}
+) {
   console.info('→ Restoring wallet with seed:', seed);
   // Let cloud state flush - carried over from Detox
   await sleep(5000);
@@ -518,6 +524,9 @@ export async function restoreWallet(seed: string, passphrase?: string) {
   await tap('GetStartedButton');
 
   await dismissUpdateSheet();
+  if (expectQuickPayTimedSheet) {
+    await dismissQuickPayIntro();
+  }
 
   // Wait for Suggestions Label to appear
   const suggestions = await elementById('Suggestions');
@@ -625,7 +634,7 @@ export async function receiveOnchainFunds(
   if (expectHighBalanceWarning) {
     await acknowledgeHighBalanceWarning();
   }
-  const moneyText = (await elementsById('MoneyText'))[1];
+  const moneyText = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
   await expect(moneyText).toHaveText(formattedSats);
 }
 
