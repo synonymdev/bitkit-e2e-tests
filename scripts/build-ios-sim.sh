@@ -17,6 +17,13 @@ set -euo pipefail
 E2E_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 IOS_ROOT="$(cd "$E2E_ROOT/../bitkit-ios" && pwd)"
 
+# Default to E2E build unless explicitly disabled.
+E2E_FLAG="${E2E:-true}"
+XCODE_EXTRA_ARGS=()
+if [[ "$E2E_FLAG" == "true" ]]; then
+  XCODE_EXTRA_ARGS+=(SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) E2E_BUILD')
+fi
+
 xcodebuild \
   -project "$IOS_ROOT/Bitkit.xcodeproj" \
   -scheme Bitkit \
@@ -24,6 +31,7 @@ xcodebuild \
   -sdk iphonesimulator \
   -destination 'platform=iOS Simulator,OS=latest,name=iPhone 17' \
   -derivedDataPath "$IOS_ROOT/build" \
+  "${XCODE_EXTRA_ARGS[@]}" \
   clean build
 
 OUT="$E2E_ROOT/aut"

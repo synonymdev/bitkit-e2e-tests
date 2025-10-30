@@ -445,10 +445,12 @@ export async function waitForSetupWalletScreenFinish(timeout: number = 150_000) 
 
 export async function completeOnboarding({ isFirstTime = true } = {}) {
   // TOS and PP
-  await elementById('Check1').waitForDisplayed();
+  await elementById('Continue').waitForDisplayed();
   await sleep(1000); // Wait for the app to settle
-  await tap('Check1');
-  await tap('Check2');
+  if (driver.isAndroid) {
+    await tap('Check1');
+    await tap('Check2');
+  }
   await tap('Continue');
   await tap('SkipIntro');
   await sleep(500); // Wait for the app to settle
@@ -523,7 +525,6 @@ export async function restoreWallet(
   await getStarted.waitForDisplayed();
   await tap('GetStartedButton');
 
-  await dismissUpdateSheet();
   if (expectQuickPayTimedSheet) {
     await dismissQuickPayIntro();
   }
@@ -672,6 +673,7 @@ export async function doTriggerTimedSheet() {
 export async function dismissBackupTimedSheet({
   triggerTimedSheet = false,
 }: { triggerTimedSheet?: boolean } = {}) {
+  if (driver.isIOS) return; // Not supported on iOS yet
   if (triggerTimedSheet) {
     await doTriggerTimedSheet();
   }
@@ -699,6 +701,7 @@ export async function dismissBackupTimedSheet({
 export async function dismissQuickPayIntro({
   triggerTimedSheet = false,
 }: { triggerTimedSheet?: boolean } = {}) {
+  if (driver.isIOS) return; // Not supported on iOS yet
   if (triggerTimedSheet) {
     await doTriggerTimedSheet();
   }
@@ -726,6 +729,7 @@ export async function dismissQuickPayIntro({
 export async function acknowledgeHighBalanceWarning({
   triggerTimedSheet = false,
 }: { triggerTimedSheet?: boolean } = {}) {
+  if (driver.isIOS) return; // Not supported on iOS yet
   if (triggerTimedSheet) {
     await doTriggerTimedSheet();
   }
@@ -733,11 +737,6 @@ export async function acknowledgeHighBalanceWarning({
   await tap('understood_button');
   await elementById('high_balance_image').waitForDisplayed({ reverse: true });
   await sleep(500);
-}
-
-export async function dismissUpdateSheet() {
-  // iOS: update notification alert handling
-  if (driver.isIOS) await elementByText('Cancel').click();
 }
 
 // enable/disable widgets in settings
