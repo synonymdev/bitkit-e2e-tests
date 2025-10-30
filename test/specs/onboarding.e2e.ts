@@ -1,7 +1,6 @@
 import {
   acceptAppNotificationAlert,
   confirmInputOnKeyboard,
-  dismissUpdateSheet,
   elementById,
   elementByText,
   getReceiveAddress,
@@ -52,7 +51,6 @@ describe('@onboarding - Onboarding', () => {
     await waitForSetupWalletScreenFinish();
 
     await acceptAppNotificationAlert();
-    await dismissUpdateSheet();
 
     await elementByText('TO GET').waitForDisplayed();
   });
@@ -90,7 +88,6 @@ describe('@onboarding - Onboarding', () => {
     await waitForSetupWalletScreenFinish();
 
     await acceptAppNotificationAlert();
-    await dismissUpdateSheet();
 
     // Wait for wallet to be created
     for (let i = 1; i <= 3; i++) {
