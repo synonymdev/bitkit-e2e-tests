@@ -14,6 +14,7 @@ import {
   confirmInputOnKeyboard,
   multiTap,
   getAccessibleText,
+  expectText,
 } from '../helpers/actions';
 import { electrumHost, electrumPort } from '../helpers/constants';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
@@ -446,8 +447,7 @@ describe('@settings - Settings', () => {
       await sleep(1000);
     });
 
-    // https://github.com/synonymdev/bitkit-android/issues/337
-    ciIt.skip('@settings_11 - Can connect to different Rapid Gossip Sync Server', async () => {
+    ciIt('@settings_11 - Can connect to different Rapid Gossip Sync Server', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('AdvancedSettings');
@@ -463,13 +463,16 @@ describe('@settings - Settings', () => {
       await typeText('RGSUrl', newUrl);
       await confirmInputOnKeyboard();
       await tap('ConnectToHost');
-      await sleep(1000);
+      const updatedMsg = 'Rapid-Gossip-Sync Server Updated';
+      await expectText(updatedMsg);
+      await expectText(updatedMsg, { visible: false });
       const updatedUrl = await (await elementById('ConnectedUrl')).getText();
       await expect(updatedUrl).toBe(newUrl);
 
       // switch back to default
       await tap('ResetToDefault');
       await tap('ConnectToHost');
+      await expectText(updatedMsg);
 
       const resetUrl = await (await elementById('ConnectedUrl')).getText();
       await expect(resetUrl).toBe(rgsUrl);
