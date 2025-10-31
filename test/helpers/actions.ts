@@ -177,7 +177,7 @@ export async function expectTextWithin(
 
   const needle = driver.isAndroid
     ? `.//*[contains(@text,'${text}')]`
-    : `.//XCUIElementTypeStaticText[@label[contains(.,'${text}')] or @value[contains(.,'${text}')]]`;
+    : `.//XCUIElementTypeStaticText[contains(@label,'${text}') or contains(@value,'${text}')]`;
 
   if (!visible) {
     await parent.$(needle).waitForDisplayed({ reverse: true, timeout });
