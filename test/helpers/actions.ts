@@ -806,3 +806,56 @@ export async function waitForBackup() {
   await allSynced.waitForDisplayed();
   await doNavigationClose();
 }
+
+type alertAction = 'confirm' | 'cancel';
+export async function handleCommonAlert(
+  action: alertAction = 'confirm',
+  androidId: string,
+  iosText: string
+) {
+  if (driver.isAndroid) {
+    await elementById(androidId).waitForDisplayed();
+  } else {
+    // iOS alert is system modal
+    // check if alert text includes iosText
+    await driver.waitUntil(
+      async () => {
+        try {
+          const alertText = await driver.getAlertText();
+          return alertText.includes(iosText);
+        } catch {
+          return false;
+        }
+      },
+      {
+        timeout: 10_000,
+        interval: 300,
+        timeoutMsg: `Timed out waiting for alert with text: ${iosText}`,
+      }
+    );
+  }
+
+  if (action === 'confirm') {
+    if (driver.isAndroid) {
+      await tap('DialogConfirm');
+    } else {
+      await driver.acceptAlert();
+    }
+  } else {
+    if (driver.isAndroid) {
+      await tap('DialogCancel');
+    } else {
+      await driver.dismissAlert();
+    }
+  }
+}
+
+// sending over 50% of balance warning
+export async function handleOver50PercentAlert(action: alertAction = 'confirm') {
+  await handleCommonAlert(action, 'SendDialog2', 'over 50%');
+}
+
+// sending over 100$ warning
+export async function handleOver100Alert(action: alertAction = 'confirm') {
+  await handleCommonAlert(action, 'SendDialog1', 'over $100');
+}
