@@ -76,7 +76,7 @@ export const config: WebdriverIO.Config = {
           'appium:platformVersion': '26.0',
           'appium:app': path.join(__dirname, 'aut', 'Bitkit.app'),
           'appium:autoGrantPermissions': true,
-          'appium:autoAcceptAlerts': true,
+          'appium:autoAcceptAlerts': false,
           // 'appium:fullReset': true,
           'appium:noReset': false,
 
