@@ -11,6 +11,7 @@ import {
   enterAddress,
   dragOnElement,
   expectText,
+  doNavigationClose,
 } from '../helpers/actions';
 import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
@@ -69,7 +70,7 @@ describe('@security - Security And Privacy', () => {
     await tap('SkipButton'); // skip Biometrics for now
     await tap('ToggleBioForPayments');
     await tap('OK');
-    await tap('NavigationClose');
+    await doNavigationClose();
 
     // - login with PIN
     await launchFreshApp({ tryHandleAlert: false });
@@ -140,7 +141,7 @@ describe('@security - Security And Privacy', () => {
     await multiTap('N1', PIN_LENGTH); // retype PIN
     await tap('SkipButton'); // skip Biometrics for now
     await tap('OK');
-    await tap('NavigationClose');
+    await doNavigationClose();
     await sleep(1000);
 
     // now lets restart the app and fail to enter correct PIN 8 times

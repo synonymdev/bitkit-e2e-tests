@@ -6,6 +6,7 @@ import {
   multiTap,
   sleep,
   tap,
+  doNavigationClose,
 } from '../helpers/actions';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
@@ -139,5 +140,5 @@ async function switchToClassicDenomination() {
   await tap('GeneralSettings');
   await tap('UnitSettings');
   await tap('DenominationClassic');
-  await tap('NavigationClose');
+  await doNavigationClose();
 }

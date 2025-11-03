@@ -19,6 +19,7 @@ import {
   typeAddressAndVerifyContinue,
   mineBlocks,
   dismissQuickPayIntro,
+  doNavigationClose,
 } from '../helpers/actions';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
 import { reinstallApp } from '../helpers/setup';
@@ -422,7 +423,7 @@ describe('@send - Send', () => {
     await tap('QuickpaySettings');
     // no quickpay intro as we already dismissed it after getting lightning balance
     await tap('QuickpayToggle');
-    await tap('NavigationClose');
+    await doNavigationClose();
 
     await sleep(1000);
     await enterAddress(invoice7);

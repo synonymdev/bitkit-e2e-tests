@@ -411,6 +411,15 @@ export async function acceptAppNotificationAlert(
   }
 }
 
+export async function doNavigationClose() {
+  if (driver.isAndroid) {
+    await tap('NavigationClose');
+  } else {
+    await tap('HeaderMenu');
+    await tap('DrawerWallet');
+  }
+}
+
 export async function getSeed(): Promise<string> {
   await tap('HeaderMenu');
   await tap('DrawerSettings');
@@ -428,12 +437,7 @@ export async function getSeed(): Promise<string> {
   // close the modal
   await swipeFullScreen('down');
 
-  if (driver.isAndroid) {
-    await tap('NavigationClose');
-  } else {
-    await tap('HeaderMenu');
-    await tap('DrawerWallet');
-  }
+  await doNavigationClose();
   return seed;
 }
 
@@ -652,7 +656,7 @@ export async function doTriggerTimedSheet() {
   await tap('HeaderMenu');
   await tap('DrawerSettings');
   await sleep(500); // wait for the app to settle
-  await tap('NavigationClose');
+  await doNavigationClose();
 }
 
 /**
@@ -748,7 +752,7 @@ export async function toggleWidgets() {
   await tap('WidgetsSettings');
   const widgets = await elementsByText('Widgets');
   await widgets[1].click();
-  await tap('NavigationClose');
+  await doNavigationClose();
 }
 
 export async function typeAddressAndVerifyContinue({
@@ -800,5 +804,5 @@ export async function waitForBackup() {
   await tap('BackupSettings');
   const allSynced = await elementById('AllSynced');
   await allSynced.waitForDisplayed();
-  await tap('NavigationClose');
+  await doNavigationClose();
 }
