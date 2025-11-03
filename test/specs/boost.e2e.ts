@@ -16,6 +16,7 @@ import {
   getTextUnder,
   mineBlocks,
   attemptRefreshOnHomeScreen,
+  doNavigationClose,
 } from '../helpers/actions';
 import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
@@ -92,7 +93,7 @@ describe('@boost - Boost', () => {
     await elementById('CPFPBoosted').waitForDisplayed();
     const parentTxId = await getTextUnder('CPFPBoosted');
     console.info({ parentTxId });
-    await tap('NavigationClose');
+    await doNavigationClose();
 
     // new tx
     await tap('ActivityShort-0');
@@ -102,7 +103,7 @@ describe('@boost - Boost', () => {
     await expect(origTxId !== boostTxId).toBe(true);
     // TODO: not implemented yet
     // await expect(boostTxId === parentTxId).toBe(true);
-    await tap('NavigationClose');
+    await doNavigationClose();
 
     // --- skip due to: https://github.com/synonymdev/bitkit-android/issues/321 --- //
 
@@ -128,7 +129,7 @@ describe('@boost - Boost', () => {
 
     // check activity item after mine
     // TEMP: refresh until proper events available
-    await tap('NavigationClose');
+    await doNavigationClose();
     await sleep(500);
     await swipeFullScreen('down');
     await attemptRefreshOnHomeScreen();
@@ -139,7 +140,7 @@ describe('@boost - Boost', () => {
 
     await tap('ActivityShort-0');
     await elementById('StatusConfirmed').waitForDisplayed();
-    await tap('NavigationClose');
+    await doNavigationClose();
     await tap('ActivityShort-1');
     await elementById('StatusConfirmed').waitForDisplayed();
   });
@@ -226,7 +227,7 @@ describe('@boost - Boost', () => {
     await expect(Number(oldFee.replace(' ', '')) < Number(newFee.replace(' ', ''))).toBe(true);
     await expect(oldTxId !== newTxId).toBe(true);
     await elementById('RBFBoosted').waitForDisplayed();
-    await tap('NavigationClose');
+    await doNavigationClose();
 
     // --- skip due to: https://github.com/synonymdev/bitkit-android/issues/321 --- //
 
@@ -252,7 +253,7 @@ describe('@boost - Boost', () => {
 
     // check activity item after mine
     // TEMP: refresh until proper events available
-    await tap('NavigationClose');
+    await doNavigationClose();
     await sleep(500);
     await swipeFullScreen('down');
     await attemptRefreshOnHomeScreen();

@@ -1,6 +1,7 @@
 import BitcoinJsonRpc from 'bitcoin-json-rpc';
 import {
   confirmInputOnKeyboard,
+  doNavigationClose,
   elementById,
   expectTextWithin,
   sleep,
@@ -116,7 +117,7 @@ export async function connectToLND(lndNodeID: string, { navigationClose = true }
   await typeText('PortInput', '9735');
   await confirmInputOnKeyboard();
   await tap('ExternalContinue');
-  if (navigationClose) await tap('NavigationClose');
+  if (navigationClose) await doNavigationClose();
 }
 
 export async function checkChannelStatus({ size = '100 000' } = {}) {
@@ -128,6 +129,6 @@ export async function checkChannelStatus({ size = '100 000' } = {}) {
   await expectTextWithin('TotalSize', `₿ ${size}`);
   await swipeFullScreen('up');
   await elementById('IsUsableYes').waitForDisplayed();
-  await tap('NavigationClose');
+  await doNavigationClose();
   await sleep(500);
 }

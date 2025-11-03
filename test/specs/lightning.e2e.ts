@@ -22,6 +22,7 @@ import {
   mineBlocks,
   elementByText,
   dismissQuickPayIntro,
+  doNavigationClose,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
@@ -180,10 +181,10 @@ describe('@lightning - Lightning', () => {
     await expectTextWithin('ActivityShort-2', '111');
     await tap('ActivityShort-1');
     await expectTextWithin('InvoiceNote', note2);
-    await tap('NavigationClose');
+    await doNavigationClose();
     await tap('ActivityShort-2');
     await expectTextWithin('InvoiceNote', note1);
-    await tap('NavigationClose');
+    await doNavigationClose();
 
     // check activity filters & tags
     await sleep(500); // wait for the app to settle
@@ -249,10 +250,10 @@ describe('@lightning - Lightning', () => {
     await expectTextWithin('ActivityShort-2', '111');
     await tap('ActivityShort-1');
     await expectTextWithin('InvoiceNote', note2);
-    await tap('NavigationClose');
+    await doNavigationClose();
     await tap('ActivityShort-2');
     await expectTextWithin('InvoiceNote', note1);
-    await tap('NavigationClose');
+    await doNavigationClose();
 
     // check channel status
     await tap('HeaderMenu');
@@ -277,7 +278,7 @@ describe('@lightning - Lightning', () => {
     // await elementById('ReceivedTransaction').waitForDisplayed();
     await elementById('Channel').waitForDisplayed({ reverse: true });
     await tap('NavigationBack');
-    await tap('NavigationClose');
+    await doNavigationClose();
 
     await swipeFullScreen('up');
     await expectTextWithin('ActivityShort-0', '9 000');

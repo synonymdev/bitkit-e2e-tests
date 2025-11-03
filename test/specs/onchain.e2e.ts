@@ -10,6 +10,7 @@ import {
   elementByText,
   elementsById,
   expectTextWithin,
+  doNavigationClose,
   getReceiveAddress,
   mineBlocks,
   multiTap,
@@ -262,7 +263,7 @@ describe('@onchain - Onchain', () => {
     await tap('DrawerSettings');
     await tap('SecuritySettings');
     await tap('SendAmountWarning');
-    await tap('NavigationClose');
+    await doNavigationClose();
 
     const coreAddress = await rpc.getNewAddress();
     console.info({ coreAddress });

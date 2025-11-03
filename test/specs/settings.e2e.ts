@@ -15,6 +15,7 @@ import {
   multiTap,
   getAccessibleText,
   expectText,
+  doNavigationClose,
 } from '../helpers/actions';
 import { electrumHost, electrumPort } from '../helpers/constants';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
@@ -49,7 +50,7 @@ describe('@settings - Settings', () => {
       const eur_opt = await elementByText('EUR (€)');
       await eur_opt.waitForDisplayed();
       await eur_opt.click();
-      await tap('NavigationClose');
+      await doNavigationClose();
 
       await expect(await elementsById('MoneyFiatSymbol')[1]).toHaveText('€');
 
@@ -66,7 +67,7 @@ describe('@settings - Settings', () => {
       const usd_opt = await elementByText('USD ($)');
       await usd_opt.waitForDisplayed();
       await usd_opt.click();
-      await tap('NavigationClose');
+      await doNavigationClose();
     });
 
     ciIt('@settings_2 - Can switch Bitcoin Unit', async () => {
@@ -83,7 +84,7 @@ describe('@settings - Settings', () => {
       await tap('USD');
       await tap('NavigationBack');
       await expect(unitRow).toHaveText('USD');
-      await tap('NavigationClose');
+      await doNavigationClose();
       await expect(fiatSymbol).toHaveText('$');
       await expect(balance).toHaveText('0.00');
 
@@ -95,7 +96,7 @@ describe('@settings - Settings', () => {
       await tap('Bitcoin');
       await tap('NavigationBack');
       await expect(unitRow).toHaveText('Bitcoin');
-      await tap('NavigationClose');
+      await doNavigationClose();
       await expect(balance).toHaveText('0');
 
       // switch to classic denomination
@@ -107,7 +108,7 @@ describe('@settings - Settings', () => {
       await tap('DenominationClassic');
       await tap('NavigationBack');
       await expect(unitRow).toHaveText('Bitcoin');
-      await tap('NavigationClose');
+      await doNavigationClose();
       //   https://github.com/synonymdev/bitkit-android/issues/342
       //   await expect(balance).toHaveText('0.00000000');
       await expect(balance).toHaveText('0');
@@ -147,7 +148,7 @@ describe('@settings - Settings', () => {
       await tap('DrawerSettings');
       await tap('GeneralSettings');
       await elementById('TagsSettings').waitForDisplayed({ reverse: true });
-      await tap('NavigationClose');
+      await doNavigationClose();
 
       // open receive tags, add a tag
       const tag = 'test123';
@@ -171,7 +172,7 @@ describe('@settings - Settings', () => {
       await tap('TagsSettings');
       (await elementByText(tag)).waitForDisplayed();
       await tap(`Tag-${tag}-delete`);
-      await tap('NavigationClose');
+      await doNavigationClose();
 
       // open receive tags, check tags are gone
       await tap('Receive');
@@ -219,7 +220,7 @@ describe('@settings - Settings', () => {
       await tap('DrawerSettings');
       await tap('SecuritySettings');
       await tap('SwipeBalanceToHide');
-      await tap('NavigationClose');
+      await doNavigationClose();
 
       // Balance should be visible
       await elementById('ShowBalance').waitForDisplayed({ reverse: true });
@@ -302,7 +303,7 @@ describe('@settings - Settings', () => {
       await tap('AddressTypePreference');
       await tap('p2pkh');
       await sleep(1000); // We need a second after switching address types.
-      await tap('NavigationClose');
+      await doNavigationClose();
 
       // check address on Receiving screen
       const addressNew = await getReceiveAddress();
@@ -318,7 +319,7 @@ describe('@settings - Settings', () => {
       await tap('AdvancedSettings');
       await tap('AddressTypePreference');
       await tap('p2wpkh');
-      await tap('NavigationClose');
+      await doNavigationClose();
       await sleep(1000);
     });
 
@@ -532,7 +533,7 @@ describe('@settings - Settings', () => {
       await elementById('Status-lightning_connection').waitForDisplayed();
       await elementById('Status-backup').waitForDisplayed();
 
-      await tap('NavigationClose');
+      await doNavigationClose();
     });
   });
 });

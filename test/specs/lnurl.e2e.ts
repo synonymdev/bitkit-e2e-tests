@@ -20,6 +20,7 @@ import {
   enterAddress,
   expectText,
   dismissQuickPayIntro,
+  doNavigationClose,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
@@ -104,7 +105,7 @@ describe('@lnurl - LNURL', () => {
 
       // Get LDK node id from the UI
       const ldkNodeID = await getLDKNodeID();
-      await tap('NavigationClose');
+      await doNavigationClose();
       // send funds to LND node and open a channel
       const lnd = (await setupLND(rpc, lndConfig)).lnd;
       await electrum?.waitForSync();
@@ -200,7 +201,7 @@ describe('@lnurl - LNURL', () => {
       // await tap('ActivityShort-0');
       // await elementById('InvoiceComment').waitForDisplayed();
       // await expectTextWithin('InvoiceComment', 'test comment');
-      // await tap('NavigationClose');
+      // await doNavigationClose();
       // --- skip due to: https://github.com/synonymdev/bitkit-android/issues/417 ---//
 
       await sleep(1000);

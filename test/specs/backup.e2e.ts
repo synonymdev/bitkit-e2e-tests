@@ -6,6 +6,7 @@ import {
   completeOnboarding,
   confirmInputOnKeyboard,
   deleteAllDefaultWidgets,
+  doNavigationClose,
   elementById,
   elementByIdWithin,
   elementByText,
@@ -67,7 +68,7 @@ describe('@backup - Backup', () => {
     // workaround for Android keyboard not hiding (only in emulator)
     await confirmInputOnKeyboard();
     await sleep(200);
-    await tap('NavigationClose');
+    await doNavigationClose();
     await tap('NavigationBack');
 
     // - change settings (currency to GBP) //
@@ -78,7 +79,7 @@ describe('@backup - Backup', () => {
     const gbp_opt = await elementByText('GBP (£)');
     await gbp_opt.waitForDisplayed();
     await gbp_opt.click();
-    await tap('NavigationClose');
+    await doNavigationClose();
 
     // - add widgets (add PriceWidget) //
     await deleteAllDefaultWidgets();

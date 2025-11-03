@@ -18,6 +18,7 @@ import {
   elementByIdWithin,
   enterAddress,
   dismissQuickPayIntro,
+  doNavigationClose,
 } from '../helpers/actions';
 import {
   checkChannelStatus,
@@ -79,7 +80,7 @@ describe('@transfer - Transfer', () => {
       await tap('GeneralSettings');
       await tap('CurrenciesSettings');
       await elementByText('EUR (€)').click();
-      await tap('NavigationClose');
+      await doNavigationClose();
 
       await launchFreshApp();
       await tap('Suggestion-lightning');
@@ -227,7 +228,7 @@ describe('@transfer - Transfer', () => {
       channels[1].click();
       await expectTextWithin('TotalSize', '₿ 250 000');
       await expectText('Processing payment');
-      await tap('NavigationClose');
+      await doNavigationClose();
 
       // check activities
       await sleep(1000);
@@ -310,7 +311,7 @@ describe('@transfer - Transfer', () => {
     await elementById('ExternalSuccess').waitForDisplayed();
     await tap('ExternalSuccess-button');
     await tap('NavigationBack');
-    await tap('NavigationClose');
+    await doNavigationClose();
 
     // check transfer card
     // await elementById('Suggestion-lightning_setting_up').waitForDisplayed();
