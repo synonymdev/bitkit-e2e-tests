@@ -855,7 +855,7 @@ export async function handleOver50PercentAlert(action: alertAction = 'confirm') 
   await handleCommonAlert(action, 'SendDialog2', 'over 50%');
 }
 
-// sending over 100$ warning
+// sending over $100 warning
 export async function handleOver100Alert(action: alertAction = 'confirm') {
   await handleCommonAlert(action, 'SendDialog1', 'over $100');
 }
