@@ -22,6 +22,8 @@ import {
   acknowledgeHighBalanceWarning,
   enterAddress,
   dismissBackupTimedSheet,
+  handleOver50PercentAlert,
+  handleOver100Alert,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
 
@@ -161,8 +163,7 @@ describe('@onchain - Onchain', () => {
     await dragOnElement('GRAB', 'right', 0.95);
 
     await sleep(1000);
-    await elementById('SendDialog2').waitForDisplayed(); // sending over 50% of balance warning
-    await tap('DialogConfirm');
+    await handleOver50PercentAlert();
     await elementById('SendSuccess').waitForDisplayed();
     await tap('Close');
 
@@ -271,6 +272,7 @@ describe('@onchain - Onchain', () => {
 
     // enter amount that would leave dust
     let amountStr = await (await elementByIdWithin('AvailableAmount', 'MoneyText')).getText();
+    await tap('AvailableAmount');
     amountStr = amountStr.replace('₿', '').replace(/\s/g, '');
     let amount = parseInt(amountStr, 10);
     amount = amount - 300; // = 99 999 588
@@ -284,12 +286,10 @@ describe('@onchain - Onchain', () => {
     await dragOnElement('GRAB', 'right', 0.95);
 
     // sending over 50% of balance warning
-    await elementById('SendDialog2').waitForDisplayed();
-    await tap('DialogConfirm');
+    await handleOver50PercentAlert();
 
     // sending over 100$ warning
-    await elementById('SendDialog1').waitForDisplayed();
-    await tap('DialogConfirm');
+    await handleOver100Alert();
 
     await elementById('SendSuccess').waitForDisplayed();
     await tap('Close');
