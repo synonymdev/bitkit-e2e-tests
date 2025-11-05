@@ -272,7 +272,6 @@ describe('@onchain - Onchain', () => {
 
     // enter amount that would leave dust
     let amountStr = await (await elementByIdWithin('AvailableAmount', 'MoneyText')).getText();
-    await tap('AvailableAmount');
     amountStr = amountStr.replace('₿', '').replace(/\s/g, '');
     let amount = parseInt(amountStr, 10);
     amount = amount - 300; // = 99 999 588
