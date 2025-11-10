@@ -541,6 +541,7 @@ export async function restoreWallet(
 type addressType = 'bitcoin' | 'lightning';
 export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise<string> {
   await tap('Receive');
+  await sleep(500); 
   return getAddressFromQRCode(which);
 }
 
@@ -635,12 +636,22 @@ export async function receiveOnchainFunds(
   // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
   // await elementById('ReceivedTransaction').waitForDisplayed();
 
-  await dismissBackupTimedSheet({ triggerTimedSheet: driver.isIOS });
-  if (expectHighBalanceWarning) {
-    await acknowledgeHighBalanceWarning({ triggerTimedSheet: driver.isIOS });
+  if (driver.isAndroid) {
+    await dismissBackupTimedSheet();
+    if (expectHighBalanceWarning) {
+      await acknowledgeHighBalanceWarning();
+    }
   }
+
   const moneyText = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
   await expect(moneyText).toHaveText(formattedSats);
+
+  if (driver.isIOS) {
+    await dismissBackupTimedSheet({ triggerTimedSheet: true });
+    if (expectHighBalanceWarning) {
+      await acknowledgeHighBalanceWarning({ triggerTimedSheet: true });
+    }
+  }
 }
 
 /**
