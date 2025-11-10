@@ -71,7 +71,7 @@ describe('@boost - Boost', () => {
     await tap('CustomFeeButton');
     await tap('Plus');
     await tap('Minus');
-    await tap('RecomendedFeeButton');
+    await tap('RecommendedFeeButton');
     await dragOnElement('GRAB', 'right', 0.95); // Swipe to confirm
 
     // check Activity
@@ -228,7 +228,7 @@ describe('@boost - Boost', () => {
     await tap('CustomFeeButton');
     await tap('Plus');
     await tap('Minus');
-    await tap('RecomendedFeeButton');
+    await tap('RecommendedFeeButton');
     await dragOnElement('GRAB', 'right', 0.95); // Swipe to confirm
 
     // check Activity
