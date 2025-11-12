@@ -541,6 +541,7 @@ export async function restoreWallet(
 type addressType = 'bitcoin' | 'lightning';
 export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise<string> {
   await tap('Receive');
+  await sleep(500); 
   return getAddressFromQRCode(which);
 }
 
@@ -635,12 +636,22 @@ export async function receiveOnchainFunds(
   // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
   // await elementById('ReceivedTransaction').waitForDisplayed();
 
-  await dismissBackupTimedSheet();
-  if (expectHighBalanceWarning) {
-    await acknowledgeHighBalanceWarning();
+  if (driver.isAndroid) {
+    await dismissBackupTimedSheet();
+    if (expectHighBalanceWarning) {
+      await acknowledgeHighBalanceWarning();
+    }
   }
+
   const moneyText = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
   await expect(moneyText).toHaveText(formattedSats);
+
+  if (driver.isIOS) {
+    await dismissBackupTimedSheet({ triggerTimedSheet: true });
+    if (expectHighBalanceWarning) {
+      await acknowledgeHighBalanceWarning({ triggerTimedSheet: true });
+    }
+  }
 }
 
 /**
@@ -677,13 +688,12 @@ export async function doTriggerTimedSheet() {
 export async function dismissBackupTimedSheet({
   triggerTimedSheet = false,
 }: { triggerTimedSheet?: boolean } = {}) {
-  if (driver.isIOS) return; // Not supported on iOS yet
   if (triggerTimedSheet) {
     await doTriggerTimedSheet();
   }
-  await elementById('backup_description').waitForDisplayed();
+  await elementById('BackupIntroViewDescription').waitForDisplayed();
   await sleep(500); // wait for the app to settle
-  await tap('later_button');
+  await tap('BackupIntroViewCancel');
   await sleep(500);
 }
 
@@ -733,13 +743,12 @@ export async function dismissQuickPayIntro({
 export async function acknowledgeHighBalanceWarning({
   triggerTimedSheet = false,
 }: { triggerTimedSheet?: boolean } = {}) {
-  if (driver.isIOS) return; // Not supported on iOS yet
   if (triggerTimedSheet) {
     await doTriggerTimedSheet();
   }
-  await elementById('high_balance_image').waitForDisplayed();
-  await tap('understood_button');
-  await elementById('high_balance_image').waitForDisplayed({ reverse: true });
+  await elementById('HighBalanceSheetDescription').waitForDisplayed();
+  await tap('HighBalanceSheetContinue');
+  await elementById('HighBalanceSheetDescription').waitForDisplayed({ reverse: true });
   await sleep(500);
 }
 

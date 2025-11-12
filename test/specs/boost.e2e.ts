@@ -59,7 +59,7 @@ describe('@boost - Boost', () => {
 
     // old tx
     await tap('ActivityShort-0');
-    await expectText('100 000');
+    await expectText('100 000', { strategy: 'contains' });
     await tap('ActivityTxDetails');
     const origTxId = await getTextUnder('TXID');
     console.info({ oldTxId: origTxId });
@@ -71,19 +71,31 @@ describe('@boost - Boost', () => {
     await tap('CustomFeeButton');
     await tap('Plus');
     await tap('Minus');
-    await tap('RecomendedFeeButton');
+    await tap('RecommendedFeeButton');
     await dragOnElement('GRAB', 'right', 0.95); // Swipe to confirm
 
     // check Activity
     await elementById('BoostingIcon').waitForDisplayed();
     await elementById('ActivityShort-0').waitForDisplayed();
-    await expect(elementById('ActivityShort-1')).toBeDisplayed();
-    await expect(elementById('ActivityShort-2')).not.toBeDisplayed();
+
+    // no additional boost tx item on iOS, there is one on Android
+    const showsBoostTxItem = driver.isAndroid;
+    if (showsBoostTxItem) {
+      await expect(elementById('ActivityShort-1')).toBeDisplayed();
+      await expect(elementById('ActivityShort-2')).not.toBeDisplayed();
+    } else {
+      await expect(elementById('ActivityShort-1')).not.toBeDisplayed();
+      await expect(elementById('ActivityShort-2')).not.toBeDisplayed();
+    }
 
     // orig tx still there
     await swipeFullScreen('up');
-    await tap('ActivityShort-1');
-    await expectText('100 000');
+    if (showsBoostTxItem) {
+      await tap('ActivityShort-1');
+    } else {
+      await tap('ActivityShort-0');
+    }
+    await expectText('100 000', { strategy: 'contains' });
     await elementById('BoostedButton').waitForDisplayed();
     await elementById('StatusBoosting').waitForDisplayed();
     await tap('ActivityTxDetails');
@@ -95,15 +107,17 @@ describe('@boost - Boost', () => {
     console.info({ parentTxId });
     await doNavigationClose();
 
-    // new tx
-    await tap('ActivityShort-0');
-    await tap('ActivityTxDetails');
-    const boostTxId = await getTextUnder('TXID');
-    console.info({ newTxId: boostTxId });
-    await expect(origTxId !== boostTxId).toBe(true);
-    // TODO: not implemented yet
-    // await expect(boostTxId === parentTxId).toBe(true);
-    await doNavigationClose();
+    if (showsBoostTxItem) {
+      // new tx
+      await tap('ActivityShort-0');
+      await tap('ActivityTxDetails');
+      const boostTxId = await getTextUnder('TXID');
+      console.info({ newTxId: boostTxId });
+      await expect(origTxId !== boostTxId).toBe(true);
+      // TODO: not implemented yet
+      // await expect(boostTxId === parentTxId).toBe(true);
+      await doNavigationClose();
+    }
 
     // --- skip due to: https://github.com/synonymdev/bitkit-android/issues/321 --- //
 
@@ -119,8 +133,13 @@ describe('@boost - Boost', () => {
     // check activity after restore
     await swipeFullScreen('up');
     await elementById('BoostingIcon').waitForDisplayed();
-    await elementById('ActivityShort-1').waitForDisplayed();
-    await tap('ActivityShort-1');
+    if (showsBoostTxItem) {
+      await elementById('ActivityShort-1').waitForDisplayed();
+      await tap('ActivityShort-1');
+    } else {
+      await elementById('ActivityShort-0').waitForDisplayed();
+      await tap('ActivityShort-0');
+    }
     await elementById('BoostedButton').waitForDisplayed();
     await elementById('StatusBoosting').waitForDisplayed();
 
@@ -135,14 +154,18 @@ describe('@boost - Boost', () => {
     await attemptRefreshOnHomeScreen();
     await swipeFullScreen('up');
     await elementById('ActivityShort-0').waitForDisplayed();
-    await elementById('ActivityShort-1').waitForDisplayed();
+    if (showsBoostTxItem) {
+      await elementById('ActivityShort-1').waitForDisplayed();
+    }
     // TEMP: refresh until proper events available
 
     await tap('ActivityShort-0');
     await elementById('StatusConfirmed').waitForDisplayed();
     await doNavigationClose();
-    await tap('ActivityShort-1');
-    await elementById('StatusConfirmed').waitForDisplayed();
+    if (showsBoostTxItem) {
+      await tap('ActivityShort-1');
+      await elementById('StatusConfirmed').waitForDisplayed();
+    }
   });
 
   ciIt('@boost_2 - Can do RBF', async () => {
@@ -205,7 +228,7 @@ describe('@boost - Boost', () => {
     await tap('CustomFeeButton');
     await tap('Plus');
     await tap('Minus');
-    await tap('RecomendedFeeButton');
+    await tap('RecommendedFeeButton');
     await dragOnElement('GRAB', 'right', 0.95); // Swipe to confirm
 
     // check Activity
