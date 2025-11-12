@@ -7,6 +7,7 @@ import {
   expectTextWithin,
   getReceiveAddress,
   sleep,
+  swipeFullScreen,
   tap,
   typeText,
 } from '../helpers/actions';
@@ -26,11 +27,19 @@ describe('@receive - Receive', () => {
     }
 
     // Onchain/Lightning details
-    await dragOnElement('ReceiveSlider', 'left', 0.7);
+    if (driver.isIOS) {
+      await tap('ShowDetails');
+    } else {
+      await dragOnElement('ReceiveSlider', 'left', 0.7);
+    }
     await elementById('ReceiveScreen').waitForDisplayed();
 
     // ReceiveDetail
-    await dragOnElement('ReceiveScreen', 'right', 0.7);
+    if (driver.isIOS) {
+      await tap('QRCode');
+    } else {
+      await dragOnElement('ReceiveScreen', 'right', 0.7);
+    }
     await sleep(1000);
     await tap('SpecifyInvoiceButton');
 
@@ -59,31 +68,41 @@ describe('@receive - Receive', () => {
 
     // Show QR
     await tap('ShowQrReceive');
+    await sleep(500);
 
     // Back to ReceiveDetail
     // data should still be there
     await tap('SpecifyInvoiceButton');
     await expectText('123');
     await expectTextWithin('ReceiveNote', note);
-    await expectText(tag);
+    // tags not shown on iOS
+    // https://github.com/synonymdev/bitkit-ios/issues/197
+    if (driver.isAndroid) {
+      await expectText(tag);
+    }
 
     // Close & reopen
-    await dragOnElement('ReceiveScreen', 'down', 0.7);
+    await swipeFullScreen('down');
     await sleep(1000);
     await elementById('Receive').waitForDisplayed();
     await tap('Receive');
 
     // data should be reset
+    await sleep(500);
     await tap('SpecifyInvoiceButton');
     await expectText('123', { visible: false });
     await expectTextWithin('ReceiveNote', note, { visible: false });
     await expectText(tag, { visible: false });
 
-    // check previous tags & delete
-    await tap('TagsAdd');
-    await tap(`Tag-${tag}`);
-    await expectText(tag);
-    await tap(`Tag-${tag}-delete`);
-    await expectText(tag, { visible: false });
+    // tags not shown on iOS
+    // https://github.com/synonymdev/bitkit-ios/issues/197
+    if (driver.isAndroid) {
+      // check previous tags & delete
+      await tap('TagsAdd');
+      await tap(`Tag-${tag}`);
+      await expectText(tag);
+      await tap(`Tag-${tag}-delete`);
+      await expectText(tag, { visible: false });
+    }
   });
 });
