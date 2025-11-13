@@ -407,7 +407,7 @@ export async function confirmInputOnKeyboard() {
   } else {
     for (const el of ['return', 'done', 'go']) {
     try {
-        let elem = await elementByText(el);
+        const elem = await elementByText(el);
         await elem.waitForDisplayed({ timeout: 2000 });
         await elem.click();
         return;
