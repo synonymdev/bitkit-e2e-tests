@@ -405,7 +405,7 @@ export async function confirmInputOnKeyboard() {
       await driver.hideKeyboard();
     } catch {}
   } else {
-    for (let el of ['return', 'done', 'go']) {
+    for (const el of ['return', 'done', 'go']) {
     try {
         let elem = await elementByText(el);
         await elem.waitForDisplayed({ timeout: 2000 });
