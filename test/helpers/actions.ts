@@ -175,9 +175,24 @@ export async function expectTextWithin(
   const parent = elementById(ancestorId);
   await parent.waitForDisplayed();
 
+  if (driver.isIOS) {
+    const parentLabel = await parent.getAttribute('label');
+    const parentValue = await parent.getAttribute('value');
+    const matchesParent =
+      (typeof parentLabel === 'string' && parentLabel.includes(text)) ||
+      (typeof parentValue === 'string' && parentValue.includes(text));
+
+    if (matchesParent) {
+      if (!visible) {
+        await parent.waitForDisplayed({ reverse: true, timeout });
+      }
+      return;
+    }
+  }
+
   const needle = driver.isAndroid
     ? `.//*[contains(@text,'${text}')]`
-    : `.//XCUIElementTypeStaticText[contains(@label,'${text}') or contains(@value,'${text}')]`;
+    : `.//*[self::XCUIElementTypeStaticText or self::XCUIElementTypeTextView or self::XCUIElementTypeTextField][contains(@label,'${text}') or contains(@value,'${text}')]`;
 
   if (!visible) {
     await parent.$(needle).waitForDisplayed({ reverse: true, timeout });
@@ -390,10 +405,16 @@ export async function confirmInputOnKeyboard() {
       await driver.hideKeyboard();
     } catch {}
   } else {
+    for (const el of ['return', 'done', 'go']) {
     try {
-      await elementByText('return').click();
-    } catch {
-      // Swallow the error; keyboard might already be closed
+        const elem = await elementByText(el);
+        await elem.waitForDisplayed({ timeout: 2000 });
+        await elem.click();
+        return;
+      } catch {
+        // Swallow the error; keyboard might already be closed
+        console.warn(`Not closing keyboard on element: ${el}`);
+      }
     }
   }
 }
