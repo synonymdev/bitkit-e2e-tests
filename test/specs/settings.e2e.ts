@@ -34,13 +34,14 @@ describe('@settings - Settings', () => {
   describe('General', () => {
     ciIt('@settings_1 - Can switch local currency', async () => {
       // switch to local currency
+      const fiatSymbol = await elementByIdWithin('TotalBalance-primary','MoneyFiatSymbol');
       try {
         await tap('TotalBalance');
-        await expect(await elementsById('MoneyFiatSymbol')[1]).toHaveText('$');
+        await expect(fiatSymbol).toHaveText('$');
       } catch {
         await tap('TotalBalance');
       }
-      await expect(await elementsById('MoneyFiatSymbol')[1]).toHaveText('$');
+      await expect(fiatSymbol).toHaveText('$');
 
       // - change settings (currency to EUR) //
       await tap('HeaderMenu');
@@ -52,12 +53,12 @@ describe('@settings - Settings', () => {
       await eur_opt.click();
       await doNavigationClose();
 
-      await expect(await elementsById('MoneyFiatSymbol')[1]).toHaveText('€');
+      await expect(fiatSymbol).toHaveText('€');
 
       // switch back to sats
       await tap('TotalBalance');
       await sleep(500);
-      await expect(await elementsById('MoneyFiatSymbol')[1]).toHaveText('₿');
+      await expect(fiatSymbol).toHaveText('₿');
 
       // switch to USD
       await tap('HeaderMenu');
@@ -71,18 +72,18 @@ describe('@settings - Settings', () => {
     });
 
     ciIt('@settings_2 - Can switch Bitcoin Unit', async () => {
-      const fiatSymbol = (await elementsById('MoneyFiatSymbol'))[1];
-      const balance = (await elementsById('MoneyText'))[1];
-      const unitRow = await elementByIdWithin('UnitSettings', 'Value');
-
+      const fiatSymbol = await elementByIdWithin('TotalBalance-primary','MoneyFiatSymbol');
+      const balance = await elementByIdWithin('TotalBalance-primary','MoneyText');
+      
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('GeneralSettings');
-
+      
       // switch to USD
       await tap('UnitSettings');
       await tap('USD');
       await tap('NavigationBack');
+      const unitRow = await elementByIdWithin('UnitSettings', 'Value');
       await expect(unitRow).toHaveText('USD');
       await doNavigationClose();
       await expect(fiatSymbol).toHaveText('$');
@@ -109,9 +110,7 @@ describe('@settings - Settings', () => {
       await tap('NavigationBack');
       await expect(unitRow).toHaveText('Bitcoin');
       await doNavigationClose();
-      //   https://github.com/synonymdev/bitkit-android/issues/342
-      //   await expect(balance).toHaveText('0.00000000');
-      await expect(balance).toHaveText('0');
+      await expect(balance).toHaveText('0.00000000');
     });
 
     ciIt('@settings_3 - Can switch transaction speed', async () => {
