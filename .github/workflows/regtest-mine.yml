@@ -41,7 +41,7 @@ jobs:
           fi
       - name: Mine regtest blocks
         run: |
-          echo "Mining ${BLOCK_COUNT} block(s) on regtest…"
+          echo "Mining ${BLOCK_COUNT} block(s) on regtest..."
           curl --fail --silent --show-error \
             -X POST \
             "${BLOCKTANK_SERVER}/regtest/chain/mine" \
