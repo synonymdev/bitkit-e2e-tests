@@ -87,5 +87,5 @@ jobs:
             fi
             sleep 1
           done
-          echo "Tip height did not reach expected value ${EXPECTED} within 10 seconds (last observed: ${LAST_TIP:-unknown})" >&2
+          echo "Tip height did not reach expected value ${EXPECTED} (started at ${TIP_BEFORE}) within 10 seconds (last observed: ${LAST_TIP:-unknown})" >&2
           exit 1
