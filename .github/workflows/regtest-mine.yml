@@ -1,0 +1,49 @@
+name: Regtest Mine Blocks
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # 2 AM UTC daily
+  workflow_dispatch:
+    inputs:
+      blocktank_server:
+        description: Blocktank base URL
+        required: true
+        default: 'https://api.stag0.blocktank.to/blocktank/api/v2'
+      block_count:
+        description: Number of regtest blocks to mine
+        required: true
+        default: '1'
+
+jobs:
+  mine:
+    runs-on: ubuntu-latest
+    env:
+      BLOCK_COUNT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.block_count || '1' }}
+      BLOCKTANK_SERVER: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.blocktank_server || 'https://api.stag0.blocktank.to/blocktank/api/v2' }}
+    steps:
+      - name: Validate params
+        run: |
+          if [[ -z "${BLOCK_COUNT}" ]]; then
+            echo "BLOCK_COUNT is empty" >&2
+            exit 1
+          fi
+          if ! [[ "${BLOCK_COUNT}" =~ ^[0-9]+$ ]]; then
+            echo "BLOCK_COUNT must be a positive integer: ${BLOCK_COUNT}" >&2
+            exit 1
+          fi
+          if [[ "${BLOCK_COUNT}" -eq 0 ]]; then
+            echo "BLOCK_COUNT must be greater than zero" >&2
+            exit 1
+          fi
+          if [[ -z "${BLOCKTANK_SERVER}" ]]; then
+            echo "BLOCKTANK_SERVER is empty" >&2
+            exit 1
+          fi
+      - name: Mine regtest blocks
+        run: |
+          echo "Mining ${BLOCK_COUNT} block(s) on regtest..."
+          curl --fail --silent --show-error \
+            -X POST \
+            "${BLOCKTANK_SERVER}/regtest/chain/mine" \
+            -H 'Content-Type: application/json' \
+            -d "{\"count\": ${BLOCK_COUNT}}"
