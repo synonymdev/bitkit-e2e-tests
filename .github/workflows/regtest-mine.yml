@@ -20,6 +20,7 @@ jobs:
     env:
       BLOCK_COUNT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.block_count || '1' }}
       BLOCKTANK_SERVER: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.blocktank_server || 'https://api.stag0.blocktank.to/blocktank/api/v2' }}
+      MEMPOOL_API: https://mempool.bitkit.stag0.blocktank.to/api/blocks/tip/height
     steps:
       - name: Validate params
         run: |
@@ -39,6 +40,15 @@ jobs:
             echo "BLOCKTANK_SERVER is empty" >&2
             exit 1
           fi
+      - name: Capture initial tip height
+        run: |
+          TIP_BEFORE=$(curl -sS "${MEMPOOL_API}" | tr -dc '0-9')
+          if [[ -z "${TIP_BEFORE}" ]]; then
+            echo "Failed to obtain initial block height" >&2
+            exit 1
+          fi
+          echo "Initial tip height: ${TIP_BEFORE}"
+          echo "TIP_BEFORE=${TIP_BEFORE}" >> "${GITHUB_ENV}"
       - name: Mine regtest blocks
         run: |
           echo "Mining ${BLOCK_COUNT} block(s) on regtest..."
@@ -47,3 +57,17 @@ jobs:
             "${BLOCKTANK_SERVER}/regtest/chain/mine" \
             -H 'Content-Type: application/json' \
             -d "{\"count\": ${BLOCK_COUNT}}"
+      - name: Verify new tip height
+        run: |
+          TIP_AFTER=$(curl -sS "${MEMPOOL_API}" | tr -dc '0-9')
+          if [[ -z "${TIP_AFTER}" ]]; then
+            echo "Failed to obtain post-mining block height" >&2
+            exit 1
+          fi
+          echo "New tip height: ${TIP_AFTER}"
+          EXPECTED=$((TIP_BEFORE + BLOCK_COUNT))
+          if (( TIP_AFTER < EXPECTED )); then
+            echo "Tip height ${TIP_AFTER} is less than expected ${EXPECTED}" >&2
+            exit 1
+          fi
+          echo "Regtest height increased as expected"
