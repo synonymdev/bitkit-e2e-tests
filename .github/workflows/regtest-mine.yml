@@ -59,15 +59,23 @@ jobs:
             -d "{\"count\": ${BLOCK_COUNT}}"
       - name: Verify new tip height
         run: |
-          TIP_AFTER=$(curl -sS "${MEMPOOL_API}" | tr -dc '0-9')
-          if [[ -z "${TIP_AFTER}" ]]; then
-            echo "Failed to obtain post-mining block height" >&2
-            exit 1
-          fi
-          echo "New tip height: ${TIP_AFTER}"
           EXPECTED=$((TIP_BEFORE + BLOCK_COUNT))
-          if (( TIP_AFTER < EXPECTED )); then
-            echo "Tip height ${TIP_AFTER} is less than expected ${EXPECTED}" >&2
-            exit 1
-          fi
-          echo "Regtest height increased as expected"
+          echo "Waiting up to 10 seconds for tip height to reach ${EXPECTED}..."
+          END=$((SECONDS + 10))
+          LAST_TIP=""
+          while (( SECONDS < END )); do
+            TIP_AFTER=$(curl -sS "${MEMPOOL_API}" | tr -dc '0-9')
+            if [[ -n "${TIP_AFTER}" ]]; then
+              LAST_TIP="${TIP_AFTER}"
+              if (( TIP_AFTER >= EXPECTED )); then
+                echo "New tip height: ${TIP_AFTER}"
+                echo "Regtest height increased as expected"
+                exit 0
+              fi
+            else
+              echo "Failed to read tip height, retrying..."
+            fi
+            sleep 1
+          done
+          echo "Tip height did not reach expected value ${EXPECTED} within 10 seconds (last observed: ${LAST_TIP:-unknown})" >&2
+          exit 1
