@@ -239,7 +239,7 @@ describe('@settings - Settings', () => {
 
       // Restart the app
       await sleep(3000);
-      await launchFreshApp();
+      await launchFreshApp( {tryHandleAlert: driver.isAndroid} );
       // Balance should be hidden
       await elementById('ShowBalance').waitForDisplayed();
     });
