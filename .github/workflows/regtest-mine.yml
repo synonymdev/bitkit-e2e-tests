@@ -9,6 +9,10 @@ on:
         description: Blocktank base URL
         required: true
         default: 'https://api.stag0.blocktank.to/blocktank/api/v2'
+      mempool_server:
+        description: Mempool API base URL
+        required: true
+        default: 'https://mempool.bitkit.stag0.blocktank.to'
       block_count:
         description: Number of regtest blocks to mine
         required: true
@@ -20,6 +24,7 @@ jobs:
     env:
       BLOCK_COUNT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.block_count || '1' }}
       BLOCKTANK_SERVER: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.blocktank_server || 'https://api.stag0.blocktank.to/blocktank/api/v2' }}
+      MEMPOOL_SERVER: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.mempool_server || 'https://mempool.bitkit.stag0.blocktank.to' }}
     steps:
       - name: Validate params
         run: |
@@ -39,6 +44,20 @@ jobs:
             echo "BLOCKTANK_SERVER is empty" >&2
             exit 1
           fi
+          if [[ -z "${MEMPOOL_SERVER}" ]]; then
+            echo "MEMPOOL_SERVER is empty" >&2
+            exit 1
+          fi
+      - name: Capture initial tip height
+        run: |
+          MEMPOOL_API="${MEMPOOL_SERVER%/}/api/blocks/tip/height"
+          TIP_BEFORE=$(curl -sS "${MEMPOOL_API}" | tr -dc '0-9')
+          if [[ -z "${TIP_BEFORE}" ]]; then
+            echo "Failed to obtain initial block height" >&2
+            exit 1
+          fi
+          echo "Initial tip height: ${TIP_BEFORE}"
+          echo "TIP_BEFORE=${TIP_BEFORE}" >> "${GITHUB_ENV}"
       - name: Mine regtest blocks
         run: |
           echo "Mining ${BLOCK_COUNT} block(s) on regtest..."
@@ -47,3 +66,26 @@ jobs:
             "${BLOCKTANK_SERVER}/regtest/chain/mine" \
             -H 'Content-Type: application/json' \
             -d "{\"count\": ${BLOCK_COUNT}}"
+      - name: Verify new tip height
+        run: |
+          MEMPOOL_API="${MEMPOOL_SERVER%/}/api/blocks/tip/height"
+          EXPECTED=$((TIP_BEFORE + BLOCK_COUNT))
+          echo "Waiting up to 10 seconds for tip height to reach ${EXPECTED}..."
+          END=$((SECONDS + 10))
+          LAST_TIP=""
+          while (( SECONDS < END )); do
+            TIP_AFTER=$(curl -sS "${MEMPOOL_API}" | tr -dc '0-9')
+            if [[ -n "${TIP_AFTER}" ]]; then
+              LAST_TIP="${TIP_AFTER}"
+              if (( TIP_AFTER >= EXPECTED )); then
+                echo "New tip height: ${TIP_AFTER}"
+                echo "Regtest height increased as expected"
+                exit 0
+              fi
+            else
+              echo "Failed to read tip height, retrying..."
+            fi
+            sleep 1
+          done
+          echo "Tip height did not reach expected value ${EXPECTED} (started at ${TIP_BEFORE}) within 10 seconds (last observed: ${LAST_TIP:-unknown})" >&2
+          exit 1
