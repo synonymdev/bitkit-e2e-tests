@@ -292,6 +292,6 @@ describe('@boost - Boost', () => {
     await elementById('StatusConfirmed').waitForDisplayed();
     await doNavigationClose();
     await tap('ActivityShort-1')
-    await expectText('Removed From Mempool', {strategy: 'contains'})
+    await elementById('StatusRemoved').waitForDisplayed();
   });
 });
