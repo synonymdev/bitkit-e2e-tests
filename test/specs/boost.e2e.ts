@@ -235,7 +235,11 @@ describe('@boost - Boost', () => {
     await elementById('BoostingIcon').waitForDisplayed();
     await elementById('ActivityShort-0').waitForDisplayed();
     await elementById('ActivityShort-1').waitForDisplayed();
-    await expect(elementById('ActivityShort-2')).not.toBeDisplayed();
+    await elementById('ActivityShort-2').waitForDisplayed();
+    await expectTextWithin('ActivityShort-0', '-');
+    await expectTextWithin('ActivityShort-1', '-');
+    await expectTextWithin('ActivityShort-2', '100 000');
+    await expectTextWithin('ActivityShort-2', '+');
 
     // new tx
     await tap('ActivityShort-0');
@@ -281,9 +285,13 @@ describe('@boost - Boost', () => {
     await swipeFullScreen('down');
     await attemptRefreshOnHomeScreen();
     await swipeFullScreen('up');
+    // TEMP: refresh until proper events available
+    await expect(elementById('BoostingIcon')).not.toBeDisplayed();
     await elementById('ActivityShort-0').waitForDisplayed();
     await tap('ActivityShort-0');
-    // TEMP: refresh until proper events available
     await elementById('StatusConfirmed').waitForDisplayed();
+    await doNavigationClose();
+    await tap('ActivityShort-1')
+    await expectText('Removed From Mempool', {strategy: 'contains'})
   });
 });
