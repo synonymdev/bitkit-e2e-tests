@@ -504,18 +504,19 @@ describe('@settings - Settings', () => {
   });
 
   describe('Dev Settings', () => {
-    ciIt('@settings_13 - Can show Dev Settings', async () => {
+    ciIt('@settings_13 - Can show/hide Dev Settings', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
-      await elementById('DevSettings').waitForDisplayed({ reverse: true });
-
-      await multiTap('DevOptions', 5);
+      await elementById('DevSettings').waitForDisplayed();
       await tap('DevSettings');
       await sleep(1000);
       await tap('NavigationBack');
 
       await multiTap('DevOptions', 5);
       await elementById('DevSettings').waitForDisplayed({ reverse: true });
+
+      await multiTap('DevOptions', 5);
+      await elementById('DevSettings').waitForDisplayed();
     });
   });
 
