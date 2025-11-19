@@ -457,7 +457,7 @@ describe('@settings - Settings', () => {
       await sleep(1000);
 
       // add slash at the end
-      const rgsUrl = await (await elementById('RGSUrl')).getText();
+      const rgsUrl = await (await elementById('ConnectedUrl')).getText();
       console.info({ rgsUrl });
       const newUrl = `${rgsUrl}/`;
 
