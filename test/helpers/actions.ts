@@ -406,7 +406,7 @@ export async function confirmInputOnKeyboard() {
     } catch {}
   } else {
     for (const el of ['return', 'done', 'go']) {
-    try {
+      try {
         const elem = await elementByText(el);
         await elem.waitForDisplayed({ timeout: 2000 });
         await elem.click();
@@ -562,7 +562,7 @@ export async function restoreWallet(
 type addressType = 'bitcoin' | 'lightning';
 export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise<string> {
   await tap('Receive');
-  await sleep(500); 
+  await sleep(500);
   return getAddressFromQRCode(which);
 }
 

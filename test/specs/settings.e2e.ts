@@ -32,9 +32,9 @@ describe('@settings - Settings', () => {
   });
 
   describe('General', () => {
-    ciIt('@settings_1 - Can switch local currency', async () => {
+    ciIt('@settings_01 - Can switch local currency', async () => {
       // switch to local currency
-      const fiatSymbol = await elementByIdWithin('TotalBalance-primary','MoneyFiatSymbol');
+      const fiatSymbol = await elementByIdWithin('TotalBalance-primary', 'MoneyFiatSymbol');
       try {
         await tap('TotalBalance');
         await expect(fiatSymbol).toHaveText('$');
@@ -71,14 +71,14 @@ describe('@settings - Settings', () => {
       await doNavigationClose();
     });
 
-    ciIt('@settings_2 - Can switch Bitcoin Unit', async () => {
-      const fiatSymbol = await elementByIdWithin('TotalBalance-primary','MoneyFiatSymbol');
-      const balance = await elementByIdWithin('TotalBalance-primary','MoneyText');
-      
+    ciIt('@settings_02 - Can switch Bitcoin Unit', async () => {
+      const fiatSymbol = await elementByIdWithin('TotalBalance-primary', 'MoneyFiatSymbol');
+      const balance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
+
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('GeneralSettings');
-      
+
       // switch to USD
       await tap('UnitSettings');
       await tap('USD');
@@ -113,7 +113,7 @@ describe('@settings - Settings', () => {
       await expect(balance).toHaveText('0.00000000');
     });
 
-    ciIt('@settings_3 - Can switch transaction speed', async () => {
+    ciIt('@settings_03 - Can switch transaction speed', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('GeneralSettings');
@@ -121,27 +121,29 @@ describe('@settings - Settings', () => {
       // switch to Fast
       await tap('TransactionSpeedSettings');
       await tap('fast');
-      await expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText('Fast');
+      await expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText(
+        /.*Fast/
+      );
 
       // switch to Custom
       await tap('TransactionSpeedSettings');
       await tap('custom');
-      (await elementByIdWithin('CustomFee', 'N1')).click();
+      await tap('N1');
       await tap('Continue');
       await tap('NavigationBack');
       await expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText(
-        'Custom'
+        /.*Custom/
       );
 
       // switch back to Normal
       await tap('TransactionSpeedSettings');
       await tap('normal');
       await expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText(
-        'Normal'
+        /.*Normal/
       );
     });
 
-    ciIt('@settings_4 - Can remove last used tags', async () => {
+    ciIt('@settings_04 - Can remove last used tags', async () => {
       // no tags, menu entry should be hidden
       await tap('HeaderMenu');
       await tap('DrawerSettings');
@@ -181,7 +183,7 @@ describe('@settings - Settings', () => {
       (await elementByText(tag)).waitForDisplayed({ reverse: true });
     });
 
-    ciIt('@settings_5 - Can show About screen', async () => {
+    ciIt('@settings_05 - Can show About screen', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('About');
@@ -190,7 +192,7 @@ describe('@settings - Settings', () => {
   });
 
   describe('Security and Privacy', () => {
-    ciIt('@settings_6 - Can swipe to hide balance', async () => {
+    ciIt('@settings_06 - Can swipe to hide balance', async () => {
       // test plan:
       // - swipe to hide balance
       // - disable 'swipe to hide balance'
@@ -237,14 +239,14 @@ describe('@settings - Settings', () => {
 
       // Restart the app
       await sleep(3000);
-      await launchFreshApp();
+      await launchFreshApp({ tryHandleAlert: driver.isAndroid });
       // Balance should be hidden
       await elementById('ShowBalance').waitForDisplayed();
     });
   });
 
   describe('Backup or restore', () => {
-    ciIt('@settings_7 - Can show backup and validate it', async () => {
+    ciIt('@settings_07 - Can show backup and validate it', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('BackupSettings');
@@ -285,7 +287,7 @@ describe('@settings - Settings', () => {
 
   describe('Advanced', () => {
     // not available in ldk-node
-    ciIt.skip('@settings_8 - Can switch address types', async () => {
+    ciIt.skip('@settings_08 - Can switch address types', async () => {
       // wallet be in regtest mode by default
       // at first check if it is Native segwit by default
       const address = await getReceiveAddress();
@@ -322,7 +324,7 @@ describe('@settings - Settings', () => {
       await sleep(1000);
     });
 
-    ciIt('@settings_9 - Can open LN settings screens', async () => {
+    ciIt('@settings_09 - Can open LN settings screens', async () => {
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       // LDKDebug, CopyNodeId, RefreshLDK, RestartLDK and RebroadcastLDKTXS N/A in DevSettings
@@ -455,7 +457,7 @@ describe('@settings - Settings', () => {
       await sleep(1000);
 
       // add slash at the end
-      const rgsUrl = await (await elementById('RGSUrl')).getText();
+      const rgsUrl = await (await elementById('ConnectedUrl')).getText();
       console.info({ rgsUrl });
       const newUrl = `${rgsUrl}/`;
 
