@@ -79,6 +79,7 @@ describe('@boost - Boost', () => {
     await elementById('ActivityShort-0').waitForDisplayed();
 
     // no additional boost tx item on iOS, there is one on Android
+    // https://github.com/synonymdev/bitkit-android/issues/463
     const showsBoostTxItem = driver.isAndroid;
     if (showsBoostTxItem) {
       await expect(elementById('ActivityShort-1')).toBeDisplayed();
@@ -269,11 +270,15 @@ describe('@boost - Boost', () => {
 
     // check activity after restore
     await swipeFullScreen('up');
-    await elementById('BoostingIcon').waitForDisplayed();
-    await elementById('ActivityShort-0').waitForDisplayed();
+    (await elementByIdWithin('ActivityShort-0','BoostingIcon')).waitForDisplayed();
+    (await elementByIdWithin('ActivityShort-1','BoostingIcon')).waitForDisplayed();
     await tap('ActivityShort-0');
     await elementById('BoostedButton').waitForDisplayed();
     await elementById('StatusBoosting').waitForDisplayed();
+    await doNavigationClose();
+    await tap('ActivityShort-1');
+    await elementById('BoostedButton').waitForDisplayed();
+    await elementById('StatusRemoved').waitForDisplayed();
 
     // mine new block
     await mineBlocks(rpc, 1);
@@ -286,11 +291,11 @@ describe('@boost - Boost', () => {
     await attemptRefreshOnHomeScreen();
     await swipeFullScreen('up');
     // TEMP: refresh until proper events available
-    await expect(elementById('BoostingIcon')).not.toBeDisplayed();
     await elementById('ActivityShort-0').waitForDisplayed();
     await tap('ActivityShort-0');
     await elementById('StatusConfirmed').waitForDisplayed();
     await doNavigationClose();
+    (await elementByIdWithin('ActivityShort-1', 'BoostingIcon')).waitForDisplayed();
     await tap('ActivityShort-1')
     await elementById('StatusRemoved').waitForDisplayed();
   });
