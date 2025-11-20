@@ -159,8 +159,6 @@ describe('@security - Security And Privacy', () => {
     await multiTap('N7', PIN_LENGTH); // wrong PIN on the last attempt
     await sleep(1000);
     // app should reset itself and show onboarding
-    await elementById('TOS').waitForDisplayed();
-    await elementById('Check1').waitForDisplayed();
-    await elementById('Check2').waitForDisplayed();
+    await elementById('Continue').waitForDisplayed();
   });
 });
