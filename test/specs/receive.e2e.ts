@@ -75,11 +75,7 @@ describe('@receive - Receive', () => {
     await tap('SpecifyInvoiceButton');
     await expectText('123');
     await expectTextWithin('ReceiveNote', note);
-    // tags not shown on iOS
-    // https://github.com/synonymdev/bitkit-ios/issues/197
-    if (driver.isAndroid) {
-      await expectText(tag);
-    }
+    await expectText(tag);
 
     // Close & reopen
     await swipeFullScreen('down');
@@ -94,15 +90,11 @@ describe('@receive - Receive', () => {
     await expectTextWithin('ReceiveNote', note, { visible: false });
     await expectText(tag, { visible: false });
 
-    // tags not shown on iOS
-    // https://github.com/synonymdev/bitkit-ios/issues/197
-    if (driver.isAndroid) {
-      // check previous tags & delete
-      await tap('TagsAdd');
-      await tap(`Tag-${tag}`);
-      await expectText(tag);
-      await tap(`Tag-${tag}-delete`);
-      await expectText(tag, { visible: false });
-    }
+    // check previous tags & delete
+    await tap('TagsAdd');
+    await tap(`Tag-${tag}`);
+    await expectText(tag);
+    await tap(`Tag-${tag}-delete`);
+    await expectText(tag, { visible: false });
   });
 });
