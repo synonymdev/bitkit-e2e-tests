@@ -61,7 +61,7 @@ describe('@security - Security And Privacy', () => {
     await tap('DrawerSettings');
     await tap('SecuritySettings');
     await tap('PINCode');
-    await tap('SecureWallet-button-continue');
+    await tap('SecureWalletContinue');
     await multiTap('N1', PIN_LENGTH); // enter PIN
     await multiTap('N2', PIN_LENGTH); // retype wrong PIN
     await elementById('WrongPIN').waitForDisplayed(); // WrongPIN warning should appear
@@ -136,7 +136,7 @@ describe('@security - Security And Privacy', () => {
     await tap('DrawerSettings');
     await tap('SecuritySettings');
     await tap('PINCode');
-    await tap('SecureWallet-button-continue');
+    await tap('SecureWalletContinue');
     await multiTap('N1', PIN_LENGTH); // enter PIN
     await multiTap('N1', PIN_LENGTH); // retype PIN
     await tap('SkipButton'); // skip Biometrics for now
