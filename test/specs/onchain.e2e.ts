@@ -132,8 +132,8 @@ describe('@onchain - Onchain', () => {
       // await elementById('ReceivedTransaction').waitForDisplayed();
 
       if (i === 1) {
-        await dismissBackupTimedSheet();
-        await acknowledgeHighBalanceWarning();
+        await dismissBackupTimedSheet({ triggerTimedSheet: driver.isIOS });
+        await acknowledgeHighBalanceWarning({ triggerTimedSheet: driver.isIOS });
       }
       await sleep(1000); // wait for the app to settle
 

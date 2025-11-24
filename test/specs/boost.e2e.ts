@@ -270,8 +270,8 @@ describe('@boost - Boost', () => {
 
     // check activity after restore
     await swipeFullScreen('up');
-    (await elementByIdWithin('ActivityShort-0','BoostingIcon')).waitForDisplayed();
-    (await elementByIdWithin('ActivityShort-1','BoostingIcon')).waitForDisplayed();
+    (await elementByIdWithin('ActivityShort-0', 'BoostingIcon')).waitForDisplayed();
+    (await elementByIdWithin('ActivityShort-1', 'BoostingIcon')).waitForDisplayed();
     await tap('ActivityShort-0');
     await elementById('BoostedButton').waitForDisplayed();
     await elementById('StatusBoosting').waitForDisplayed();
@@ -296,7 +296,7 @@ describe('@boost - Boost', () => {
     await elementById('StatusConfirmed').waitForDisplayed();
     await doNavigationClose();
     (await elementByIdWithin('ActivityShort-1', 'BoostingIcon')).waitForDisplayed();
-    await tap('ActivityShort-1')
+    await tap('ActivityShort-1');
     await elementById('StatusRemoved').waitForDisplayed();
   });
 });
