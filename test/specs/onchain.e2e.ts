@@ -239,6 +239,8 @@ describe('@onchain - Onchain', () => {
     await elementById('CalendarApplyButton').waitForDisplayed();
     await sleep(1000);
     await tap('CalendarClearButton');
+    await sleep(500);
+    await swipeFullScreen('down'); // hide calendar
     await elementById('Activity-1').waitForDisplayed();
     await elementById('Activity-2').waitForDisplayed();
     await elementById('Activity-3').waitForDisplayed();

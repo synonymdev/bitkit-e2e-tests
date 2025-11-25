@@ -17,6 +17,9 @@ import {
   mineBlocks,
   attemptRefreshOnHomeScreen,
   doNavigationClose,
+  getSeed,
+  waitForBackup,
+  restoreWallet,
 } from '../helpers/actions';
 import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
@@ -120,16 +123,10 @@ describe('@boost - Boost', () => {
       await doNavigationClose();
     }
 
-    // --- skip due to: https://github.com/synonymdev/bitkit-android/issues/321 --- //
-
-    // boost & transfers backup not working yet
-    // // wipe & restore
-    // const seed = await getSeed();
-    // // await waitForBackup();
-    // await sleep(10_000); //temp wait (until we have a proper event for backup completion)
-    // await restoreWallet(seed);
-
-    // --- skip due to: https://github.com/synonymdev/bitkit-android/issues/321 --- //
+    // wipe & restore
+    const seed = await getSeed();
+    await waitForBackup();
+    await restoreWallet(seed);
 
     // check activity after restore
     await swipeFullScreen('up');
@@ -257,16 +254,10 @@ describe('@boost - Boost', () => {
     await elementById('RBFBoosted').waitForDisplayed();
     await doNavigationClose();
 
-    // --- skip due to: https://github.com/synonymdev/bitkit-android/issues/321 --- //
-
-    // boost & transfers backup not working yet
-    // // wipe & restore
-    // const seed = await getSeed();
-    // // await waitForBackup();
-    // await sleep(10_000); //temp wait (until we have a proper event for backup completion)
-    // await restoreWallet(seed);
-
-    // --- skip due to: https://github.com/synonymdev/bitkit-android/issues/321 --- //
+    // wipe & restore
+    const seed = await getSeed();
+    await waitForBackup();
+    await restoreWallet(seed);
 
     // check activity after restore
     await swipeFullScreen('up');
