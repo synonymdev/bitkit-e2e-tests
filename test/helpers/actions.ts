@@ -832,8 +832,7 @@ export async function waitForBackup() {
   await tap('HeaderMenu');
   await tap('DrawerSettings');
   await tap('BackupSettings');
-  const allSynced = await elementById('AllSynced');
-  await allSynced.waitForDisplayed();
+  await elementById('AllSynced').waitForDisplayed();
   await doNavigationClose();
 }
 

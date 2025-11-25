@@ -16,6 +16,7 @@ import {
   sleep,
   tap,
   typeText,
+  waitForBackup,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
 
@@ -66,9 +67,11 @@ describe('@backup - Backup', () => {
     await typeText('TagInput', tag);
     await tap('ActivityTagsSubmit');
     // workaround for Android keyboard not hiding (only in emulator)
-    await confirmInputOnKeyboard();
+    if (driver.isAndroid) {
+      await confirmInputOnKeyboard();
+    }
     await sleep(200);
-    await doNavigationClose();
+    await tap('NavigationBack');
     await tap('NavigationBack');
 
     // - change settings (currency to GBP) //
@@ -82,6 +85,7 @@ describe('@backup - Backup', () => {
     await doNavigationClose();
 
     // - add widgets (add PriceWidget) //
+    await sleep(1000); // wait for the app to settle
     await deleteAllDefaultWidgets();
     await tap('WidgetsAdd');
     await tap('WidgetsOnboarding-button');
@@ -99,8 +103,7 @@ describe('@backup - Backup', () => {
 
     // - backup seed and restore wallet //
     const seed = await getSeed();
-    // await waitForBackup();
-    await sleep(10_000); //temp wait (until we have a proper event for backup completion)
+    await waitForBackup();
     await restoreWallet(seed);
 
     // - check if everything was restored
@@ -111,12 +114,9 @@ describe('@backup - Backup', () => {
     // check widget
     await elementById('PriceWidget').waitForDisplayed();
     // check metadata
-
-    // data backup not fully functional yet
-    // https://github.com/synonymdev/bitkit-android/issues/321
-    // await tap('ActivitySavings');
-    // await tap('Activity-1');
-    // const tagElement = await elementById('Tag-${tag}');
-    // await tagElement.waitForDisplayed();
+    await tap('ActivitySavings');
+    await tap('Activity-1');
+    const tagElement = await elementById(`Tag-${tag}-delete`);
+    await tagElement.waitForDisplayed();
   });
 });
