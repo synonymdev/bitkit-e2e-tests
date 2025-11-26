@@ -23,6 +23,7 @@ import {
   elementByText,
   dismissQuickPayIntro,
   doNavigationClose,
+  acceptReceivedPayment,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
@@ -273,9 +274,7 @@ describe('@lightning - Lightning', () => {
 
     await mineBlocks(rpc, 6);
     await electrum?.waitForSync();
-    // https://github.com/synonymdev/bitkit-android/issues/268
-    // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
-    // await elementById('ReceivedTransaction').waitForDisplayed();
+    await acceptReceivedPayment();
     await elementById('Channel').waitForDisplayed({ reverse: true });
     await tap('NavigationBack');
     await doNavigationClose();
