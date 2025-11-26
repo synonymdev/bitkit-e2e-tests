@@ -630,6 +630,12 @@ export async function mineBlocks(rpc: BitcoinJsonRpc, blocks: number = 1) {
   }
 }
 
+export async function acceptReceivedPayment() {
+  await elementById('ReceivedTransaction').waitForDisplayed();
+  await tap('ReceivedTransactionButton');
+  await sleep(300);
+}
+
 export async function receiveOnchainFunds(
   rpc: BitcoinJsonRpc,
   {
@@ -651,11 +657,11 @@ export async function receiveOnchainFunds(
   const address = await getReceiveAddress();
   await swipeFullScreen('down');
   await rpc.sendToAddress(address, btc);
-  await mineBlocks(rpc, blocksToMine);
 
-  // https://github.com/synonymdev/bitkit-android/issues/268
-  // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
-  // await elementById('ReceivedTransaction').waitForDisplayed();
+  await acceptReceivedPayment();
+
+  await mineBlocks(rpc, blocksToMine);
+  await expectText('Payment Confirmed');
 
   if (driver.isAndroid) {
     await dismissBackupTimedSheet();
