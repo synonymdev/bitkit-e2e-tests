@@ -130,7 +130,7 @@ describe('@onchain - Onchain', () => {
 
       await mineBlocks(rpc, 1);
       await electrum?.waitForSync();
-      await expectText('Payment Confirmed');
+      await elementById('PaymentConfirmedToast').waitForDisplayed();
 
       if (i === 1 && driver.isAndroid) {
         await dismissBackupTimedSheet();

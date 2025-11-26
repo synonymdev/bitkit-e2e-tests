@@ -657,7 +657,9 @@ export async function receiveOnchainFunds(
   await acceptReceivedPayment();
 
   await mineBlocks(rpc, blocksToMine);
-  await expectText('Payment Confirmed');
+  if (blocksToMine > 0) {
+    await elementById('PaymentConfirmedToast').waitForDisplayed();
+  }
 
   if (driver.isAndroid) {
     await dismissBackupTimedSheet();
