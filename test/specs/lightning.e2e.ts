@@ -23,7 +23,7 @@ import {
   elementByText,
   dismissQuickPayIntro,
   doNavigationClose,
-  acceptReceivedPayment,
+  acknowledgeReceivedPayment,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
@@ -274,7 +274,7 @@ describe('@lightning - Lightning', () => {
 
     await mineBlocks(rpc, 6);
     await electrum?.waitForSync();
-    await acceptReceivedPayment();
+    await acknowledgeReceivedPayment();
     await elementById('Channel').waitForDisplayed({ reverse: true });
     await tap('NavigationBack');
     await doNavigationClose();

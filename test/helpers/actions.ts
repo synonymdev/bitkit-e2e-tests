@@ -630,12 +630,6 @@ export async function mineBlocks(rpc: BitcoinJsonRpc, blocks: number = 1) {
   }
 }
 
-export async function acceptReceivedPayment() {
-  await elementById('ReceivedTransaction').waitForDisplayed();
-  await tap('ReceivedTransactionButton');
-  await sleep(300);
-}
-
 export async function receiveOnchainFunds(
   rpc: BitcoinJsonRpc,
   {
@@ -658,7 +652,7 @@ export async function receiveOnchainFunds(
   await swipeFullScreen('down');
   await rpc.sendToAddress(address, btc);
 
-  await acceptReceivedPayment();
+  await acknowledgeReceivedPayment();
 
   await mineBlocks(rpc, blocksToMine);
   if (blocksToMine > 0) {
@@ -681,6 +675,14 @@ export async function receiveOnchainFunds(
       await acknowledgeHighBalanceWarning({ triggerTimedSheet: true });
     }
   }
+}
+
+/** Acknowledges the received payment notification by tapping the button.
+ */
+export async function acknowledgeReceivedPayment() {
+  await elementById('ReceivedTransaction').waitForDisplayed();
+  await tap('ReceivedTransactionButton');
+  await sleep(300);
 }
 
 /**

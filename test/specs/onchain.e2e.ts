@@ -24,7 +24,7 @@ import {
   dismissBackupTimedSheet,
   handleOver50PercentAlert,
   handleOver100Alert,
-  acceptReceivedPayment,
+  acknowledgeReceivedPayment,
   expectText,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
@@ -126,7 +126,7 @@ describe('@onchain - Onchain', () => {
       await swipeFullScreen('down');
 
       await rpc.sendToAddress(address, '1');
-      await acceptReceivedPayment();
+      await acknowledgeReceivedPayment();
 
       await mineBlocks(rpc, 1);
       await electrum?.waitForSync();
