@@ -24,6 +24,8 @@ import {
   dismissBackupTimedSheet,
   handleOver50PercentAlert,
   handleOver100Alert,
+  acceptReceivedPayment,
+  expectText,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
 
@@ -124,12 +126,11 @@ describe('@onchain - Onchain', () => {
       await swipeFullScreen('down');
 
       await rpc.sendToAddress(address, '1');
+      await acceptReceivedPayment();
+
       await mineBlocks(rpc, 1);
       await electrum?.waitForSync();
-
-      // https://github.com/synonymdev/bitkit-android/issues/268
-      // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
-      // await elementById('ReceivedTransaction').waitForDisplayed();
+      await expectText('Payment Confirmed');
 
       if (i === 1 && driver.isAndroid) {
         await dismissBackupTimedSheet();
