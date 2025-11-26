@@ -433,12 +433,8 @@ export async function acceptAppNotificationAlert(
 }
 
 export async function doNavigationClose() {
-  if (driver.isAndroid) {
-    await tap('NavigationClose');
-  } else {
-    await tap('HeaderMenu');
-    await tap('DrawerWallet');
-  }
+  await tap('HeaderMenu');
+  await tap('DrawerWallet');
 }
 
 export async function getSeed(): Promise<string> {
