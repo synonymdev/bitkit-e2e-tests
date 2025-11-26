@@ -131,9 +131,9 @@ describe('@onchain - Onchain', () => {
       // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
       // await elementById('ReceivedTransaction').waitForDisplayed();
 
-      if (i === 1) {
-        await dismissBackupTimedSheet({ triggerTimedSheet: driver.isIOS });
-        await acknowledgeHighBalanceWarning({ triggerTimedSheet: driver.isIOS });
+      if (i === 1 && driver.isAndroid) {
+        await dismissBackupTimedSheet();
+        await acknowledgeHighBalanceWarning();
       }
       await sleep(1000); // wait for the app to settle
 
@@ -141,6 +141,11 @@ describe('@onchain - Onchain', () => {
       const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
       const expected = `${i}00 000 000`;
       await expect(totalBalance).toHaveText(expected);
+
+      if (i === 1 && driver.isIOS) {
+        await dismissBackupTimedSheet({ triggerTimedSheet: true });
+        await acknowledgeHighBalanceWarning({ triggerTimedSheet: true });
+      }
     }
 
     // - can send total balance and tag the tx //
