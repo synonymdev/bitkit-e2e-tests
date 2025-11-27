@@ -148,12 +148,6 @@ describe('@boost - Boost', () => {
     await doNavigationClose();
     await sleep(500);
 
-    // TEMP: refresh until proper events available
-    await swipeFullScreen('down');
-    await attemptRefreshOnHomeScreen();
-    await swipeFullScreen('up');
-    // TEMP: refresh until proper events available
-    
     // check activity item after mine
     await elementById('ActivityShort-0').waitForDisplayed();
     if (showsBoostTxItem) {
@@ -279,13 +273,6 @@ describe('@boost - Boost', () => {
     await doNavigationClose();
     await sleep(500);
 
-    if (driver.isAndroid) {
-      // TEMP: refresh until proper events available
-      await swipeFullScreen('down');
-      await attemptRefreshOnHomeScreen();
-      await swipeFullScreen('up');
-      // TEMP: refresh until proper events available
-    }
     // check activity item after mine
     await elementById('ActivityShort-0').waitForDisplayed();
     await tap('ActivityShort-0');
