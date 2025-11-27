@@ -652,7 +652,7 @@ export async function receiveOnchainFunds(
 
   await mineBlocks(rpc, blocksToMine);
   if (blocksToMine > 0) {
-    await elementById('PaymentConfirmedToast').waitForDisplayed();
+    await waitForToast('PaymentConfirmedToast');
   }
 
   if (driver.isAndroid) {
@@ -671,6 +671,19 @@ export async function receiveOnchainFunds(
       await acknowledgeHighBalanceWarning({ triggerTimedSheet: true });
     }
   }
+}
+
+type ToastId =
+  | 'PaymentConfirmedToast'
+  | 'PaymentFailedToast'
+  | 'TransactionConfirmedToast'
+  | 'ReceivedTransactionReplacedToast'
+  | 'TransactionReplacedToast'
+  | 'TransactionUnconfirmedToast'
+  | 'TransactionRemovedToast';
+
+export async function waitForToast(toastId: ToastId) {
+  await elementById(toastId).waitForDisplayed();
 }
 
 /** Acknowledges the received payment notification by tapping the button.
