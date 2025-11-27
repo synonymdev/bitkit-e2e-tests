@@ -227,11 +227,10 @@ describe('@boost - Boost', () => {
     await elementById('BoostingIcon').waitForDisplayed();
     await elementById('ActivityShort-0').waitForDisplayed();
     await elementById('ActivityShort-1').waitForDisplayed();
-    await elementById('ActivityShort-2').waitForDisplayed();
+    await expect(elementById('ActivityShort-2')).not.toBeDisplayed();
     await expectTextWithin('ActivityShort-0', '-');
-    await expectTextWithin('ActivityShort-1', '-');
-    await expectTextWithin('ActivityShort-2', '100 000');
-    await expectTextWithin('ActivityShort-2', '+');
+    await expectTextWithin('ActivityShort-1', '100 000');
+    await expectTextWithin('ActivityShort-1', '+');
 
     // new tx
     await tap('ActivityShort-0');
@@ -256,13 +255,10 @@ describe('@boost - Boost', () => {
     // check activity after restore
     await swipeFullScreen('up');
     (await elementByIdWithin('ActivityShort-0', 'BoostingIcon')).waitForDisplayed();
-    (await elementByIdWithin('ActivityShort-1', 'BoostingIcon')).waitForDisplayed();
     await tap('ActivityShort-0');
     await elementById('BoostedButton').waitForDisplayed();
     await elementById('StatusBoosting').waitForDisplayed();
     await doNavigationClose();
-    await tap('ActivityShort-1');
-    await elementById('StatusRemoved').waitForDisplayed();
 
     // mine new block
     await mineBlocks(rpc, 1);
@@ -274,8 +270,5 @@ describe('@boost - Boost', () => {
     await tap('ActivityShort-0');
     await elementById('StatusConfirmed').waitForDisplayed();
     await doNavigationClose();
-    (await elementByIdWithin('ActivityShort-1', 'BoostingIcon')).waitForDisplayed();
-    await tap('ActivityShort-1');
-    await elementById('StatusRemoved').waitForDisplayed();
   });
 });
