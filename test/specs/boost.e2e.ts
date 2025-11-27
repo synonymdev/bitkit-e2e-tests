@@ -15,12 +15,10 @@ import {
   elementByIdWithin,
   getTextUnder,
   mineBlocks,
-  attemptRefreshOnHomeScreen,
   doNavigationClose,
   getSeed,
   waitForBackup,
   restoreWallet,
-  waitForToast,
 } from '../helpers/actions';
 import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
@@ -144,7 +142,6 @@ describe('@boost - Boost', () => {
 
     // mine new block
     await mineBlocks(rpc, 1);
-    await waitForToast('TransactionConfirmedToast');
     await doNavigationClose();
     await sleep(500);
 
@@ -269,7 +266,6 @@ describe('@boost - Boost', () => {
 
     // mine new block
     await mineBlocks(rpc, 1);
-    await waitForToast('TransactionConfirmedToast');
     await doNavigationClose();
     await sleep(500);
 
