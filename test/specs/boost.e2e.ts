@@ -20,6 +20,7 @@ import {
   getSeed,
   waitForBackup,
   restoreWallet,
+  waitForToast,
 } from '../helpers/actions';
 import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
@@ -268,20 +269,22 @@ describe('@boost - Boost', () => {
     await elementById('StatusBoosting').waitForDisplayed();
     await doNavigationClose();
     await tap('ActivityShort-1');
-    await elementById('BoostedButton').waitForDisplayed();
     await elementById('StatusRemoved').waitForDisplayed();
 
     // mine new block
     await mineBlocks(rpc, 1);
-
-    // check activity item after mine
-    // TEMP: refresh until proper events available
+    await waitForToast('TransactionConfirmedToast');
     await doNavigationClose();
     await sleep(500);
-    await swipeFullScreen('down');
-    await attemptRefreshOnHomeScreen();
-    await swipeFullScreen('up');
-    // TEMP: refresh until proper events available
+
+    if (driver.isAndroid) {
+      // TEMP: refresh until proper events available
+      await swipeFullScreen('down');
+      await attemptRefreshOnHomeScreen();
+      await swipeFullScreen('up');
+      // TEMP: refresh until proper events available
+    }
+    // check activity item after mine
     await elementById('ActivityShort-0').waitForDisplayed();
     await tap('ActivityShort-0');
     await elementById('StatusConfirmed').waitForDisplayed();

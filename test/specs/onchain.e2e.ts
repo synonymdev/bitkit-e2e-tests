@@ -25,7 +25,7 @@ import {
   handleOver50PercentAlert,
   handleOver100Alert,
   acknowledgeReceivedPayment,
-  expectText,
+  waitForToast,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
 
@@ -130,7 +130,7 @@ describe('@onchain - Onchain', () => {
 
       await mineBlocks(rpc, 1);
       await electrum?.waitForSync();
-      await elementById('PaymentConfirmedToast').waitForDisplayed();
+      await waitForToast('PaymentConfirmedToast');
 
       if (i === 1 && driver.isAndroid) {
         await dismissBackupTimedSheet();
