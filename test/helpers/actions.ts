@@ -678,13 +678,12 @@ export async function receiveOnchainFunds(
 }
 
 type ToastId =
-  | 'PaymentConfirmedToast' // removed
-  | 'TransactionConfirmedToast' //removed
   | 'PaymentFailedToast'
   | 'ReceivedTransactionReplacedToast'
   | 'TransactionReplacedToast'
   | 'TransactionUnconfirmedToast'
   | 'TransactionRemovedToast';
+
 export async function waitForToast(toastId: ToastId) {
   await elementById(toastId).waitForDisplayed();
 }
