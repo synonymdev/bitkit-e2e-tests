@@ -84,7 +84,7 @@ describe('@boost - Boost', () => {
 
     // no additional boost tx item on iOS, there is one on Android
     // https://github.com/synonymdev/bitkit-android/issues/463
-    const showsBoostTxItem = driver.isAndroid;
+    const showsBoostTxItem = driver.isAndroid || driver.isIOS;
     if (showsBoostTxItem) {
       await expect(elementById('ActivityShort-1')).toBeDisplayed();
       await expect(elementById('ActivityShort-2')).not.toBeDisplayed();
@@ -144,19 +144,21 @@ describe('@boost - Boost', () => {
 
     // mine new block
     await mineBlocks(rpc, 1);
-
-    // check activity item after mine
-    // TEMP: refresh until proper events available
+    await waitForToast('TransactionConfirmedToast');
     await doNavigationClose();
     await sleep(500);
+
+    // TEMP: refresh until proper events available
     await swipeFullScreen('down');
     await attemptRefreshOnHomeScreen();
     await swipeFullScreen('up');
+    // TEMP: refresh until proper events available
+    
+    // check activity item after mine
     await elementById('ActivityShort-0').waitForDisplayed();
     if (showsBoostTxItem) {
       await elementById('ActivityShort-1').waitForDisplayed();
     }
-    // TEMP: refresh until proper events available
 
     await tap('ActivityShort-0');
     await elementById('StatusConfirmed').waitForDisplayed();
