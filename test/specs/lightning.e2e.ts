@@ -188,8 +188,10 @@ describe('@lightning - Lightning', () => {
 
     // check activity filters & tags
     await sleep(500); // wait for the app to settle
+    if (driver.isAndroid) {
     await swipeFullScreen('up');
     await swipeFullScreen('up');
+    }
     await tap('ActivityShowAll');
     // All transactions
     await expectTextWithin('Activity-1', '-');
@@ -277,7 +279,9 @@ describe('@lightning - Lightning', () => {
     // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
     // await elementById('ReceivedTransaction').waitForDisplayed();
     await elementById('Channel').waitForDisplayed({ reverse: true });
-    await tap('NavigationBack');
+    if (driver.isAndroid) {
+      await tap('NavigationBack');
+    }
     await doNavigationClose();
 
     await swipeFullScreen('up');
