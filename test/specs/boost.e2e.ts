@@ -79,25 +79,16 @@ describe('@boost - Boost', () => {
     // check Activity
     await elementById('BoostingIcon').waitForDisplayed();
     await elementById('ActivityShort-0').waitForDisplayed();
-
-    // no additional boost tx item on iOS, there is one on Android
-    // https://github.com/synonymdev/bitkit-android/issues/463
-    const showsBoostTxItem = driver.isAndroid || driver.isIOS;
-    if (showsBoostTxItem) {
-      await expect(elementById('ActivityShort-1')).toBeDisplayed();
-      await expect(elementById('ActivityShort-2')).not.toBeDisplayed();
-    } else {
-      await expect(elementById('ActivityShort-1')).not.toBeDisplayed();
-      await expect(elementById('ActivityShort-2')).not.toBeDisplayed();
-    }
+    await elementById('ActivityShort-1').waitForDisplayed();
+    await expect(elementById('ActivityShort-2')).not.toBeDisplayed();
+    await expectTextWithin('ActivityShort-0', '-');
+    await expectTextWithin('ActivityShort-0', 'Boost Fee');
+    await expectTextWithin('ActivityShort-1', '100 000');
+    await expectTextWithin('ActivityShort-1', '+');
 
     // orig tx still there
     await swipeFullScreen('up');
-    if (showsBoostTxItem) {
-      await tap('ActivityShort-1');
-    } else {
-      await tap('ActivityShort-0');
-    }
+    await tap('ActivityShort-1');
     await expectText('100 000', { strategy: 'contains' });
     await elementById('BoostedButton').waitForDisplayed();
     await elementById('StatusBoosting').waitForDisplayed();
@@ -110,17 +101,14 @@ describe('@boost - Boost', () => {
     console.info({ parentTxId });
     await doNavigationClose();
 
-    if (showsBoostTxItem) {
-      // new tx
-      await tap('ActivityShort-0');
-      await tap('ActivityTxDetails');
-      const boostTxId = await getTextUnder('TXID');
-      console.info({ newTxId: boostTxId });
-      await expect(origTxId !== boostTxId).toBe(true);
-      // TODO: not implemented yet
-      // await expect(boostTxId === parentTxId).toBe(true);
-      await doNavigationClose();
-    }
+    // new tx: Boost Fee
+    await tap('ActivityShort-0');
+    await tap('ActivityTxDetails');
+    const boostTxId = await getTextUnder('TXID');
+    console.info({ newTxId: boostTxId });
+    await expect(origTxId !== boostTxId).toBe(true);
+    await expect(boostTxId === parentTxId).toBe(true);
+    await doNavigationClose();
 
     // wipe & restore
     const seed = await getSeed();
@@ -130,13 +118,8 @@ describe('@boost - Boost', () => {
     // check activity after restore
     await swipeFullScreen('up');
     await elementById('BoostingIcon').waitForDisplayed();
-    if (showsBoostTxItem) {
-      await elementById('ActivityShort-1').waitForDisplayed();
-      await tap('ActivityShort-1');
-    } else {
-      await elementById('ActivityShort-0').waitForDisplayed();
-      await tap('ActivityShort-0');
-    }
+    await elementById('ActivityShort-1').waitForDisplayed();
+    await tap('ActivityShort-1');
     await elementById('BoostedButton').waitForDisplayed();
     await elementById('StatusBoosting').waitForDisplayed();
 
@@ -147,17 +130,13 @@ describe('@boost - Boost', () => {
 
     // check activity item after mine
     await elementById('ActivityShort-0').waitForDisplayed();
-    if (showsBoostTxItem) {
-      await elementById('ActivityShort-1').waitForDisplayed();
-    }
+    await elementById('ActivityShort-1').waitForDisplayed();
 
     await tap('ActivityShort-0');
     await elementById('StatusConfirmed').waitForDisplayed();
     await doNavigationClose();
-    if (showsBoostTxItem) {
-      await tap('ActivityShort-1');
-      await elementById('StatusConfirmed').waitForDisplayed();
-    }
+    await tap('ActivityShort-1');
+    await elementById('StatusConfirmed').waitForDisplayed();
   });
 
   ciIt('@boost_2 - Can do RBF', async () => {
