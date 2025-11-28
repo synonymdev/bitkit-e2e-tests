@@ -131,6 +131,7 @@ describe('@lightning - Lightning', () => {
     await tap('ReceiveTagsSubmit');
     await sleep(300);
     await tap('ShowQrReceive');
+    await sleep(500);
     const invoice2 = await getAddressFromQRCode('lightning');
     await swipeFullScreen('down');
     await lnd.sendPaymentSync({ paymentRequest: invoice2 });
