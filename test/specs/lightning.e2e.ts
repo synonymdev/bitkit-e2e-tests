@@ -98,6 +98,7 @@ describe('@lightning - Lightning', () => {
 
     // Toast message
     await expectText('Spending Balance Ready');
+    await expectText('Spending Balance Ready', { visible: false });
 
     // check channel status
     await checkChannelStatus();
@@ -117,6 +118,7 @@ describe('@lightning - Lightning', () => {
 
     // send funds to LDK, 111 sats invoice
     await tap('Receive');
+    await sleep(1000);
     await tap('SpecifyInvoiceButton');
     await tap('ReceiveNumberPadTextField');
     await sleep(100);
@@ -270,12 +272,12 @@ describe('@lightning - Lightning', () => {
     // close channel
     await tap('CloseConnection');
     await tap('CloseConnectionButton');
+    await acknowledgeReceivedPayment();
     await elementByText('Transfer Initiated').waitForDisplayed();
     await elementByText('Transfer Initiated').waitForDisplayed({ reverse: true });
 
     await mineBlocks(rpc, 6);
     await electrum?.waitForSync();
-    await acknowledgeReceivedPayment();
     await elementById('Channel').waitForDisplayed({ reverse: true });
     await tap('NavigationBack');
     await doNavigationClose();
