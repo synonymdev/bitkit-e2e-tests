@@ -87,7 +87,7 @@ describe('@transfer - Transfer', () => {
       await tap('TransferIntro-button');
       await tap('FundTransfer');
       await tap('SpendingIntro-button');
-      await sleep(1000); // let the animation finish
+      await sleep(3000); // let the animation finish
 
       //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/425 ---//
       //// can continue with default client balance (0)
@@ -118,6 +118,7 @@ describe('@transfer - Transfer', () => {
       //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/424 ---//
 
       // can continue with 25% client balance
+      await elementById('SpendingAmountQuarter').waitForEnabled();
       await tap('SpendingAmountQuarter');
       await elementById('SpendingAmountContinue').waitForEnabled();
       await sleep(500);
