@@ -24,6 +24,7 @@ import {
   dismissQuickPayIntro,
   doNavigationClose,
   acknowledgeReceivedPayment,
+  waitForBackup,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
@@ -238,8 +239,7 @@ describe('@lightning - Lightning', () => {
 
     // wipe and restore wallet
     const seed = await getSeed();
-    // await waitForBackup();
-    await sleep(10_000); //temp wait (until we have a proper event for backup completion)
+    await waitForBackup();
     await restoreWallet(seed);
 
     // check balance
@@ -264,6 +264,7 @@ describe('@lightning - Lightning', () => {
     await tap('DrawerSettings');
     await tap('AdvancedSettings');
     await tap('Channels');
+    await sleep(500);
     await tap('Channel');
     await expectTextWithin('TotalSize', '₿ 100 000');
     await swipeFullScreen('up');
