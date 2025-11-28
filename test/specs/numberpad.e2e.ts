@@ -24,6 +24,7 @@ describe('@numberpad - NumberPad', () => {
   describe('Modern denomination', () => {
     ciIt('@numberpad_1 - Receive: Can enter amounts in modern denomination', async () => {
       await tap('Receive');
+      await sleep(700);
       await tap('SpecifyInvoiceButton');
       await tap('ReceiveNumberPadTextField');
       await sleep(700);
@@ -45,6 +46,7 @@ describe('@numberpad - NumberPad', () => {
 
     ciIt('@numberpad_3 - Receive: Can enter amounts in classic denomination', async () => {
       await tap('Receive');
+      await sleep(700);
       await tap('SpecifyInvoiceButton');
       await tap('ReceiveNumberPadTextField');
       await sleep(700);
