@@ -103,6 +103,7 @@ export async function getLDKNodeID(): Promise<string> {
   await elementById('LDKNodeID').waitForDisplayed({ timeout: 60_000 });
   const ldkNodeId = (await elementById('LDKNodeID').getText()).trim();
   console.info({ ldkNodeId });
+  await sleep(500);
   await tap('NavigationBack');
   return ldkNodeId;
 }

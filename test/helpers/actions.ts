@@ -647,11 +647,13 @@ export async function receiveOnchainFunds(
   const address = await getReceiveAddress();
   await swipeFullScreen('down');
   await rpc.sendToAddress(address, btc);
-  await mineBlocks(rpc, blocksToMine);
 
-  // https://github.com/synonymdev/bitkit-android/issues/268
-  // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
-  // await elementById('ReceivedTransaction').waitForDisplayed();
+  await acknowledgeReceivedPayment();
+
+  await mineBlocks(rpc, blocksToMine);
+  // if (blocksToMine > 0) {
+  //   await waitForToast('PaymentConfirmedToast');
+  // }
 
   if (driver.isAndroid) {
     await dismissBackupTimedSheet();
@@ -669,6 +671,25 @@ export async function receiveOnchainFunds(
       await acknowledgeHighBalanceWarning({ triggerTimedSheet: true });
     }
   }
+}
+
+type ToastId =
+  | 'PaymentFailedToast'
+  | 'ReceivedTransactionReplacedToast'
+  | 'TransactionReplacedToast'
+  | 'TransactionUnconfirmedToast'
+  | 'TransactionRemovedToast';
+
+export async function waitForToast(toastId: ToastId) {
+  await elementById(toastId).waitForDisplayed();
+}
+
+/** Acknowledges the received payment notification by tapping the button.
+ */
+export async function acknowledgeReceivedPayment() {
+  await elementById('ReceivedTransaction').waitForDisplayed();
+  await tap('ReceivedTransactionButton');
+  await sleep(300);
 }
 
 /**

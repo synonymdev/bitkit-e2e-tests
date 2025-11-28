@@ -154,6 +154,7 @@ describe('@settings - Settings', () => {
       // open receive tags, add a tag
       const tag = 'test123';
       await tap('Receive');
+      await sleep(700);
       await tap('SpecifyInvoiceButton');
       (await elementByText(tag)).waitForDisplayed({ reverse: true });
 
@@ -177,6 +178,7 @@ describe('@settings - Settings', () => {
 
       // open receive tags, check tags are gone
       await tap('Receive');
+      await sleep(700);
       await tap('SpecifyInvoiceButton');
       (await elementByText(tag)).waitForDisplayed({ reverse: true });
       await tap('TagsAdd');
