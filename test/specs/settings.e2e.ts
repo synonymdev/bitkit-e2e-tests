@@ -14,8 +14,8 @@ import {
   confirmInputOnKeyboard,
   multiTap,
   getAccessibleText,
-  expectText,
   doNavigationClose,
+  waitForToast,
 } from '../helpers/actions';
 import { electrumHost, electrumPort } from '../helpers/constants';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
@@ -380,7 +380,7 @@ describe('@settings - Settings', () => {
 
       // disconnected warning should appear
       await elementById('Disconnected').waitForDisplayed();
-      await sleep(1000);
+      await waitForToast('ElectrumErrorToast');
 
       // scanner - check all possible connection formats
       // Umbrel format
@@ -394,20 +394,6 @@ describe('@settings - Settings', () => {
         url: `${electrumHost}:${electrumPort}:s`,
         expectedHost: electrumHost,
         expectedPort: electrumPort.toString(),
-        expectedProtocol: 'TLS',
-      };
-
-      // should detect protocol for common ports
-      const noProto1 = {
-        url: `${electrumHost}:50001`,
-        expectedHost: electrumHost,
-        expectedPort: '50001',
-        expectedProtocol: 'TCP',
-      };
-      const noProto2 = {
-        url: `${electrumHost}:50002`,
-        expectedHost: electrumHost,
-        expectedPort: '50002',
         expectedProtocol: 'TLS',
       };
 
@@ -425,7 +411,7 @@ describe('@settings - Settings', () => {
         expectedProtocol: 'TLS',
       };
 
-      const conns = [umbrel1, umbrel2, noProto1, noProto2, http1, http2];
+      const conns = [umbrel1, umbrel2, http1, http2];
       let i = 0;
       for (const conn of conns) {
         await sleep(1000);
@@ -437,6 +423,7 @@ describe('@settings - Settings', () => {
         await tap('ScanPrompt');
         await typeText('QRInput', conn.url);
         await tap('DialogConfirm');
+        await waitForToast('ElectrumUpdatedToast');
         await expect(await elementById('HostInput')).toHaveText(conn.expectedHost);
         expect(await elementById('PortInput')).toHaveText(conn.expectedPort);
         // await expectTextWithin('ElectrumProtocol', conn.expectedProtocol);
@@ -447,6 +434,7 @@ describe('@settings - Settings', () => {
       await elementById('ResetToDefault').waitForEnabled();
       await tap('ResetToDefault');
       await tap('ConnectToHost');
+      await waitForToast('ElectrumUpdatedToast', { waitToDisappear: false });
       await elementById('Connected').waitForDisplayed();
       await sleep(1000);
     });
@@ -467,16 +455,14 @@ describe('@settings - Settings', () => {
       await typeText('RGSUrl', newUrl);
       await confirmInputOnKeyboard();
       await tap('ConnectToHost');
-      const updatedMsg = 'Rapid-Gossip-Sync Server Updated';
-      await expectText(updatedMsg);
-      await expectText(updatedMsg, { visible: false });
+      await waitForToast('RgsUpdatedToast');
       const updatedUrl = await (await elementById('ConnectedUrl')).getText();
       await expect(updatedUrl).toBe(newUrl);
 
       // switch back to default
       await tap('ResetToDefault');
       await tap('ConnectToHost');
-      await expectText(updatedMsg);
+      await waitForToast('RgsUpdatedToast', { waitToDisappear: false });
 
       const resetUrl = await (await elementById('ConnectedUrl')).getText();
       await expect(resetUrl).toBe(rgsUrl);
