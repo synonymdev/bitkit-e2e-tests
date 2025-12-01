@@ -16,6 +16,7 @@ import {
   getAccessibleText,
   doNavigationClose,
   waitForToast,
+  ToastId,
 } from '../helpers/actions';
 import { electrumHost, electrumPort } from '../helpers/constants';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
@@ -389,12 +390,14 @@ describe('@settings - Settings', () => {
         expectedHost: electrumHost,
         expectedPort: electrumPort.toString(),
         expectedProtocol: 'TCP',
+        expectedToastMessage: 'ElectrumUpdatedToast',
       };
       const umbrel2 = {
         url: `${electrumHost}:${electrumPort}:s`,
         expectedHost: electrumHost,
         expectedPort: electrumPort.toString(),
         expectedProtocol: 'TLS',
+        expectedToastMessage: driver.isAndroid ? 'ElectrumErrorToast' : 'ElectrumUpdatedToast',
       };
 
       // HTTP URL
@@ -403,17 +406,20 @@ describe('@settings - Settings', () => {
         expectedHost: electrumHost,
         expectedPort: electrumPort.toString(),
         expectedProtocol: 'TCP',
+        expectedToastMessage: 'ElectrumUpdatedToast',
       };
       const http2 = {
         url: `https://${electrumHost}:${electrumPort}`,
         expectedHost: electrumHost,
         expectedPort: electrumPort.toString(),
         expectedProtocol: 'TLS',
+        expectedToastMessage: driver.isAndroid ? 'ElectrumErrorToast' : 'ElectrumUpdatedToast',
       };
 
       const conns = [umbrel1, umbrel2, http1, http2];
       let i = 0;
       for (const conn of conns) {
+        console.info(`Testing Electrum connection format #${i + 1}: ${conn.url}`);
         await sleep(1000);
         await tap('NavigationAction');
         // on the first time we need to accept the notifications permission dialog to use camera
@@ -423,7 +429,7 @@ describe('@settings - Settings', () => {
         await tap('ScanPrompt');
         await typeText('QRInput', conn.url);
         await tap('DialogConfirm');
-        await waitForToast('ElectrumUpdatedToast');
+        await waitForToast(conn.expectedToastMessage as ToastId);
         await expect(await elementById('HostInput')).toHaveText(conn.expectedHost);
         expect(await elementById('PortInput')).toHaveText(conn.expectedPort);
         // await expectTextWithin('ElectrumProtocol', conn.expectedProtocol);
@@ -434,7 +440,9 @@ describe('@settings - Settings', () => {
       await elementById('ResetToDefault').waitForEnabled();
       await tap('ResetToDefault');
       await tap('ConnectToHost');
-      await waitForToast('ElectrumUpdatedToast', { waitToDisappear: false });
+      if (driver.isIOS) {
+        await waitForToast('ElectrumUpdatedToast', { waitToDisappear: false });
+      }
       await elementById('Connected').waitForDisplayed();
       await sleep(1000);
     });

@@ -673,7 +673,7 @@ export async function receiveOnchainFunds(
   }
 }
 
-type ToastId =
+export type ToastId =
   | 'RgsUpdatedToast'
   | 'RgsErrorToast'
   | 'ElectrumErrorToast'
@@ -687,7 +687,7 @@ type ToastId =
 export async function waitForToast(toastId: ToastId, { waitToDisappear = true } = {}) {
   await elementById(toastId).waitForDisplayed();
   if (waitToDisappear) {
-    await elementById(toastId).waitForDisplayed({ reverse: true, timeout: 15_000 });
+    await elementById(toastId).waitForDisplayed({ reverse: true });
   }
 }
 
