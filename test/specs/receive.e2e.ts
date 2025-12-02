@@ -27,19 +27,11 @@ describe('@receive - Receive', () => {
     }
 
     // Onchain/Lightning details
-    if (driver.isIOS) {
-      await tap('ShowDetails');
-    } else {
-      await dragOnElement('ReceiveSlider', 'left', 0.7);
-    }
+    await tap('ShowDetails');
     await elementById('ReceiveScreen').waitForDisplayed();
 
     // ReceiveDetail
-    if (driver.isIOS) {
-      await tap('QRCode');
-    } else {
-      await dragOnElement('ReceiveScreen', 'right', 0.7);
-    }
+    await tap('QRCode');
     await sleep(1000);
     await tap('SpecifyInvoiceButton');
 
