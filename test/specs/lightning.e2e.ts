@@ -25,6 +25,7 @@ import {
   doNavigationClose,
   acknowledgeReceivedPayment,
   waitForBackup,
+  dismissBackgroundPaymentsTimedSheet,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
@@ -112,7 +113,12 @@ describe('@lightning - Lightning', () => {
     await elementById('ReceivedTransaction').waitForDisplayed();
     await tap('ReceivedTransactionButton');
     await sleep(500);
-    await dismissQuickPayIntro();
+    if (driver.isIOS) {
+      await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: driver.isIOS });
+      await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
+    } else {
+      await dismissQuickPayIntro();
+    }
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     await expect(totalBalance).toHaveText('11 000'); // 1k onchain + 10k lightning
     await expectTextWithin('ActivitySpending', '10 000');
@@ -196,6 +202,7 @@ describe('@lightning - Lightning', () => {
     await swipeFullScreen('up');
     await swipeFullScreen('up');
     await tap('ActivityShowAll');
+
     // All transactions
     await expectTextWithin('Activity-1', '-');
     await expectTextWithin('Activity-2', '-');
@@ -280,7 +287,9 @@ describe('@lightning - Lightning', () => {
     await mineBlocks(rpc, 6);
     await electrum?.waitForSync();
     await elementById('Channel').waitForDisplayed({ reverse: true });
-    await tap('NavigationBack');
+    if (driver.isAndroid) {
+      await tap('NavigationBack');
+    }
     await doNavigationClose();
 
     await swipeFullScreen('up');
