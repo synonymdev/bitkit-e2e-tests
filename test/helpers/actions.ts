@@ -673,15 +673,22 @@ export async function receiveOnchainFunds(
   }
 }
 
-type ToastId =
+export type ToastId =
+  | 'RgsUpdatedToast'
+  | 'RgsErrorToast'
+  | 'ElectrumErrorToast'
+  | 'ElectrumUpdatedToast'
   | 'PaymentFailedToast'
   | 'ReceivedTransactionReplacedToast'
   | 'TransactionReplacedToast'
   | 'TransactionUnconfirmedToast'
   | 'TransactionRemovedToast';
 
-export async function waitForToast(toastId: ToastId) {
+export async function waitForToast(toastId: ToastId, { waitToDisappear = true } = {}) {
   await elementById(toastId).waitForDisplayed();
+  if (waitToDisappear) {
+    await elementById(toastId).waitForDisplayed({ reverse: true });
+  }
 }
 
 /** Acknowledges the received payment notification by tapping the button.
