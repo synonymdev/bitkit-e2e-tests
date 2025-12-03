@@ -651,9 +651,6 @@ export async function receiveOnchainFunds(
   await acknowledgeReceivedPayment();
 
   await mineBlocks(rpc, blocksToMine);
-  // if (blocksToMine > 0) {
-  //   await waitForToast('PaymentConfirmedToast');
-  // }
 
   if (driver.isAndroid) {
     await dismissBackupTimedSheet();
@@ -674,6 +671,8 @@ export async function receiveOnchainFunds(
 }
 
 export type ToastId =
+  | 'BalanceUnitSwitchedToast'
+  | 'BalanceHiddenToast'
   | 'RgsUpdatedToast'
   | 'RgsErrorToast'
   | 'ElectrumErrorToast'
@@ -684,10 +683,17 @@ export type ToastId =
   | 'TransactionUnconfirmedToast'
   | 'TransactionRemovedToast';
 
-export async function waitForToast(toastId: ToastId, { waitToDisappear = true } = {}) {
+export async function waitForToast(
+  toastId: ToastId,
+  { waitToDisappear = false, dismiss = true } = {}
+) {
   await elementById(toastId).waitForDisplayed();
   if (waitToDisappear) {
     await elementById(toastId).waitForDisplayed({ reverse: true });
+    return;
+  }
+  if (dismiss) {
+    await dragOnElement(toastId, 'up', 0.2);
   }
 }
 

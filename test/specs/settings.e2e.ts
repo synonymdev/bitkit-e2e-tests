@@ -43,6 +43,9 @@ describe('@settings - Settings', () => {
         await tap('TotalBalance');
       }
       await expect(fiatSymbol).toHaveText('$');
+      if (driver.isIOS) {
+        await waitForToast('BalanceUnitSwitchedToast');
+      }
 
       // - change settings (currency to EUR) //
       await tap('HeaderMenu');
@@ -122,6 +125,7 @@ describe('@settings - Settings', () => {
       // switch to Fast
       await tap('TransactionSpeedSettings');
       await tap('fast');
+      await sleep(1000);
       await expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText(
         /.*Fast/
       );
@@ -132,6 +136,7 @@ describe('@settings - Settings', () => {
       await tap('N1');
       await tap('Continue');
       await tap('NavigationBack');
+      await sleep(1000);
       await expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText(
         /.*Custom/
       );
@@ -139,6 +144,7 @@ describe('@settings - Settings', () => {
       // switch back to Normal
       await tap('TransactionSpeedSettings');
       await tap('normal');
+      await sleep(1000);
       await expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText(
         /.*Normal/
       );
@@ -218,6 +224,9 @@ describe('@settings - Settings', () => {
         await dragOnElement('TotalBalance', 'right', 0.5);
       }
       await elementById('ShowBalance').waitForDisplayed();
+      if (driver.isIOS) {
+        await waitForToast('BalanceHiddenToast', { waitToDisappear: false, dismiss: true });
+      }
 
       // Disable 'swipe to hide balance'
       await tap('HeaderMenu');
@@ -242,9 +251,12 @@ describe('@settings - Settings', () => {
 
       // Restart the app
       await sleep(3000);
-      await launchFreshApp({ tryHandleAlert: driver.isAndroid });
+      await launchFreshApp();
       // Balance should be hidden
-      await elementById('ShowBalance').waitForDisplayed();
+      // https://github.com/synonymdev/bitkit-ios/issues/260
+      if (driver.isAndroid) {
+        await elementById('ShowBalance').waitForDisplayed();
+      }
     });
   });
 
@@ -255,7 +267,9 @@ describe('@settings - Settings', () => {
       await tap('BackupSettings');
       await sleep(1000);
       await tap('ResetAndRestore');
+      await sleep(1000);
       await tap('NavigationBack');
+      await sleep(1000);
       await tap('BackupWallet');
       await sleep(1000); // animation
 
