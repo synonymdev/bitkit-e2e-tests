@@ -264,8 +264,9 @@ describe('@lightning - Lightning', () => {
     await tap('DrawerSettings');
     await tap('AdvancedSettings');
     await tap('Channels');
-    await sleep(500);
+    await sleep(2000);
     await tap('Channel');
+    await sleep(1000);
     await expectTextWithin('TotalSize', '₿ 100 000');
     await swipeFullScreen('up');
     await elementById('IsUsableYes').waitForDisplayed();
@@ -273,7 +274,6 @@ describe('@lightning - Lightning', () => {
     // close channel
     await tap('CloseConnection');
     await tap('CloseConnectionButton');
-    await acknowledgeReceivedPayment();
     await elementByText('Transfer Initiated').waitForDisplayed();
     await elementByText('Transfer Initiated').waitForDisplayed({ reverse: true });
 
