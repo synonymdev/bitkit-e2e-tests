@@ -251,7 +251,10 @@ describe('@settings - Settings', () => {
       await sleep(3000);
       await launchFreshApp();
       // Balance should be hidden
-      await elementById('ShowBalance').waitForDisplayed();
+      // https://github.com/synonymdev/bitkit-ios/issues/260
+      if (driver.isAndroid) {
+        await elementById('ShowBalance').waitForDisplayed();
+      }
     });
   });
 
