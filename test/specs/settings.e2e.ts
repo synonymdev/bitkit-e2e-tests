@@ -125,6 +125,7 @@ describe('@settings - Settings', () => {
       // switch to Fast
       await tap('TransactionSpeedSettings');
       await tap('fast');
+      await sleep(1000);
       await expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText(
         /.*Fast/
       );
@@ -143,6 +144,7 @@ describe('@settings - Settings', () => {
       // switch back to Normal
       await tap('TransactionSpeedSettings');
       await tap('normal');
+      await sleep(1000);
       await expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText(
         /.*Normal/
       );
@@ -265,6 +267,7 @@ describe('@settings - Settings', () => {
       await tap('BackupSettings');
       await sleep(1000);
       await tap('ResetAndRestore');
+      await sleep(1000);
       await tap('NavigationBack');
       await sleep(1000);
       await tap('BackupWallet');
