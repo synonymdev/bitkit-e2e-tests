@@ -23,7 +23,6 @@ import {
   elementByText,
   dismissQuickPayIntro,
   doNavigationClose,
-  acknowledgeReceivedPayment,
   waitForBackup,
   dismissBackgroundPaymentsTimedSheet,
 } from '../helpers/actions';
@@ -112,7 +111,7 @@ describe('@lightning - Lightning', () => {
     console.info({ response });
     await elementById('ReceivedTransaction').waitForDisplayed();
     await tap('ReceivedTransactionButton');
-    await sleep(500);
+    await sleep(1000);
     if (driver.isIOS) {
       await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: driver.isIOS });
       await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });

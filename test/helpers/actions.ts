@@ -715,6 +715,7 @@ export async function acknowledgeReceivedPayment() {
  * await doTriggerTimedSheet();
  */
 export async function doTriggerTimedSheet() {
+  await sleep(700); // wait for any previous animations to finish
   await tap('HeaderMenu');
   await tap('DrawerSettings');
   await sleep(500); // wait for the app to settle
