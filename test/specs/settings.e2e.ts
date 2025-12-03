@@ -43,6 +43,9 @@ describe('@settings - Settings', () => {
         await tap('TotalBalance');
       }
       await expect(fiatSymbol).toHaveText('$');
+      if (driver.isIOS) {
+        await waitForToast('BalanceUnitSwitchedToast');
+      }
 
       // - change settings (currency to EUR) //
       await tap('HeaderMenu');
@@ -132,6 +135,7 @@ describe('@settings - Settings', () => {
       await tap('N1');
       await tap('Continue');
       await tap('NavigationBack');
+      await sleep(1000);
       await expect(await elementByIdWithin('TransactionSpeedSettings', 'Value')).toHaveText(
         /.*Custom/
       );
@@ -245,7 +249,7 @@ describe('@settings - Settings', () => {
 
       // Restart the app
       await sleep(3000);
-      await launchFreshApp({ tryHandleAlert: driver.isAndroid });
+      await launchFreshApp();
       // Balance should be hidden
       await elementById('ShowBalance').waitForDisplayed();
     });
@@ -259,6 +263,7 @@ describe('@settings - Settings', () => {
       await sleep(1000);
       await tap('ResetAndRestore');
       await tap('NavigationBack');
+      await sleep(1000);
       await tap('BackupWallet');
       await sleep(1000); // animation
 
