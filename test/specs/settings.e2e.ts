@@ -218,6 +218,9 @@ describe('@settings - Settings', () => {
         await dragOnElement('TotalBalance', 'right', 0.5);
       }
       await elementById('ShowBalance').waitForDisplayed();
+      if (driver.isIOS) {
+        await waitForToast('BalanceHiddenToast', { waitToDisappear: false, dismiss: true });
+      }
 
       // Disable 'swipe to hide balance'
       await tap('HeaderMenu');
