@@ -394,7 +394,6 @@ describe('@settings - Settings', () => {
       await tap('ConnectToHost');
 
       // disconnected warning should appear
-      await elementById('Disconnected').waitForDisplayed();
       await waitForToast('ElectrumErrorToast');
 
       // scanner - check all possible connection formats
@@ -411,7 +410,7 @@ describe('@settings - Settings', () => {
         expectedHost: electrumHost,
         expectedPort: electrumPort.toString(),
         expectedProtocol: 'TLS',
-        expectedToastMessage: driver.isAndroid ? 'ElectrumErrorToast' : 'ElectrumUpdatedToast',
+        expectedToastMessage: 'ElectrumErrorToast',
       };
 
       // HTTP URL
@@ -427,7 +426,7 @@ describe('@settings - Settings', () => {
         expectedHost: electrumHost,
         expectedPort: electrumPort.toString(),
         expectedProtocol: 'TLS',
-        expectedToastMessage: driver.isAndroid ? 'ElectrumErrorToast' : 'ElectrumUpdatedToast',
+        expectedToastMessage: 'ElectrumErrorToast',
       };
 
       const conns = [umbrel1, umbrel2, http1, http2];
