@@ -715,10 +715,23 @@ export async function acknowledgeReceivedPayment() {
  * await doTriggerTimedSheet();
  */
 export async function doTriggerTimedSheet() {
+  await sleep(700); // wait for any previous animations to finish
   await tap('HeaderMenu');
   await tap('DrawerSettings');
   await sleep(500); // wait for the app to settle
   await doNavigationClose();
+}
+
+export async function dismissBackgroundPaymentsTimedSheet({
+  triggerTimedSheet = false,
+}: { triggerTimedSheet?: boolean } = {}) {
+  if (triggerTimedSheet) {
+    await doTriggerTimedSheet();
+  }
+  await elementById('BackgroundPaymentsDescription').waitForDisplayed();
+  await sleep(500); // wait for the app to settle
+  await tap('BackgroundPaymentsCancel');
+  await sleep(500);
 }
 
 /**
@@ -744,7 +757,7 @@ export async function dismissBackupTimedSheet({
   }
   await elementById('BackupIntroViewDescription').waitForDisplayed();
   await sleep(500); // wait for the app to settle
-  await tap('BackupIntroViewCancel');
+  await swipeFullScreen('down');
   await sleep(500);
 }
 
@@ -766,14 +779,22 @@ export async function dismissBackupTimedSheet({
 export async function dismissQuickPayIntro({
   triggerTimedSheet = false,
 }: { triggerTimedSheet?: boolean } = {}) {
-  if (driver.isIOS) return; // Not supported on iOS yet
   if (triggerTimedSheet) {
     await doTriggerTimedSheet();
   }
-  await elementById('QuickpayIntro-button').waitForDisplayed();
-  await sleep(500); // wait for the app to settle
-  await swipeFullScreen('down');
-  await sleep(500);
+
+  if (driver.isAndroid) {
+    // TODO: it's temp, change on Android to match iOS testID
+    await elementById('QuickpayIntro-button').waitForDisplayed();
+    await sleep(500); // wait for the app to settle
+    await swipeFullScreen('down');
+    await sleep(500);
+  } else {
+    await elementById('QuickpayIntroDescription').waitForDisplayed();
+    await sleep(500); // wait for the app to settle
+    await tap('QuickpayIntroCancel');
+    await sleep(500);
+  }
 }
 
 /**
