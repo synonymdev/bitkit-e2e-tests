@@ -23,8 +23,9 @@ import {
   elementByText,
   dismissQuickPayIntro,
   doNavigationClose,
-  waitForBackup,
   dismissBackgroundPaymentsTimedSheet,
+  acknowledgeReceivedPayment,
+  waitForBackup,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
