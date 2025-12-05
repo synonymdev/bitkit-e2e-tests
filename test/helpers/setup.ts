@@ -1,32 +1,13 @@
 import { execSync } from 'node:child_process';
-import { elementsById, sleep, tap } from './actions';
+import { sleep } from './actions';
 import { getAppId, getAppPath } from './constants';
 
-export async function launchFreshApp({ tryHandleAlert = true } = {}) {
+export async function launchFreshApp() {
   const appId = getAppId();
 
   await driver.terminateApp(appId);
   await driver.activateApp(appId);
-  // workaround to get rid of "Bitkit is running in background" alert
-  if (tryHandleAlert) {
-    await sleep(1000);
-    try {
-      await tapBalanceToReset();
-    } catch {
-      await tapBalanceToReset();
-    }
-  }
-  await sleep(500);
-}
-
-async function tapBalanceToReset() {
-  await tap('TotalBalance');
-  const moneyFiatSymbols = await elementsById('MoneyFiatSymbol');
-  moneyFiatSymbols[0].waitForDisplayed();
-  moneyFiatSymbols[1].waitForDisplayed();
-  if ((await moneyFiatSymbols[1].getText()) !== '₿') {
-    await tap('TotalBalance');
-  }
+  await sleep(3000);
 }
 
 /**

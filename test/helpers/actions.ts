@@ -647,11 +647,10 @@ export async function receiveOnchainFunds(
   const address = await getReceiveAddress();
   await swipeFullScreen('down');
   await rpc.sendToAddress(address, btc);
-  await mineBlocks(rpc, blocksToMine);
 
-  // https://github.com/synonymdev/bitkit-android/issues/268
-  // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
-  // await elementById('ReceivedTransaction').waitForDisplayed();
+  await acknowledgeReceivedPayment();
+
+  await mineBlocks(rpc, blocksToMine);
 
   if (driver.isAndroid) {
     await dismissBackupTimedSheet();
@@ -671,6 +670,41 @@ export async function receiveOnchainFunds(
   }
 }
 
+export type ToastId =
+  | 'BalanceUnitSwitchedToast'
+  | 'BalanceHiddenToast'
+  | 'RgsUpdatedToast'
+  | 'RgsErrorToast'
+  | 'ElectrumErrorToast'
+  | 'ElectrumUpdatedToast'
+  | 'PaymentFailedToast'
+  | 'ReceivedTransactionReplacedToast'
+  | 'TransactionReplacedToast'
+  | 'TransactionUnconfirmedToast'
+  | 'TransactionRemovedToast';
+
+export async function waitForToast(
+  toastId: ToastId,
+  { waitToDisappear = false, dismiss = true } = {}
+) {
+  await elementById(toastId).waitForDisplayed();
+  if (waitToDisappear) {
+    await elementById(toastId).waitForDisplayed({ reverse: true });
+    return;
+  }
+  if (dismiss) {
+    await dragOnElement(toastId, 'up', 0.2);
+  }
+}
+
+/** Acknowledges the received payment notification by tapping the button.
+ */
+export async function acknowledgeReceivedPayment() {
+  await elementById('ReceivedTransaction').waitForDisplayed();
+  await tap('ReceivedTransactionButton');
+  await sleep(300);
+}
+
 /**
  * Triggers the timed backup sheet by navigating to settings and back.
  * Since timed sheets are sometimes triggered by user behavior (when user goes back to home screen),
@@ -681,10 +715,23 @@ export async function receiveOnchainFunds(
  * await doTriggerTimedSheet();
  */
 export async function doTriggerTimedSheet() {
+  await sleep(700); // wait for any previous animations to finish
   await tap('HeaderMenu');
   await tap('DrawerSettings');
   await sleep(500); // wait for the app to settle
   await doNavigationClose();
+}
+
+export async function dismissBackgroundPaymentsTimedSheet({
+  triggerTimedSheet = false,
+}: { triggerTimedSheet?: boolean } = {}) {
+  if (triggerTimedSheet) {
+    await doTriggerTimedSheet();
+  }
+  await elementById('BackgroundPaymentsDescription').waitForDisplayed();
+  await sleep(500); // wait for the app to settle
+  await tap('BackgroundPaymentsCancel');
+  await sleep(500);
 }
 
 /**
@@ -710,7 +757,7 @@ export async function dismissBackupTimedSheet({
   }
   await elementById('BackupIntroViewDescription').waitForDisplayed();
   await sleep(500); // wait for the app to settle
-  await tap('BackupIntroViewCancel');
+  await swipeFullScreen('down');
   await sleep(500);
 }
 
@@ -732,14 +779,22 @@ export async function dismissBackupTimedSheet({
 export async function dismissQuickPayIntro({
   triggerTimedSheet = false,
 }: { triggerTimedSheet?: boolean } = {}) {
-  if (driver.isIOS) return; // Not supported on iOS yet
   if (triggerTimedSheet) {
     await doTriggerTimedSheet();
   }
-  await elementById('QuickpayIntro-button').waitForDisplayed();
-  await sleep(500); // wait for the app to settle
-  await swipeFullScreen('down');
-  await sleep(500);
+
+  if (driver.isAndroid) {
+    // TODO: it's temp, change on Android to match iOS testID
+    await elementById('QuickpayIntro-button').waitForDisplayed();
+    await sleep(500); // wait for the app to settle
+    await swipeFullScreen('down');
+    await sleep(500);
+  } else {
+    await elementById('QuickpayIntroDescription').waitForDisplayed();
+    await sleep(500); // wait for the app to settle
+    await tap('QuickpayIntroCancel');
+    await sleep(500);
+  }
 }
 
 /**

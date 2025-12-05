@@ -23,6 +23,9 @@ import {
   elementByText,
   dismissQuickPayIntro,
   doNavigationClose,
+  dismissBackgroundPaymentsTimedSheet,
+  acknowledgeReceivedPayment,
+  waitForBackup,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
@@ -97,6 +100,7 @@ describe('@lightning - Lightning', () => {
 
     // Toast message
     await expectText('Spending Balance Ready');
+    await expectText('Spending Balance Ready', { visible: false });
 
     // check channel status
     await checkChannelStatus();
@@ -108,14 +112,20 @@ describe('@lightning - Lightning', () => {
     console.info({ response });
     await elementById('ReceivedTransaction').waitForDisplayed();
     await tap('ReceivedTransactionButton');
-    await sleep(500);
-    await dismissQuickPayIntro();
+    await sleep(1000);
+    if (driver.isIOS) {
+      await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: driver.isIOS });
+      await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
+    } else {
+      await dismissQuickPayIntro();
+    }
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     await expect(totalBalance).toHaveText('11 000'); // 1k onchain + 10k lightning
     await expectTextWithin('ActivitySpending', '10 000');
 
     // send funds to LDK, 111 sats invoice
     await tap('Receive');
+    await sleep(1000);
     await tap('SpecifyInvoiceButton');
     await tap('ReceiveNumberPadTextField');
     await sleep(100);
@@ -130,6 +140,7 @@ describe('@lightning - Lightning', () => {
     await tap('ReceiveTagsSubmit');
     await sleep(300);
     await tap('ShowQrReceive');
+    await sleep(500);
     const invoice2 = await getAddressFromQRCode('lightning');
     await swipeFullScreen('down');
     await lnd.sendPaymentSync({ paymentRequest: invoice2 });
@@ -191,6 +202,7 @@ describe('@lightning - Lightning', () => {
     await swipeFullScreen('up');
     await swipeFullScreen('up');
     await tap('ActivityShowAll');
+
     // All transactions
     await expectTextWithin('Activity-1', '-');
     await expectTextWithin('Activity-2', '-');
@@ -234,8 +246,7 @@ describe('@lightning - Lightning', () => {
 
     // wipe and restore wallet
     const seed = await getSeed();
-    // await waitForBackup();
-    await sleep(10_000); //temp wait (until we have a proper event for backup completion)
+    await waitForBackup();
     await restoreWallet(seed);
 
     // check balance
@@ -260,7 +271,9 @@ describe('@lightning - Lightning', () => {
     await tap('DrawerSettings');
     await tap('AdvancedSettings');
     await tap('Channels');
+    await sleep(2000);
     await tap('Channel');
+    await sleep(1000);
     await expectTextWithin('TotalSize', '₿ 100 000');
     await swipeFullScreen('up');
     await elementById('IsUsableYes').waitForDisplayed();
@@ -273,11 +286,10 @@ describe('@lightning - Lightning', () => {
 
     await mineBlocks(rpc, 6);
     await electrum?.waitForSync();
-    // https://github.com/synonymdev/bitkit-android/issues/268
-    // send - onchain - receiver sees no confetti — missing-in-ldk-node missing onchain payment event
-    // await elementById('ReceivedTransaction').waitForDisplayed();
     await elementById('Channel').waitForDisplayed({ reverse: true });
-    await tap('NavigationBack');
+    if (driver.isAndroid) {
+      await tap('NavigationBack');
+    }
     await doNavigationClose();
 
     await swipeFullScreen('up');
