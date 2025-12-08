@@ -21,6 +21,8 @@ import {
   expectText,
   dismissQuickPayIntro,
   doNavigationClose,
+  waitForToast,
+  dismissBackgroundPaymentsTimedSheet,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
@@ -128,6 +130,7 @@ describe('@lnurl - LNURL', () => {
 
       const channelRequestPromise = waitForEvent(lnurlServer, 'channelRequest:action');
       await elementById('ConnectButton').waitForDisplayed();
+      // await sleep(100000);
       await tap('ConnectButton');
       await channelRequestPromise;
 
@@ -142,10 +145,14 @@ describe('@lnurl - LNURL', () => {
       await waitForActiveChannel(lnd as any, ldkNodeID);
 
       // Success toast/flow
-      await dismissQuickPayIntro();
+      if (driver.isIOS) await waitForToast('SpendingBalanceReadyToast')
+      if (driver.isAndroid) await dismissQuickPayIntro();
       await elementById('ExternalSuccess').waitForDisplayed({ timeout: 30_000 });
       await tap('ExternalSuccess-button');
-
+      if (driver.isIOS) {
+        await dismissBackgroundPaymentsTimedSheet();
+        await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
+      } 
       await expectTextWithin('ActivitySpending', '20 001');
 
       // lnurl-pay (min != max) with comment

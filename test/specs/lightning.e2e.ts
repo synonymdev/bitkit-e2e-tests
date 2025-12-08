@@ -26,6 +26,7 @@ import {
   dismissBackgroundPaymentsTimedSheet,
   acknowledgeReceivedPayment,
   waitForBackup,
+  waitForToast,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
@@ -99,8 +100,7 @@ describe('@lightning - Lightning', () => {
     await waitForActiveChannel(lnd, ldkNodeId);
 
     // Toast message
-    await expectText('Spending Balance Ready');
-    await expectText('Spending Balance Ready', { visible: false });
+    await waitForToast('SpendingBalanceReadyToast');
 
     // check channel status
     await checkChannelStatus();

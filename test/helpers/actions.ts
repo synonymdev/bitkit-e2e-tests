@@ -671,6 +671,7 @@ export async function receiveOnchainFunds(
 }
 
 export type ToastId =
+  | 'SpendingBalanceReadyToast'
   | 'BalanceUnitSwitchedToast'
   | 'BalanceHiddenToast'
   | 'RgsUpdatedToast'
