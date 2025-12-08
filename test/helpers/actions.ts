@@ -671,6 +671,7 @@ export async function receiveOnchainFunds(
 }
 
 export type ToastId =
+  | 'LnurlPayAmountTooLowToast'
   | 'SpendingBalanceReadyToast'
   | 'BalanceUnitSwitchedToast'
   | 'BalanceHiddenToast'
@@ -792,7 +793,7 @@ export async function dismissQuickPayIntro({
     await sleep(500);
   } else {
     await elementById('QuickpayIntroDescription').waitForDisplayed();
-    await sleep(500); // wait for the app to settle
+    await sleep(1000); // wait for the app to settle
     await tap('QuickpayIntroCancel');
     await sleep(500);
   }

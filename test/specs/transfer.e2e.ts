@@ -332,7 +332,7 @@ describe('@transfer - Transfer', () => {
 
     await mineBlocks(rpc, 6);
     await electrum?.waitForSync();
-    await waitForToast('SpendingBalanceReadyToast');    
+    await waitForToast('SpendingBalanceReadyToast');
     await dismissQuickPayIntro();
     await waitForActiveChannel(lnd, ldkNodeId);
 

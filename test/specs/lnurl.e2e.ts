@@ -145,14 +145,14 @@ describe('@lnurl - LNURL', () => {
       await waitForActiveChannel(lnd as any, ldkNodeID);
 
       // Success toast/flow
-      if (driver.isIOS) await waitForToast('SpendingBalanceReadyToast')
+      if (driver.isIOS) await waitForToast('SpendingBalanceReadyToast');
       if (driver.isAndroid) await dismissQuickPayIntro();
       await elementById('ExternalSuccess').waitForDisplayed({ timeout: 30_000 });
       await tap('ExternalSuccess-button');
       if (driver.isIOS) {
         await dismissBackgroundPaymentsTimedSheet();
         await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
-      } 
+      }
       await expectTextWithin('ActivitySpending', '20 001');
 
       // lnurl-pay (min != max) with comment
@@ -182,7 +182,12 @@ describe('@lnurl - LNURL', () => {
       await multiTap('NRemove', 3); // remove "201"
       await multiTap('N9', 2);
       await expectTextWithin('SendNumberField', '99');
-      await elementById('ContinueAmount').waitForEnabled({ reverse: true });
+      if (driver.isIOS) {
+        await tap('ContinueAmount');
+        await waitForToast('LnurlPayAmountTooLowToast');
+      } else {
+        await elementById('ContinueAmount').waitForEnabled({ reverse: true });
+      }
       await multiTap('NRemove', 2); // remove "99"
       // go with 150
       await tap('N1');
@@ -224,11 +229,24 @@ describe('@lnurl - LNURL', () => {
       });
       console.log('payRequest2', payRequest2);
 
-      await tap('Scan');
-      await tap('ScanPrompt');
-      await typeText('QRInput', payRequest2.encoded);
-      await confirmInputOnKeyboard();
-      await tap('DialogConfirm');
+      try {
+        await tap('Scan');
+        await tap('ScanPrompt');
+        await typeText('QRInput', payRequest2.encoded);
+        await confirmInputOnKeyboard();
+        await tap('DialogConfirm');
+        await sleep(1000);
+        await elementById('ReviewAmount-primary').waitForDisplayed({ timeout: 5000 });
+      } catch {
+        console.warn('ReviewAmount not found, trying again');
+        await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
+        await tap('Scan');
+        await tap('ScanPrompt');
+        await typeText('QRInput', payRequest2.encoded);
+        await confirmInputOnKeyboard();
+        await tap('DialogConfirm');
+        await sleep(1000);
+      }
       // Comment input should not be visible
       await elementById('CommentInput').waitForDisplayed({ reverse: true });
       const reviewAmt = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
@@ -283,11 +301,22 @@ describe('@lnurl - LNURL', () => {
       });
       console.log('withdrawRequest1', withdrawRequest1);
 
-      await tap('Scan');
-      await tap('ScanPrompt');
-      await typeText('QRInput', withdrawRequest1.encoded);
-      await confirmInputOnKeyboard();
-      await tap('DialogConfirm');
+      try {
+        await tap('Scan');
+        await tap('ScanPrompt');
+        await typeText('QRInput', withdrawRequest1.encoded);
+        await confirmInputOnKeyboard();
+        await tap('DialogConfirm');
+        await elementById('SendNumberField').waitForDisplayed({ timeout: 5000 });
+      } catch {
+        console.warn('SendNumberField not found, trying again');
+        await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
+        await tap('Scan');
+        await tap('ScanPrompt');
+        await typeText('QRInput', withdrawRequest1.encoded);
+        await confirmInputOnKeyboard();
+        await tap('DialogConfirm');
+      }
       await expectTextWithin('SendNumberField', '102');
       await tap('ContinueAmount');
       await tap('WithdrawConfirmButton');
