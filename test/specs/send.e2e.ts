@@ -224,7 +224,7 @@ describe('@send - Send', () => {
     const { paymentRequest: invoice1 } = await lnd.addInvoice({});
     console.info({ invoice1 });
     await sleep(1000);
-    await enterAddress(invoice1);
+    await enterAddress(invoice1, { acceptCameraPermission: false });
     await elementById('AssetButton-spending').waitForDisplayed();
     await tap('N2');
     await multiTap('N0', 3);
@@ -242,7 +242,7 @@ describe('@send - Send', () => {
     console.info('Editing invoice on review screen...');
     const { paymentRequest: invoice2 } = await lnd.addInvoice({ value: '2000' });
     console.info({ invoice2 });
-    await enterAddress(invoice2);
+    await enterAddress(invoice2, { acceptCameraPermission: false });
     const reviewAmt = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
     await reviewAmt.waitForDisplayed();
     await expect(reviewAmt).toHaveText('2 000');
@@ -282,7 +282,7 @@ describe('@send - Send', () => {
     });
     console.info({ unified1 });
     await sleep(1000);
-    await enterAddress(unified1);
+    await enterAddress(unified1, { acceptCameraPermission: false });
     await expect(reviewAmt).toHaveText('1 000'); // invoice amount
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('SendSuccess').waitForDisplayed();
@@ -304,7 +304,7 @@ describe('@send - Send', () => {
     });
     console.info({ unified2 });
     await sleep(1000);
-    await enterAddress(unified2);
+    await enterAddress(unified2, { acceptCameraPermission: false });
     // should only allow spending from savings
     await elementById('AssetButton-savings').waitForDisplayed();
     await sleep(500);
@@ -336,7 +336,7 @@ describe('@send - Send', () => {
     // // console.info(JSON.stringify(dec, null, 2));
 
     // await sleep(1000);
-    // await enterAddress(unified3);
+    // await enterAddress(unified3, { acceptCameraPermission: false });
     // await elementById('AssetButton-savings').waitForDisplayed();
     // await tap('N1');
     // await multiTap('N0', 4);
@@ -360,7 +360,7 @@ describe('@send - Send', () => {
     const unified4 = encode(onchainAddress, { lightning: invoice5 });
     console.info({ unified4 });
     await sleep(1000);
-    await enterAddress(unified4);
+    await enterAddress(unified4, { acceptCameraPermission: false });
     // max amount (lightning)
     await expectText('6 000', { strategy: 'contains' }); // current balance 8k - 1k reserve balance
     await tap('AssetButton-switch');
@@ -386,7 +386,7 @@ describe('@send - Send', () => {
     const unified5 = encode(onchainAddress, { lightning: invoice6 });
     console.info({ unified5 });
     await sleep(1000);
-    await enterAddress(unified5);
+    await enterAddress(unified5, { acceptCameraPermission: false });
     // max amount (lightning)
     await tap('AvailableAmount');
     await tap('ContinueAmount');
@@ -428,7 +428,7 @@ describe('@send - Send', () => {
     await doNavigationClose();
 
     await sleep(1000);
-    await enterAddress(invoice7);
+    await enterAddress(invoice7, { acceptCameraPermission: false });
     await elementById('SendSuccess').waitForDisplayed();
     await sleep(500);
     await tap('Close');
@@ -445,7 +445,7 @@ describe('@send - Send', () => {
     });
     console.info({ unified7 });
     await sleep(1000);
-    await enterAddress(unified7);
+    await enterAddress(unified7, { acceptCameraPermission: false });
     await elementById('SendSuccess').waitForDisplayed();
     await sleep(500);
     await tap('Close');
@@ -471,7 +471,7 @@ describe('@send - Send', () => {
     const { paymentRequest: invoice9 } = await lnd.addInvoice({ value: '10000' });
     console.info({ invoice9 });
     await sleep(1000);
-    await enterAddress(invoice9);
+    await enterAddress(invoice9, { acceptCameraPermission: false });
     await elementById('ReviewAmount').waitForDisplayed();
     await swipeFullScreen('down');
   });
