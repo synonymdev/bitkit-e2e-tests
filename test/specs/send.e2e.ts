@@ -20,6 +20,7 @@ import {
   mineBlocks,
   dismissQuickPayIntro,
   doNavigationClose,
+  acceptAppNotificationAlert,
 } from '../helpers/actions';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
 import { reinstallApp } from '../helpers/setup';
@@ -63,6 +64,7 @@ describe('@send - Send', () => {
 
   ciIt('@send_1 - Validates payment data in the manual input', async () => {
     await tap('Send');
+    await acceptAppNotificationAlert('permission_allow_foreground_only_button');
     await tap('RecipientManual');
 
     // check validation for empty address
