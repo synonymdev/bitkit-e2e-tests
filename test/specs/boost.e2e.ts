@@ -6,8 +6,6 @@ import {
   tap,
   elementById,
   receiveOnchainFunds,
-  typeText,
-  confirmInputOnKeyboard,
   expectText,
   dragOnElement,
   swipeFullScreen,
@@ -19,6 +17,7 @@ import {
   getSeed,
   waitForBackup,
   restoreWallet,
+  enterAddress,
 } from '../helpers/actions';
 import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
@@ -145,18 +144,7 @@ describe('@boost - Boost', () => {
 
     // Send 10 000
     const coreAddress = await rpc.getNewAddress();
-    await tap('Send');
-    await sleep(1000);
-    try {
-      await tap('RecipientManual');
-      await elementById('RecipientInput').waitForDisplayed();
-    } catch {
-      console.warn('RecipientInput not found, trying again');
-      await tap('RecipientManual');
-    }
-    await typeText('RecipientInput', coreAddress);
-    await confirmInputOnKeyboard();
-    await tap('AddressContinue');
+    await enterAddress(coreAddress);
     await tap('N1');
     await tap('N0');
     await tap('N000');

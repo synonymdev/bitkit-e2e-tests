@@ -851,9 +851,12 @@ export async function typeAddressAndVerifyContinue({
   await elementById('AddressContinue').waitForEnabled({ reverse });
 }
 
-export async function enterAddress(address: string) {
+export async function enterAddress(address: string, { acceptCameraPermission = true } = {}) {
   await tap('Send');
   await sleep(700);
+  if (acceptCameraPermission) {
+    await acceptAppNotificationAlert('permission_allow_one_time_button');
+  }
   await tap('RecipientManual');
   await typeAddressAndVerifyContinue({ address });
   await tap('AddressContinue');
