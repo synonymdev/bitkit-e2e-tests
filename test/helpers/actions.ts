@@ -852,6 +852,7 @@ export async function typeAddressAndVerifyContinue({
 export async function enterAddress(address: string) {
   await tap('Send');
   await sleep(700);
+  await acceptAppNotificationAlert('permission_allow_one_time_button');
   await tap('RecipientManual');
   await typeAddressAndVerifyContinue({ address });
   await tap('AddressContinue');
