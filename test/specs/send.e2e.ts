@@ -33,7 +33,7 @@ import {
   waitForPeerConnection,
   waitForActiveChannel,
   openLNDAndSync,
-  checkChannelStatus
+  checkChannelStatus,
 } from '../helpers/lnd';
 import { ciIt } from '../helpers/suite';
 

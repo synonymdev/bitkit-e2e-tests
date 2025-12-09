@@ -862,6 +862,21 @@ export async function enterAddress(address: string, { acceptCameraPermission = t
   await tap('AddressContinue');
 }
 
+export async function enterAddressViaScanPrompt(
+  address: string,
+  { acceptCameraPermission = true } = {}
+) {
+  await tap('Scan');
+  await sleep(700);
+  if (acceptCameraPermission) {
+    await acceptAppNotificationAlert('permission_allow_foreground_only_button');
+  }
+  await tap('ScanPrompt');
+  await typeText('QRInput', address);
+  await confirmInputOnKeyboard();
+  await tap('DialogConfirm');
+}
+
 export async function deleteAllDefaultWidgets() {
   await tap('WidgetsEdit');
   for (const w of ['Bitcoin Price', 'Bitcoin Blocks', 'Bitcoin Headlines']) {

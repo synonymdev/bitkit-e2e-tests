@@ -13,7 +13,6 @@ import {
   swipeFullScreen,
   dragOnElement,
   completeOnboarding,
-  acceptAppNotificationAlert,
   multiTap,
   receiveOnchainFunds,
   expectTextWithin,
@@ -23,6 +22,7 @@ import {
   doNavigationClose,
   waitForToast,
   dismissBackgroundPaymentsTimedSheet,
+  enterAddressViaScanPrompt,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
@@ -120,13 +120,7 @@ describe('@lnurl - LNURL', () => {
       });
       console.log('channelReq', channelReq);
 
-      await tap('Scan');
-      // on the first time we need to accept the notifications permission dialog to use camera
-      await acceptAppNotificationAlert('permission_allow_foreground_only_button');
-      await tap('ScanPrompt');
-      await typeText('QRInput', channelReq.encoded);
-      await confirmInputOnKeyboard();
-      await tap('DialogConfirm');
+      await enterAddressViaScanPrompt(channelReq.encoded);
 
       const channelRequestPromise = waitForEvent(lnurlServer, 'channelRequest:action');
       await elementById('ConnectButton').waitForDisplayed();
@@ -166,11 +160,7 @@ describe('@lnurl - LNURL', () => {
       });
       console.log('payRequest1', payRequest1);
 
-      await tap('Scan');
-      await tap('ScanPrompt');
-      await typeText('QRInput', payRequest1.encoded);
-      await confirmInputOnKeyboard();
-      await tap('DialogConfirm');
+      await enterAddressViaScanPrompt(payRequest1.encoded, { acceptCameraPermission: false });
       await expectTextWithin('SendNumberField', sats);
       // Check amounts 99 - 201 not allowed
       await multiTap('NRemove', 3); // remove "100"
@@ -230,21 +220,11 @@ describe('@lnurl - LNURL', () => {
       console.log('payRequest2', payRequest2);
 
       try {
-        await tap('Scan');
-        await tap('ScanPrompt');
-        await typeText('QRInput', payRequest2.encoded);
-        await confirmInputOnKeyboard();
-        await tap('DialogConfirm');
-        await sleep(1000);
+        await enterAddressViaScanPrompt(payRequest2.encoded, { acceptCameraPermission: false });
         await elementById('ReviewAmount-primary').waitForDisplayed({ timeout: 5000 });
       } catch {
         console.warn('ReviewAmount not found, trying again');
-        await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
-        await tap('Scan');
-        await tap('ScanPrompt');
-        await typeText('QRInput', payRequest2.encoded);
-        await confirmInputOnKeyboard();
-        await tap('DialogConfirm');
+        await enterAddressViaScanPrompt(payRequest2.encoded, { acceptCameraPermission: false });
         await sleep(1000);
       }
       // Comment input should not be visible
@@ -302,20 +282,15 @@ describe('@lnurl - LNURL', () => {
       console.log('withdrawRequest1', withdrawRequest1);
 
       try {
-        await tap('Scan');
-        await tap('ScanPrompt');
-        await typeText('QRInput', withdrawRequest1.encoded);
-        await confirmInputOnKeyboard();
-        await tap('DialogConfirm');
+        await enterAddressViaScanPrompt(withdrawRequest1.encoded, {
+          acceptCameraPermission: false,
+        });
         await elementById('SendNumberField').waitForDisplayed({ timeout: 5000 });
       } catch {
         console.warn('SendNumberField not found, trying again');
-        await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
-        await tap('Scan');
-        await tap('ScanPrompt');
-        await typeText('QRInput', withdrawRequest1.encoded);
-        await confirmInputOnKeyboard();
-        await tap('DialogConfirm');
+        await enterAddressViaScanPrompt(withdrawRequest1.encoded, {
+          acceptCameraPermission: false,
+        });
       }
       await expectTextWithin('SendNumberField', '102');
       await tap('ContinueAmount');
@@ -365,14 +340,10 @@ describe('@lnurl - LNURL', () => {
       // lnurl-auth
       const loginRequest1 = await lnurlServer.generateNewUrl('login');
       console.log('loginRequest1', loginRequest1);
-      await tap('Scan');
-      await tap('ScanPrompt');
-      await typeText('QRInput', loginRequest1.encoded);
-      const loginEvent = new Promise<void>((resolve) => lnurlServer.once('login', resolve));
-      await confirmInputOnKeyboard();
-      await tap('DialogConfirm');
+      await enterAddressViaScanPrompt(loginRequest1.encoded, { acceptCameraPermission: false });
       await tap('continue_button');
       await expectText('Signed In');
+      const loginEvent = new Promise<void>((resolve) => lnurlServer.once('login', resolve));
       await loginEvent;
     }
   );
