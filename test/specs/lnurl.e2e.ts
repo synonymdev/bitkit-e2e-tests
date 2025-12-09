@@ -255,7 +255,7 @@ describe('@lnurl - LNURL', () => {
       });
       console.log('payRequest3', payRequest3);
 
-      await enterAddress(payRequest3.encoded);
+      await enterAddress(payRequest3.encoded, { acceptCameraPermission: false });
       await expectTextWithin('SendNumberField', minSendableSats);
       await elementById('ContinueAmount').waitForDisplayed();
       await tap('ContinueAmount');
@@ -319,7 +319,7 @@ describe('@lnurl - LNURL', () => {
 
       // TODO: after https://github.com/synonymdev/bitkit-android/issues/418 is resolved
       // we should test the scan flow here
-      await enterAddress(withdrawRequest2.encoded);
+      await enterAddress(withdrawRequest2.encoded, { acceptCameraPermission: false });
       const reviewAmtWithdraw = await elementByIdWithin('WithdrawAmount-primary', 'MoneyText');
       await expect(reviewAmtWithdraw).toHaveText('303');
       await tap('WithdrawConfirmButton');
@@ -340,10 +340,10 @@ describe('@lnurl - LNURL', () => {
       // lnurl-auth
       const loginRequest1 = await lnurlServer.generateNewUrl('login');
       console.log('loginRequest1', loginRequest1);
+      const loginEvent = new Promise<void>((resolve) => lnurlServer.once('login', resolve));
       await enterAddressViaScanPrompt(loginRequest1.encoded, { acceptCameraPermission: false });
       await tap('continue_button');
       await expectText('Signed In');
-      const loginEvent = new Promise<void>((resolve) => lnurlServer.once('login', resolve));
       await loginEvent;
     }
   );
