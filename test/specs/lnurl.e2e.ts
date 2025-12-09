@@ -219,15 +219,9 @@ describe('@lnurl - LNURL', () => {
       });
       console.log('payRequest2', payRequest2);
 
-      try {
-        await enterAddressViaScanPrompt(payRequest2.encoded, { acceptCameraPermission: false });
-        await sleep(2000);
-        await elementById('ReviewAmount-primary').waitForDisplayed({ timeout: 5000 });
-      } catch {
-        console.warn('ReviewAmount not found, trying again');
-        await enterAddressViaScanPrompt(payRequest2.encoded, { acceptCameraPermission: false });
-        await sleep(2000);
-      }
+      await enterAddressViaScanPrompt(payRequest2.encoded, { acceptCameraPermission: false });
+      await sleep(2000);
+      await elementById('ReviewAmount-primary').waitForDisplayed({ timeout: 5000 });
       // Comment input should not be visible
       await elementById('CommentInput').waitForDisplayed({ reverse: true });
       const reviewAmt = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
@@ -282,18 +276,11 @@ describe('@lnurl - LNURL', () => {
       });
       console.log('withdrawRequest1', withdrawRequest1);
 
-      try {
-        await enterAddressViaScanPrompt(withdrawRequest1.encoded, {
-          acceptCameraPermission: false,
-        });
-        await sleep(2000);
-        await elementById('SendNumberField').waitForDisplayed({ timeout: 5000 });
-      } catch {
-        console.warn('SendNumberField not found, trying again');
-        await enterAddressViaScanPrompt(withdrawRequest1.encoded, {
-          acceptCameraPermission: false,
-        });
-      }
+      await enterAddressViaScanPrompt(withdrawRequest1.encoded, {
+        acceptCameraPermission: false,
+      });
+      await sleep(2000);
+      await elementById('SendNumberField').waitForDisplayed({ timeout: 5000 });
       await expectTextWithin('SendNumberField', '102');
       await tap('ContinueAmount');
       await tap('WithdrawConfirmButton');
