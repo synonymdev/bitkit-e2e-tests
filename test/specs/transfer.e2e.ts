@@ -19,6 +19,7 @@ import {
   enterAddress,
   dismissQuickPayIntro,
   doNavigationClose,
+  waitForToast,
 } from '../helpers/actions';
 import {
   checkChannelStatus,
@@ -331,7 +332,7 @@ describe('@transfer - Transfer', () => {
 
     await mineBlocks(rpc, 6);
     await electrum?.waitForSync();
-    await expectText('Spending Balance Ready');
+    await waitForToast('SpendingBalanceReadyToast');
     await dismissQuickPayIntro();
     await waitForActiveChannel(lnd, ldkNodeId);
 

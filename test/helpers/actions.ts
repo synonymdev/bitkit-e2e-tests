@@ -671,6 +671,8 @@ export async function receiveOnchainFunds(
 }
 
 export type ToastId =
+  | 'LnurlPayAmountTooLowToast'
+  | 'SpendingBalanceReadyToast'
   | 'BalanceUnitSwitchedToast'
   | 'BalanceHiddenToast'
   | 'RgsUpdatedToast'
@@ -791,7 +793,7 @@ export async function dismissQuickPayIntro({
     await sleep(500);
   } else {
     await elementById('QuickpayIntroDescription').waitForDisplayed();
-    await sleep(500); // wait for the app to settle
+    await sleep(1000); // wait for the app to settle
     await tap('QuickpayIntroCancel');
     await sleep(500);
   }
@@ -858,6 +860,21 @@ export async function enterAddress(address: string, { acceptCameraPermission = t
   await tap('RecipientManual');
   await typeAddressAndVerifyContinue({ address });
   await tap('AddressContinue');
+}
+
+export async function enterAddressViaScanPrompt(
+  address: string,
+  { acceptCameraPermission = true } = {}
+) {
+  await tap('Scan');
+  await sleep(700);
+  if (acceptCameraPermission) {
+    await acceptAppNotificationAlert('permission_allow_foreground_only_button');
+  }
+  await tap('ScanPrompt');
+  await typeText('QRInput', address);
+  await confirmInputOnKeyboard();
+  await tap('DialogConfirm');
 }
 
 export async function deleteAllDefaultWidgets() {

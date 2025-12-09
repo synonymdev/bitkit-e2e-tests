@@ -20,6 +20,7 @@ import {
   mineBlocks,
   dismissQuickPayIntro,
   doNavigationClose,
+  waitForToast,
   acceptAppNotificationAlert,
 } from '../helpers/actions';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
@@ -163,7 +164,7 @@ describe('@send - Send', () => {
     await waitForActiveChannel(lnd, ldkNodeId);
 
     // Toast message
-    await expectText('Spending Balance Ready');
+    await waitForToast('SpendingBalanceReadyToast');
 
     // check channel status
     await checkChannelStatus();
