@@ -23,6 +23,7 @@ import {
   waitForToast,
   dismissBackgroundPaymentsTimedSheet,
   enterAddressViaScanPrompt,
+  acknowledgeReceivedPayment,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
@@ -312,8 +313,7 @@ describe('@lnurl - LNURL', () => {
       const reviewAmtWithdraw = await elementByIdWithin('WithdrawAmount-primary', 'MoneyText');
       await expect(reviewAmtWithdraw).toHaveText('303');
       await tap('WithdrawConfirmButton');
-      await elementById('ReceivedTransaction').waitForDisplayed();
-      await swipeFullScreen('down');
+      await acknowledgeReceivedPayment();
       await expectTextWithin('ActivitySpending', '19 713'); // 19 410 + 303 = 19 713
       await swipeFullScreen('up');
       await swipeFullScreen('up');
