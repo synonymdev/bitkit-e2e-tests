@@ -221,11 +221,12 @@ describe('@lnurl - LNURL', () => {
 
       try {
         await enterAddressViaScanPrompt(payRequest2.encoded, { acceptCameraPermission: false });
+        await sleep(2000);
         await elementById('ReviewAmount-primary').waitForDisplayed({ timeout: 5000 });
       } catch {
         console.warn('ReviewAmount not found, trying again');
         await enterAddressViaScanPrompt(payRequest2.encoded, { acceptCameraPermission: false });
-        await sleep(1000);
+        await sleep(2000);
       }
       // Comment input should not be visible
       await elementById('CommentInput').waitForDisplayed({ reverse: true });
@@ -285,6 +286,7 @@ describe('@lnurl - LNURL', () => {
         await enterAddressViaScanPrompt(withdrawRequest1.encoded, {
           acceptCameraPermission: false,
         });
+        await sleep(2000);
         await elementById('SendNumberField').waitForDisplayed({ timeout: 5000 });
       } catch {
         console.warn('SendNumberField not found, trying again');
