@@ -703,6 +703,7 @@ export async function waitForToast(
  */
 export async function acknowledgeReceivedPayment() {
   await elementById('ReceivedTransaction').waitForDisplayed();
+  await sleep(500);
   await tap('ReceivedTransactionButton');
   await sleep(300);
 }
