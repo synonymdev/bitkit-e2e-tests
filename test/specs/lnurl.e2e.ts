@@ -285,8 +285,7 @@ describe('@lnurl - LNURL', () => {
       await expectTextWithin('SendNumberField', '102');
       await tap('ContinueAmount');
       await tap('WithdrawConfirmButton');
-      await elementById('ReceivedTransaction').waitForDisplayed();
-      await swipeFullScreen('down');
+      await acknowledgeReceivedPayment();
       await expectTextWithin('ActivitySpending', '19 410'); // 19 308 + 102 = 19 410
       await swipeFullScreen('up');
       await swipeFullScreen('up');
