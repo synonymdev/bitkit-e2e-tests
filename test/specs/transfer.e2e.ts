@@ -211,6 +211,7 @@ describe('@transfer - Transfer', () => {
       await tap('TransferSuccess-button');
 
       // verify both transfers activities on savings
+      await tap('ActivitySavings');
       await elementById('Activity-1').waitForDisplayed();
       await expectTextWithin('Activity-1', 'Transfer');
       await expectTextWithin('Activity-1', '-');
