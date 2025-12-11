@@ -69,12 +69,12 @@ export async function waitForActiveChannel(
     }) => PromiseLike<{ channels: any }> | { channels: any };
   },
   nodeId: string,
-  maxRetries = 20
+  maxRetries = 200
 ) {
   let retries = 0;
 
   while (retries < maxRetries) {
-    await sleep(1000);
+    await sleep(100);
     const { channels } = await lnd.listChannels({
       peer: Buffer.from(nodeId, 'hex'),
       activeOnly: true,
