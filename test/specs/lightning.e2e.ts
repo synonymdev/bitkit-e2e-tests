@@ -100,12 +100,8 @@ describe('@lightning - Lightning', () => {
     await waitForActiveChannel(lnd, ldkNodeId);
 
     // Toast message
-    if (driver.isIOS) {
-      await expectText('Spending Balance Ready');
-      await expectText('Spending Balance Ready', { visible: false });
-    } else {
-      await waitForToast('SpendingBalanceReadyToast');
-    }
+    await waitForToast('SpendingBalanceReadyToast');
+
     // check channel status
     await checkChannelStatus();
 
