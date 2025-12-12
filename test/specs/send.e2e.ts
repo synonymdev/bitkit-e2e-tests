@@ -22,6 +22,8 @@ import {
   doNavigationClose,
   waitForToast,
   acceptAppNotificationAlert,
+  dismissBackgroundPaymentsTimedSheet,
+  acknowledgeReceivedPayment,
 } from '../helpers/actions';
 import { bitcoinURL, lndConfig } from '../helpers/constants';
 import { reinstallApp } from '../helpers/setup';
@@ -193,10 +195,13 @@ describe('@send - Send', () => {
     // console.info(JSON.stringify(dec, null, 2));
     const response = await lnd.sendPaymentSync({ paymentRequest: receive, amt: '10000' });
     console.info({ response });
-    await elementById('ReceivedTransaction').waitForDisplayed();
-    await tap('ReceivedTransactionButton');
-    await sleep(500);
-    await dismissQuickPayIntro();
+    await acknowledgeReceivedPayment();
+    if (driver.isIOS) {
+      await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: driver.isIOS });
+      await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
+    } else {
+      await dismissQuickPayIntro();
+    }
 
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     await expect(totalBalance).toHaveText('110 000'); // 100k onchain + 10k lightning
@@ -464,9 +469,7 @@ describe('@send - Send', () => {
     await swipeFullScreen('down');
     const r = await lnd.sendPaymentSync({ paymentRequest: receive2, amt: '10000' });
     console.info({ r });
-    await elementById('ReceivedTransaction').waitForDisplayed();
-    await tap('ReceivedTransactionButton');
-    await sleep(500);
+    await acknowledgeReceivedPayment();
     await expectTextWithin('ActivitySpending', '14 000');
 
     const { paymentRequest: invoice9 } = await lnd.addInvoice({ value: '10000' });
