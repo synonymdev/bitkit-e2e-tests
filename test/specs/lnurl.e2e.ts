@@ -23,6 +23,7 @@ import {
   waitForToast,
   dismissBackgroundPaymentsTimedSheet,
   enterAddressViaScanPrompt,
+  acknowledgeReceivedPayment,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
@@ -219,14 +220,9 @@ describe('@lnurl - LNURL', () => {
       });
       console.log('payRequest2', payRequest2);
 
-      try {
-        await enterAddressViaScanPrompt(payRequest2.encoded, { acceptCameraPermission: false });
-        await elementById('ReviewAmount-primary').waitForDisplayed({ timeout: 5000 });
-      } catch {
-        console.warn('ReviewAmount not found, trying again');
-        await enterAddressViaScanPrompt(payRequest2.encoded, { acceptCameraPermission: false });
-        await sleep(1000);
-      }
+      await enterAddressViaScanPrompt(payRequest2.encoded, { acceptCameraPermission: false });
+      await sleep(2000);
+      await elementById('ReviewAmount-primary').waitForDisplayed({ timeout: 5000 });
       // Comment input should not be visible
       await elementById('CommentInput').waitForDisplayed({ reverse: true });
       const reviewAmt = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
@@ -281,22 +277,15 @@ describe('@lnurl - LNURL', () => {
       });
       console.log('withdrawRequest1', withdrawRequest1);
 
-      try {
-        await enterAddressViaScanPrompt(withdrawRequest1.encoded, {
-          acceptCameraPermission: false,
-        });
-        await elementById('SendNumberField').waitForDisplayed({ timeout: 5000 });
-      } catch {
-        console.warn('SendNumberField not found, trying again');
-        await enterAddressViaScanPrompt(withdrawRequest1.encoded, {
-          acceptCameraPermission: false,
-        });
-      }
+      await enterAddressViaScanPrompt(withdrawRequest1.encoded, {
+        acceptCameraPermission: false,
+      });
+      await sleep(2000);
+      await elementById('SendNumberField').waitForDisplayed({ timeout: 5000 });
       await expectTextWithin('SendNumberField', '102');
       await tap('ContinueAmount');
       await tap('WithdrawConfirmButton');
-      await elementById('ReceivedTransaction').waitForDisplayed();
-      await swipeFullScreen('down');
+      await acknowledgeReceivedPayment();
       await expectTextWithin('ActivitySpending', '19 410'); // 19 308 + 102 = 19 410
       await swipeFullScreen('up');
       await swipeFullScreen('up');
@@ -323,8 +312,7 @@ describe('@lnurl - LNURL', () => {
       const reviewAmtWithdraw = await elementByIdWithin('WithdrawAmount-primary', 'MoneyText');
       await expect(reviewAmtWithdraw).toHaveText('303');
       await tap('WithdrawConfirmButton');
-      await elementById('ReceivedTransaction').waitForDisplayed();
-      await swipeFullScreen('down');
+      await acknowledgeReceivedPayment();
       await expectTextWithin('ActivitySpending', '19 713'); // 19 410 + 303 = 19 713
       await swipeFullScreen('up');
       await swipeFullScreen('up');
