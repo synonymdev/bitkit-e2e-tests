@@ -114,9 +114,8 @@ describe('@lightning - Lightning', () => {
     await swipeFullScreen('down');
     const response = await lnd.sendPaymentSync({ paymentRequest: receive, amt: '10000' });
     console.info({ response });
-    await elementById('ReceivedTransaction').waitForDisplayed();
-    await tap('ReceivedTransactionButton');
-    await sleep(1000);
+    await acknowledgeReceivedPayment();
+    await sleep(500);
     if (driver.isIOS) {
       await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: driver.isIOS });
       await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
@@ -148,8 +147,7 @@ describe('@lightning - Lightning', () => {
     const invoice2 = await getAddressFromQRCode('lightning');
     await swipeFullScreen('down');
     await lnd.sendPaymentSync({ paymentRequest: invoice2 });
-    await elementById('ReceivedTransaction').waitForDisplayed();
-    await tap('ReceivedTransactionButton');
+    await acknowledgeReceivedPayment();
     await sleep(500);
     await expect(totalBalance).toHaveText('11 111'); // 1k onchain + 10 111 lightning
     await expectTextWithin('ActivitySpending', '10 111');
