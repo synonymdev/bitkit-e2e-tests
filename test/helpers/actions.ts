@@ -214,8 +214,8 @@ export async function getTextUnder(containerId: string, index: Index = 'last'): 
   let textEls: ChainablePromiseArray;
 
   if (driver.isAndroid) {
-    // All descendants under the container containing a text attribute
-    textEls = await container.$$('.//*[@text]');
+    // All android.widget.TextView descendants under the container containing a text attribute
+    textEls = await container.$$('.//android.widget.TextView[@text]');
   } else {
     // All XCUIElementTypeStaticText descendants under the container
     textEls = await container.$$('.//XCUIElementTypeStaticText');
