@@ -162,9 +162,8 @@ describe('@lnurl - LNURL', () => {
       console.log('payRequest1', payRequest1);
 
       await enterAddressViaScanPrompt(payRequest1.encoded, { acceptCameraPermission: false });
-      await expectTextWithin('SendNumberField', sats);
+      await expectTextWithin('SendNumberField', '0');
       // Check amounts 99 - 201 not allowed
-      await multiTap('NRemove', 3); // remove "100"
       await tap('N2');
       await tap('N0');
       await tap('N1');
@@ -172,7 +171,7 @@ describe('@lnurl - LNURL', () => {
       await elementById('ContinueAmount').waitForEnabled({ reverse: true });
       await multiTap('NRemove', 3); // remove "201"
       await multiTap('N9', 2);
-      
+
       await expectTextWithin('SendNumberField', '99');
       await tap('ContinueAmount');
       await waitForToast('LnurlPayAmountTooLowToast');
@@ -241,7 +240,6 @@ describe('@lnurl - LNURL', () => {
 
       // lnurl-pay via manual entry
       const minSendable = 321000; // msats
-      const minSendableSats = (minSendable / 1000).toString();
       const payRequest3 = await lnurlServer.generateNewUrl('payRequest', {
         minSendable,
         maxSendable: 350000,
@@ -250,7 +248,11 @@ describe('@lnurl - LNURL', () => {
       console.log('payRequest3', payRequest3);
 
       await enterAddress(payRequest3.encoded, { acceptCameraPermission: false });
-      await expectTextWithin('SendNumberField', minSendableSats);
+      await expectTextWithin('SendNumberField', '0');
+      // go with 321
+      await tap('N3');
+      await tap('N2');
+      await tap('N1');
       await elementById('ContinueAmount').waitForDisplayed();
       await tap('ContinueAmount');
       await dragOnElement('GRAB', 'right', 0.95);
