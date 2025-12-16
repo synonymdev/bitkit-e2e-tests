@@ -109,14 +109,13 @@ describe('@lightning - Lightning', () => {
     // check channel status
     await checkChannelStatus();
 
-    // send funds to LDK, 0 invoice
+    console.info('receive 10k sats from LND (non-edited invoice)');
     const receive = await getReceiveAddress('lightning');
     await swipeFullScreen('down');
     const response = await lnd.sendPaymentSync({ paymentRequest: receive, amt: '10000' });
     console.info({ response });
-    await elementById('ReceivedTransaction').waitForDisplayed();
-    await tap('ReceivedTransactionButton');
-    await sleep(1000);
+    await acknowledgeReceivedPayment();
+    await sleep(500);
     if (driver.isIOS) {
       await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: driver.isIOS });
       await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
@@ -127,7 +126,7 @@ describe('@lightning - Lightning', () => {
     await expect(totalBalance).toHaveText('11 000'); // 1k onchain + 10k lightning
     await expectTextWithin('ActivitySpending', '10 000');
 
-    // send funds to LDK, 111 sats invoice
+    console.info('receive 111 sats from LND, (edited invoice with amt=111, note and tag)');
     await tap('Receive');
     await sleep(1000);
     await tap('SpecifyInvoiceButton');
@@ -148,19 +147,22 @@ describe('@lightning - Lightning', () => {
     const invoice2 = await getAddressFromQRCode('lightning');
     await swipeFullScreen('down');
     await lnd.sendPaymentSync({ paymentRequest: invoice2 });
-    await elementById('ReceivedTransaction').waitForDisplayed();
-    await tap('ReceivedTransactionButton');
+    await acknowledgeReceivedPayment();
     await sleep(500);
     await expect(totalBalance).toHaveText('11 111'); // 1k onchain + 10 111 lightning
     await expectTextWithin('ActivitySpending', '10 111');
 
-    // send funds to LND, 0 invoice
+    await console.info('send lightning payment (lightning invoice with no amount and note)');
     const note2 = 'zero';
     const { paymentRequest: invoice1 } = await lnd.addInvoice({
       memo: note2,
     });
+    await console.info({ invoice1 });
     await enterAddress(invoice1);
     await multiTap('N1', 3);
+    await tap('ContinueAmount');
+    await console.info('I can edit the amount on Review screen');
+    await tap('ReviewAmount-primary');
     await tap('ContinueAmount');
     await dragOnElement('GRAB', 'right', 0.95); // Swipe to confirm
     await elementById('SendSuccess').waitForDisplayed();
@@ -168,16 +170,19 @@ describe('@lightning - Lightning', () => {
     await expect(totalBalance).toHaveText('11 000'); // 1k onchain + 10k lightning
     await expectTextWithin('ActivitySpending', '10 000');
 
-    // send funds to LND, 10000 invoice
+    await console.info('send lightning payment (lightning invoice with amount = 1000) and manually added tag');
     const value = '1000';
     const { paymentRequest: invoice4 } = await lnd.addInvoice({
       value: value,
     });
-    await enterAddress(invoice4);
+    await console.info({ invoice4 });
+    await enterAddress(invoice4, { acceptCameraPermission: false });
     // Review & Send
     const reviewAmt = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
     await reviewAmt.waitForDisplayed();
     await expect(reviewAmt).toHaveText('1 000');
+    await console.info('I cannot edit the amount on Review screen');
+    await tap('ReviewAmount-primary');
     await tap('TagsAddSend');
     await typeText('TagInputSend', 'stag');
     await tap('SendTagsSubmit');
@@ -234,6 +239,7 @@ describe('@lightning - Lightning', () => {
     // filter by receive tag
     await tap('Tab-all');
     await tap('TagsPrompt');
+    await sleep(500);
     await tap('Tag-rtag');
     await expectTextWithin('Activity-1', '+');
     await elementById('Activity-2').waitForDisplayed({ reverse: true });
@@ -241,6 +247,7 @@ describe('@lightning - Lightning', () => {
 
     // filter by send tag
     await tap('TagsPrompt');
+    await sleep(500);
     await tap('Tag-stag');
     await expectTextWithin('Activity-1', '-');
     await elementById('Activity-2').waitForDisplayed({ reverse: true });

@@ -118,6 +118,7 @@ export async function connectToLND(lndNodeID: string, { navigationClose = true }
   await typeText('PortInput', '9735');
   await confirmInputOnKeyboard();
   await tap('ExternalContinue');
+  await sleep(1000);
   if (navigationClose) await doNavigationClose();
 }
 
