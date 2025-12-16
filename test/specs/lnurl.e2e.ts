@@ -330,7 +330,7 @@ describe('@lnurl - LNURL', () => {
       console.log('loginRequest1', loginRequest1);
       const loginEvent = new Promise<void>((resolve) => lnurlServer.once('login', resolve));
       await enterAddressViaScanPrompt(loginRequest1.encoded, { acceptCameraPermission: false });
-      await tap('continue_button');
+      await tap('LnurlAuthContinue');
       await expectText('Signed In');
       await loginEvent;
     }
