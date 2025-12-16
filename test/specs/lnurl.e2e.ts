@@ -172,13 +172,11 @@ describe('@lnurl - LNURL', () => {
       await elementById('ContinueAmount').waitForEnabled({ reverse: true });
       await multiTap('NRemove', 3); // remove "201"
       await multiTap('N9', 2);
+      
       await expectTextWithin('SendNumberField', '99');
-      if (driver.isIOS) {
-        await tap('ContinueAmount');
-        await waitForToast('LnurlPayAmountTooLowToast');
-      } else {
-        await elementById('ContinueAmount').waitForEnabled({ reverse: true });
-      }
+      await tap('ContinueAmount');
+      await waitForToast('LnurlPayAmountTooLowToast');
+
       await multiTap('NRemove', 2); // remove "99"
       // go with 150
       await tap('N1');
