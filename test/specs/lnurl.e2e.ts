@@ -23,6 +23,7 @@ import {
   waitForToast,
   dismissBackgroundPaymentsTimedSheet,
   enterAddressViaScanPrompt,
+  acknowledgeReceivedPayment,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
@@ -161,9 +162,8 @@ describe('@lnurl - LNURL', () => {
       console.log('payRequest1', payRequest1);
 
       await enterAddressViaScanPrompt(payRequest1.encoded, { acceptCameraPermission: false });
-      await expectTextWithin('SendNumberField', sats);
+      await expectTextWithin('SendNumberField', '0');
       // Check amounts 99 - 201 not allowed
-      await multiTap('NRemove', 3); // remove "100"
       await tap('N2');
       await tap('N0');
       await tap('N1');
@@ -171,13 +171,11 @@ describe('@lnurl - LNURL', () => {
       await elementById('ContinueAmount').waitForEnabled({ reverse: true });
       await multiTap('NRemove', 3); // remove "201"
       await multiTap('N9', 2);
+
       await expectTextWithin('SendNumberField', '99');
-      if (driver.isIOS) {
-        await tap('ContinueAmount');
-        await waitForToast('LnurlPayAmountTooLowToast');
-      } else {
-        await elementById('ContinueAmount').waitForEnabled({ reverse: true });
-      }
+      await tap('ContinueAmount');
+      await waitForToast('LnurlPayAmountTooLowToast');
+
       await multiTap('NRemove', 2); // remove "99"
       // go with 150
       await tap('N1');
@@ -219,14 +217,9 @@ describe('@lnurl - LNURL', () => {
       });
       console.log('payRequest2', payRequest2);
 
-      try {
-        await enterAddressViaScanPrompt(payRequest2.encoded, { acceptCameraPermission: false });
-        await elementById('ReviewAmount-primary').waitForDisplayed({ timeout: 5000 });
-      } catch {
-        console.warn('ReviewAmount not found, trying again');
-        await enterAddressViaScanPrompt(payRequest2.encoded, { acceptCameraPermission: false });
-        await sleep(1000);
-      }
+      await enterAddressViaScanPrompt(payRequest2.encoded, { acceptCameraPermission: false });
+      await sleep(2000);
+      await elementById('ReviewAmount-primary').waitForDisplayed({ timeout: 5000 });
       // Comment input should not be visible
       await elementById('CommentInput').waitForDisplayed({ reverse: true });
       const reviewAmt = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
@@ -247,7 +240,6 @@ describe('@lnurl - LNURL', () => {
 
       // lnurl-pay via manual entry
       const minSendable = 321000; // msats
-      const minSendableSats = (minSendable / 1000).toString();
       const payRequest3 = await lnurlServer.generateNewUrl('payRequest', {
         minSendable,
         maxSendable: 350000,
@@ -256,7 +248,11 @@ describe('@lnurl - LNURL', () => {
       console.log('payRequest3', payRequest3);
 
       await enterAddress(payRequest3.encoded, { acceptCameraPermission: false });
-      await expectTextWithin('SendNumberField', minSendableSats);
+      await expectTextWithin('SendNumberField', '0');
+      // go with 321
+      await tap('N3');
+      await tap('N2');
+      await tap('N1');
       await elementById('ContinueAmount').waitForDisplayed();
       await tap('ContinueAmount');
       await dragOnElement('GRAB', 'right', 0.95);
@@ -281,22 +277,15 @@ describe('@lnurl - LNURL', () => {
       });
       console.log('withdrawRequest1', withdrawRequest1);
 
-      try {
-        await enterAddressViaScanPrompt(withdrawRequest1.encoded, {
-          acceptCameraPermission: false,
-        });
-        await elementById('SendNumberField').waitForDisplayed({ timeout: 5000 });
-      } catch {
-        console.warn('SendNumberField not found, trying again');
-        await enterAddressViaScanPrompt(withdrawRequest1.encoded, {
-          acceptCameraPermission: false,
-        });
-      }
+      await enterAddressViaScanPrompt(withdrawRequest1.encoded, {
+        acceptCameraPermission: false,
+      });
+      await sleep(2000);
+      await elementById('SendNumberField').waitForDisplayed({ timeout: 5000 });
       await expectTextWithin('SendNumberField', '102');
       await tap('ContinueAmount');
       await tap('WithdrawConfirmButton');
-      await elementById('ReceivedTransaction').waitForDisplayed();
-      await swipeFullScreen('down');
+      await acknowledgeReceivedPayment();
       await expectTextWithin('ActivitySpending', '19 410'); // 19 308 + 102 = 19 410
       await swipeFullScreen('up');
       await swipeFullScreen('up');
@@ -323,8 +312,7 @@ describe('@lnurl - LNURL', () => {
       const reviewAmtWithdraw = await elementByIdWithin('WithdrawAmount-primary', 'MoneyText');
       await expect(reviewAmtWithdraw).toHaveText('303');
       await tap('WithdrawConfirmButton');
-      await elementById('ReceivedTransaction').waitForDisplayed();
-      await swipeFullScreen('down');
+      await acknowledgeReceivedPayment();
       await expectTextWithin('ActivitySpending', '19 713'); // 19 410 + 303 = 19 713
       await swipeFullScreen('up');
       await swipeFullScreen('up');
@@ -342,7 +330,7 @@ describe('@lnurl - LNURL', () => {
       console.log('loginRequest1', loginRequest1);
       const loginEvent = new Promise<void>((resolve) => lnurlServer.once('login', resolve));
       await enterAddressViaScanPrompt(loginRequest1.encoded, { acceptCameraPermission: false });
-      await tap('continue_button');
+      await tap('LnurlAuthContinue');
       await expectText('Signed In');
       await loginEvent;
     }
