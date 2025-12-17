@@ -161,7 +161,7 @@ describe('@lnurl - LNURL', () => {
 
       await enterAddressViaScanPrompt(payRequest1.encoded, { acceptCameraPermission: false });
       await expectTextWithin('SendNumberField', '0');
-      // Check amounts 149 - 201 not allowed
+      // Check that 149 sats is below minimum and 201 sats is above maximum (both rejected)
       await tap('N2');
       await tap('N0');
       await tap('N1');
