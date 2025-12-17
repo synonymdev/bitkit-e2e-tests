@@ -435,6 +435,7 @@ export async function acceptAppNotificationAlert(
 export async function doNavigationClose() {
   await tap('HeaderMenu');
   await tap('DrawerWallet');
+  await sleep(500);
 }
 
 export async function getSeed(): Promise<string> {
@@ -671,6 +672,8 @@ export async function receiveOnchainFunds(
 }
 
 export type ToastId =
+  | 'BoostSuccessToast'
+  | 'BoostFailureToast'
   | 'LnurlPayAmountTooLowToast'
   | 'SpendingBalanceReadyToast'
   | 'BalanceUnitSwitchedToast'

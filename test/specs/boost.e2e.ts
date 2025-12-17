@@ -18,6 +18,7 @@ import {
   waitForBackup,
   restoreWallet,
   enterAddress,
+  waitForToast,
 } from '../helpers/actions';
 import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
@@ -74,6 +75,7 @@ describe('@boost - Boost', () => {
     await tap('Minus');
     await tap('RecommendedFeeButton');
     await dragOnElement('GRAB', 'right', 0.95); // Swipe to confirm
+    await waitForToast('BoostSuccessToast');
 
     // check Activity
     await elementById('BoostingIcon').waitForDisplayed();
@@ -189,7 +191,8 @@ describe('@boost - Boost', () => {
     await tap('Minus');
     await tap('RecommendedFeeButton');
     await dragOnElement('GRAB', 'right', 0.95); // Swipe to confirm
-
+    await waitForToast('BoostSuccessToast');
+    
     // check Activity
     await elementById('BoostingIcon').waitForDisplayed();
     await elementById('ActivityShort-0').waitForDisplayed();
