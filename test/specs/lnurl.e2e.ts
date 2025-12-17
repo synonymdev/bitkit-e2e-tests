@@ -151,11 +151,9 @@ describe('@lnurl - LNURL', () => {
       await expectTextWithin('ActivitySpending', '20 001');
 
       // lnurl-pay (min != max) with comment
-      const msats = 100000; // msats
-      const sats = (msats / 1000).toString();
       const payRequest1 = await lnurlServer.generateNewUrl('payRequest', {
-        minSendable: msats, // msats
-        maxSendable: 200000, // msats
+        minSendable: 149500, // msats
+        maxSendable: 200999, // msats
         metadata: '[["text/plain","lnurl-node1"]]',
         commentAllowed: 12,
       });
@@ -163,20 +161,21 @@ describe('@lnurl - LNURL', () => {
 
       await enterAddressViaScanPrompt(payRequest1.encoded, { acceptCameraPermission: false });
       await expectTextWithin('SendNumberField', '0');
-      // Check amounts 99 - 201 not allowed
+      // Check amounts 149 - 201 not allowed
       await tap('N2');
       await tap('N0');
       await tap('N1');
       await expectTextWithin('SendNumberField', '201');
       await elementById('ContinueAmount').waitForEnabled({ reverse: true });
       await multiTap('NRemove', 3); // remove "201"
-      await multiTap('N9', 2);
-
-      await expectTextWithin('SendNumberField', '99');
+      await tap('N1');
+      await tap('N4');
+      await tap('N9');
+      await expectTextWithin('SendNumberField', '149');
       await tap('ContinueAmount');
       await waitForToast('LnurlPayAmountTooLowToast');
 
-      await multiTap('NRemove', 2); // remove "99"
+      await multiTap('NRemove', 3); // remove "149"
       // go with 150
       await tap('N1');
       await tap('N5');
