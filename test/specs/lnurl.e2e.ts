@@ -197,6 +197,7 @@ describe('@lnurl - LNURL', () => {
       await expectTextWithin('ActivityShort-0', 'Sent');
 
       // --- skip due to: https://github.com/synonymdev/bitkit-android/issues/417 ---//
+      //                  https://github.com/synonymdev/bitkit-ios/issues/277
       // await tap('ActivityShort-0');
       // await elementById('InvoiceComment').waitForDisplayed();
       // await expectTextWithin('InvoiceComment', 'test comment');
