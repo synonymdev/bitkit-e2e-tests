@@ -166,7 +166,9 @@ describe('@lightning - Lightning', () => {
     await expect(totalBalance).toHaveText('11 000'); // 1k onchain + 10k lightning
     await expectTextWithin('ActivitySpending', '10 000');
 
-    await console.info('send lightning payment (lightning invoice with amount = 1000) and manually added tag');
+    await console.info(
+      'send lightning payment (lightning invoice with amount = 1000) and manually added tag'
+    );
     const value = '1000';
     const { paymentRequest: invoice4 } = await lnd.addInvoice({
       value: value,
