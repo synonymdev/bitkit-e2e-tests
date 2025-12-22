@@ -469,10 +469,6 @@ export async function completeOnboarding({ isFirstTime = true } = {}) {
   // TOS and PP
   await elementById('Continue').waitForDisplayed();
   await sleep(1000); // Wait for the app to settle
-  if (driver.isAndroid) {
-    await tap('Check1');
-    await tap('Check2');
-  }
   await tap('Continue');
   await tap('SkipIntro');
   await sleep(500); // Wait for the app to settle
@@ -511,10 +507,6 @@ export async function restoreWallet(
   // Terms of service
   await elementById('Continue').waitForDisplayed();
   await sleep(1000); // Wait for the app to settle
-  if (driver.isAndroid) {
-    await tap('Check1');
-    await tap('Check2');
-  }
   await tap('Continue');
 
   // Skip intro

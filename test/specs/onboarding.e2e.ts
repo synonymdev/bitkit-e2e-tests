@@ -24,10 +24,6 @@ describe('@onboarding - Onboarding', () => {
     // TOS and PP
     await elementById('Continue').waitForDisplayed();
     await sleep(1000); // Wait for the app to settle
-    if (driver.isAndroid) {
-      await tap('Check1');
-      await tap('Check2');
-    }
     await tap('Continue');
     await tap('GetStarted');
     await elementById('Slide0').waitForDisplayed();
@@ -59,10 +55,6 @@ describe('@onboarding - Onboarding', () => {
     // TOS and PP
     await elementById('Continue').waitForDisplayed();
     await sleep(1000); // Wait for the app to settle
-    if (driver.isAndroid) {
-      await tap('Check1');
-      await tap('Check2');
-    }
     await tap('Continue');
     await tap('GetStarted');
     await elementById('Slide0').waitForDisplayed();
