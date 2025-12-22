@@ -22,6 +22,8 @@ import {
   waitForToast,
   getTextUnder,
   acknowledgeExternalSuccess,
+  dismissBackgroundPaymentsTimedSheet,
+  expectNoTextWithin,
 } from '../helpers/actions';
 import {
   checkChannelStatus,
@@ -299,22 +301,28 @@ describe('@transfer - Transfer', () => {
     await sleep(500);
 
     // change fee
-    await tap('SetCustomFee');
-    await sleep(500);
-    await tap('NRemove');
-    await sleep(1000); // wait for input to register
-    await tap('FeeCustomContinue');
-    await tap('N5');
-    await sleep(1000); // wait for input to register
-    await tap('FeeCustomContinue');
+    // skiping for iOS as not implemented
+    // skip: https://github.com/synonymdev/bitkit-ios/issues/285
+    if (driver.isAndroid) {
+      await tap('SetCustomFee');
+      await sleep(500);
+      await tap('NRemove');
+      await sleep(1000); // wait for input to register
+      await tap('FeeCustomContinue');
+      await tap('N5');
+      await sleep(1000); // wait for input to register
+      await tap('FeeCustomContinue');
+    }
 
-    // Swipe to confirm (set x offset to avoid navigating back)
+    // Swipe to confirm
     await dragOnElement('GRAB', 'right', 0.95);
     console.info('channel opening...');
     await sleep(1000);
     await acknowledgeExternalSuccess();
-    await tap('NavigationBack');
-    await doNavigationClose();
+    if (driver.isAndroid) {
+      await tap('NavigationBack');
+      await doNavigationClose();
+    }
 
     // check transfer card
     // await elementById('Suggestion-lightning_setting_up').waitForDisplayed();
@@ -334,7 +342,14 @@ describe('@transfer - Transfer', () => {
     await mineBlocks(rpc, 6);
     await electrum?.waitForSync();
     await waitForToast('SpendingBalanceReadyToast');
-    await dismissQuickPayIntro();
+    await sleep(1000);
+    if (driver.isIOS) {
+      await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: driver.isIOS });
+      await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
+    } else {
+      await dismissQuickPayIntro();
+    }
+    await expectNoTextWithin('ActivitySpending', '0');
     await waitForActiveChannel(lnd, ldkNodeId);
 
     // check transfer card

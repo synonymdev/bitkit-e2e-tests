@@ -170,7 +170,15 @@ export async function expectText(
 export async function expectTextWithin(
   ancestorId: string,
   text: string,
-  { visible = true, timeout = 30_000 }: { visible?: boolean; timeout?: number } = {}
+  {
+    visible = true,
+    timeout = 30_000,
+    strategy = 'contains',
+  }: {
+    visible?: boolean;
+    timeout?: number;
+    strategy?: RetrieveStrategy;
+  } = {}
 ) {
   const parent = elementById(ancestorId);
   await parent.waitForDisplayed();
@@ -178,9 +186,18 @@ export async function expectTextWithin(
   if (driver.isIOS) {
     const parentLabel = await parent.getAttribute('label');
     const parentValue = await parent.getAttribute('value');
-    const matchesParent =
-      (typeof parentLabel === 'string' && parentLabel.includes(text)) ||
-      (typeof parentValue === 'string' && parentValue.includes(text));
+    const matchesParent = (() => {
+      if (strategy === 'exact') {
+        return (
+          (typeof parentLabel === 'string' && parentLabel === text) ||
+          (typeof parentValue === 'string' && parentValue === text)
+        );
+      }
+      return (
+        (typeof parentLabel === 'string' && parentLabel.includes(text)) ||
+        (typeof parentValue === 'string' && parentValue.includes(text))
+      );
+    })();
 
     if (matchesParent) {
       if (!visible) {
@@ -190,15 +207,25 @@ export async function expectTextWithin(
     }
   }
 
-  const needle = driver.isAndroid
-    ? `.//*[contains(@text,'${text}')]`
-    : `.//*[self::XCUIElementTypeStaticText or self::XCUIElementTypeTextView or self::XCUIElementTypeTextField][contains(@label,'${text}') or contains(@value,'${text}')]`;
+  const needle = (() => {
+    if (driver.isAndroid) {
+      return strategy === 'exact' ? `.//*[@text='${text}']` : `.//*[contains(@text,'${text}')]`;
+    }
+
+    return strategy === 'exact'
+      ? `.//*[self::XCUIElementTypeStaticText or self::XCUIElementTypeTextView or self::XCUIElementTypeTextField][@label='${text}' or @value='${text}']`
+      : `.//*[self::XCUIElementTypeStaticText or self::XCUIElementTypeTextView or self::XCUIElementTypeTextField][contains(@label,'${text}') or contains(@value,'${text}')]`;
+  })();
 
   if (!visible) {
     await parent.$(needle).waitForDisplayed({ reverse: true, timeout });
   } else {
     await parent.$(needle).waitForDisplayed({ timeout });
   }
+}
+
+export async function expectNoTextWithin(ancestorId: string, text: string) {
+  await expectTextWithin(ancestorId, text, { visible: false, strategy: 'exact' });
 }
 
 type Index = number | 'first' | 'last';
