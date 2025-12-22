@@ -711,6 +711,15 @@ export async function acknowledgeReceivedPayment() {
   await sleep(300);
 }
 
+/** Acknowledges the external success notification by tapping the button.
+ */
+export async function acknowledgeExternalSuccess() {
+  await elementById('ExternalSuccess').waitForDisplayed();
+  await sleep(500);
+  await tap('ExternalSuccess-button');
+  await sleep(300);
+}
+
 /**
  * Triggers the timed backup sheet by navigating to settings and back.
  * Since timed sheets are sometimes triggered by user behavior (when user goes back to home screen),

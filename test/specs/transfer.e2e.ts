@@ -21,6 +21,7 @@ import {
   doNavigationClose,
   waitForToast,
   getTextUnder,
+  acknowledgeExternalSuccess,
 } from '../helpers/actions';
 import {
   checkChannelStatus,
@@ -311,8 +312,7 @@ describe('@transfer - Transfer', () => {
     await dragOnElement('GRAB', 'right', 0.95);
     console.info('channel opening...');
     await sleep(1000);
-    await elementById('ExternalSuccess').waitForDisplayed();
-    await tap('ExternalSuccess-button');
+    await acknowledgeExternalSuccess();
     await tap('NavigationBack');
     await doNavigationClose();
 

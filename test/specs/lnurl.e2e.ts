@@ -24,6 +24,7 @@ import {
   dismissBackgroundPaymentsTimedSheet,
   enterAddressViaScanPrompt,
   acknowledgeReceivedPayment,
+  acknowledgeExternalSuccess,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
@@ -142,8 +143,7 @@ describe('@lnurl - LNURL', () => {
       // Success toast/flow
       if (driver.isIOS) await waitForToast('SpendingBalanceReadyToast');
       if (driver.isAndroid) await dismissQuickPayIntro();
-      await elementById('ExternalSuccess').waitForDisplayed({ timeout: 30_000 });
-      await tap('ExternalSuccess-button');
+      await acknowledgeExternalSuccess();
       if (driver.isIOS) {
         await dismissBackgroundPaymentsTimedSheet();
         await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
