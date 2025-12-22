@@ -20,6 +20,7 @@ import {
   dismissQuickPayIntro,
   doNavigationClose,
   waitForToast,
+  getTextUnder,
 } from '../helpers/actions';
 import {
   checkChannelStatus,
@@ -83,40 +84,36 @@ describe('@transfer - Transfer', () => {
       await elementByText('EUR (€)').click();
       await doNavigationClose();
 
-      await launchFreshApp();
+      if (driver.isAndroid) await launchFreshApp();
       await tap('Suggestion-lightning');
       await tap('TransferIntro-button');
       await tap('FundTransfer');
       await tap('SpendingIntro-button');
       await sleep(3000); // let the animation finish
 
-      //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/425 ---//
-      //// can continue with default client balance (0)
-      //await tap('SpendingAmountContinue');
-      //await sleep(100);
-      //await tap('SpendingConfirmAdvanced');
-      //await tap('SpendingAdvancedMin');
-      //await expectTextVisible('100 000');
-      //await tap('SpendingAdvancedDefault');
-      //await tap('SpendingAdvancedNumberField'); // change to fiat
-      //const label = await getTextUnder('SpendingAdvancedNumberField');
-      //const eurBalance = Number.parseInt(label, 10);
-      //await expect(eurBalance).toBeGreaterThan(440);
-      //await expect(eurBalance).toBeLessThan(460);
-      //await tap('SpendingAdvancedNumberField'); // change back to sats
-      //await tap('SpendingAdvancedContinue');
-      //await tap('NavigationBack');
-      //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/425 ---//
+      // can continue with default client balance (0)
+      await tap('SpendingAmountContinue');
+      await sleep(100);
+      await tap('SpendingConfirmAdvanced');
+      await tap('SpendingAdvancedMin');
+      await expectText('100 000', { strategy: 'contains' });
+      await tap('SpendingAdvancedDefault');
+      await tap('SpendingAdvancedNumberField'); // change to fiat
+      const label = await getTextUnder('SpendingAdvancedNumberField');
+      const eurBalance = Number.parseInt(label, 10);
+      await expect(eurBalance).toBeGreaterThan(440);
+      await expect(eurBalance).toBeLessThan(460);
+      await tap('SpendingAdvancedNumberField'); // change back to sats
+      await tap('SpendingAdvancedContinue');
+      await tap('NavigationBack');
 
-      //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/424 ---//
       // can continue with max client balance
-      //await tap('SpendingAmountMax');
-      //await elementById('SpendingAmountContinue').waitForEnabled();
-      //await sleep(500);
-      //await tap('SpendingAmountContinue');
-      //await elementById('SpendingConfirmAdvanced').waitForDisplayed();
-      //await tap('NavigationBack');
-      //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/424 ---//
+      await tap('SpendingAmountMax');
+      await elementById('SpendingAmountContinue').waitForEnabled();
+      await sleep(500);
+      await tap('SpendingAmountContinue');
+      await elementById('SpendingConfirmAdvanced').waitForDisplayed();
+      await tap('NavigationBack');
 
       // can continue with 25% client balance
       await elementById('SpendingAmountQuarter').waitForEnabled();
@@ -133,7 +130,7 @@ describe('@transfer - Transfer', () => {
       await tap('N2');
       await multiTap('N0', 5);
       await tap('SpendingAmountContinue');
-      await expectText('200 000');
+      await expectText('200 000', { strategy: 'contains' });
       await tap('SpendingConfirmMore');
       await expectText('200 000');
       await tap('LiquidityContinue');
@@ -145,6 +142,7 @@ describe('@transfer - Transfer', () => {
       // verify transfer activity on savings
       await tap('ActivitySavings');
       await elementById('Activity-1').waitForDisplayed();
+      await elementById('Activity-2').waitForDisplayed();
       await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
       await expectTextWithin('Activity-1', '-');
       await tap('NavigationBack');
@@ -158,7 +156,7 @@ describe('@transfer - Transfer', () => {
       await tap('N1');
       await multiTap('N0', 5);
       await tap('SpendingAmountContinue');
-      await expectText('100 000');
+      await expectText('100 000', { strategy: 'contains' });
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
       await sleep(500);
@@ -213,6 +211,8 @@ describe('@transfer - Transfer', () => {
       // verify both transfers activities on savings
       await tap('ActivitySavings');
       await elementById('Activity-1').waitForDisplayed();
+      await elementById('Activity-2').waitForDisplayed();
+      await elementById('Activity-3').waitForDisplayed();
       await expectTextWithin('Activity-1', 'Transfer');
       await expectTextWithin('Activity-1', '-');
       await elementById('Activity-2').waitForDisplayed();
@@ -228,7 +228,7 @@ describe('@transfer - Transfer', () => {
       await tap('AdvancedSettings');
       await tap('Channels');
       const channels = await elementsById('Channel');
-      channels[1].click();
+      channels[driver.isAndroid ? 1 : 0].click();
       await expectTextWithin('TotalSize', '₿ 250 000');
       await expectText('Processing payment');
       await doNavigationClose();
