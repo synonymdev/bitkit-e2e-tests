@@ -301,8 +301,8 @@ describe('@transfer - Transfer', () => {
     await sleep(500);
 
     // change fee
-    // skiping for iOS as not implemented
-    // skip: https://github.com/synonymdev/bitkit-ios/issues/285
+    // this should be removed from Andorid:
+    // https://github.com/synonymdev/bitkit-android/issues/548
     if (driver.isAndroid) {
       await tap('SetCustomFee');
       await sleep(500);
@@ -379,7 +379,7 @@ describe('@transfer - Transfer', () => {
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('TransferSuccess').waitForDisplayed();
     await tap('TransferSuccess-button');
-    await tap('NavigationBack');
+    if (driver.isAndroid) await tap('NavigationBack');
 
     // check channel is closed
     await tap('HeaderMenu');
