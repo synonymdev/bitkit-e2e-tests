@@ -7,6 +7,7 @@ import {
   sleep,
   tap,
   doNavigationClose,
+  expectTextWithin,
 } from '../helpers/actions';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
@@ -78,8 +79,11 @@ async function modernDenominationChecks(mode: NumberpadMode) {
   await tap(`${mode}NumberPadUnit`);
   // reset to 0
   await multiTap('NRemove', 8);
-  await expectText('0.00');
-
+  if (mode === 'Send') {
+    await expectTextWithin('SendNumberField', '0.00');
+  } else {
+    await expectTextWithin('ReceiveNumberPadTextField', '0.00');
+  }
   await tap('N0');
   await tap('N0');
   await tap('N1');
@@ -110,7 +114,11 @@ async function classicDenominationChecks(mode: NumberpadMode) {
 
   // reset to 0
   await multiTap('NRemove', 2);
-  await expectText('0.00000000');
+    if (mode === 'Send') {
+    await expectTextWithin('SendNumberField', '0.00000000');
+  } else {
+    await expectTextWithin('ReceiveNumberPadTextField', '0.00000000');
+  }
   await tap('N4');
   await tap('NDecimal');
   await tap('N2');
