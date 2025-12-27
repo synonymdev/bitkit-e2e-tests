@@ -172,6 +172,8 @@ describe('@settings - Settings', () => {
       await sleep(300);
       (await elementByText(tag)).waitForDisplayed();
       await swipeFullScreen('down');
+      await sleep(500);
+      await swipeFullScreen('down'); // second swipe to dismiss receive sheet
       await sleep(1000); // wait for the app to settle
 
       // open tag manager, delete tag
@@ -272,6 +274,8 @@ describe('@settings - Settings', () => {
       await sleep(1000);
       await tap('BackupWallet');
       await sleep(1000); // animation
+      await tap('BackupIntroViewContinue'); // proceed past backup intro screen
+      await sleep(1000);
 
       // get the seed from SeedContainer
       const seedElement = await elementById('SeedContainer');
