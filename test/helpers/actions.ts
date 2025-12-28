@@ -334,8 +334,8 @@ export async function swipeFullScreen(direction: Direction) {
       endY = height * 0.2;
       break;
     case 'down':
-      startY = height * 0.2;
-      endY = height * 0.8;
+      startY = height * 0.1;
+      endY = height * 0.9;
       break;
   }
 
@@ -347,8 +347,7 @@ export async function swipeFullScreen(direction: Direction) {
       actions: [
         { type: 'pointerMove', duration: 0, x: startX, y: startY },
         { type: 'pointerDown', button: 0 },
-        { type: 'pause', duration: 50 },
-        { type: 'pointerMove', duration: 200, x: endX, y: endY },
+        { type: 'pointerMove', duration: 100, x: endX, y: endY },
         { type: 'pointerUp', button: 0 },
       ],
     },
