@@ -35,8 +35,11 @@ describe('@onboarding - Onboarding', () => {
       await swipeFullScreen('left');
       await elementById('Slide3').waitForDisplayed();
     } else {
-      await elementById('Slide3').waitForDisplayed();
+      await elementById('Slide2').waitForDisplayed();
     }
+    await swipeFullScreen('left');
+    await swipeFullScreen('left');
+    await swipeFullScreen('right');
     await swipeFullScreen('right');
     await tap('SkipButton');
 
@@ -66,7 +69,7 @@ describe('@onboarding - Onboarding', () => {
       await swipeFullScreen('left');
       await elementById('Slide3').waitForDisplayed();
     } else {
-      await elementById('Slide3').waitForDisplayed();
+      await elementById('Slide2').waitForDisplayed();
     }
     await swipeFullScreen('right');
     await tap('SkipButton');
