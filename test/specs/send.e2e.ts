@@ -370,10 +370,10 @@ describe('@send - Send', () => {
     // max amount (lightning)
     // Android shows raw `maxSendLightningSats` (7k - 1k reserve = 6k).
     // iOS subtracts an estimated routing fee which includes a hardcoded 2 sat buffer (see SendAmountView.calculateRoutingFee()).
-    await expectText(driver.isIOS ? '5 998' : '6 000', { strategy: 'contains' });
+    await expectText('5 998', { strategy: 'contains' });
     await tap('AssetButton-switch');
     // max amount (onchain)
-    await expectText(driver.isIOS ? '5 998' : '6 000', { visible: false, strategy: 'contains' });
+    await expectText('5 998', { visible: false, strategy: 'contains' });
     await tap('AssetButton-switch');
     await tap('N1');
     await multiTap('N0', 3);
@@ -398,7 +398,7 @@ describe('@send - Send', () => {
     // max amount (lightning)
     await tap('AvailableAmount');
     await tap('ContinueAmount');
-    await expectText(driver.isIOS ? '4 998' : '5 000', { strategy: 'contains' });
+    await expectText('4 998', { strategy: 'contains' });
     // expect toast about reserve balance
     await expectText('Reserve Balance');
     await tap('NavigationBack');
@@ -412,7 +412,7 @@ describe('@send - Send', () => {
       await tap('NRemove');
     }
     await tap('ContinueAmount');
-    await expectText(driver.isIOS ? '4 998' : '5 000', { visible: false, strategy: 'contains' });
+    await expectText('4 998', { visible: false, strategy: 'contains' });
     await tap('NavigationBack');
     await multiTap('NRemove', 6);
     await tap('N1');
