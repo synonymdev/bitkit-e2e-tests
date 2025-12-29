@@ -114,7 +114,7 @@ async function classicDenominationChecks(mode: NumberpadMode) {
 
   // reset to 0
   await multiTap('NRemove', 2);
-    if (mode === 'Send') {
+  if (mode === 'Send') {
     await expectTextWithin('SendNumberField', '0.00000000');
   } else {
     await expectTextWithin('ReceiveNumberPadTextField', '0.00000000');
