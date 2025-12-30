@@ -1,5 +1,5 @@
 import {
-  acceptAppNotificationAlert,
+  handleAndroidAlert,
   confirmInputOnKeyboard,
   elementById,
   elementByText,
@@ -43,7 +43,7 @@ describe('@onboarding - Onboarding', () => {
     await tap('NewWallet');
     await waitForSetupWalletScreenFinish();
 
-    await acceptAppNotificationAlert();
+    await handleAndroidAlert();
 
     await elementByText('TO GET').waitForDisplayed();
   });
@@ -70,7 +70,7 @@ describe('@onboarding - Onboarding', () => {
     await tap('CreateNewWallet');
     await waitForSetupWalletScreenFinish();
 
-    await acceptAppNotificationAlert();
+    await handleAndroidAlert();
 
     // Wait for wallet to be created
     for (let i = 1; i <= 3; i++) {

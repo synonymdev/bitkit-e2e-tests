@@ -10,7 +10,7 @@ import {
   dragOnElement,
   elementsById,
   getReceiveAddress,
-  acceptAppNotificationAlert,
+  handleAndroidAlert,
   confirmInputOnKeyboard,
   multiTap,
   getAccessibleText,
@@ -437,7 +437,7 @@ describe('@settings - Settings', () => {
         await tap('NavigationAction');
         // on the first time we need to accept the notifications permission dialog to use camera
         if (i === 0) {
-          await acceptAppNotificationAlert('permission_allow_foreground_only_button');
+          await handleAndroidAlert('permission_allow_foreground_only_button');
         }
         await tap('ScanPrompt');
         await typeText('QRInput', conn.url);
