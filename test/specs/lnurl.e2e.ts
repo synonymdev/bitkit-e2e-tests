@@ -142,7 +142,7 @@ describe('@lnurl - LNURL', () => {
 
       // Success toast/flow
       if (driver.isIOS) await waitForToast('SpendingBalanceReadyToast');
-      if (driver.isAndroid) await dismissQuickPayIntro();
+      if (driver.isAndroid) await dismissQuickPayIntro({ triggerTimedSheet: true });
       await acknowledgeExternalSuccess();
       if (driver.isIOS) {
         await dismissBackgroundPaymentsTimedSheet();
