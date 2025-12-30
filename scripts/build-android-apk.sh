@@ -12,7 +12,7 @@
 # - Android SDK/NDK as required by the project, Gradle wrapper
 #
 # Usage:
-#   ./scripts/build-android-apk.sh [API_LEVEL]
+#   E2E_BACKEND=network ./scripts/build-android-apk.sh [API_LEVEL]
 # Example:
 #   ./scripts/build-android-apk.sh 14
 set -euo pipefail
@@ -20,8 +20,10 @@ set -euo pipefail
 E2E_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ANDROID_ROOT="$(cd "$E2E_ROOT/../bitkit-android" && pwd)"
 
+E2E_BACKEND="${E2E_BACKEND:-local}"
+
 pushd "$ANDROID_ROOT" >/dev/null
-E2E=true ./gradlew assembleDevDebug --no-daemon --stacktrace
+E2E=true E2E_BACKEND="$E2E_BACKEND" ./gradlew assembleDevDebug --no-daemon --stacktrace
 popd >/dev/null
 
 # Determine APK path: prefer provided API level, else auto-detect, else fallback to 14
@@ -51,5 +53,4 @@ OUT="$E2E_ROOT/aut"
 mkdir -p "$OUT"
 cp -f "$APK_PATH" "$OUT/bitkit_e2e.apk"
 echo "Android APK copied to: $OUT/bitkit_e2e.apk (from $(basename "$APK_PATH"))"
-
 
