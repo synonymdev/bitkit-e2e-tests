@@ -30,13 +30,7 @@ describe('@onboarding - Onboarding', () => {
     await swipeFullScreen('left');
     await elementById('Slide1').waitForDisplayed();
     await swipeFullScreen('left');
-    if (driver.isAndroid) {
-      await elementById('Slide2').waitForDisplayed();
-      await swipeFullScreen('left');
-      await elementById('Slide3').waitForDisplayed();
-    } else {
-      await elementById('Slide2').waitForDisplayed();
-    }
+    await elementById('Slide2').waitForDisplayed();
     await swipeFullScreen('left');
     await swipeFullScreen('left');
     await swipeFullScreen('right');
@@ -64,13 +58,7 @@ describe('@onboarding - Onboarding', () => {
     await swipeFullScreen('left');
     await elementById('Slide1').waitForDisplayed();
     await swipeFullScreen('left');
-    if (driver.isAndroid) {
-      await elementById('Slide2').waitForDisplayed();
-      await swipeFullScreen('left');
-      await elementById('Slide3').waitForDisplayed();
-    } else {
-      await elementById('Slide2').waitForDisplayed();
-    }
+    await elementById('Slide2').waitForDisplayed();
     await swipeFullScreen('right');
     await tap('SkipButton');
 
