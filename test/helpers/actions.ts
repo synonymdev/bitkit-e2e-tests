@@ -446,7 +446,7 @@ export async function confirmInputOnKeyboard() {
   }
 }
 
-export async function acceptAppNotificationAlert(
+export async function handleAndroidAlert(
   button: string = 'permission_allow_button'
 ): Promise<void> {
   if (driver.isAndroid) {
@@ -503,7 +503,7 @@ export async function completeOnboarding({ isFirstTime = true } = {}) {
   await waitForSetupWalletScreenFinish();
 
   if (isFirstTime) {
-    await acceptAppNotificationAlert();
+    await handleAndroidAlert();
   }
 
   // Wait for wallet to be created
@@ -559,7 +559,7 @@ export async function restoreWallet(
   await tap('RestoreButton');
   await waitForSetupWalletScreenFinish();
 
-  await acceptAppNotificationAlert();
+  await handleAndroidAlert();
 
   // Wait for Get Started
   const getStarted = await elementById('GetStartedButton');
@@ -878,7 +878,7 @@ export async function enterAddress(address: string, { acceptCameraPermission = t
   await tap('Send');
   await sleep(700);
   if (acceptCameraPermission) {
-    await acceptAppNotificationAlert('permission_allow_one_time_button');
+    await handleAndroidAlert('permission_allow_one_time_button');
   }
   await tap('RecipientManual');
   await typeAddressAndVerifyContinue({ address });
@@ -892,7 +892,7 @@ export async function enterAddressViaScanPrompt(
   await tap('Scan');
   await sleep(700);
   if (acceptCameraPermission) {
-    await acceptAppNotificationAlert('permission_allow_foreground_only_button');
+    await handleAndroidAlert('permission_allow_foreground_only_button');
   }
   await tap('ScanPrompt');
   await typeText('QRInput', address);
