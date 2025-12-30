@@ -60,10 +60,14 @@ If you have `bitkit-e2e-tests`, `bitkit-android`, and `bitkit-ios` checked out i
 ./scripts/build-ios-sim.sh
 ```
 
-Optional Android override to use network Electrum:
+Optional Android backend selection:
 
 ```bash
-E2E_BACKEND=network ./scripts/build-android-apk.sh
+# local Electrum (default)
+./scripts/build-android-apk.sh
+
+# regtest Electrum (network)
+BACKEND=regtest ./scripts/build-android-apk.sh
 ```
 
 ---
