@@ -48,6 +48,30 @@ test/
 
 ---
 
+### 🧱 Build apps locally (Android/iOS)
+
+If you have `bitkit-e2e-tests`, `bitkit-android`, and `bitkit-ios` checked out in the same parent directory, you can use the helper scripts to build local artifacts. The outputs land in `./aut` and are ready to be tested.
+
+```bash
+# Android (builds ../bitkit-android and copies APK to ./aut/bitkit_e2e.apk)
+./scripts/build-android-apk.sh
+
+# iOS (builds ../bitkit-ios and copies IPA to ./aut/bitkit_e2e.ipa)
+./scripts/build-ios-sim.sh
+```
+
+Optional Android backend selection:
+
+```bash
+# local Electrum (default)
+./scripts/build-android-apk.sh
+
+# regtest Electrum (network)
+BACKEND=regtest ./scripts/build-android-apk.sh
+```
+
+---
+
 ### 🧪 Running tests
 
 ```bash
