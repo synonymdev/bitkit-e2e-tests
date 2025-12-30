@@ -672,21 +672,12 @@ export async function receiveOnchainFunds(
 
   await mineBlocks(rpc, blocksToMine);
 
-  if (driver.isAndroid) {
-    await dismissBackupTimedSheet();
-    if (expectHighBalanceWarning) {
-      await acknowledgeHighBalanceWarning();
-    }
-  }
-
   const moneyText = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
   await expect(moneyText).toHaveText(formattedSats);
 
-  if (driver.isIOS) {
-    await dismissBackupTimedSheet({ triggerTimedSheet: true });
-    if (expectHighBalanceWarning) {
-      await acknowledgeHighBalanceWarning({ triggerTimedSheet: true });
-    }
+  await dismissBackupTimedSheet({ triggerTimedSheet: true });
+  if (expectHighBalanceWarning) {
+    await acknowledgeHighBalanceWarning({ triggerTimedSheet: driver.isIOS });
   }
 }
 
