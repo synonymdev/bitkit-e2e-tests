@@ -200,7 +200,7 @@ describe('@send - Send', () => {
       await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: driver.isIOS });
       await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
     } else {
-      await dismissQuickPayIntro();
+      await dismissQuickPayIntro({ triggerTimedSheet: true });
     }
 
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');

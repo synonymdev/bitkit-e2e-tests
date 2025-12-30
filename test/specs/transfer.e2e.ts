@@ -347,7 +347,7 @@ describe('@transfer - Transfer', () => {
       await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: driver.isIOS });
       await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
     } else {
-      await dismissQuickPayIntro();
+      await dismissQuickPayIntro({ triggerTimedSheet: true });
     }
     await expectNoTextWithin('ActivitySpending', '0');
     await waitForActiveChannel(lnd, ldkNodeId);
