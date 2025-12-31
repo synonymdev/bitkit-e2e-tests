@@ -1,6 +1,6 @@
 export const APP_ID = {
   android: 'to.bitkit.dev',
-  ios: 'to.bitkit-regtest',
+  ios: 'to.bitkit',
 };
 
 export function getAppId(): string {
