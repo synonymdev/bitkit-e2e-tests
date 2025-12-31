@@ -138,7 +138,7 @@ describe('@onchain - Onchain', () => {
 
       if (i === 1) {
         await dismissBackupTimedSheet({ triggerTimedSheet: true });
-        await acknowledgeHighBalanceWarning({ triggerTimedSheet: driver.isIOS });
+        await acknowledgeHighBalanceWarning({ triggerTimedSheet: true });
       }
     }
 

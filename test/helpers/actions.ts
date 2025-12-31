@@ -677,7 +677,7 @@ export async function receiveOnchainFunds(
 
   await dismissBackupTimedSheet({ triggerTimedSheet: true });
   if (expectHighBalanceWarning) {
-    await acknowledgeHighBalanceWarning({ triggerTimedSheet: driver.isIOS });
+    await acknowledgeHighBalanceWarning({ triggerTimedSheet: true });
   }
 }
 
