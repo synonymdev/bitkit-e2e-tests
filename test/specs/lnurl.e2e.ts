@@ -141,12 +141,13 @@ describe('@lnurl - LNURL', () => {
       await waitForActiveChannel(lnd as any, ldkNodeID);
 
       // Success toast/flow
-      if (driver.isIOS) await waitForToast('SpendingBalanceReadyToast');
-      if (driver.isAndroid) await dismissQuickPayIntro({ triggerTimedSheet: true });
+      await waitForToast('SpendingBalanceReadyToast');
       await acknowledgeExternalSuccess();
       if (driver.isIOS) {
         await dismissBackgroundPaymentsTimedSheet();
         await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
+      } else {
+        await dismissQuickPayIntro({ triggerTimedSheet: driver.isAndroid });
       }
       await expectTextWithin('ActivitySpending', '20 001');
 
