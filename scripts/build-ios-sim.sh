@@ -13,16 +13,30 @@
 #
 # Usage:
 #   ./scripts/build-ios-sim.sh
+#   BACKEND=regtest ./scripts/build-ios-sim.sh
 set -euo pipefail
 E2E_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 IOS_ROOT="$(cd "$E2E_ROOT/../bitkit-ios" && pwd)"
 
-# Default to E2E build unless explicitly disabled.
-E2E_FLAG="${E2E:-true}"
+BACKEND="${BACKEND:-local}"
+E2E_BACKEND="local"
+E2E_NETWORK="regtest"
 XCODE_EXTRA_ARGS=()
-if [[ "$E2E_FLAG" == "true" ]]; then
-  XCODE_EXTRA_ARGS+=(SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) E2E_BUILD')
+
+if [[ "$BACKEND" == "regtest" ]]; then
+  E2E_BACKEND="network"
+elif [[ "$BACKEND" == "local" ]]; then
+  E2E_BACKEND="local"
+else
+  echo "ERROR: Unsupported BACKEND value: $BACKEND" >&2
+  exit 1
 fi
+
+XCODE_EXTRA_ARGS+=(
+  "E2E_BACKEND=$E2E_BACKEND"
+  "E2E_NETWORK=$E2E_NETWORK"
+  "SWIFT_ACTIVE_COMPILATION_CONDITIONS=\$(inherited) E2E_BUILD"
+)
 
 xcodebuild \
   -project "$IOS_ROOT/Bitkit.xcodeproj" \
