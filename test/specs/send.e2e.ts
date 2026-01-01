@@ -21,7 +21,7 @@ import {
   dismissQuickPayIntro,
   doNavigationClose,
   waitForToast,
-  acceptAppNotificationAlert,
+  handleAndroidAlert,
   dismissBackgroundPaymentsTimedSheet,
   acknowledgeReceivedPayment,
 } from '../helpers/actions';
@@ -67,7 +67,7 @@ describe('@send - Send', () => {
 
   ciIt('@send_1 - Validates payment data in the manual input', async () => {
     await tap('Send');
-    await acceptAppNotificationAlert('permission_allow_foreground_only_button');
+    await handleAndroidAlert('permission_allow_foreground_only_button');
     await tap('RecipientManual');
 
     // check validation for empty address
@@ -200,7 +200,7 @@ describe('@send - Send', () => {
       await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: driver.isIOS });
       await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
     } else {
-      await dismissQuickPayIntro();
+      await dismissQuickPayIntro({ triggerTimedSheet: true });
     }
 
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
