@@ -116,7 +116,7 @@ describe('@lightning - Lightning', () => {
       await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: driver.isIOS });
       await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
     } else {
-      await dismissQuickPayIntro({ triggerTimedSheet: true });
+      await dismissQuickPayIntro();
     }
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     await expect(totalBalance).toHaveText('11 000'); // 1k onchain + 10k lightning
