@@ -129,11 +129,6 @@ describe('@onchain - Onchain', () => {
 
       await mineBlocks(rpc, 1);
       await electrum?.waitForSync();
-
-      if (i === 1 && driver.isAndroid) {
-        await dismissBackupTimedSheet();
-        await acknowledgeHighBalanceWarning();
-      }
       await sleep(1000); // wait for the app to settle
 
       // - shows correct total balance
@@ -141,7 +136,7 @@ describe('@onchain - Onchain', () => {
       const expected = `${i}00 000 000`;
       await expect(totalBalance).toHaveText(expected);
 
-      if (i === 1 && driver.isIOS) {
+      if (i === 1) {
         await dismissBackupTimedSheet({ triggerTimedSheet: true });
         await acknowledgeHighBalanceWarning({ triggerTimedSheet: true });
       }

@@ -127,6 +127,7 @@ export async function checkChannelStatus({ size = '100 000' } = {}) {
   await tap('DrawerSettings');
   await tap('AdvancedSettings');
   await tap('Channels');
+  await sleep(1000);
   await tap('Channel');
   await expectTextWithin('TotalSize', `₿ ${size}`);
   await swipeFullScreen('up');
