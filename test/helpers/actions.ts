@@ -559,13 +559,13 @@ export async function restoreWallet(
   await tap('RestoreButton');
   await waitForSetupWalletScreenFinish();
 
-  await handleAndroidAlert();
-
   // Wait for Get Started
   const getStarted = await elementById('GetStartedButton');
   await getStarted.waitForDisplayed();
   await tap('GetStartedButton');
-
+  
+  await handleAndroidAlert();
+  
   if (expectQuickPayTimedSheet) {
     await dismissQuickPayIntro();
   }
