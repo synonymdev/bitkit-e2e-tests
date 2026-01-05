@@ -1,4 +1,6 @@
 import { execSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 import { sleep } from './actions';
 import { getAppId, getAppPath } from './constants';
 
@@ -18,6 +20,36 @@ export async function reinstallApp() {
   const appId = getAppId();
   const appPath = getAppPath();
 
+  await driver.removeApp(appId);
+  resetBootedIOSKeychain();
+  await driver.installApp(appPath);
+  await driver.activateApp(appId);
+}
+
+export function getRnAppPath(): string {
+  const fallback = path.join(__dirname, '..', '..', 'aut', 'bitkit_rn_regtest.apk');
+  const appPath = process.env.RN_APK_PATH ?? fallback;
+  if (!fs.existsSync(appPath)) {
+    throw new Error(
+      `RN APK not found at: ${appPath}. Set RN_APK_PATH or place it at ${fallback}`
+    );
+  }
+  return appPath;
+}
+
+export function getNativeAppPath(): string {
+  const fallback = path.join(__dirname, '..', '..', 'aut', 'bitkit_e2e.apk');
+  const appPath = process.env.NATIVE_APK_PATH ?? fallback;
+  if (!fs.existsSync(appPath)) {
+    throw new Error(
+      `Native APK not found at: ${appPath}. Set NATIVE_APK_PATH or place it at ${fallback}`
+    );
+  }
+  return appPath;
+}
+
+export async function reinstallAppFromPath(appPath: string, appId: string = getAppId()) {
+  console.info(`→ Reinstalling app from: ${appPath}`);
   await driver.removeApp(appId);
   resetBootedIOSKeychain();
   await driver.installApp(appPath);
