@@ -522,14 +522,18 @@ export async function restoreWallet(
   {
     passphrase,
     expectQuickPayTimedSheet = false,
-  }: { passphrase?: string; expectQuickPayTimedSheet?: boolean } = {}
+    reinstall = true,
+  }: { passphrase?: string; expectQuickPayTimedSheet?: boolean; reinstall?: boolean } = {}
 ) {
   console.info('→ Restoring wallet with seed:', seed);
   // Let cloud state flush - carried over from Detox
   await sleep(5000);
 
   // Reinstall app to wipe all data
-  await reinstallApp();
+  if (reinstall) {
+    console.info('Reinstalling app to reset state...');
+    await reinstallApp();
+  }
 
   // Terms of service
   await elementById('Continue').waitForDisplayed();

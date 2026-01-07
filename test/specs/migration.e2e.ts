@@ -1,25 +1,64 @@
-import { elementById, restoreWallet, sleep, tap, typeText, waitForSetupWalletScreenFinish } from '../helpers/actions';
+import {
+  dismissBackupTimedSheet,
+  elementById,
+  elementByIdWithin,
+  expectText,
+  expectTextWithin,
+  handleAndroidAlert,
+  restoreWallet,
+  sleep,
+  swipeFullScreen,
+  tap,
+  typeText,
+  waitForSetupWalletScreenFinish,
+} from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
-import { getNativeAppPath, getRnAppPath, reinstallAppFromPath } from '../helpers/setup';
+import {
+  getNativeAppPath,
+  getRnAppPath,
+  reinstallAppFromPath,
+  resetBootedIOSKeychain,
+} from '../helpers/setup';
+import { getAppId } from '../helpers/constants';
 
 const MIGRATION_MNEMONIC =
   process.env.MIGRATION_MNEMONIC ??
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 
 describe('@migration - Legacy RN migration', () => {
-  ciIt('@migration_1 - Can restore legacy RN wallet from mnemonic', async () => {
+  ciIt('@migration_1 - Remove legacy RN app and install native app', async () => {
     await installLegacyRnApp();
     await restoreLegacyRnWallet(MIGRATION_MNEMONIC);
 
-    // Restore into native app
-    // await installNativeApp();
-    await restoreWallet(MIGRATION_MNEMONIC);
+    // Reinstall native app
+    console.info(`→ Reinstalling app from: ${getNativeAppPath()}`);
+    await driver.removeApp(getAppId());
+    resetBootedIOSKeychain();
+    await driver.installApp(getNativeAppPath());
+    await driver.activateApp(getAppId());
+
+    // restore wallet and verify migration
+    await restoreWallet(MIGRATION_MNEMONIC, { reinstall: false });
+    await verifyMigration();
+  });
+
+  ciIt('@migration_2 - Install native app on top of legacy RN app', async () => {
+    await installLegacyRnApp();
+    await restoreLegacyRnWallet(MIGRATION_MNEMONIC);
+
+    // Install native app
+    console.info(`→ Installing app from: ${getNativeAppPath()}`);
+    await driver.installApp(getNativeAppPath());
+    await driver.activateApp(getAppId());
+
+    // verify migration
+    await handleAndroidAlert();
+    await expectText('Migration Complete');
+    await dismissBackupTimedSheet();
+    await verifyMigration();
   });
 });
 
-async function installNativeApp() {
-  await reinstallAppFromPath(getNativeAppPath());
-}
 async function installLegacyRnApp() {
   await reinstallAppFromPath(getRnAppPath());
 }
@@ -41,7 +80,73 @@ async function restoreLegacyRnWallet(seed: string) {
   await waitForSetupWalletScreenFinish();
 
   const getStarted = await elementById('GetStartedButton');
-  await getStarted.waitForDisplayed( { timeout: 120000 });
+  await getStarted.waitForDisplayed({ timeout: 120000 });
   await tap('GetStartedButton');
   await sleep(1000);
+  await expectText(totalBalance);
+  await expectText(savingBalance);
+  await expectText(spendingBalance);
+}
+
+const totalBalance = '141 321';
+const savingBalance = '91 766';
+const spendingBalance = '49 555';
+
+async function verifyMigration() {
+  console.info('→ Verifying migrated wallet balances...');
+  const totalBalanceEl = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
+  await expect(totalBalanceEl).toHaveText(totalBalance);
+  await expectTextWithin('ActivitySpending', spendingBalance);
+  await expectTextWithin('ActivitySavings', savingBalance);
+
+  console.info('→ Verify transaction details...');
+  await swipeFullScreen('up');
+  await swipeFullScreen('up');
+  await tap('ActivityShowAll');
+
+  // All transactions
+  await expectTextWithin('Activity-1', '-');
+  await expectTextWithin('Activity-2', '+');
+  await expectTextWithin('Activity-3', '-');
+  await expectTextWithin('Activity-4', '-');
+  await expectTextWithin('Activity-5', '+');
+  await expectTextWithin('Activity-6', '+');
+
+  // Sent, 2 transactions
+  await tap('Tab-sent');
+  await expectTextWithin('Activity-1', '-');
+  await expectTextWithin('Activity-2', '-');
+  await expectTextWithin('Activity-3', '-');
+  await elementById('Activity-4').waitForDisplayed({ reverse: true });
+
+  // Received, 2 transactions
+  await tap('Tab-received');
+  await expectTextWithin('Activity-1', '+');
+  await expectTextWithin('Activity-2', '+');
+  await expectTextWithin('Activity-3', '+');
+  await elementById('Activity-4').waitForDisplayed({ reverse: true });
+
+  // Other, 0 transactions
+  await tap('Tab-other');
+  await elementById('Activity-1').waitForDisplayed();
+  await elementById('Activity-2').waitForDisplayed({ reverse: true });
+
+  // filter by receive tag
+  await tap('Tab-all');
+  await tap('TagsPrompt');
+  await sleep(500);
+  await tap('Tag-received ');
+  await expectTextWithin('Activity-1', '+');
+  await expectTextWithin('Activity-2', '+');
+  await elementById('Activity-3').waitForDisplayed({ reverse: true });
+  await tap('Tag-received -delete');
+
+  // filter by send tag
+  await tap('TagsPrompt');
+  await sleep(500);
+  await tap('Tag-sent');
+  await expectTextWithin('Activity-1', '-');
+  await expectTextWithin('Activity-2', '-');
+  await elementById('Activity-3').waitForDisplayed({ reverse: true });
+  await tap('Tag-sent-delete');
 }
