@@ -56,6 +56,9 @@ If you have `bitkit-e2e-tests`, `bitkit-android`, and `bitkit-ios` checked out i
 # Android (builds ../bitkit-android and copies APK to ./aut/bitkit_e2e.apk)
 ./scripts/build-android-apk.sh
 
+# Legacy RN Android (builds ../bitkit and copies APK to ./aut/bitkit_rn_regtest.apk)
+./scripts/build-rn-android-apk.sh
+
 # iOS (builds ../bitkit-ios and copies IPA to ./aut/bitkit_e2e.ipa)
 ./scripts/build-ios-sim.sh
 ```
@@ -66,6 +69,9 @@ Optional backend selection (`BACKEND=local` is default and can be omitted):
 # Android
 BACKEND=local ./scripts/build-android-apk.sh
 BACKEND=regtest ./scripts/build-android-apk.sh
+
+# Legacy RN Android
+BACKEND=regtest ./scripts/build-rn-android-apk.sh
 
 # iOS
 BACKEND=local ./scripts/build-ios-sim.sh

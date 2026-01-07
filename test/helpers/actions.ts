@@ -565,7 +565,9 @@ export async function restoreWallet(
   const getStarted = await elementById('GetStartedButton');
   await getStarted.waitForDisplayed();
   await tap('GetStartedButton');
-
+  await sleep(1000);
+  await handleAndroidAlert();
+  
   if (expectQuickPayTimedSheet) {
     await dismissQuickPayIntro();
   }
