@@ -356,7 +356,9 @@ describe('@send - Send', () => {
       await expectTextWithin('ActivitySpending', '7 000');
     } else {
       // https://github.com/synonymdev/bitkit-ios/issues/300
-      console.info('Skipping sending to unified invoice w/ expired invoice on iOS due to /bitkit-ios/issues/300');
+      console.info(
+        'Skipping sending to unified invoice w/ expired invoice on iOS due to /bitkit-ios/issues/300'
+      );
       amtAfterUnified3 = amtAfterUnified2;
     }
 

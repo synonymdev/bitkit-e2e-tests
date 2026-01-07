@@ -65,7 +65,6 @@ export const config: WebdriverIO.Config = {
           'appium:deviceName': 'Pixel_6',
           'appium:platformVersion': '13.0',
           'appium:app': path.join(__dirname, 'aut', 'bitkit_e2e.apk'),
-          // 'appium:app': path.join(__dirname, 'aut', 'bitkit_v1.1.2.apk'),
           'appium:autoGrantPermissions': true,
         }
       : {
