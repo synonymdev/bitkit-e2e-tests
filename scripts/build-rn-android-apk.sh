@@ -27,7 +27,7 @@ fi
 
 if [[ -z "${ENV_FILE:-}" ]]; then
   if [[ "$BACKEND" == "regtest" ]]; then
-    ENV_FILE=".env.test.template"
+    ENV_FILE=".env.development.template"
   else
     ENV_FILE=".env.development"
   fi
