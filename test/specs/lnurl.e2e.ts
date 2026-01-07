@@ -307,9 +307,7 @@ describe('@lnurl - LNURL', () => {
       });
       console.log('withdrawRequest2', withdrawRequest2);
 
-      // TODO: after https://github.com/synonymdev/bitkit-android/issues/418 is resolved
-      // we should test the scan flow here
-      await enterAddress(withdrawRequest2.encoded, { acceptCameraPermission: false });
+      await enterAddressViaScanPrompt(withdrawRequest2.encoded, { acceptCameraPermission: false });
       const reviewAmtWithdraw = await elementByIdWithin('WithdrawAmount-primary', 'MoneyText');
       await expect(reviewAmtWithdraw).toHaveText('303');
       await tap('WithdrawConfirmButton');

@@ -5,6 +5,7 @@ This file provides guidance to AI agents (Codex/Claude/Cursor/WARP) working in t
 ## Purpose
 
 Bitkit E2E tests for:
+
 - **bitkit-android** (native Android app)
 - **bitkit-ios** (native iOS app)
 
@@ -39,6 +40,7 @@ BACKEND=regtest ./scripts/build-ios-sim.sh
 ```
 
 Notes:
+
 - `BACKEND=local` uses local Electrum (default).
 - `BACKEND=regtest` sets network Electrum against regtest.
 
