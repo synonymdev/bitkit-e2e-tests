@@ -326,39 +326,39 @@ describe('@send - Send', () => {
     console.info({ amtAfterUnified2 });
     await expectTextWithin('ActivitySpending', '7 000');
 
-    //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/366 ---//
-
-    // TODO: uncomment after fix
-
     // send to unified invoice w/ expired invoice
-    // console.info('Sending to unified invoice w/ expired invoice...');
-    // const unified3 =
-    //   'bitcoin:bcrt1qaytrqsrgg75rtxrtr7ur6k75la8p3v95mey48z?lightning=LNBCRT1PN33T20DQQNP4QTNTQ4D2DHDYQ420HAUQF5TS7X32TNW9WGYEPQZQ6R9G69QPHW4RXPP5QU7UYXJYJA9PJV7H6JPEYEFFNZ98N686JDEAAK8AUD5AGC5X70HQSP54V5LEFATCQDEU8TLKAF6MDK3ZLU6MWUA52J4JEMD5XA85KGKMTTQ9QYYSGQCQPCXQRRSSRZJQWU6G4HMGH26EXXQYPQD8XHVWLARA66PL53V7S9CV2EE808UGDRN4APYQQQQQQQGRCQQQQLGQQQQQQGQ2QX7F74RT5SQE0KEYCU47LYMSVY2LM4QA4KLR65PPSY55M0H4VR8AN7WVM9EFVSPYJ5R8EFGVXTGVATAGFTC372VRJ3HEPSEELFZ7FQFCQ9XDU9X';
-    // console.info({ unified3 });
+    let amtAfterUnified3: string;
+    if (driver.isAndroid) {
+      console.info('Sending to unified invoice w/ expired invoice...');
+      const unified3 =
+        'bitcoin:bcrt1qaytrqsrgg75rtxrtr7ur6k75la8p3v95mey48z?lightning=LNBCRT1PN33T20DQQNP4QTNTQ4D2DHDYQ420HAUQF5TS7X32TNW9WGYEPQZQ6R9G69QPHW4RXPP5QU7UYXJYJA9PJV7H6JPEYEFFNZ98N686JDEAAK8AUD5AGC5X70HQSP54V5LEFATCQDEU8TLKAF6MDK3ZLU6MWUA52J4JEMD5XA85KGKMTTQ9QYYSGQCQPCXQRRSSRZJQWU6G4HMGH26EXXQYPQD8XHVWLARA66PL53V7S9CV2EE808UGDRN4APYQQQQQQQGRCQQQQLGQQQQQQGQ2QX7F74RT5SQE0KEYCU47LYMSVY2LM4QA4KLR65PPSY55M0H4VR8AN7WVM9EFVSPYJ5R8EFGVXTGVATAGFTC372VRJ3HEPSEELFZ7FQFCQ9XDU9X';
+      console.info({ unified3 });
 
-    // // const ln =
-    // //   'LNBCRT1PN33T20DQQNP4QTNTQ4D2DHDYQ420HAUQF5TS7X32TNW9WGYEPQZQ6R9G69QPHW4RXPP5QU7UYXJYJA9PJV7H6JPEYEFFNZ98N686JDEAAK8AUD5AGC5X70HQSP54V5LEFATCQDEU8TLKAF6MDK3ZLU6MWUA52J4JEMD5XA85KGKMTTQ9QYYSGQCQPCXQRRSSRZJQWU6G4HMGH26EXXQYPQD8XHVWLARA66PL53V7S9CV2EE808UGDRN4APYQQQQQQQGRCQQQQLGQQQQQQGQ2QX7F74RT5SQE0KEYCU47LYMSVY2LM4QA4KLR65PPSY55M0H4VR8AN7WVM9EFVSPYJ5R8EFGVXTGVATAGFTC372VRJ3HEPSEELFZ7FQFCQ9XDU9X';
-    // // const dec = await lnd.decodePayReq({ payReq: ln });
-    // // console.info(JSON.stringify(dec, null, 2));
+      // const ln =
+      //   'LNBCRT1PN33T20DQQNP4QTNTQ4D2DHDYQ420HAUQF5TS7X32TNW9WGYEPQZQ6R9G69QPHW4RXPP5QU7UYXJYJA9PJV7H6JPEYEFFNZ98N686JDEAAK8AUD5AGC5X70HQSP54V5LEFATCQDEU8TLKAF6MDK3ZLU6MWUA52J4JEMD5XA85KGKMTTQ9QYYSGQCQPCXQRRSSRZJQWU6G4HMGH26EXXQYPQD8XHVWLARA66PL53V7S9CV2EE808UGDRN4APYQQQQQQQGRCQQQQLGQQQQQQGQ2QX7F74RT5SQE0KEYCU47LYMSVY2LM4QA4KLR65PPSY55M0H4VR8AN7WVM9EFVSPYJ5R8EFGVXTGVATAGFTC372VRJ3HEPSEELFZ7FQFCQ9XDU9X';
+      // const dec = await lnd.decodePayReq({ payReq: ln });
+      // console.info(JSON.stringify(dec, null, 2));
 
-    // await sleep(1000);
-    // await enterAddress(unified3, { acceptCameraPermission: false });
-    // await elementById('AssetButton-savings').waitForDisplayed();
-    // await tap('N1');
-    // await multiTap('N0', 4);
-    // await tap('ContinueAmount');
-    // await amt_el.waitForDisplayed();
-    // await expect(amt_el).toHaveText('10 000');
-    // await dragOnElement('GRAB', 'right', 0.95);
-    // await elementById('SendSuccess').waitForDisplayed();
-    // await tap('Close');
-    // await expect(moneyText).not.toHaveText(amtAfterUnified2);
-    // const amtAfterUnified3 = await moneyText.getText();
-    // await expectTextWithin('ActivitySpending', '7 000');
-
-    //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/366 ---//
-    const amtAfterUnified3 = await totalBalance.getText();
-    console.info({ amtAfterUnified3 });
+      await sleep(1000);
+      await enterAddress(unified3, { acceptCameraPermission: false });
+      await elementById('AssetButton-savings').waitForDisplayed();
+      await tap('N1');
+      await multiTap('N0', 4);
+      await tap('ContinueAmount');
+      await reviewAmt.waitForDisplayed();
+      await expect(reviewAmt).toHaveText('10 000');
+      await dragOnElement('GRAB', 'right', 0.95);
+      await elementById('SendSuccess').waitForDisplayed();
+      await tap('Close');
+      await expect(totalBalance).not.toHaveText(amtAfterUnified2);
+      amtAfterUnified3 = await totalBalance.getText();
+      console.info({ amtAfterUnified3 });
+      await expectTextWithin('ActivitySpending', '7 000');
+    } else {
+      // https://github.com/synonymdev/bitkit-ios/issues/300
+      console.info('Skipping sending to unified invoice w/ expired invoice on iOS due to /bitkit-ios/issues/300');
+      amtAfterUnified3 = amtAfterUnified2;
+    }
 
     // send to unified invoice w/o amount (lightning)
     console.info('Sending to unified invoice w/o amount (lightning)...');
