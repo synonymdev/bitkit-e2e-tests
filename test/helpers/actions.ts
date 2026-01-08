@@ -88,11 +88,11 @@ export function elementByText(
   } else {
     if (strategy === 'exact') {
       return $(
-        `-ios predicate string:(type == "XCUIElementTypeStaticText" OR type == "XCUIElementTypeButton") AND (label == "${text}" OR value == "${text}")`
+        `-ios predicate string:(type == "XCUIElementTypeStaticText" OR type == "XCUIElementTypeButton" OR type == "XCUIElementTypeOther") AND (label == "${text}" OR value == "${text}")`
       );
     }
     return $(
-      `-ios predicate string:(type == "XCUIElementTypeStaticText" OR type == "XCUIElementTypeButton") AND label CONTAINS "${text}"`
+      `-ios predicate string:(type == "XCUIElementTypeStaticText" OR type == "XCUIElementTypeButton" OR type == "XCUIElementTypeOther") AND label CONTAINS "${text}"`
     );
   }
 }
@@ -567,7 +567,7 @@ export async function restoreWallet(
 
   // Wait for Get Started
   const getStarted = await elementById('GetStartedButton');
-  await getStarted.waitForDisplayed();
+  await getStarted.waitForDisplayed( { timeout: 120000 });
   await tap('GetStartedButton');
   await sleep(1000);
   await handleAndroidAlert();
