@@ -239,6 +239,7 @@ describe('@transfer - Transfer', () => {
       // check activities
       await sleep(1000);
       await swipeFullScreen('up');
+      await swipeFullScreen('up');
       await elementById('ActivityShort-0').waitForDisplayed();
       await expectTextWithin('ActivityShort-0', 'Transfer');
       await elementById('ActivityShort-1').waitForDisplayed();
