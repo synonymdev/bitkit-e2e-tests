@@ -27,7 +27,8 @@ export async function reinstallApp() {
 }
 
 export function getRnAppPath(): string {
-  const fallback = path.join(__dirname, '..', '..', 'aut', 'bitkit_rn_regtest.apk');
+  const appFileName = driver.isIOS ? 'bitkit_rn_regtest_ios.app' : 'bitkit_rn_regtest.apk';
+  const fallback = path.join(__dirname, '..', '..', 'aut', appFileName);
   const appPath = process.env.RN_APK_PATH ?? fallback;
   if (!fs.existsSync(appPath)) {
     throw new Error(`RN APK not found at: ${appPath}. Set RN_APK_PATH or place it at ${fallback}`);
@@ -36,7 +37,8 @@ export function getRnAppPath(): string {
 }
 
 export function getNativeAppPath(): string {
-  const fallback = path.join(__dirname, '..', '..', 'aut', 'bitkit_e2e.apk');
+  const appFileName = driver.isIOS ? 'bitkit.app' : 'bitkit_e2e.apk';
+  const fallback = path.join(__dirname, '..', '..', 'aut', appFileName);
   const appPath = process.env.NATIVE_APK_PATH ?? fallback;
   if (!fs.existsSync(appPath)) {
     throw new Error(
