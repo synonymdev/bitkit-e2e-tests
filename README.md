@@ -59,6 +59,9 @@ If you have `bitkit-e2e-tests`, `bitkit-android`, and `bitkit-ios` checked out i
 # Legacy RN Android (builds ../bitkit and copies APK to ./aut/bitkit_rn_regtest.apk)
 ./scripts/build-rn-android-apk.sh
 
+# Legacy RN iOS simulator (builds ../bitkit and copies app to ./aut/bitkit_rn_regtest_ios.app)
+./scripts/build-rn-ios-sim.sh
+
 # iOS (builds ../bitkit-ios and copies IPA to ./aut/bitkit_e2e.ipa)
 ./scripts/build-ios-sim.sh
 ```
@@ -72,6 +75,9 @@ BACKEND=regtest ./scripts/build-android-apk.sh
 
 # Legacy RN Android
 BACKEND=regtest ./scripts/build-rn-android-apk.sh
+
+# Legacy RN iOS simulator
+BACKEND=regtest ./scripts/build-rn-ios-sim.sh
 
 # iOS
 BACKEND=local ./scripts/build-ios-sim.sh
