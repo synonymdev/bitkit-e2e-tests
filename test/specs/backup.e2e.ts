@@ -17,22 +17,13 @@ import {
   waitForBackup,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
-import { getBitcoinRpc } from '../helpers/regtest';
+import { ensureLocalFunds } from '../helpers/regtest';
 
 describe('@backup - Backup', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
-  const rpc = getBitcoinRpc();
 
   before(async () => {
-    // ensure we have at least 10 BTC on regtest
-    let balance = await rpc.getBalance();
-    const address = await rpc.getNewAddress();
-
-    while (balance < 10) {
-      await rpc.generateToAddress(10, address);
-      balance = await rpc.getBalance();
-    }
-
+    await ensureLocalFunds();
     electrum = await initElectrum();
   });
 

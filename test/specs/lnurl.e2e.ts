@@ -33,7 +33,7 @@ import {
   waitForActiveChannel,
   setupLND,
 } from '../helpers/lnd';
-import { getBitcoinRpc } from '../helpers/regtest';
+import { ensureLocalFunds, getBitcoinRpc, mineBlocks } from '../helpers/regtest';
 
 function waitForEvent(lnurlServer: any, name: string): Promise<void> {
   let timer: NodeJS.Timeout | undefined;
@@ -57,17 +57,12 @@ function waitForEvent(lnurlServer: any, name: string): Promise<void> {
 describe('@lnurl - LNURL', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
   let lnurlServer: any;
-  const rpc = getBitcoinRpc();
+  // LND tests only work with BACKEND=local
+  let rpc: ReturnType<typeof getBitcoinRpc>;
 
   before(async () => {
-    // Ensure we have at least 10 BTC on regtest
-    let balance = await rpc.getBalance();
-    const address = await rpc.getNewAddress();
-    while (balance < 10) {
-      await rpc.generateToAddress(10, address);
-      balance = await rpc.getBalance();
-    }
-
+    rpc = getBitcoinRpc();
+    await ensureLocalFunds();
     electrum = await initElectrum();
 
     // Start local LNURL server backed by LND REST
@@ -134,7 +129,7 @@ describe('@lnurl - LNURL', () => {
       await waitForPeerConnection(lnd as any, ldkNodeID);
 
       // Confirm channel by mining and syncing
-      await rpc.generateToAddress(6, await rpc.getNewAddress());
+      await mineBlocks(6);
       await electrum?.waitForSync();
 
       // Wait for channel to be active

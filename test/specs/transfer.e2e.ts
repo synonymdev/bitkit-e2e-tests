@@ -31,24 +31,19 @@ import {
   waitForPeerConnection,
 } from '../helpers/lnd';
 import { lndConfig } from '../helpers/constants';
-import { getBitcoinRpc, mineBlocks } from '../helpers/regtest';
+import { ensureLocalFunds, getBitcoinRpc, mineBlocks } from '../helpers/regtest';
 
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 
 describe('@transfer - Transfer', () => {
   let electrum: { waitForSync: () => any; stop: () => void };
-  const rpc = getBitcoinRpc();
+  // LND tests only work with BACKEND=local
+  let rpc: ReturnType<typeof getBitcoinRpc>;
 
   before(async () => {
-    let balance = await rpc.getBalance();
-    const address = await rpc.getNewAddress();
-
-    while (balance < 10) {
-      await rpc.generateToAddress(10, address);
-      balance = await rpc.getBalance();
-    }
-
+    rpc = getBitcoinRpc();
+    await ensureLocalFunds();
     electrum = await initElectrum();
   });
 

@@ -24,22 +24,13 @@ import {
   acknowledgeReceivedPayment,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
-import { getBitcoinRpc, mineBlocks } from '../helpers/regtest';
+import { ensureLocalFunds, getExternalAddress, mineBlocks, sendToAddress } from '../helpers/regtest';
 
 describe('@onchain - Onchain', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
-  const rpc = getBitcoinRpc();
 
   before(async () => {
-    // ensure we have at least 10 BTC on regtest
-    let balance = await rpc.getBalance();
-    const address = await rpc.getNewAddress();
-
-    while (balance < 10) {
-      await rpc.generateToAddress(10, address);
-      balance = await rpc.getBalance();
-    }
-
+    await ensureLocalFunds();
     electrum = await initElectrum();
   });
 
@@ -58,7 +49,7 @@ describe('@onchain - Onchain', () => {
     await receiveOnchainFunds({ sats: 100_000_000, expectHighBalanceWarning: true });
 
     // then send out 10 000
-    const coreAddress = await rpc.getNewAddress();
+    const coreAddress = await getExternalAddress();
     console.info({ coreAddress });
     await enterAddress(coreAddress);
     await tap('N1');
@@ -122,7 +113,7 @@ describe('@onchain - Onchain', () => {
       await tap('ShowQrReceive');
       await swipeFullScreen('down');
 
-      await rpc.sendToAddress(address, '1');
+      await sendToAddress(address, '1');
       await acknowledgeReceivedPayment();
 
       await mineBlocks(1);
@@ -141,7 +132,7 @@ describe('@onchain - Onchain', () => {
     }
 
     // - can send total balance and tag the tx //
-    const coreAddress = await rpc.getNewAddress();
+    const coreAddress = await getExternalAddress();
     await enterAddress(coreAddress);
 
     // Amount / NumberPad
@@ -265,7 +256,7 @@ describe('@onchain - Onchain', () => {
     await tap('SendAmountWarning');
     await doNavigationClose();
 
-    const coreAddress = await rpc.getNewAddress();
+    const coreAddress = await getExternalAddress();
     console.info({ coreAddress });
     await enterAddress(coreAddress);
 

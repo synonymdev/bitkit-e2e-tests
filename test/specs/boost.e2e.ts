@@ -20,21 +20,13 @@ import {
 import initElectrum from '../helpers/electrum';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
-import { getBitcoinRpc, mineBlocks } from '../helpers/regtest';
+import { ensureLocalFunds, getExternalAddress, mineBlocks } from '../helpers/regtest';
 
 describe('@boost - Boost', () => {
   let electrum: { waitForSync: any; stop: any };
-  const rpc = getBitcoinRpc();
 
   before(async () => {
-    let balance = await rpc.getBalance();
-    const address = await rpc.getNewAddress();
-
-    while (balance < 10) {
-      await rpc.generateToAddress(10, address);
-      balance = await rpc.getBalance();
-    }
-
+    await ensureLocalFunds();
     electrum = await initElectrum();
   });
 
@@ -142,7 +134,7 @@ describe('@boost - Boost', () => {
     await receiveOnchainFunds();
 
     // Send 10 000
-    const coreAddress = await rpc.getNewAddress();
+    const coreAddress = await getExternalAddress();
     await enterAddress(coreAddress);
     await tap('N1');
     await tap('N0');

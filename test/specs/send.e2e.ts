@@ -36,21 +36,16 @@ import {
   checkChannelStatus,
 } from '../helpers/lnd';
 import { ciIt } from '../helpers/suite';
-import { getBitcoinRpc, mineBlocks } from '../helpers/regtest';
+import { ensureLocalFunds, getBitcoinRpc, getExternalAddress, mineBlocks } from '../helpers/regtest';
 
 describe('@send - Send', () => {
   let electrum: { waitForSync: any; stop: any };
-  const rpc = getBitcoinRpc();
+  // LND tests only work with BACKEND=local
+  let rpc: ReturnType<typeof getBitcoinRpc>;
 
   before(async () => {
-    let balance = await rpc.getBalance();
-    const address = await rpc.getNewAddress();
-
-    while (balance < 10) {
-      await rpc.generateToAddress(10, address);
-      balance = await rpc.getBalance();
-    }
-
+    rpc = getBitcoinRpc();
+    await ensureLocalFunds();
     electrum = await initElectrum();
   });
 
@@ -102,7 +97,7 @@ describe('@send - Send', () => {
     await tap('RecipientManual');
 
     // check validation for address
-    const address2 = await rpc.getNewAddress();
+    const address2 = await getExternalAddress();
     try {
       await typeAddressAndVerifyContinue({ address: address2 });
     } catch {

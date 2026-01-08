@@ -13,7 +13,7 @@ import { bitcoinURL, blocktankURL } from './constants';
 export type Backend = 'local' | 'regtest';
 
 export function getBackend(): Backend {
-  const backend = process.env.BACKEND ?? 'local';
+  const backend = process.env.BACKEND || 'local'; // Use || to handle empty string
   if (backend !== 'local' && backend !== 'regtest') {
     throw new Error(`Invalid BACKEND: ${backend}. Expected 'local' or 'regtest'.`);
   }
@@ -130,6 +130,74 @@ export function getBitcoinRpc(): BitcoinJsonRpc {
     throw new Error('getBitcoinRpc() only works with BACKEND=local');
   }
   return getRpc();
+}
+
+/**
+ * Ensures the local bitcoind has enough funds for testing.
+ * Only runs when BACKEND=local. Skips silently when BACKEND=regtest
+ * (Blocktank handles funding via its API).
+ *
+ * Call this in test `before` hooks instead of directly using RPC.
+ */
+export async function ensureLocalFunds(minBtc: number = 10): Promise<void> {
+  const backend = getBackend();
+  if (backend !== 'local') {
+    console.info(`→ [${backend}] Skipping local bitcoind funding (using Blocktank API)`);
+    return;
+  }
+
+  const rpc = getRpc();
+  let balance = await rpc.getBalance();
+  const address = await rpc.getNewAddress();
+
+  while (balance < minBtc) {
+    console.info(`→ [local] Mining blocks to fund local bitcoind (balance: ${balance} BTC)...`);
+    await rpc.generateToAddress(10, address);
+    balance = await rpc.getBalance();
+  }
+  console.info(`→ [local] Local bitcoind has ${balance} BTC`);
+}
+
+// Known regtest address for send tests (used when BACKEND=regtest)
+// This is a standard regtest address that always works
+const REGTEST_TEST_ADDRESS = 'bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080';
+
+/**
+ * Returns an external address to send funds TO (for testing send functionality).
+ * - BACKEND=local: generates a new address from local bitcoind
+ * - BACKEND=regtest: returns a known regtest test address
+ */
+export async function getExternalAddress(): Promise<string> {
+  const backend = getBackend();
+  if (backend === 'local') {
+    const rpc = getRpc();
+    return rpc.getNewAddress();
+  }
+  return REGTEST_TEST_ADDRESS;
+}
+
+/**
+ * Sends funds to an address (for testing receive in the app).
+ * - BACKEND=local: uses local bitcoind RPC
+ * - BACKEND=regtest: uses Blocktank deposit API
+ *
+ * @param address - The address to send to
+ * @param amountBtcOrSats - Amount (BTC string for local, sats number for regtest)
+ */
+export async function sendToAddress(address: string, amountBtcOrSats: string | number): Promise<string> {
+  const backend = getBackend();
+  if (backend === 'local') {
+    const rpc = getRpc();
+    const btc = typeof amountBtcOrSats === 'number'
+      ? (amountBtcOrSats / 100_000_000).toString()
+      : amountBtcOrSats;
+    return rpc.sendToAddress(address, btc);
+  } else {
+    const sats = typeof amountBtcOrSats === 'string'
+      ? Math.round(parseFloat(amountBtcOrSats) * 100_000_000)
+      : amountBtcOrSats;
+    return blocktankDeposit(address, sats);
+  }
 }
 
 /**
