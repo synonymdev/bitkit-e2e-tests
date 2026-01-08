@@ -268,9 +268,9 @@ export async function getTextUnder(containerId: string, index: Index = 'last'): 
 export async function tap(testId: string) {
   const el = await elementById(testId);
   await el.waitForDisplayed();
-  await sleep(100); // Allow time for the element to settle
+  await sleep(150); // Allow time for the element to settle
   await el.click();
-  await sleep(50);
+  await sleep(100);
 }
 
 export async function multiTap(testId: string, count: number) {
@@ -567,7 +567,7 @@ export async function restoreWallet(
   await tap('GetStartedButton');
   await sleep(1000);
   await handleAndroidAlert();
-  
+
   if (expectQuickPayTimedSheet) {
     await dismissQuickPayIntro();
   }
@@ -846,6 +846,7 @@ export async function acknowledgeHighBalanceWarning({
     await doTriggerTimedSheet();
   }
   await elementById('HighBalanceSheetDescription').waitForDisplayed();
+  await sleep(700); // wait for the app to settle
   await tap('HighBalanceSheetContinue');
   await elementById('HighBalanceSheetDescription').waitForDisplayed({ reverse: true });
   await sleep(500);
