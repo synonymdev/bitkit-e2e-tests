@@ -1,4 +1,3 @@
-import BitcoinJsonRpc from 'bitcoin-json-rpc';
 import { encode } from 'bip21';
 
 import initElectrum from '../helpers/electrum';
@@ -17,7 +16,6 @@ import {
   swipeFullScreen,
   multiTap,
   typeAddressAndVerifyContinue,
-  mineBlocks,
   dismissQuickPayIntro,
   doNavigationClose,
   waitForToast,
@@ -25,7 +23,7 @@ import {
   dismissBackgroundPaymentsTimedSheet,
   acknowledgeReceivedPayment,
 } from '../helpers/actions';
-import { bitcoinURL, lndConfig } from '../helpers/constants';
+import { lndConfig } from '../helpers/constants';
 import { reinstallApp } from '../helpers/setup';
 import { confirmInputOnKeyboard, tap, typeText } from '../helpers/actions';
 import {
@@ -38,10 +36,11 @@ import {
   checkChannelStatus,
 } from '../helpers/lnd';
 import { ciIt } from '../helpers/suite';
+import { getBitcoinRpc, mineBlocks } from '../helpers/regtest';
 
 describe('@send - Send', () => {
   let electrum: { waitForSync: any; stop: any };
-  const rpc = new BitcoinJsonRpc(bitcoinURL);
+  const rpc = getBitcoinRpc();
 
   before(async () => {
     let balance = await rpc.getBalance();
@@ -96,7 +95,7 @@ describe('@send - Send', () => {
 
     // Receive funds and check validation w/ balance
     await swipeFullScreen('down');
-    await receiveOnchainFunds(rpc);
+    await receiveOnchainFunds();
 
     await tap('Send');
     await sleep(500);
@@ -143,7 +142,7 @@ describe('@send - Send', () => {
     // - quickpay to lightning invoice
     // - quickpay to unified invoice
 
-    await receiveOnchainFunds(rpc);
+    await receiveOnchainFunds();
 
     // send funds to LND node and open a channel
     const { lnd, lndNodeID } = await setupLND(rpc, lndConfig);
@@ -473,7 +472,7 @@ describe('@send - Send', () => {
 
     // TEMP: receive more funds to be able to pay 10k invoice
     console.info('Receiving lightning funds...');
-    await mineBlocks(rpc, 1);
+    await mineBlocks(1);
     await electrum?.waitForSync();
     const receive2 = await getReceiveAddress('lightning');
     await swipeFullScreen('down');

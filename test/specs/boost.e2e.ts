@@ -1,5 +1,3 @@
-import BitcoinJsonRpc from 'bitcoin-json-rpc';
-
 import {
   sleep,
   completeOnboarding,
@@ -12,7 +10,6 @@ import {
   expectTextWithin,
   elementByIdWithin,
   getTextUnder,
-  mineBlocks,
   doNavigationClose,
   getSeed,
   waitForBackup,
@@ -20,14 +17,14 @@ import {
   enterAddress,
   waitForToast,
 } from '../helpers/actions';
-import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
+import { getBitcoinRpc, mineBlocks } from '../helpers/regtest';
 
 describe('@boost - Boost', () => {
   let electrum: { waitForSync: any; stop: any };
-  const rpc = new BitcoinJsonRpc(bitcoinURL);
+  const rpc = getBitcoinRpc();
 
   before(async () => {
     let balance = await rpc.getBalance();
@@ -52,7 +49,7 @@ describe('@boost - Boost', () => {
 
   ciIt('@boost_1 - Can do CPFP', async () => {
     // fund the wallet (100 000), don't mine blocks so tx is unconfirmed
-    await receiveOnchainFunds(rpc, { sats: 100_000, blocksToMine: 0 });
+    await receiveOnchainFunds({ sats: 100_000, blocksToMine: 0 });
 
     // check Activity
     await swipeFullScreen('up');
@@ -125,7 +122,7 @@ describe('@boost - Boost', () => {
     await elementById('StatusBoosting').waitForDisplayed();
 
     // mine new block
-    await mineBlocks(rpc, 1);
+    await mineBlocks(1);
     await doNavigationClose();
     await sleep(500);
 
@@ -142,7 +139,7 @@ describe('@boost - Boost', () => {
 
   ciIt('@boost_2 - Can do RBF', async () => {
     // fund the wallet (100 000)
-    await receiveOnchainFunds(rpc);
+    await receiveOnchainFunds();
 
     // Send 10 000
     const coreAddress = await rpc.getNewAddress();
@@ -231,7 +228,7 @@ describe('@boost - Boost', () => {
     await doNavigationClose();
 
     // mine new block
-    await mineBlocks(rpc, 1);
+    await mineBlocks(1);
     await doNavigationClose();
     await sleep(500);
 

@@ -26,13 +26,17 @@ const MIGRATION_MNEMONIC =
   process.env.MIGRATION_MNEMONIC ??
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 
-describe('@migration - Legacy RN migration', () => {
+const totalBalance = '141 321';
+const savingBalance = '91 766';
+const spendingBalance = '49 555';
+
+describe('@migration - Migration from legacy RN app to native app', () => {
   ciIt('@migration_1 - Remove legacy RN app and install native app', async () => {
     await installLegacyRnApp();
     await restoreLegacyRnWallet(MIGRATION_MNEMONIC);
 
     // Reinstall native app
-    console.info(`→ Reinstalling app from: ${getNativeAppPath()}`);
+    console.info(`→ Remove and install app from: ${getNativeAppPath()}`);
     await driver.removeApp(getAppId());
     resetBootedIOSKeychain();
     await driver.installApp(getNativeAppPath());
@@ -84,14 +88,10 @@ async function restoreLegacyRnWallet(seed: string) {
   await getStarted.waitForDisplayed({ timeout: 120000 });
   await tap('GetStartedButton');
   await sleep(1000);
-  await expectText(totalBalance);
-  await expectText(savingBalance);
-  await expectText(spendingBalance);
+  await expectText(totalBalance, { strategy: 'contains' });
+  await expectText(savingBalance, { strategy: 'contains' });
+  await expectText(spendingBalance, { strategy: 'contains' });
 }
-
-const totalBalance = '141 321';
-const savingBalance = '91 766';
-const spendingBalance = '49 555';
 
 async function verifyMigration() {
   console.info('→ Verifying migrated wallet balances...');

@@ -1,4 +1,3 @@
-import BitcoinJsonRpc from 'bitcoin-json-rpc';
 import initElectrum from '../helpers/electrum';
 import {
   completeOnboarding,
@@ -19,7 +18,6 @@ import {
   getAddressFromQRCode,
   getSeed,
   restoreWallet,
-  mineBlocks,
   elementByText,
   dismissQuickPayIntro,
   doNavigationClose,
@@ -29,7 +27,7 @@ import {
   waitForToast,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
-import { bitcoinURL, lndConfig } from '../helpers/constants';
+import { lndConfig } from '../helpers/constants';
 import {
   connectToLND,
   getLDKNodeID,
@@ -40,10 +38,11 @@ import {
   checkChannelStatus,
 } from '../helpers/lnd';
 import { ciIt } from '../helpers/suite';
+import { getBitcoinRpc, mineBlocks } from '../helpers/regtest';
 
 describe('@lightning - Lightning', () => {
   let electrum: { waitForSync: any; stop: any };
-  const rpc = new BitcoinJsonRpc(bitcoinURL);
+  const rpc = getBitcoinRpc();
 
   before(async () => {
     let balance = await rpc.getBalance();
@@ -77,7 +76,7 @@ describe('@lightning - Lightning', () => {
     // - check balances, tx history and notes
     // - close channel
 
-    await receiveOnchainFunds(rpc, { sats: 1000 });
+    await receiveOnchainFunds({ sats: 1000 });
 
     // send funds to LND node and open a channel
     const { lnd, lndNodeID } = await setupLND(rpc, lndConfig);
@@ -293,7 +292,7 @@ describe('@lightning - Lightning', () => {
     await elementByText('Transfer Initiated').waitForDisplayed();
     await elementByText('Transfer Initiated').waitForDisplayed({ reverse: true });
 
-    await mineBlocks(rpc, 6);
+    await mineBlocks(6);
     await electrum?.waitForSync();
     await elementById('Channel').waitForDisplayed({ reverse: true });
     if (driver.isAndroid) {

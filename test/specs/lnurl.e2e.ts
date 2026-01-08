@@ -1,8 +1,7 @@
-import BitcoinJsonRpc from 'bitcoin-json-rpc';
 import LNURL from 'lnurl';
 
 import initElectrum from '../helpers/electrum';
-import { bitcoinURL, lndConfig } from '../helpers/constants';
+import { lndConfig } from '../helpers/constants';
 import {
   sleep,
   tap,
@@ -34,6 +33,7 @@ import {
   waitForActiveChannel,
   setupLND,
 } from '../helpers/lnd';
+import { getBitcoinRpc } from '../helpers/regtest';
 
 function waitForEvent(lnurlServer: any, name: string): Promise<void> {
   let timer: NodeJS.Timeout | undefined;
@@ -57,7 +57,7 @@ function waitForEvent(lnurlServer: any, name: string): Promise<void> {
 describe('@lnurl - LNURL', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
   let lnurlServer: any;
-  const rpc = new BitcoinJsonRpc(bitcoinURL);
+  const rpc = getBitcoinRpc();
 
   before(async () => {
     // Ensure we have at least 10 BTC on regtest
@@ -105,7 +105,7 @@ describe('@lnurl - LNURL', () => {
   ciIt(
     '@lnurl_1 - Can process lnurl-channel, lnurl-pay, lnurl-withdraw, and lnurl-auth',
     async () => {
-      await receiveOnchainFunds(rpc, { sats: 1000 });
+      await receiveOnchainFunds({ sats: 1000 });
 
       // Get LDK node id from the UI
       const ldkNodeID = await getLDKNodeID();

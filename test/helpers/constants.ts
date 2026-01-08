@@ -18,9 +18,14 @@ export function getAppPath(): string {
   throw new Error(`App path not defined in capabilities (tried ${possibleKeys.join(', ')})`);
 }
 
-export const bitcoinURL = 'http://polaruser:polarpass@127.0.0.1:43782';
+export const bitcoinURL =
+  process.env.BITCOIN_RPC_URL ?? 'http://polaruser:polarpass@127.0.0.1:43782';
 export const electrumHost = '127.0.0.1';
 export const electrumPort = 60001;
+
+// Blocktank API for regtest operations (deposit, mine blocks, pay invoices)
+export const blocktankURL =
+  process.env.BLOCKTANK_URL ?? 'https://api.stag0.blocktank.to/blocktank/api/v2';
 
 export type LndConfig = {
   server: string;

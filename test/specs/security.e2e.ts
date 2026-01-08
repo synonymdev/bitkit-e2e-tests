@@ -1,5 +1,3 @@
-import BitcoinJsonRpc from 'bitcoin-json-rpc';
-
 import {
   sleep,
   completeOnboarding,
@@ -13,14 +11,14 @@ import {
   expectText,
   doNavigationClose,
 } from '../helpers/actions';
-import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
+import { getBitcoinRpc } from '../helpers/regtest';
 
 describe('@security - Security And Privacy', () => {
   let electrum: { waitForSync: any; stop: any };
-  const rpc = new BitcoinJsonRpc(bitcoinURL);
+  const rpc = getBitcoinRpc();
 
   before(async () => {
     let balance = await rpc.getBalance();
@@ -80,7 +78,7 @@ describe('@security - Security And Privacy', () => {
     await elementById('TotalBalance').waitForDisplayed();
 
     // receive
-    await receiveOnchainFunds(rpc);
+    await receiveOnchainFunds();
 
     // send, using PIN
     const coreAddress = await rpc.getNewAddress();
