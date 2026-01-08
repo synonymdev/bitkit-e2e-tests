@@ -239,10 +239,33 @@ describe('@transfer - Transfer', () => {
       // check activities
       await sleep(1000);
       await swipeFullScreen('up');
+      await swipeFullScreen('up');
       await elementById('ActivityShort-0').waitForDisplayed();
       await expectTextWithin('ActivityShort-0', 'Transfer');
       await elementById('ActivityShort-1').waitForDisplayed();
       await expectTextWithin('ActivityShort-1', 'Transfer');
+
+      await tap('ActivityShowAll');
+
+      // All transactions
+      await expectTextWithin('Activity-1', '-');
+      await expectTextWithin('Activity-2', '-');
+      await expectTextWithin('Activity-3', '+');
+
+      // Sent, 0 transactions
+      await tap('Tab-sent');
+      await elementById('Activity-1').waitForDisplayed({ reverse: true });
+
+      // Received, 1 transaction
+      await tap('Tab-received');
+      await expectTextWithin('Activity-1', '+');
+      await elementById('Activity-2').waitForDisplayed({ reverse: true });
+
+      // Other, 2 transfer transactions
+      await tap('Tab-other');
+      await expectTextWithin('Activity-1', '-');
+      await expectTextWithin('Activity-2', '-');
+      await elementById('Activity-3').waitForDisplayed({ reverse: true });
 
       // TODO: enable when boost backup is operational
       // https://github.com/synonymdev/bitkit-android/issues/321
