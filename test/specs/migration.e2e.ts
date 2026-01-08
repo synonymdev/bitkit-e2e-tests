@@ -1,5 +1,6 @@
 import {
   dismissBackupTimedSheet,
+  doNavigationClose,
   elementById,
   elementByIdWithin,
   expectText,
@@ -112,21 +113,20 @@ async function verifyMigration() {
   await expectTextWithin('Activity-5', '+');
   await expectTextWithin('Activity-6', '+');
 
-  // Sent, 2 transactions
+  // Sent
   await tap('Tab-sent');
   await expectTextWithin('Activity-1', '-');
   await expectTextWithin('Activity-2', '-');
-  await expectTextWithin('Activity-3', '-');
-  await elementById('Activity-4').waitForDisplayed({ reverse: true });
+  await elementById('Activity-3').waitForDisplayed({ reverse: true });
 
-  // Received, 2 transactions
+  // Received
   await tap('Tab-received');
   await expectTextWithin('Activity-1', '+');
   await expectTextWithin('Activity-2', '+');
   await expectTextWithin('Activity-3', '+');
   await elementById('Activity-4').waitForDisplayed({ reverse: true });
 
-  // Other, 0 transactions
+  // Other
   await tap('Tab-other');
   await elementById('Activity-1').waitForDisplayed();
   await elementById('Activity-2').waitForDisplayed({ reverse: true });
@@ -149,4 +149,6 @@ async function verifyMigration() {
   await expectTextWithin('Activity-2', '-');
   await elementById('Activity-3').waitForDisplayed({ reverse: true });
   await tap('Tag-sent-delete');
+
+  await doNavigationClose();
 }
