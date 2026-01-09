@@ -392,6 +392,7 @@ describe('@send - Send', () => {
     await sleep(1000);
     await enterAddress(unified5, { acceptCameraPermission: false });
     // max amount (lightning)
+    await sleep(500);
     await tap('AvailableAmount');
     await tap('ContinueAmount');
     await expectText('4 998', { strategy: 'contains' });
@@ -400,6 +401,7 @@ describe('@send - Send', () => {
     await tap('NavigationBack');
     // max amount (onchain)
     await tap('AssetButton-switch');
+    await sleep(500);
     await tap('AvailableAmount');
     if (driver.isIOS) {
       // iOS runs an autopilot coin selection step on Continue; when the amount is the true "max"
