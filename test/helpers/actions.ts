@@ -522,8 +522,9 @@ export async function restoreWallet(
   {
     passphrase,
     expectQuickPayTimedSheet = false,
+    expectBackupSheet = false,
     reinstall = true,
-  }: { passphrase?: string; expectQuickPayTimedSheet?: boolean; reinstall?: boolean } = {}
+  }: { passphrase?: string; expectQuickPayTimedSheet?: boolean; expectBackupSheet?: boolean; reinstall?: boolean } = {}
 ) {
   console.info('→ Restoring wallet with seed:', seed);
   // Let cloud state flush - carried over from Detox
@@ -572,6 +573,10 @@ export async function restoreWallet(
   await sleep(1000);
   await handleAndroidAlert();
 
+  if (expectBackupSheet) {
+    await dismissBackupTimedSheet();
+  }
+  
   if (expectQuickPayTimedSheet) {
     await dismissQuickPayIntro();
   }
