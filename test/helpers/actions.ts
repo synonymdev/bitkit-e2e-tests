@@ -1,6 +1,6 @@
 import type { ChainablePromiseElement } from 'webdriverio';
 import { reinstallApp } from './setup';
-import BitcoinJsonRpc from 'bitcoin-json-rpc';
+import { deposit, mineBlocks } from './regtest';
 
 export const sleep = (ms: number) => browser.pause(ms);
 
@@ -646,37 +646,50 @@ export async function getAddressFromQRCode(which: addressType): Promise<string> 
   return address;
 }
 
-export async function mineBlocks(rpc: BitcoinJsonRpc, blocks: number = 1) {
-  for (let i = 0; i < blocks; i++) {
-    await rpc.generateToAddress(1, await rpc.getNewAddress());
+/**
+ * Funds the wallet on regtest.
+ * Gets the receive address from the app, deposits sats, and optionally mines blocks.
+ * Uses local Bitcoin RPC or Blocktank API based on BACKEND env var.
+ */
+export async function fundOnchainWallet({
+  sats,
+  blocksToMine = 1,
+}: {
+  sats?: number;
+  blocksToMine?: number;
+} = {}) {
+  const address = await getReceiveAddress();
+  await swipeFullScreen('down');
+  await deposit(address, sats);
+  if (blocksToMine > 0) {
+    await mineBlocks(blocksToMine);
   }
 }
 
-export async function receiveOnchainFunds(
-  rpc: BitcoinJsonRpc,
-  {
-    sats = 100_000,
-    blocksToMine = 1,
-    expectHighBalanceWarning = false,
-  }: {
-    sats?: number;
-    blocksToMine?: number;
-    expectHighBalanceWarning?: boolean;
-  } = {}
-) {
-  // convert sats → btc string
-  const btc = (sats / 100_000_000).toString();
+/**
+ * Receives onchain funds and verifies the balance.
+ * Uses local Bitcoin RPC or Blocktank API based on BACKEND env var.
+ */
+export async function receiveOnchainFunds({
+  sats = 100_000,
+  blocksToMine = 1,
+  expectHighBalanceWarning = false,
+}: {
+  sats?: number;
+  blocksToMine?: number;
+  expectHighBalanceWarning?: boolean;
+} = {}) {
   // format sats with spaces every 3 digits
   const formattedSats = sats.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
   // receive some first
   const address = await getReceiveAddress();
   await swipeFullScreen('down');
-  await rpc.sendToAddress(address, btc);
+  await deposit(address, sats);
 
   await acknowledgeReceivedPayment();
 
-  await mineBlocks(rpc, blocksToMine);
+  await mineBlocks(blocksToMine);
 
   const moneyText = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
   await expect(moneyText).toHaveText(formattedSats);

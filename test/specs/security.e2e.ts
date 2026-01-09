@@ -1,5 +1,3 @@
-import BitcoinJsonRpc from 'bitcoin-json-rpc';
-
 import {
   sleep,
   completeOnboarding,
@@ -13,24 +11,16 @@ import {
   expectText,
   doNavigationClose,
 } from '../helpers/actions';
-import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
+import { ensureLocalFunds, getExternalAddress } from '../helpers/regtest';
 
 describe('@security - Security And Privacy', () => {
   let electrum: { waitForSync: any; stop: any };
-  const rpc = new BitcoinJsonRpc(bitcoinURL);
 
   before(async () => {
-    let balance = await rpc.getBalance();
-    const address = await rpc.getNewAddress();
-
-    while (balance < 10) {
-      await rpc.generateToAddress(10, address);
-      balance = await rpc.getBalance();
-    }
-
+    await ensureLocalFunds();
     electrum = await initElectrum();
   });
 
@@ -80,10 +70,10 @@ describe('@security - Security And Privacy', () => {
     await elementById('TotalBalance').waitForDisplayed();
 
     // receive
-    await receiveOnchainFunds(rpc);
+    await receiveOnchainFunds();
 
     // send, using PIN
-    const coreAddress = await rpc.getNewAddress();
+    const coreAddress = await getExternalAddress();
     await enterAddress(coreAddress);
     await tap('N1');
     await tap('N000');
