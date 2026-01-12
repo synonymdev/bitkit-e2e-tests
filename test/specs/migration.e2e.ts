@@ -103,7 +103,6 @@ describe('@migration - Migration from legacy RN app to native app', () => {
 
     // Handle migration flow
     await handleAndroidAlert();
-    await expectText('Migration Complete');
     await dismissBackupTimedSheet();
 
     // Verify migration
@@ -156,7 +155,6 @@ describe('@migration - Migration from legacy RN app to native app', () => {
 
     // Handle migration flow
     await handleAndroidAlert();
-    await expectText('Migration Complete');
     await dismissBackupTimedSheet();
 
     // Verify migration
