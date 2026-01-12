@@ -65,7 +65,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
   // --------------------------------------------------------------------------
   // Migration Scenario 1: Uninstall RN, install Native, restore mnemonic
   // --------------------------------------------------------------------------
-  ciIt('@migration_1 - Uninstall RN app and install native app', async () => {
+  ciIt('@migration_1 - Uninstall RN, install Native, restore mnemonic', async () => {
     // Setup wallet in RN app
     await setupLegacyWallet();
 
@@ -92,7 +92,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
   // --------------------------------------------------------------------------
   // Migration Scenario 2: Install native on top of RN (upgrade)
   // --------------------------------------------------------------------------
-  ciIt('@migration_2 - Install native app on top of RN app', async () => {
+  ciIt('@migration_2 - Install native on top of RN (upgrade)', async () => {
     // Setup wallet in RN app
     await setupLegacyWallet();
 
@@ -112,7 +112,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
   // --------------------------------------------------------------------------
   // Migration Scenario 3: Uninstall RN, install Native, restore with passphrase
   // --------------------------------------------------------------------------
-  ciIt('@migration_3 - Uninstall RN app and install native app (with passphrase)', async () => {
+  ciIt('@migration_3 - Uninstall RN, install Native, restore with passphrase', async () => {
     // Setup wallet in RN app WITH passphrase
     await setupLegacyWallet({ passphrase: TEST_PASSPHRASE });
 
@@ -144,7 +144,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
   // --------------------------------------------------------------------------
   // Migration Scenario 4: Install native on top of RN with passphrase (upgrade)
   // --------------------------------------------------------------------------
-  ciIt('@migration_4 - Install native app on top of RN app (with passphrase)', async () => {
+  ciIt('@migration_4 - Install native on top of RN with passphrase (upgrade)', async () => {
     // Setup wallet in RN app WITH passphrase
     await setupLegacyWallet({ passphrase: TEST_PASSPHRASE });
 
