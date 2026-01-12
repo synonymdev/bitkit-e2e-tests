@@ -1,4 +1,5 @@
 import {
+  confirmInputOnKeyboard,
   dismissBackupTimedSheet,
   doNavigationClose,
   dragOnElement,
@@ -43,12 +44,14 @@ const INITIAL_FUND_SATS = 500_000; // 500k sats initial funding
 const ONCHAIN_SEND_SATS = 50_000; // 50k sats for on-chain send test
 const TRANSFER_TO_SPENDING_SATS = 100_000; // 100k for creating a channel
 
+// Passphrase for passphrase-protected wallet tests
+const TEST_PASSPHRASE = 'supersecret';
+
 // ============================================================================
 // TEST SUITE
 // ============================================================================
 
 describe('@migration - Migration from legacy RN app to native app', () => {
-  let mnemonic: string = '';
 
   before(async () => {
     await ensureLocalFunds();
@@ -67,9 +70,8 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     await setupLegacyWallet();
 
     // Get mnemonic before uninstalling
-    mnemonic = await getRnMnemonic();
-    console.info(`→ Got mnemonic: ${mnemonic.substring(0, 20)}...`);
-
+    const mnemonic = await getRnMnemonic();
+    await sleep(1000);
     // Uninstall RN app
     console.info('→ Removing legacy RN app...');
     await driver.removeApp(getAppId());
@@ -107,6 +109,59 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     // Verify migration
     await verifyMigration();
   });
+
+  // --------------------------------------------------------------------------
+  // Migration Scenario 3: Uninstall RN, install Native, restore with passphrase
+  // --------------------------------------------------------------------------
+  ciIt('@migration_3 - Uninstall RN app and install native app (with passphrase)', async () => {
+    // Setup wallet in RN app WITH passphrase
+    await setupLegacyWallet({ passphrase: TEST_PASSPHRASE });
+
+    // Get mnemonic before uninstalling
+    const mnemonic = await getRnMnemonic();
+    await sleep(10000);
+
+    // Uninstall RN app
+    console.info('→ Removing legacy RN app...');
+    await driver.removeApp(getAppId());
+    resetBootedIOSKeychain();
+
+    // Install native app
+    console.info(`→ Installing native app from: ${getNativeAppPath()}`);
+    await driver.installApp(getNativeAppPath());
+    await driver.activateApp(getAppId());
+
+    // Restore wallet with mnemonic AND passphrase
+    await restoreWallet(mnemonic, {
+      reinstall: false,
+      expectBackupSheet: true,
+      passphrase: TEST_PASSPHRASE,
+    });
+
+    // Verify migration
+    await verifyMigration();
+  });
+
+  // --------------------------------------------------------------------------
+  // Migration Scenario 4: Install native on top of RN with passphrase (upgrade)
+  // --------------------------------------------------------------------------
+  ciIt('@migration_4 - Install native app on top of RN app (with passphrase)', async () => {
+    // Setup wallet in RN app WITH passphrase
+    await setupLegacyWallet({ passphrase: TEST_PASSPHRASE });
+
+    // Install native app ON TOP of RN (upgrade)
+    console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
+    await driver.installApp(getNativeAppPath());
+    await driver.activateApp(getAppId());
+
+    // Handle migration flow
+    await handleAndroidAlert();
+    await expectText('Migration Complete');
+    await dismissBackupTimedSheet();
+
+    // Verify migration
+    await verifyMigration();
+  });
 });
 
 // ============================================================================
@@ -115,19 +170,20 @@ describe('@migration - Migration from legacy RN app to native app', () => {
 
 /**
  * Complete wallet setup in legacy RN app:
- * 1. Create new wallet
+ * 1. Create new wallet (optionally with passphrase)
  * 2. Fund with on-chain tx
  *
  * TODO: Add these steps once basic flow works:
  * 3. Send on-chain tx (with tag)
  * 4. Transfer to spending balance (create channel)
  */
-async function setupLegacyWallet(): Promise<void> {
-  console.info('=== Setting up legacy RN wallet ===');
+async function setupLegacyWallet(options: { passphrase?: string } = {}): Promise<void> {
+  const { passphrase } = options;
+  console.info(`=== Setting up legacy RN wallet${passphrase ? ' (with passphrase)' : ''} ===`);
 
   // Install and create wallet
   await installLegacyRnApp();
-  await createLegacyRnWallet();
+  await createLegacyRnWallet({ passphrase });
 
   // 1. Fund wallet (receive on-chain)
   console.info('→ Step 1: Funding wallet on-chain...');
@@ -150,16 +206,27 @@ async function installLegacyRnApp(): Promise<void> {
   await reinstallAppFromPath(getRnAppPath());
 }
 
-async function createLegacyRnWallet(): Promise<void> {
-  console.info('→ Creating new wallet in legacy RN app...');
+async function createLegacyRnWallet(options: { passphrase?: string } = {}): Promise<void> {
+  const { passphrase } = options;
+  console.info(`→ Creating new wallet in legacy RN app${passphrase ? ' (with passphrase)' : ''}...`);
+
   await elementById('Continue').waitForDisplayed();
   await tap('Check1');
   await tap('Check2');
   await tap('Continue');
   await tap('SkipIntro');
 
+  // Set passphrase if provided (before creating wallet)
+  if (passphrase) {
+    console.info('→ Setting passphrase...');
+    await tap('Passphrase');
+    await typeText('PassphraseInput', passphrase);
+    await confirmInputOnKeyboard();
+    await tap('CreateNewWallet');
+  } else {
   // Create new wallet
-  await tap('NewWallet');
+    await tap('NewWallet');
+  }
   await waitForSetupWalletScreenFinish();
 
   // Wait for wallet to be created
@@ -283,6 +350,7 @@ async function transferToSpending(sats: number): Promise<void> {
  */
 async function tagLatestTransaction(tag: string): Promise<void> {
   // Go to activity
+  await sleep(1000);
   await swipeFullScreen('up');
   await swipeFullScreen('up');
   await tap('ActivityShowAll');
@@ -324,7 +392,7 @@ async function getRnMnemonic(): Promise<string> {
   const seed = await getAccessibleText(seedElement);
 
   if (!seed) throw new Error('Could not read seed from "SeedContaider"');
-  console.info(`→ RN mnemonic retrieved: ${seed.split(' ').slice(0, 3).join(' ')}...`);
+  console.info(`→ RN mnemonic retrieved: ${seed}...`);
 
   // Navigate back to main screen using Android back button
   // ShowMnemonic -> BackupSettings -> Settings -> Main
