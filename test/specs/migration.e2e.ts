@@ -168,10 +168,10 @@ describe('@migration - Migration from legacy RN app to native app', () => {
 /**
  * Complete wallet setup in legacy RN app:
  * 1. Create new wallet (optionally with passphrase)
- * 2. Fund with on-chain tx
+ * 2. Fund with on-chain tx (add tag to latest tx)
+ * 3. Send on-chain tx (add tag to latest tx)
  *
  * TODO: Add these steps once basic flow works:
- * 3. Send on-chain tx (with tag)
  * 4. Transfer to spending balance (create channel)
  */
 async function setupLegacyWallet(options: { passphrase?: string } = {}): Promise<void> {
