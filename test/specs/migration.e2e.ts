@@ -365,10 +365,7 @@ async function tagLatestTransaction(tag: string): Promise<void> {
   await sleep(1000);
   await swipeFullScreen('up', { upStartYPercent: 0.6, downEndYPercent: 0.6 });
   await swipeFullScreen('up', { upStartYPercent: 0.6, downEndYPercent: 0.6 });
-  await tap('ActivityShowAll');
-
-  // Tap latest transaction
-  await tap('Activity-1');
+  await tap('ActivityShort-1'); // latest tx
 
   // Add tag
   await tap('ActivityTag');
@@ -385,7 +382,6 @@ async function tagLatestTransaction(tag: string): Promise<void> {
   await sleep(1000);
 
   // Go back
-  await driver.back();
   await driver.back();
   await swipeFullScreen('down', { upStartYPercent: 0.6, downEndYPercent: 0.6 });
   await swipeFullScreen('down', { upStartYPercent: 0.6, downEndYPercent: 0.6 });
