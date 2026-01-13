@@ -325,6 +325,13 @@ async function sendRnOnchain(sats: number): Promise<void> {
  */
 async function transferToSpending(sats: number): Promise<void> {
   // Navigate via ActivitySavings -> TransferToSpending
+  try {
+    await elementById('ActivitySavings').waitForDisplayed({ timeout: 5000 });
+  } catch {
+    console.info('→ Scrolling to find ActivitySavings...');
+    await swipeFullScreen('down', { downEndYPercent: 0.6 });
+    await swipeFullScreen('down');
+  }
   await tap('ActivitySavings');
   await elementById('TransferToSpending').waitForDisplayed();
   await tap('TransferToSpending');
@@ -398,6 +405,7 @@ async function tagLatestTransaction(tag: string): Promise<void> {
     await swipeFullScreen('up', { upStartYPercent: 0.6 });
     await elementById('ActivityShort-1').waitForDisplayed({ timeout: 5000 });
   } catch {
+    console.info('→ Scrolling to find latest transaction...');
     await swipeFullScreen('up');
     await swipeFullScreen('up');
   }
