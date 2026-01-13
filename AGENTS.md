@@ -46,24 +46,39 @@ Notes:
 
 ## Running Tests
 
+**Important:** The `BACKEND` env var controls which infrastructure the tests use for deposits/mining:
+
+- `BACKEND=local` (default) — Uses local docker stack (Bitcoin RPC on localhost:18443, Electrum on localhost:60001). Requires `bitkit-docker` running locally.
+- `BACKEND=regtest` — Uses Blocktank API over the internet (remote regtest infrastructure).
+
+**The `BACKEND` must match how the app was built:**
+- Apps built with `BACKEND=local` connect to localhost electrum → run tests with `BACKEND=local`
+- Apps built with `BACKEND=regtest` connect to remote electrum → run tests with `BACKEND=regtest`
+
 ```bash
-# Android
+# Android (local backend - default)
 npm run e2e:android
+
+# Android (regtest backend - for apps built with BACKEND=regtest)
+BACKEND=regtest npm run e2e:android
 
 # iOS
 npm run e2e:ios
+BACKEND=regtest npm run e2e:ios
 ```
 
 Run a single spec:
 
 ```bash
 npm run e2e:android -- --spec ./test/specs/onboarding.e2e.ts
+BACKEND=regtest npm run e2e:android -- --spec ./test/specs/migration.e2e.ts
 ```
 
 Run by tag:
 
 ```bash
 npm run e2e:android -- --mochaOpts.grep "@backup"
+BACKEND=regtest npm run e2e:android -- --mochaOpts.grep "@migration"
 ```
 
 ## CI Helper Scripts
@@ -71,8 +86,13 @@ npm run e2e:android -- --mochaOpts.grep "@backup"
 These wrap the `npm run e2e:*` commands and capture logs/artifacts:
 
 ```bash
+# Local backend (default)
 ./ci_run_android.sh
 ./ci_run_ios.sh
+
+# Regtest backend
+BACKEND=regtest ./ci_run_android.sh
+BACKEND=regtest ./ci_run_ios.sh
 ```
 
 ## Practical Tips

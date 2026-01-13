@@ -88,18 +88,34 @@ BACKEND=regtest ./scripts/build-ios-sim.sh
 
 ### 🧪 Running tests
 
+**Important:** The `BACKEND` environment variable controls which infrastructure the tests use for blockchain operations (deposits, mining blocks):
+
+| Backend | Infrastructure | When to use |
+|---------|---------------|-------------|
+| `BACKEND=local` (default) | Local docker stack (Bitcoin RPC on localhost:18443, Electrum on localhost:60001) | Apps built with `BACKEND=local` |
+| `BACKEND=regtest` | Blocktank API over the internet (remote regtest) | Apps built with `BACKEND=regtest` |
+
+> ⚠️ **The `BACKEND` must match how the app was built.** If the app connects to remote electrum, use `BACKEND=regtest`. If it connects to localhost, use `BACKEND=local`.
+
 ```bash
-# Run all tests on Android
+# Run all tests on Android (local backend - default)
 npm run e2e:android
+
+# Run all tests on Android (regtest backend)
+BACKEND=regtest npm run e2e:android
 
 # Run all tests on iOS
 npm run e2e:ios
+BACKEND=regtest npm run e2e:ios
 ```
 
 To run a **specific test file**:
 
 ```bash
 npm run e2e:android -- --spec ./test/specs/onboarding.e2e.ts
+
+# With regtest backend
+BACKEND=regtest npm run e2e:android -- --spec ./test/specs/migration.e2e.ts
 ```
 
 To run a **specific test case**:
@@ -148,18 +164,24 @@ These helper scripts wrap the regular `npm run e2e:*` commands and add CI-friend
 The Android script will:
 
 - Clear and capture `adb logcat` output into `./artifacts/logcat.txt`.
-- Reverse the regtest port (`60001`).
+- Reverse the regtest port (`60001`) for local backend.
 - Run the Android E2E tests.
 - Forward any arguments directly to Mocha/WebdriverIO.
 
 **Usage examples:**
 
 ```bash
-# Run all Android tests (with logcat capture)
+# Run all Android tests with local backend (default)
 ./ci_run_android.sh
+
+# Run all Android tests with regtest backend (for apps built with BACKEND=regtest)
+BACKEND=regtest ./ci_run_android.sh
 
 # Run only @backup tests
 ./ci_run_android.sh --mochaOpts.grep "@backup"
+
+# Run migration tests (typically need regtest backend for RN app)
+BACKEND=regtest ./ci_run_android.sh --mochaOpts.grep "@migration"
 
 # Run backup OR onboarding OR onchain tests
 ./ci_run_android.sh --mochaOpts.grep "@backup|@onboarding|@onchain"
@@ -183,8 +205,11 @@ The iOS helper mirrors the Android workflow but tailors it for the Apple Simulat
 **Usage examples:**
 
 ```bash
-# Run all iOS tests (with simulator log capture)
+# Run all iOS tests with local backend (default)
 ./ci_run_ios.sh
+
+# Run all iOS tests with regtest backend
+BACKEND=regtest ./ci_run_ios.sh
 
 # Run only @onboarding-tagged tests
 ./ci_run_ios.sh --mochaOpts.grep "@onboarding"
