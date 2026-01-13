@@ -7,6 +7,7 @@ import {
   elementByIdWithin,
   enterAddress,
   expectText,
+  expectTextWithin,
   getAccessibleText,
   getReceiveAddress,
   handleAndroidAlert,
@@ -52,7 +53,6 @@ const TEST_PASSPHRASE = 'supersecret';
 // ============================================================================
 
 describe('@migration - Migration from legacy RN app to native app', () => {
-
   before(async () => {
     await ensureLocalFunds();
     electrumClient = await initElectrum();
@@ -69,6 +69,10 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     // Setup wallet in RN app
     await setupLegacyWallet();
 
+    //dismiss backup sheet if shown
+    await sleep(1000);
+    await swipeFullScreen('down');
+    await sleep(500);
     // Get mnemonic before uninstalling
     const mnemonic = await getRnMnemonic();
     await sleep(1000);
@@ -118,7 +122,6 @@ describe('@migration - Migration from legacy RN app to native app', () => {
 
     // Get mnemonic before uninstalling
     const mnemonic = await getRnMnemonic();
-    await sleep(10000);
 
     // Uninstall RN app
     console.info('→ Removing legacy RN app...');
@@ -186,12 +189,13 @@ async function setupLegacyWallet(options: { passphrase?: string } = {}): Promise
   // 1. Fund wallet (receive on-chain)
   console.info('→ Step 1: Funding wallet on-chain...');
   await fundRnWallet(INITIAL_FUND_SATS);
+  await tagLatestTransaction(TAG_RECEIVED);
 
-  // TODO: Add more steps once basic migration works
-  // // 2. Send on-chain tx with tag
-  // console.info('→ Step 2: Sending on-chain tx...');
-  // await sendRnOnchainWithTag(ONCHAIN_SEND_SATS, TAG_SENT);
+  // 2. Send on-chain tx with tag
+  console.info('→ Step 2: Sending on-chain tx...');
+  await sendRnOnchainWithTag(ONCHAIN_SEND_SATS, TAG_SENT);
 
+  // TODO: Add transfer to spending once send works
   // // 3. Transfer to spending (create channel via Blocktank)
   // console.info('→ Step 3: Creating spending balance (channel)...');
   // await transferToSpending(TRANSFER_TO_SPENDING_SATS);
@@ -206,7 +210,9 @@ async function installLegacyRnApp(): Promise<void> {
 
 async function createLegacyRnWallet(options: { passphrase?: string } = {}): Promise<void> {
   const { passphrase } = options;
-  console.info(`→ Creating new wallet in legacy RN app${passphrase ? ' (with passphrase)' : ''}...`);
+  console.info(
+    `→ Creating new wallet in legacy RN app${passphrase ? ' (with passphrase)' : ''}...`
+  );
 
   await elementById('Continue').waitForDisplayed();
   await tap('Check1');
@@ -222,7 +228,7 @@ async function createLegacyRnWallet(options: { passphrase?: string } = {}): Prom
     await confirmInputOnKeyboard();
     await tap('CreateNewWallet');
   } else {
-  // Create new wallet
+    // Create new wallet
     await tap('NewWallet');
   }
   await waitForSetupWalletScreenFinish();
@@ -236,6 +242,8 @@ async function createLegacyRnWallet(options: { passphrase?: string } = {}): Prom
       if (i === 3) throw new Error('Tapping "WalletOnboardingClose" timeout');
     }
   }
+  await swipeFullScreen('up');
+  await swipeFullScreen('down');
   console.info('→ Legacy RN wallet created');
 }
 
@@ -276,28 +284,54 @@ async function fundRnWallet(sats: number): Promise<void> {
 }
 
 /**
- * Send on-chain tx from RN wallet and add a tag
+ * Send on-chain tx from RN wallet and add a tag.
+ * Note: This uses a custom flow for RN since camera permission is already granted from receive.
  */
 async function sendRnOnchainWithTag(sats: number, tag: string): Promise<void> {
   const externalAddress = await getExternalAddress();
 
-  // Use existing helper for address entry (handles camera permission)
-  await enterAddress(externalAddress);
+  // RN-specific send flow (camera permission already granted during receive)
+  await tap('Send');
+  await sleep(1000);
+
+  // Tap manual address entry (skip camera since permission already granted)
+  await elementById('RecipientManual').waitForDisplayed();
+  await tap('RecipientManual');
+
+  // Enter address
+  await elementById('RecipientInput').waitForDisplayed();
+  await typeText('RecipientInput', externalAddress);
+  await confirmInputOnKeyboard();
+  await sleep(500);
+  await tap('AddressContinue');
 
   // Enter amount
+  await sleep(500);
   const satsStr = String(sats);
   for (const digit of satsStr) {
     await tap(`N${digit}`);
   }
   await tap('ContinueAmount');
 
-  // Add tag before sending
-  await elementById('TagsAddSend').waitForDisplayed();
-  await tap('TagsAddSend');
-  await typeText('TagInputSend', tag);
-  await tap('TagsAddSend'); // confirm tag
+  // Wait for review screen
+  await sleep(1000);
 
-  // Send
+  // Add tag - use click + addValue to trigger RN state update
+  await tap('TagsAddSend');
+  await elementById('TagInputSend').waitForDisplayed();
+  const tagInput = await elementById('TagInputSend');
+  await tagInput.click(); // Focus the input
+  await sleep(300);
+  // Use addValue to type (triggers RN onChangeText properly)
+  await tagInput.addValue(tag);
+  await sleep(300);
+  // Press Enter key to submit (keycode 66 = KEYCODE_ENTER)
+  await driver.pressKeyCode(66);
+  // Wait for tag sheet to close and return to Review screen
+  await sleep(1000);
+
+  // Send using swipe gesture
+  console.info(`→ About to send ${sats} sats with tag "${tag}"...`);
   await dragOnElement('GRAB', 'right', 0.95);
   await elementById('SendSuccess').waitForDisplayed();
   await tap('Close');
@@ -357,14 +391,24 @@ async function tagLatestTransaction(tag: string): Promise<void> {
   await tap('Activity-1');
 
   // Add tag
-  await elementById('ActivityTags').waitForDisplayed();
-  await tap('ActivityTags');
-  await typeText('TagInput', tag);
-  await tap('ActivityTagsSubmit');
+  await tap('ActivityTag');
+  await elementById('TagInput').waitForDisplayed();
+  const tagInput = await elementById('TagInput');
+  await tagInput.click(); // Focus the input
+  await sleep(300);
+  // Use addValue to type (triggers RN onChangeText properly)
+  await tagInput.addValue(tag);
+  await sleep(300);
+  // Press Enter key to submit (keycode 66 = KEYCODE_ENTER)
+  await driver.pressKeyCode(66);
+  // Wait for tag sheet to close and return to Review screen
+  await sleep(1000);
 
   // Go back
-  await doNavigationClose();
-  await doNavigationClose();
+  await driver.back();
+  await driver.back();
+  await swipeFullScreen('down');
+  await swipeFullScreen('down');
   console.info(`→ Tagged latest transaction with "${tag}"`);
 }
 
@@ -431,8 +475,42 @@ async function verifyMigration(): Promise<void> {
   await swipeFullScreen('up');
   await tap('ActivityShowAll');
 
-  // Verify we have at least one transaction (the receive)
-  await elementById('Activity-1').waitForDisplayed();
+  // All transactions
+  await expectTextWithin('Activity-1', '-');
+  await expectTextWithin('Activity-2', '+');
+
+  // Sent, 2 transactions
+  await tap('Tab-sent');
+  await expectTextWithin('Activity-1', '-');
+  await elementById('Activity-2').waitForDisplayed({ reverse: true });
+
+  // Received, 2 transactions
+  await tap('Tab-received');
+  await expectTextWithin('Activity-1', '+');
+  await elementById('Activity-2').waitForDisplayed({ reverse: true });
+
+  // Other, 0 transactions
+  await tap('Tab-other');
+  await elementById('Activity-1').waitForDisplayed({ reverse: true });
+
+  // filter by receive tag
+  await tap('Tab-all');
+  await tap('TagsPrompt');
+  await sleep(500);
+  await tap(`Tag-${TAG_RECEIVED}`);
+  await expectTextWithin('Activity-1', '+');
+  await elementById('Activity-2').waitForDisplayed({ reverse: true });
+  await tap(`Tag-${TAG_RECEIVED}-delete`);
+
+  // filter by send tag
+  await tap('TagsPrompt');
+  await sleep(500);
+  await tap(`Tag-${TAG_SENT}`);
+  await expectTextWithin('Activity-1', '-');
+  await elementById('Activity-2').waitForDisplayed({ reverse: true });
+  await tap(`Tag-${TAG_SENT}-delete`);
+
+  console.info('→ Activity tags migrated successfully');
   console.info('→ Transaction history migrated successfully');
 
   await doNavigationClose();
