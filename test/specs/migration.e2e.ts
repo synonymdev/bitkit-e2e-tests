@@ -66,12 +66,9 @@ describe('@migration - Migration from legacy RN app to native app', () => {
   // Migration Scenario 1: Uninstall RN, install Native, restore mnemonic
   // --------------------------------------------------------------------------
   ciIt('@migration_1 - Uninstall RN, install Native, restore mnemonic', async () => {
-    // Setup wallet in RN app
-    await setupLegacyWallet();
+    // Setup wallet in RN app and get mnemonic
+    const mnemonic = await setupLegacyWallet({ returnSeed: true });
 
-    // Get mnemonic before uninstalling
-    const mnemonic = await getRnMnemonic();
-    await sleep(1000);
     // Uninstall RN app
     console.info('→ Removing legacy RN app...');
     await driver.removeApp(getAppId());
@@ -83,7 +80,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     await driver.activateApp(getAppId());
 
     // Restore wallet with mnemonic (uses custom flow to handle backup sheet)
-    await restoreWallet(mnemonic, { reinstall: false, expectBackupSheet: true });
+    await restoreWallet(mnemonic!, { reinstall: false, expectBackupSheet: true });
 
     // Verify migration
     await verifyMigration();
@@ -113,12 +110,9 @@ describe('@migration - Migration from legacy RN app to native app', () => {
   // Migration Scenario 3: Uninstall RN, install Native, restore with passphrase
   // --------------------------------------------------------------------------
   ciIt('@migration_3 - Uninstall RN, install Native, restore with passphrase', async () => {
-    // Setup wallet in RN app WITH passphrase
-    await setupLegacyWallet({ passphrase: TEST_PASSPHRASE });
+    // Setup wallet in RN app WITH passphrase and get mnemonic
+    const mnemonic = await setupLegacyWallet({ passphrase: TEST_PASSPHRASE, returnSeed: true });
 
-    // Get mnemonic before uninstalling
-    const mnemonic = await getRnMnemonic();
-    await sleep(1000);
     // Uninstall RN app
     console.info('→ Removing legacy RN app...');
     await driver.removeApp(getAppId());
@@ -130,7 +124,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     await driver.activateApp(getAppId());
 
     // Restore wallet with mnemonic AND passphrase
-    await restoreWallet(mnemonic, {
+    await restoreWallet(mnemonic!, {
       reinstall: false,
       expectBackupSheet: true,
       passphrase: TEST_PASSPHRASE,
@@ -171,9 +165,18 @@ describe('@migration - Migration from legacy RN app to native app', () => {
  * 2. Fund with on-chain tx (add tag to latest tx)
  * 3. Send on-chain tx (add tag to latest tx)
  * 4. Transfer to spending balance (create channel via Blocktank)
+ *
+ * @param options.passphrase - Optional passphrase for the wallet
+ * @param options.returnSeed - If true, returns the mnemonic seed
+ * @returns The mnemonic seed if returnSeed is true, otherwise undefined
  */
-async function setupLegacyWallet(options: { passphrase?: string } = {}): Promise<void> {
-  const { passphrase } = options;
+async function setupLegacyWallet(
+  options: {
+    passphrase?: string;
+    returnSeed?: boolean;
+  } = {}
+): Promise<string | undefined> {
+  const { passphrase, returnSeed } = options;
   console.info(`=== Setting up legacy RN wallet${passphrase ? ' (with passphrase)' : ''} ===`);
 
   // Install and create wallet
@@ -195,6 +198,13 @@ async function setupLegacyWallet(options: { passphrase?: string } = {}): Promise
   await transferToSpending(TRANSFER_TO_SPENDING_SATS);
 
   console.info('=== Legacy wallet setup complete ===');
+
+  // Get mnemonic if requested
+  if (returnSeed) {
+    const mnemonic = await getRnMnemonic();
+    await sleep(1000);
+    return mnemonic;
+  }
 }
 
 async function installLegacyRnApp(): Promise<void> {
@@ -376,8 +386,7 @@ async function transferToSpending(sats: number): Promise<void> {
   // Mine blocks periodically to progress the channel opening
   console.info('→ Mining blocks to confirm channel...');
   for (let i = 0; i < 10; i++) {
-    await mineBlocks(3);
-    await sleep(5000);
+    await mineBlocks(1);
     // Check if spending balance shows the transferred amount (transfer complete)
     try {
       const expectedBalance = sats.toLocaleString('en').replace(/,/g, ' ');
@@ -385,6 +394,7 @@ async function transferToSpending(sats: number): Promise<void> {
       break;
     } catch {
       // Still waiting
+      await sleep(3000);
     }
   }
 
