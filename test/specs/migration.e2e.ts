@@ -440,7 +440,10 @@ async function getRnMnemonic(): Promise<string> {
   const seed = await getAccessibleText(seedElement);
 
   if (!seed) throw new Error('Could not read seed from "SeedContaider"');
-  console.info(`→ RN mnemonic retrieved: ${seed}...`);
+  console.info(`→ RN mnemonic retrieved: ${seed}`);
+  await swipeFullScreen('down'); // close mnemonic sheet
+  // wait for backup to be performed
+  await sleep(10000);
 
   // Navigate back to main screen using Android back button
   // ShowMnemonic -> BackupSettings -> Settings -> Main
