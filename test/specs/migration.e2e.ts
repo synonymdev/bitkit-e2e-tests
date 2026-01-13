@@ -170,9 +170,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
  * 1. Create new wallet (optionally with passphrase)
  * 2. Fund with on-chain tx (add tag to latest tx)
  * 3. Send on-chain tx (add tag to latest tx)
- *
- * TODO: Add these steps once basic flow works:
- * 4. Transfer to spending balance (create channel)
+ * 4. Transfer to spending balance (create channel via Blocktank)
  */
 async function setupLegacyWallet(options: { passphrase?: string } = {}): Promise<void> {
   const { passphrase } = options;
@@ -192,10 +190,9 @@ async function setupLegacyWallet(options: { passphrase?: string } = {}): Promise
   await sendRnOnchain(ONCHAIN_SEND_SATS);
   await tagLatestTransaction(TAG_SENT);
 
-  // TODO: Add transfer to spending once send works
-  // // 3. Transfer to spending (create channel via Blocktank)
-  // console.info('→ Step 3: Creating spending balance (channel)...');
-  // await transferToSpending(TRANSFER_TO_SPENDING_SATS);
+  // 3. Transfer to spending (create channel via Blocktank)
+  console.info('→ Step 3: Creating spending balance (channel)...');
+  await transferToSpending(TRANSFER_TO_SPENDING_SATS);
 
   console.info('=== Legacy wallet setup complete ===');
 }
@@ -327,13 +324,15 @@ async function sendRnOnchain(sats: number): Promise<void> {
  * Transfer savings to spending balance (create channel via Blocktank)
  */
 async function transferToSpending(sats: number): Promise<void> {
-  // Navigate to transfer
-  await tap('Suggestion-lightning');
-  await elementById('TransferIntro-button').waitForDisplayed();
-  await tap('TransferIntro-button');
-  await tap('FundTransfer');
-  await tap('SpendingIntro-button');
-  await sleep(2000); // let animation finish
+  // Navigate via ActivitySavings -> TransferToSpending
+  await tap('ActivitySavings');
+  await elementById('TransferToSpending').waitForDisplayed();
+  await tap('TransferToSpending');
+
+  // Handle intro screen if shown
+  await sleep(1000);
+  await tap('SpendingIntro-button'); // "Get Started"
+  await sleep(1000); // let animation finish
 
   // Enter amount
   const satsStr = String(sats);
@@ -342,18 +341,49 @@ async function transferToSpending(sats: number): Promise<void> {
   }
   await tap('SpendingAmountContinue');
 
-  // Confirm with default settings
-  await tap('SpendingConfirmDefault');
+  // Confirm screen - swipe to transfer (no intermediate button needed)
+  await sleep(1000);
   await dragOnElement('GRAB', 'right', 0.95);
 
-  // Wait for channel to be created
-  await elementById('TransferSuccess').waitForDisplayed({ timeout: 120000 });
-  await tap('TransferSuccess');
+  // Handle notification permission dialog if shown
+  await sleep(1000);
+  try {
+    const allowButton = await $('android=new UiSelector().text("Allow")');
+    await allowButton.waitForDisplayed({ timeout: 5000 });
+    await allowButton.click();
+  } catch {
+    // Dialog might not appear, that's fine
+  }
 
-  // Mine blocks to confirm channel
-  await mineBlocks(6);
+  // RN shows "IN TRANSFER" screen - tap "Continue Using Bitkit" to dismiss and let it run in background
+  await sleep(2000);
+  try {
+    const continueButton = await $('android=new UiSelector().textContains("Continue")');
+    await continueButton.waitForDisplayed({ timeout: 10000 });
+    await continueButton.click();
+    console.info('→ Dismissed transfer screen, continuing in background...');
+  } catch {
+    // Screen might have auto-dismissed
+  }
+
+  // Mine blocks periodically to progress the channel opening
+  console.info('→ Mining blocks to confirm channel...');
+  for (let i = 0; i < 10; i++) {
+    await mineBlocks(3);
+    await sleep(5000);
+    // Check if spending balance shows the transferred amount (transfer complete)
+    try {
+      const expectedBalance = sats.toLocaleString('en').replace(/,/g, ' ');
+      await expectText(expectedBalance);
+      break;
+    } catch {
+      // Still waiting
+    }
+  }
+
   await electrumClient?.waitForSync();
-  await sleep(5000);
+  await sleep(3000);
+  await dismissSheet();
   console.info(`→ Created spending balance with ${sats} sats`);
 }
 
@@ -462,30 +492,33 @@ async function verifyMigration(): Promise<void> {
   await swipeFullScreen('up');
   await tap('ActivityShowAll');
 
-  // All transactions
-  await expectTextWithin('Activity-1', '-');
-  await expectTextWithin('Activity-2', '+');
+  // All transactions (Transfer, Sent, Received = 3 items)
+  await expectTextWithin('Activity-1', '-'); // Transfer (spending)
+  await expectTextWithin('Activity-2', '-'); // Sent
+  await expectTextWithin('Activity-3', '+'); // Received
 
-  // Sent, 2 transactions
+  // Sent tab: should show Sent tx only (not Transfer)
   await tap('Tab-sent');
   await expectTextWithin('Activity-1', '-');
   await elementById('Activity-2').waitForDisplayed({ reverse: true });
 
-  // Received, 2 transactions
+  // Received tab: should show Received tx only
   await tap('Tab-received');
   await expectTextWithin('Activity-1', '+');
   await elementById('Activity-2').waitForDisplayed({ reverse: true });
 
-  // Other, 0 transactions
+  // Other tab: should show Transfer (spending) tx
   await tap('Tab-other');
-  await elementById('Activity-1').waitForDisplayed({ reverse: true });
+  await elementById('Activity-1').waitForDisplayed();
+  await expectTextWithin('Activity-1', '-'); // Transfer shows here
+  await elementById('Activity-2').waitForDisplayed({ reverse: true });
 
   // filter by receive tag
   await tap('Tab-all');
   await tap('TagsPrompt');
   await sleep(500);
   await tap(`Tag-${TAG_RECEIVED}`);
-  await expectTextWithin('Activity-1', '+');
+  await expectTextWithin('Activity-1', '+'); // Only received tx has this tag
   await elementById('Activity-2').waitForDisplayed({ reverse: true });
   await tap(`Tag-${TAG_RECEIVED}-delete`);
 
@@ -493,7 +526,7 @@ async function verifyMigration(): Promise<void> {
   await tap('TagsPrompt');
   await sleep(500);
   await tap(`Tag-${TAG_SENT}`);
-  await expectTextWithin('Activity-1', '-');
+  await expectTextWithin('Activity-1', '-'); // Only sent tx has this tag (not Transfer)
   await elementById('Activity-2').waitForDisplayed({ reverse: true });
   await tap(`Tag-${TAG_SENT}-delete`);
 
