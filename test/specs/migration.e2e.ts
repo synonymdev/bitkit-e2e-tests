@@ -69,10 +69,6 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     // Setup wallet in RN app
     await setupLegacyWallet();
 
-    //dismiss backup sheet if shown
-    await sleep(1000);
-    await swipeFullScreen('down', { upStartYPercent: 0.6, downEndYPercent: 0.6 });
-    await sleep(2000);
     // Get mnemonic before uninstalling
     const mnemonic = await getRnMnemonic();
     await sleep(1000);
@@ -122,7 +118,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
 
     // Get mnemonic before uninstalling
     const mnemonic = await getRnMnemonic();
-
+    await sleep(1000);
     // Uninstall RN app
     console.info('→ Removing legacy RN app...');
     await driver.removeApp(getAppId());
@@ -193,7 +189,8 @@ async function setupLegacyWallet(options: { passphrase?: string } = {}): Promise
 
   // 2. Send on-chain tx with tag
   console.info('→ Step 2: Sending on-chain tx...');
-  await sendRnOnchainWithTag(ONCHAIN_SEND_SATS, TAG_SENT);
+  await sendRnOnchain(ONCHAIN_SEND_SATS);
+  await tagLatestTransaction(TAG_SENT);
 
   // TODO: Add transfer to spending once send works
   // // 3. Transfer to spending (create channel via Blocktank)
@@ -285,7 +282,7 @@ async function fundRnWallet(sats: number): Promise<void> {
  * Send on-chain tx from RN wallet and add a tag.
  * Note: This uses a custom flow for RN since camera permission is already granted from receive.
  */
-async function sendRnOnchainWithTag(sats: number, tag: string): Promise<void> {
+async function sendRnOnchain(sats: number): Promise<void> {
   const externalAddress = await getExternalAddress();
 
   // RN-specific send flow (camera permission already granted during receive)
@@ -311,34 +308,19 @@ async function sendRnOnchainWithTag(sats: number, tag: string): Promise<void> {
   }
   await tap('ContinueAmount');
 
-  // Wait for review screen
-  await sleep(1000);
-
-  // Add tag - use click + addValue to trigger RN state update
-  await tap('TagsAddSend');
-  await elementById('TagInputSend').waitForDisplayed();
-  const tagInput = await elementById('TagInputSend');
-  await tagInput.click(); // Focus the input
-  await sleep(300);
-  // Use addValue to type (triggers RN onChangeText properly)
-  await tagInput.addValue(tag);
-  await sleep(300);
-  // Press Enter key to submit (keycode 66 = KEYCODE_ENTER)
-  await driver.pressKeyCode(66);
-  // Wait for tag sheet to close and return to Review screen
-  await sleep(1000);
-
   // Send using swipe gesture
-  console.info(`→ About to send ${sats} sats with tag "${tag}"...`);
+  console.info(`→ About to send ${sats} sats...`);
   await dragOnElement('GRAB', 'right', 0.95);
   await elementById('SendSuccess').waitForDisplayed();
   await tap('Close');
+  await sleep(2000);
 
   // Mine and sync
   await mineBlocks(1);
   await electrumClient?.waitForSync();
-  await sleep(2000);
-  console.info(`→ Sent ${sats} sats with tag "${tag}"`);
+  await sleep(1000);
+  await dismissSheet()
+  console.info(`→ Sent ${sats} sats`);
 }
 
 /**
@@ -525,4 +507,11 @@ async function verifyMigration(): Promise<void> {
   await doNavigationClose();
 
   console.info('=== Migration verified successfully ===');
+}
+
+async function dismissSheet(): Promise<void> {
+    //dismiss a sheet if shown
+    await sleep(1000);
+    await swipeFullScreen('down', { upStartYPercent: 0.6, downEndYPercent: 0.6 });
+    await sleep(2000);
 }
