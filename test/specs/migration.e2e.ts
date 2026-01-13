@@ -255,7 +255,7 @@ async function createLegacyRnWallet(options: { passphrase?: string } = {}): Prom
 async function getRnReceiveAddress(): Promise<string> {
   const address = await getReceiveAddress('bitcoin');
   console.info(`→ RN receive address: ${address}`);
-  await swipeFullScreen('down', { upStartYPercent: 0.6, downEndYPercent: 0.6 }); // close receive sheet
+  await swipeFullScreen('down'); // close receive sheet
   return address;
 }
 
@@ -277,7 +277,7 @@ async function fundRnWallet(sats: number): Promise<void> {
   console.info(`→ Received ${sats} sats`);
 
   // Ensure we're back on main screen (dismiss any sheets/modals)
-  await swipeFullScreen('down', { upStartYPercent: 0.6, downEndYPercent: 0.6 });
+  await swipeFullScreen('down');
   await sleep(500);
 }
 
