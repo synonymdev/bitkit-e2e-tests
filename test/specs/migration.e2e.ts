@@ -316,7 +316,7 @@ async function sendRnOnchain(sats: number): Promise<void> {
   await mineBlocks(1);
   await electrumClient?.waitForSync();
   await sleep(1000);
-  await dismissSheet()
+  await dismissSheet();
   console.info(`→ Sent ${sats} sats`);
 }
 
@@ -393,8 +393,14 @@ async function transferToSpending(sats: number): Promise<void> {
 async function tagLatestTransaction(tag: string): Promise<void> {
   // Go to activity
   await sleep(1000);
-  await swipeFullScreen('up', { upStartYPercent: 0.6, downEndYPercent: 0.6 });
-  await swipeFullScreen('up', { upStartYPercent: 0.6, downEndYPercent: 0.6 });
+  try {
+    await swipeFullScreen('up', { upStartYPercent: 0.6 });
+    await swipeFullScreen('up', { upStartYPercent: 0.6 });
+    await elementById('ActivityShort-1').waitForDisplayed({ timeout: 5000 });
+  } catch {
+    await swipeFullScreen('up');
+    await swipeFullScreen('up');
+  }
   await tap('ActivityShort-1'); // latest tx
 
   // Add tag
@@ -413,8 +419,8 @@ async function tagLatestTransaction(tag: string): Promise<void> {
 
   // Go back
   await driver.back();
-  await swipeFullScreen('down', { upStartYPercent: 0.6, downEndYPercent: 0.6 });
-  await swipeFullScreen('down', { upStartYPercent: 0.6, downEndYPercent: 0.6 });
+  await swipeFullScreen('down', { downEndYPercent: 0.6 });
+  await swipeFullScreen('down', { downEndYPercent: 0.6 });
   console.info(`→ Tagged latest transaction with "${tag}"`);
 }
 
@@ -539,8 +545,8 @@ async function verifyMigration(): Promise<void> {
 }
 
 async function dismissSheet(): Promise<void> {
-    //dismiss a sheet if shown
-    await sleep(1000);
-    await swipeFullScreen('down', { upStartYPercent: 0.6, downEndYPercent: 0.6 });
-    await sleep(2000);
+  //dismiss a sheet if shown
+  await sleep(1000);
+  await swipeFullScreen('down', { downEndYPercent: 0.6 });
+  await sleep(2000);
 }
