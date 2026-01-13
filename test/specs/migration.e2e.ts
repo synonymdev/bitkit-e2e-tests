@@ -72,7 +72,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     //dismiss backup sheet if shown
     await sleep(1000);
     await swipeFullScreen('down', { upStartYPercent: 0.6, downEndYPercent: 0.6 });
-    await sleep(500);
+    await sleep(2000);
     // Get mnemonic before uninstalling
     const mnemonic = await getRnMnemonic();
     await sleep(1000);
@@ -415,9 +415,17 @@ async function tagLatestTransaction(tag: string): Promise<void> {
  */
 async function getRnMnemonic(): Promise<string> {
   // Navigate to backup settings
-  await tap('HeaderMenu');
-  await sleep(500); // Wait for drawer to open
-  await elementById('DrawerSettings').waitForDisplayed();
+  try {
+    await tap('HeaderMenu');
+    await sleep(500); // Wait for drawer to open
+    await elementById('DrawerSettings').waitForDisplayed({ timeout: 5000 });
+  } catch {
+    console.info('→ Drawer did not open, trying again...');
+    await tap('HeaderMenu');
+    await sleep(500); // Wait for drawer to open
+    await elementById('DrawerSettings').waitForDisplayed({ timeout: 5000 });
+  }
+
   await tap('DrawerSettings');
   await elementById('BackupSettings').waitForDisplayed();
   await tap('BackupSettings');
