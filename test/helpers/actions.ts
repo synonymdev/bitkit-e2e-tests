@@ -312,7 +312,20 @@ export async function typeText(testId: string, text: string) {
 
 type Direction = 'left' | 'right' | 'up' | 'down';
 
-export async function swipeFullScreen(direction: Direction) {
+export async function swipeFullScreen(
+  direction: Direction,
+  {
+    downStartYPercent = 0.2,
+    downEndYPercent = 0.8,
+    upStartYPercent = 0.8,
+    upEndYPercent = 0.2,
+  }: {
+    downStartYPercent?: number;
+    downEndYPercent?: number;
+    upStartYPercent?: number;
+    upEndYPercent?: number;
+  } = {}
+) {
   const { width, height } = await driver.getWindowSize();
 
   let startX = width / 2;
@@ -330,12 +343,12 @@ export async function swipeFullScreen(direction: Direction) {
       endX = width * 0.8;
       break;
     case 'up':
-      startY = height * 0.6;
-      endY = height * 0.2;
+      startY = height * upStartYPercent;
+      endY = height * upEndYPercent;
       break;
     case 'down':
-      startY = height * 0.2;
-      endY = height * 0.6;
+      startY = height * downStartYPercent;
+      endY = height * downEndYPercent;
       break;
   }
 

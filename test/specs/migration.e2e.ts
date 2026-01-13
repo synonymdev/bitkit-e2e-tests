@@ -71,7 +71,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
 
     //dismiss backup sheet if shown
     await sleep(1000);
-    await swipeFullScreen('down');
+    await swipeFullScreen('down', { upStartYPercent: 0.6, downEndYPercent: 0.6 });
     await sleep(500);
     // Get mnemonic before uninstalling
     const mnemonic = await getRnMnemonic();
@@ -242,8 +242,6 @@ async function createLegacyRnWallet(options: { passphrase?: string } = {}): Prom
       if (i === 3) throw new Error('Tapping "WalletOnboardingClose" timeout');
     }
   }
-  await swipeFullScreen('up');
-  await swipeFullScreen('down');
   console.info('→ Legacy RN wallet created');
 }
 
@@ -257,7 +255,7 @@ async function createLegacyRnWallet(options: { passphrase?: string } = {}): Prom
 async function getRnReceiveAddress(): Promise<string> {
   const address = await getReceiveAddress('bitcoin');
   console.info(`→ RN receive address: ${address}`);
-  await swipeFullScreen('down'); // close receive sheet
+  await swipeFullScreen('down', { upStartYPercent: 0.6, downEndYPercent: 0.6 }); // close receive sheet
   return address;
 }
 
@@ -279,7 +277,7 @@ async function fundRnWallet(sats: number): Promise<void> {
   console.info(`→ Received ${sats} sats`);
 
   // Ensure we're back on main screen (dismiss any sheets/modals)
-  await swipeFullScreen('down');
+  await swipeFullScreen('down', { upStartYPercent: 0.6, downEndYPercent: 0.6 });
   await sleep(500);
 }
 
@@ -383,8 +381,8 @@ async function transferToSpending(sats: number): Promise<void> {
 async function tagLatestTransaction(tag: string): Promise<void> {
   // Go to activity
   await sleep(1000);
-  await swipeFullScreen('up');
-  await swipeFullScreen('up');
+  await swipeFullScreen('up', { upStartYPercent: 0.6, downEndYPercent: 0.6 });
+  await swipeFullScreen('up', { upStartYPercent: 0.6, downEndYPercent: 0.6 });
   await tap('ActivityShowAll');
 
   // Tap latest transaction
@@ -407,8 +405,8 @@ async function tagLatestTransaction(tag: string): Promise<void> {
   // Go back
   await driver.back();
   await driver.back();
-  await swipeFullScreen('down');
-  await swipeFullScreen('down');
+  await swipeFullScreen('down', { upStartYPercent: 0.6, downEndYPercent: 0.6 });
+  await swipeFullScreen('down', { upStartYPercent: 0.6, downEndYPercent: 0.6 });
   console.info(`→ Tagged latest transaction with "${tag}"`);
 }
 
