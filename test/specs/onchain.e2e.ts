@@ -24,7 +24,12 @@ import {
   acknowledgeReceivedPayment,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
-import { ensureLocalFunds, getExternalAddress, mineBlocks, sendToAddress } from '../helpers/regtest';
+import {
+  ensureLocalFunds,
+  getExternalAddress,
+  mineBlocks,
+  sendToAddress,
+} from '../helpers/regtest';
 
 describe('@onchain - Onchain', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;

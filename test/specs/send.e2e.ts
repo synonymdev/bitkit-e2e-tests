@@ -36,7 +36,12 @@ import {
   checkChannelStatus,
 } from '../helpers/lnd';
 import { ciIt } from '../helpers/suite';
-import { ensureLocalFunds, getBitcoinRpc, getExternalAddress, mineBlocks } from '../helpers/regtest';
+import {
+  ensureLocalFunds,
+  getBitcoinRpc,
+  getExternalAddress,
+  mineBlocks,
+} from '../helpers/regtest';
 
 describe('@send - Send', () => {
   let electrum: { waitForSync: any; stop: any };

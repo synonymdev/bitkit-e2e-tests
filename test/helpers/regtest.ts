@@ -184,18 +184,23 @@ export async function getExternalAddress(): Promise<string> {
  * @param address - The address to send to
  * @param amountBtcOrSats - Amount (BTC string for local, sats number for regtest)
  */
-export async function sendToAddress(address: string, amountBtcOrSats: string | number): Promise<string> {
+export async function sendToAddress(
+  address: string,
+  amountBtcOrSats: string | number
+): Promise<string> {
   const backend = getBackend();
   if (backend === 'local') {
     const rpc = getRpc();
-    const btc = typeof amountBtcOrSats === 'number'
-      ? (amountBtcOrSats / 100_000_000).toString()
-      : amountBtcOrSats;
+    const btc =
+      typeof amountBtcOrSats === 'number'
+        ? (amountBtcOrSats / 100_000_000).toString()
+        : amountBtcOrSats;
     return rpc.sendToAddress(address, btc);
   } else {
-    const sats = typeof amountBtcOrSats === 'string'
-      ? Math.round(parseFloat(amountBtcOrSats) * 100_000_000)
-      : amountBtcOrSats;
+    const sats =
+      typeof amountBtcOrSats === 'string'
+        ? Math.round(parseFloat(amountBtcOrSats) * 100_000_000)
+        : amountBtcOrSats;
     return blocktankDeposit(address, sats);
   }
 }
