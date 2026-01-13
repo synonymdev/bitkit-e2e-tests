@@ -52,6 +52,7 @@ Notes:
 - `BACKEND=regtest` — Uses Blocktank API over the internet (remote regtest infrastructure).
 
 **The `BACKEND` must match how the app was built:**
+
 - Apps built with `BACKEND=local` connect to localhost electrum → run tests with `BACKEND=local`
 - Apps built with `BACKEND=regtest` connect to remote electrum → run tests with `BACKEND=regtest`
 

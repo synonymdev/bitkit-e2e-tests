@@ -90,10 +90,10 @@ BACKEND=regtest ./scripts/build-ios-sim.sh
 
 **Important:** The `BACKEND` environment variable controls which infrastructure the tests use for blockchain operations (deposits, mining blocks):
 
-| Backend | Infrastructure | When to use |
-|---------|---------------|-------------|
-| `BACKEND=local` (default) | Local docker stack (Bitcoin RPC on localhost:18443, Electrum on localhost:60001) | Apps built with `BACKEND=local` |
-| `BACKEND=regtest` | Blocktank API over the internet (remote regtest) | Apps built with `BACKEND=regtest` |
+| Backend                   | Infrastructure                                                                   | When to use                       |
+| ------------------------- | -------------------------------------------------------------------------------- | --------------------------------- |
+| `BACKEND=local` (default) | Local docker stack (Bitcoin RPC on localhost:18443, Electrum on localhost:60001) | Apps built with `BACKEND=local`   |
+| `BACKEND=regtest`         | Blocktank API over the internet (remote regtest)                                 | Apps built with `BACKEND=regtest` |
 
 > ⚠️ **The `BACKEND` must match how the app was built.** If the app connects to remote electrum, use `BACKEND=regtest`. If it connects to localhost, use `BACKEND=local`.
 
