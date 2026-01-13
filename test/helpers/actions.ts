@@ -330,12 +330,12 @@ export async function swipeFullScreen(direction: Direction) {
       endX = width * 0.8;
       break;
     case 'up':
-      startY = height * 0.8;
+      startY = height * 0.6;
       endY = height * 0.2;
       break;
     case 'down':
       startY = height * 0.2;
-      endY = height * 0.8;
+      endY = height * 0.6;
       break;
   }
 
@@ -524,7 +524,12 @@ export async function restoreWallet(
     expectQuickPayTimedSheet = false,
     expectBackupSheet = false,
     reinstall = true,
-  }: { passphrase?: string; expectQuickPayTimedSheet?: boolean; expectBackupSheet?: boolean; reinstall?: boolean } = {}
+  }: {
+    passphrase?: string;
+    expectQuickPayTimedSheet?: boolean;
+    expectBackupSheet?: boolean;
+    reinstall?: boolean;
+  } = {}
 ) {
   console.info('→ Restoring wallet with seed:', seed);
   // Let cloud state flush - carried over from Detox
@@ -576,7 +581,7 @@ export async function restoreWallet(
   if (expectBackupSheet) {
     await dismissBackupTimedSheet();
   }
-  
+
   if (expectQuickPayTimedSheet) {
     await dismissQuickPayIntro();
   }
