@@ -66,6 +66,7 @@ export const config: WebdriverIO.Config = {
           'appium:platformVersion': '13.0',
           'appium:app': path.join(__dirname, 'aut', 'bitkit_e2e.apk'),
           'appium:autoGrantPermissions': true,
+          'appium:waitForIdleTimeout': 1000,
         }
       : {
           platformName: 'iOS',
