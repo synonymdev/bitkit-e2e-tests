@@ -582,8 +582,6 @@ export async function restoreWallet(
   await tap('RestoreButton');
   await waitForSetupWalletScreenFinish();
 
-  await handleAndroidAlert();
-
   // Wait for Get Started
   const getStarted = await elementById('GetStartedButton');
   await getStarted.waitForDisplayed({ timeout: 120000 });
