@@ -183,6 +183,13 @@ async function setupLegacyWallet(
   await installLegacyRnApp();
   await createLegacyRnWallet({ passphrase });
 
+  let mnemonic: string | undefined;
+  if (returnSeed) {
+    // Get mnemonic for later restoration
+    mnemonic = await getRnMnemonic();
+    console.info(`→ Legacy RN wallet mnemonic: ${mnemonic}`);
+  }
+
   // 1. Fund wallet (receive on-chain)
   console.info('→ Step 1: Funding wallet on-chain...');
   await fundRnWallet(INITIAL_FUND_SATS);
@@ -199,10 +206,7 @@ async function setupLegacyWallet(
 
   console.info('=== Legacy wallet setup complete ===');
 
-  // Get mnemonic if requested
   if (returnSeed) {
-    const mnemonic = await getRnMnemonic();
-    await sleep(1000);
     return mnemonic;
   }
 }
