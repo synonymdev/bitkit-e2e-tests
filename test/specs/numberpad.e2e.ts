@@ -1,3 +1,4 @@
+import BitcoinJsonRpc from 'bitcoin-json-rpc';
 import {
   completeOnboarding,
   enterAddress,
@@ -8,14 +9,30 @@ import {
   tap,
   doNavigationClose,
   expectTextWithin,
+  receiveOnchainFunds,
+  elementById,
 } from '../helpers/actions';
+import initElectrum from '../helpers/electrum';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
+import { bitcoinURL } from '../helpers/constants';
 
 describe('@numberpad - NumberPad', () => {
+  let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
+  const rpc = new BitcoinJsonRpc(bitcoinURL);
   before(async () => {
+    let balance = await rpc.getBalance();
+    const address = await rpc.getNewAddress();
+
+    while (balance < 10) {
+      await rpc.generateToAddress(10, address);
+      balance = await rpc.getBalance();
+    }
+
+    electrum = await initElectrum();
     await reinstallApp();
     await completeOnboarding();
+    await receiveOnchainFunds(rpc, { sats: 10_000 });
   });
 
   beforeEach(async () => {
@@ -74,9 +91,12 @@ async function modernDenominationChecks(mode: NumberpadMode) {
 
   await tap('N000');
   await expectText('123 000');
+  await checkContinueButton(mode, { aboveBalance: true });
 
   // Switch to USD
   await tap(`${mode}NumberPadUnit`);
+  await checkContinueButton(mode, { aboveBalance: true });
+
   // reset to 0
   await multiTap('NRemove', 8);
   if (mode === 'Send') {
@@ -94,6 +114,7 @@ async function modernDenominationChecks(mode: NumberpadMode) {
   await tap('NDecimal');
   await tap('N1');
   await expectText('1.01');
+  await checkContinueButton(mode, { aboveBalance: false });
 
   // Switch back to BTC
   await tap(`${mode}NumberPadUnit`);
@@ -134,6 +155,21 @@ async function classicDenominationChecks(mode: NumberpadMode) {
 
   // still there
   await expectText('4.20690000');
+  await checkContinueButton(mode);
+}
+
+async function checkContinueButton(
+  mode: NumberpadMode,
+  { aboveBalance = true }: { aboveBalance?: boolean } = {}
+) {
+  if (mode === 'Send') {
+    // make sure Continue button is disabled as amount is above balance
+    if (driver.isAndroid) return; // https://github.com/synonymdev/bitkit-android/issues/611
+    await elementById('ContinueAmount').waitForEnabled({ reverse: aboveBalance });
+  } else {
+    // In receive mode Continue is always enabled
+    await elementById('ReceiveNumberPadSubmit').waitForEnabled();
+  }
 }
 
 async function makeSureIsBitcoinInput(mode: NumberpadMode) {
