@@ -634,12 +634,19 @@ export async function getAddressFromQRCode(which: addressType): Promise<string> 
   let address = '';
   if (which === 'bitcoin') {
     address = uri.replace(/^bitcoin:/, '').replace(/\?.*$/, '');
-    // Accept Bech32 HRPs across networks: mainnet (bc1), testnet/signet (tb1), regtest (bcrt1)
-    const allowedBitcoinHrp = ['bc1', 'tb1', 'bcrt1'];
-    const addrLower = address.toLowerCase();
-    if (!allowedBitcoinHrp.some((p) => addrLower.startsWith(p))) {
+    // Accept addresses across networks and types:
+    // - Bech32 (native segwit): mainnet (bc1), testnet/signet (tb1), regtest (bcrt1)
+    // - Legacy P2PKH: mainnet (1), testnet/regtest (m, n)
+    // - P2SH: mainnet (3), testnet/regtest (2)
+    const allowedPrefixes = ['bc1', 'tb1', 'bcrt1', '1', '3', 'm', 'n', '2'];
+    const addrStart = address.charAt(0).toLowerCase();
+    const isBech32 = address.toLowerCase().startsWith('bc1') ||
+                     address.toLowerCase().startsWith('tb1') ||
+                     address.toLowerCase().startsWith('bcrt1');
+    const isLegacyOrP2SH = ['1', '3', 'm', 'n', '2'].includes(addrStart);
+    if (!isBech32 && !isLegacyOrP2SH) {
       throw new Error(
-        `Invalid Bitcoin address HRP: ${address}. Expected one of: ${allowedBitcoinHrp.join(', ')}`
+        `Invalid Bitcoin address: ${address}. Expected prefix is one of: ${allowedPrefixes.join(', ')}`
       );
     }
   } else if (which === 'lightning') {

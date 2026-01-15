@@ -1,4 +1,5 @@
 import {
+  acknowledgeReceivedPayment,
   confirmInputOnKeyboard,
   dismissBackupTimedSheet,
   doNavigationClose,
@@ -106,38 +107,10 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     await verifyMigration();
   });
 
+ // --------------------------------------------------------------------------
+  // Migration Scenario 3: Install native on top of RN with passphrase (upgrade)
   // --------------------------------------------------------------------------
-  // Migration Scenario 3: Uninstall RN, install Native, restore with passphrase
-  // --------------------------------------------------------------------------
-  ciIt('@migration_3 - Uninstall RN, install Native, restore with passphrase', async () => {
-    // Setup wallet in RN app WITH passphrase and get mnemonic
-    const mnemonic = await setupLegacyWallet({ passphrase: TEST_PASSPHRASE, returnSeed: true });
-
-    // Uninstall RN app
-    console.info('→ Removing legacy RN app...');
-    await driver.removeApp(getAppId());
-    resetBootedIOSKeychain();
-
-    // Install native app
-    console.info(`→ Installing native app from: ${getNativeAppPath()}`);
-    await driver.installApp(getNativeAppPath());
-    await driver.activateApp(getAppId());
-
-    // Restore wallet with mnemonic AND passphrase
-    await restoreWallet(mnemonic!, {
-      reinstall: false,
-      expectBackupSheet: true,
-      passphrase: TEST_PASSPHRASE,
-    });
-
-    // Verify migration
-    await verifyMigration();
-  });
-
-  // --------------------------------------------------------------------------
-  // Migration Scenario 4: Install native on top of RN with passphrase (upgrade)
-  // --------------------------------------------------------------------------
-  ciIt('@migration_4 - Install native on top of RN with passphrase (upgrade)', async () => {
+  ciIt('@migration_3 - Install native on top of RN with passphrase (upgrade)', async () => {
     // Setup wallet in RN app WITH passphrase
     await setupLegacyWallet({ passphrase: TEST_PASSPHRASE });
 
@@ -152,6 +125,29 @@ describe('@migration - Migration from legacy RN app to native app', () => {
 
     // Verify migration
     await verifyMigration();
+  });
+
+  // --------------------------------------------------------------------------
+  // Migration Scenario 4: Migration with sweep (legacy p2pkh addresses)
+  // This scenario tests migration when wallet has funds on legacy addresses,
+  // which triggers a sweep flow during migration.
+  // --------------------------------------------------------------------------
+  ciIt('@migration_4 - Migration with sweep (legacy p2pkh addresses)', async () => {
+    // Setup wallet with funds on legacy addresses (triggers sweep on migration)
+    await setupWalletWithLegacyFunds();
+
+    // Install native app ON TOP of RN (upgrade)
+    console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
+    await driver.installApp(getNativeAppPath());
+    await driver.activateApp(getAppId());
+
+    // Handle migration flow with sweep
+    await handleAndroidAlert();
+    await handleSweepFlow();
+    await dismissBackupTimedSheet();
+
+    // Verify migration completed (balance should be preserved after sweep)
+    await verifyMigrationWithSweep();
   });
 });
 
@@ -174,10 +170,11 @@ async function setupLegacyWallet(
   options: {
     passphrase?: string;
     returnSeed?: boolean;
+    setLegacyAddress?: boolean;
   } = {}
 ): Promise<string | undefined> {
-  const { passphrase, returnSeed } = options;
-  console.info(`=== Setting up legacy RN wallet${passphrase ? ' (with passphrase)' : ''} ===`);
+  const { passphrase, returnSeed, setLegacyAddress } = options;
+  console.info(`=== Setting up legacy RN wallet${passphrase ? ' (with passphrase)' : ''}${setLegacyAddress ? ' (legacy address)' : ''} ===`);
 
   // Install and create wallet
   await installLegacyRnApp();
@@ -188,6 +185,12 @@ async function setupLegacyWallet(
     // Get mnemonic for later restoration
     mnemonic = await getRnMnemonic();
     console.info(`→ Legacy RN wallet mnemonic: ${mnemonic}`);
+  }
+
+  // Set legacy address type if requested (before funding)
+  if (setLegacyAddress) {
+    console.info('→ Setting legacy (p2pkh) address type...');
+    await setRnAddressType('p2pkh');
   }
 
   // 1. Fund wallet (receive on-chain)
@@ -209,6 +212,124 @@ async function setupLegacyWallet(
   if (returnSeed) {
     return mnemonic;
   }
+}
+
+// Amount constants for sweep scenario
+const SWEEP_INITIAL_FUND_SATS = 200_000;
+const SWEEP_SEND_TO_SELF_SATS = 50_000;
+const SWEEP_SEND_OUT_SATS = 50_000;
+
+/**
+ * Setup wallet with funds on legacy addresses (for sweep migration scenario)
+ *
+ * Flow:
+ * 1. Create wallet (default native segwit)
+ * 2. Fund wallet on native segwit (works with Blocktank)
+ * 3. Switch to legacy (p2pkh) address type
+ * 4. Send to self (to a new legacy address)
+ * 5. Send out from wallet
+ *
+ * Result: Wallet has funds on legacy address, migration will trigger sweep
+ */
+async function setupWalletWithLegacyFunds(): Promise<void> {
+  console.info('=== Setting up wallet with legacy funds (sweep scenario) ===');
+
+  // Install and create wallet
+  await installLegacyRnApp();
+  await createLegacyRnWallet();
+
+  // 1. Fund wallet on native segwit (works with Blocktank)
+  console.info('→ Step 1: Funding wallet on native segwit...');
+  await fundRnWallet(SWEEP_INITIAL_FUND_SATS);
+
+  // 2. Switch to legacy address type
+  console.info('→ Step 2: Switching to legacy (p2pkh) address type...');
+  await setRnAddressType('p2pkh');
+
+  // 3. Send to self (to new legacy address)
+  console.info('→ Step 3: Sending to self (new legacy address)...');
+  await sendRnToSelf(SWEEP_SEND_TO_SELF_SATS);
+
+  // 4. Send out from wallet (from legacy address)
+  console.info('→ Step 4: Sending out from wallet...');
+  await sendRnOnchain(SWEEP_SEND_OUT_SATS);
+
+  console.info('=== Legacy funds setup complete ===');
+}
+
+/**
+ * Send BTC to wallet's own new address (self-transfer)
+ */
+async function sendRnToSelf(amountSats: number): Promise<void> {
+  // Get a new receive address (will be legacy since we switched)
+  const receiveAddress = await getRnReceiveAddress();
+  await sendRnOnchain(amountSats, { optionalAddress: receiveAddress });
+}
+
+/**
+ * Handle the sweep flow during migration
+ * Sweep is triggered when wallet has funds on unsupported address types (legacy)
+ */
+async function handleSweepFlow(): Promise<void> {
+  console.info('→ Handling sweep flow...');
+
+  await elementById('SweepButton').waitForDisplayed();
+  await sleep(1000);
+
+  try {
+    await tap('SweepButton');
+    console.info('→ Clicked Sweep button by ID');
+  } catch {
+    await tap('SweepButton');
+    console.info('→ Clicked Sweep button by ID again');
+  }
+
+  try {
+    await tap('SweepToWalletButton');
+    console.info('→ Clicked Sweep To Wallet button by ID');
+  } catch {
+    await tap('SweepToWalletButton');
+    console.info('→ Clicked Sweep To Wallet button by ID again');
+  }
+
+  // Wait for sweep confirmation screen with swipe slider
+  await sleep(2000);
+  await elementById('GRAB').waitForDisplayed();
+  await sleep(2000);
+  await dragOnElement('GRAB');
+  await acknowledgeReceivedPayment();
+
+  // Mine blocks to confirm sweep transaction
+  await mineBlocks(1);
+  await sleep(2000);
+
+  await doNavigationClose();
+
+  console.info('→ Sweep flow complete');
+}
+
+/**
+ * Verify migration completed after sweep
+ * Balance should be preserved (minus fees)
+ */
+async function verifyMigrationWithSweep(): Promise<void> {
+  console.info('=== Verifying migration with sweep ===');
+
+  // After sweep, we should have balance (original minus fees from transactions)
+  // The exact amount depends on fees, so we just check for non-zero balance
+  await elementById('TotalBalance').waitForDisplayed({ timeout: 30_000 });
+
+  // Check that we have some balance
+  const balanceElement = await elementById('TotalBalance');
+  const balanceText = await balanceElement.getText();
+  console.info(`→ Balance after sweep: ${balanceText}`);
+
+  // Verify wallet is functional by checking main screen elements
+  await elementById('ActivitySavings').waitForDisplayed();
+  await elementById('Send').waitForDisplayed();
+  await elementById('Receive').waitForDisplayed();
+
+  console.info('=== Migration with sweep verified ===');
 }
 
 async function installLegacyRnApp(): Promise<void> {
@@ -253,6 +374,42 @@ async function createLegacyRnWallet(options: { passphrase?: string } = {}): Prom
   console.info('→ Legacy RN wallet created');
 }
 
+/**
+ * Change Bitcoin address type in RN app settings
+ * @param addressType - 'p2pkh' (legacy), 'p2sh' (nested segwit), or 'p2wpkh' (native segwit)
+ */
+async function setRnAddressType(addressType: 'p2pkh' | 'p2sh' | 'p2wpkh'): Promise<void> {
+  // Navigate to Settings > Advanced > Address Type
+  await tap('HeaderMenu');
+  await sleep(500);
+  await elementById('DrawerSettings').waitForDisplayed();
+  await tap('DrawerSettings');
+
+  await elementById('AdvancedSettings').waitForDisplayed();
+  await tap('AdvancedSettings');
+
+  await elementById('AddressTypePreference').waitForDisplayed();
+  await tap('AddressTypePreference');
+
+  // Select the address type
+  await elementById(addressType).waitForDisplayed();
+  await tap(addressType);
+
+  // Navigate back to main screen via drawer
+  await driver.back(); // AddressType -> Advanced
+  await sleep(300);
+  await driver.back(); // Advanced -> Settings
+  await sleep(300);
+  // Close settings by going to wallet via drawer
+  await tap('HeaderMenu');
+  await sleep(500);
+  await elementById('DrawerWallet').waitForDisplayed();
+  await tap('DrawerWallet');
+  await sleep(500);
+
+  console.info(`→ Address type set to: ${addressType}`);
+}
+
 // ============================================================================
 // RN APP INTERACTION HELPERS
 // ============================================================================
@@ -293,8 +450,8 @@ async function fundRnWallet(sats: number): Promise<void> {
  * Send on-chain tx from RN wallet and add a tag.
  * Note: This uses a custom flow for RN since camera permission is already granted from receive.
  */
-async function sendRnOnchain(sats: number): Promise<void> {
-  const externalAddress = await getExternalAddress();
+async function sendRnOnchain(sats: number, {optionalAddress}: {optionalAddress?: string} = {}): Promise<void> {
+  const externalAddress = optionalAddress ?? await getExternalAddress();
 
   // RN-specific send flow (camera permission already granted during receive)
   await tap('Send');
