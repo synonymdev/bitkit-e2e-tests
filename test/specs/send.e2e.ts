@@ -75,24 +75,24 @@ describe('@send - Send', () => {
 
     // check validation for invalid data
     await typeAddressAndVerifyContinue({ address: 'test123', reverse: true });
+    await waitForToast('InvalidAddressToast');
 
-    //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/354 ---//
+    // check validation for invalid address (network mismatch)
+    const mainnetAddress = 'bc1qnc8at2e2navahnz7lvtl39r4dnfzxv3cc9e7ax';
+    await typeAddressAndVerifyContinue({ address: mainnetAddress, reverse: true });
+    await waitForToast('InvalidAddressToast');
 
-    // // check validation for invalid address (network mismatch)
-    // const mainnetAddress = 'bc1qnc8at2e2navahnz7lvtl39r4dnfzxv3cc9e7ax';
-    // await typeAddressAndVerifyContinue({ address: mainnetAddress, reverse: true })
+    // check validation for address when balance is 0
+    const address = await rpc.getNewAddress();
+    console.info({ address });
+    await typeAddressAndVerifyContinue({ address: address, reverse: true });
+    await waitForToast('InsufficientSavingsToast');
 
-    // // check validation for address when balance is 0
-    // const address = await rpc.getNewAddress();
-    // console.info({ address });
-    // await typeAddressAndVerifyContinue({ address: address, reverse: true })
-
-    // // check validation for expired invoice
-    // const invoice =
-    //   'lnbcrt1pn3zpqpdqqnp4qfh2x8nyvvzq4kf8j9wcaau2chr580l93pnyrh5027l8f7qtm48h6pp5lmwkulnpze4ek4zqwfepguahcr2ma3vfhwa6uepxfd378xlldprssp5wnq34d553g50suuvfy387csx5hx6mdv8zezem6f4tky7rhezycas9qyysgqcqpcxqrrssrzjqtr7pzpunxgwjddwdqucegdphm6776xcarz60gw9gxva0rhal5ntmapyqqqqqqqqpqqqqqlgqqqqqqgq2ql9zpeakxvff9cz5rd6ssc3cngl256u8htm860qv3r28vqkwy9xe3wp0l9ms3zcqvys95yf3r34ytmegz6zynuthh5s0kh7cueunm3mspg3uwpt';
-    // await typeAddressAndVerifyContinue({ address: invoice, reverse: true })
-
-    //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/354 ---//
+    // check validation for expired invoice
+    const invoice =
+      'lnbcrt1pn3zpqpdqqnp4qfh2x8nyvvzq4kf8j9wcaau2chr580l93pnyrh5027l8f7qtm48h6pp5lmwkulnpze4ek4zqwfepguahcr2ma3vfhwa6uepxfd378xlldprssp5wnq34d553g50suuvfy387csx5hx6mdv8zezem6f4tky7rhezycas9qyysgqcqpcxqrrssrzjqtr7pzpunxgwjddwdqucegdphm6776xcarz60gw9gxva0rhal5ntmapyqqqqqqqqpqqqqqlgqqqqqqgq2ql9zpeakxvff9cz5rd6ssc3cngl256u8htm860qv3r28vqkwy9xe3wp0l9ms3zcqvys95yf3r34ytmegz6zynuthh5s0kh7cueunm3mspg3uwpt';
+    await typeAddressAndVerifyContinue({ address: invoice, reverse: true });
+    await waitForToast('ExpiredLightningToast');
 
     // Receive funds and check validation w/ balance
     await swipeFullScreen('down');
@@ -120,13 +120,10 @@ describe('@send - Send', () => {
       await typeAddressAndVerifyContinue({ address: unified1 });
     }
 
-    //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/354 ---//
-
-    // // check validation for unified invoice when balance is too low
-    // const unified2 = 'bitcoin:bcrt1q07x3wl76zdxvdsz3qzzkvxrjg3n6t4tz2vnsx8?amount=0.002';
-    // await typeAddressAndVerifyContinue({ address: unified2, reverse: true });
-
-    //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/354 ---//
+    // check validation for unified invoice when balance is too low
+    const unified2 = 'bitcoin:bcrt1q07x3wl76zdxvdsz3qzzkvxrjg3n6t4tz2vnsx8?amount=0.002';
+    await typeAddressAndVerifyContinue({ address: unified2, reverse: true });
+    await waitForToast('InsufficientSavingsToast');
   });
 
   ciIt('@send_2 - Can receive funds and send to different invoices', async () => {
