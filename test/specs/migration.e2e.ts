@@ -250,9 +250,9 @@ async function setupWalletWithLegacyFunds(): Promise<void> {
   console.info('→ Step 3: Sending to self (new legacy address)...');
   await sendRnToSelf(SWEEP_SEND_TO_SELF_SATS);
 
-  // 4. Send out from wallet (from legacy address)
-  console.info('→ Step 4: Sending out from wallet...');
-  await sendRnOnchain(SWEEP_SEND_OUT_SATS);
+  // // 4. Send out from wallet (from legacy address)
+  // console.info('→ Step 4: Sending out from wallet...');
+  // await sendRnOnchain(SWEEP_SEND_OUT_SATS);
 
   console.info('=== Legacy funds setup complete ===');
 }
