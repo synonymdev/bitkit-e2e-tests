@@ -114,8 +114,8 @@ export async function connectToLND(lndNodeID: string, { navigationClose = true }
   await tap('FundCustom');
   await tap('FundManual');
   await typeText('NodeIdInput', lndNodeID);
-  await typeText('HostInput', '0.0.0.0');
   await typeText('PortInput', '9735');
+  await typeText('HostInput', '0.0.0.0');
   await confirmInputOnKeyboard();
   await tap('ExternalContinue');
   await sleep(1000);
