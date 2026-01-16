@@ -643,8 +643,6 @@ async function getRnMnemonic(): Promise<string> {
   await driver.back();
   await sleep(300);
   await driver.back();
-  await sleep(300);
-  await driver.back();
   await sleep(500);
 
   return seed;
