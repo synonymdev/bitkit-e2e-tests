@@ -1,5 +1,3 @@
-import BitcoinJsonRpc from 'bitcoin-json-rpc';
-import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
 import { reinstallApp } from '../helpers/setup';
 import {
@@ -12,7 +10,6 @@ import {
   expectTextWithin,
   doNavigationClose,
   getReceiveAddress,
-  mineBlocks,
   multiTap,
   sleep,
   swipeFullScreen,
@@ -27,21 +24,18 @@ import {
   acknowledgeReceivedPayment,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
+import {
+  ensureLocalFunds,
+  getExternalAddress,
+  mineBlocks,
+  sendToAddress,
+} from '../helpers/regtest';
 
 describe('@onchain - Onchain', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
-  const rpc = new BitcoinJsonRpc(bitcoinURL);
 
   before(async () => {
-    // ensure we have at least 10 BTC on regtest
-    let balance = await rpc.getBalance();
-    const address = await rpc.getNewAddress();
-
-    while (balance < 10) {
-      await rpc.generateToAddress(10, address);
-      balance = await rpc.getBalance();
-    }
-
+    await ensureLocalFunds();
     electrum = await initElectrum();
   });
 
@@ -57,10 +51,10 @@ describe('@onchain - Onchain', () => {
 
   ciIt('@onchain_1 - Receive and send some out', async () => {
     // receive some first
-    await receiveOnchainFunds(rpc, { sats: 100_000_000, expectHighBalanceWarning: true });
+    await receiveOnchainFunds({ sats: 100_000_000, expectHighBalanceWarning: true });
 
     // then send out 10 000
-    const coreAddress = await rpc.getNewAddress();
+    const coreAddress = await getExternalAddress();
     console.info({ coreAddress });
     await enterAddress(coreAddress);
     await tap('N1');
@@ -72,7 +66,7 @@ describe('@onchain - Onchain', () => {
     await elementById('SendSuccess').waitForDisplayed();
     await tap('Close');
 
-    await mineBlocks(rpc, 1);
+    await mineBlocks(1);
     await electrum?.waitForSync();
 
     const moneyTextAfter = (await elementsById('MoneyText'))[1];
@@ -124,10 +118,10 @@ describe('@onchain - Onchain', () => {
       await tap('ShowQrReceive');
       await swipeFullScreen('down');
 
-      await rpc.sendToAddress(address, '1');
+      await sendToAddress(address, '1');
       await acknowledgeReceivedPayment();
 
-      await mineBlocks(rpc, 1);
+      await mineBlocks(1);
       await electrum?.waitForSync();
       await sleep(1000); // wait for the app to settle
 
@@ -143,7 +137,7 @@ describe('@onchain - Onchain', () => {
     }
 
     // - can send total balance and tag the tx //
-    const coreAddress = await rpc.getNewAddress();
+    const coreAddress = await getExternalAddress();
     await enterAddress(coreAddress);
 
     // Amount / NumberPad
@@ -166,7 +160,7 @@ describe('@onchain - Onchain', () => {
     await elementById('SendSuccess').waitForDisplayed();
     await tap('Close');
 
-    await mineBlocks(rpc, 1);
+    await mineBlocks(1);
 
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     await expect(totalBalance).toHaveText('0');
@@ -258,7 +252,7 @@ describe('@onchain - Onchain', () => {
 
   ciIt('@onchain_3 - Avoids creating a dust output and instead adds it to the fee', async () => {
     // receive some first
-    await receiveOnchainFunds(rpc, { sats: 100_000_000, expectHighBalanceWarning: true });
+    await receiveOnchainFunds({ sats: 100_000_000, expectHighBalanceWarning: true });
 
     // enable warning for sending over 100$ to test multiple warning dialogs
     await tap('HeaderMenu');
@@ -267,7 +261,7 @@ describe('@onchain - Onchain', () => {
     await tap('SendAmountWarning');
     await doNavigationClose();
 
-    const coreAddress = await rpc.getNewAddress();
+    const coreAddress = await getExternalAddress();
     console.info({ coreAddress });
     await enterAddress(coreAddress);
 
@@ -294,7 +288,7 @@ describe('@onchain - Onchain', () => {
     await elementById('SendSuccess').waitForDisplayed();
     await tap('Close');
 
-    await mineBlocks(rpc, 1);
+    await mineBlocks(1);
     await electrum?.waitForSync();
 
     const totalBalanceAfter = await elementByIdWithin('TotalBalance-primary', 'MoneyText');

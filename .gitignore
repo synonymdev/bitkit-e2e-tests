@@ -5,3 +5,4 @@ node_modules
 docker/lnd
 artifacts
 WARP.md
+.ai

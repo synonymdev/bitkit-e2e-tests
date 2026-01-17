@@ -1,4 +1,3 @@
-import BitcoinJsonRpc from 'bitcoin-json-rpc';
 import { encode } from 'bip21';
 
 import initElectrum from '../helpers/electrum';
@@ -17,7 +16,6 @@ import {
   swipeFullScreen,
   multiTap,
   typeAddressAndVerifyContinue,
-  mineBlocks,
   dismissQuickPayIntro,
   doNavigationClose,
   waitForToast,
@@ -25,7 +23,7 @@ import {
   dismissBackgroundPaymentsTimedSheet,
   acknowledgeReceivedPayment,
 } from '../helpers/actions';
-import { bitcoinURL, lndConfig } from '../helpers/constants';
+import { lndConfig } from '../helpers/constants';
 import { reinstallApp } from '../helpers/setup';
 import { confirmInputOnKeyboard, tap, typeText } from '../helpers/actions';
 import {
@@ -38,20 +36,21 @@ import {
   checkChannelStatus,
 } from '../helpers/lnd';
 import { ciIt } from '../helpers/suite';
+import {
+  ensureLocalFunds,
+  getBitcoinRpc,
+  getExternalAddress,
+  mineBlocks,
+} from '../helpers/regtest';
 
 describe('@send - Send', () => {
   let electrum: { waitForSync: any; stop: any };
-  const rpc = new BitcoinJsonRpc(bitcoinURL);
+  // LND tests only work with BACKEND=local
+  let rpc: ReturnType<typeof getBitcoinRpc>;
 
   before(async () => {
-    let balance = await rpc.getBalance();
-    const address = await rpc.getNewAddress();
-
-    while (balance < 10) {
-      await rpc.generateToAddress(10, address);
-      balance = await rpc.getBalance();
-    }
-
+    rpc = getBitcoinRpc();
+    await ensureLocalFunds();
     electrum = await initElectrum();
   });
 
@@ -96,14 +95,14 @@ describe('@send - Send', () => {
 
     // Receive funds and check validation w/ balance
     await swipeFullScreen('down');
-    await receiveOnchainFunds(rpc);
+    await receiveOnchainFunds();
 
     await tap('Send');
     await sleep(500);
     await tap('RecipientManual');
 
     // check validation for address
-    const address2 = await rpc.getNewAddress();
+    const address2 = await getExternalAddress();
     try {
       await typeAddressAndVerifyContinue({ address: address2 });
     } catch {
@@ -143,7 +142,7 @@ describe('@send - Send', () => {
     // - quickpay to lightning invoice
     // - quickpay to unified invoice
 
-    await receiveOnchainFunds(rpc);
+    await receiveOnchainFunds();
 
     // send funds to LND node and open a channel
     const { lnd, lndNodeID } = await setupLND(rpc, lndConfig);
@@ -356,7 +355,9 @@ describe('@send - Send', () => {
       await expectTextWithin('ActivitySpending', '7 000');
     } else {
       // https://github.com/synonymdev/bitkit-ios/issues/300
-      console.info('Skipping sending to unified invoice w/ expired invoice on iOS due to /bitkit-ios/issues/300');
+      console.info(
+        'Skipping sending to unified invoice w/ expired invoice on iOS due to /bitkit-ios/issues/300'
+      );
       amtAfterUnified3 = amtAfterUnified2;
     }
 
@@ -396,6 +397,7 @@ describe('@send - Send', () => {
     await sleep(1000);
     await enterAddress(unified5, { acceptCameraPermission: false });
     // max amount (lightning)
+    await sleep(500);
     await tap('AvailableAmount');
     await tap('ContinueAmount');
     await expectText('4 998', { strategy: 'contains' });
@@ -404,6 +406,7 @@ describe('@send - Send', () => {
     await tap('NavigationBack');
     // max amount (onchain)
     await tap('AssetButton-switch');
+    await sleep(500);
     await tap('AvailableAmount');
     if (driver.isIOS) {
       // iOS runs an autopilot coin selection step on Continue; when the amount is the true "max"
@@ -471,7 +474,7 @@ describe('@send - Send', () => {
 
     // TEMP: receive more funds to be able to pay 10k invoice
     console.info('Receiving lightning funds...');
-    await mineBlocks(rpc, 1);
+    await mineBlocks(1);
     await electrum?.waitForSync();
     const receive2 = await getReceiveAddress('lightning');
     await swipeFullScreen('down');

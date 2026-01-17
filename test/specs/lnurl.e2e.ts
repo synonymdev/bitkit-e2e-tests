@@ -1,8 +1,7 @@
-import BitcoinJsonRpc from 'bitcoin-json-rpc';
 import LNURL from 'lnurl';
 
 import initElectrum from '../helpers/electrum';
-import { bitcoinURL, lndConfig } from '../helpers/constants';
+import { lndConfig } from '../helpers/constants';
 import {
   sleep,
   tap,
@@ -34,6 +33,7 @@ import {
   waitForActiveChannel,
   setupLND,
 } from '../helpers/lnd';
+import { ensureLocalFunds, getBitcoinRpc, mineBlocks } from '../helpers/regtest';
 
 function waitForEvent(lnurlServer: any, name: string): Promise<void> {
   let timer: NodeJS.Timeout | undefined;
@@ -57,17 +57,12 @@ function waitForEvent(lnurlServer: any, name: string): Promise<void> {
 describe('@lnurl - LNURL', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
   let lnurlServer: any;
-  const rpc = new BitcoinJsonRpc(bitcoinURL);
+  // LND tests only work with BACKEND=local
+  let rpc: ReturnType<typeof getBitcoinRpc>;
 
   before(async () => {
-    // Ensure we have at least 10 BTC on regtest
-    let balance = await rpc.getBalance();
-    const address = await rpc.getNewAddress();
-    while (balance < 10) {
-      await rpc.generateToAddress(10, address);
-      balance = await rpc.getBalance();
-    }
-
+    rpc = getBitcoinRpc();
+    await ensureLocalFunds();
     electrum = await initElectrum();
 
     // Start local LNURL server backed by LND REST
@@ -105,7 +100,7 @@ describe('@lnurl - LNURL', () => {
   ciIt(
     '@lnurl_1 - Can process lnurl-channel, lnurl-pay, lnurl-withdraw, and lnurl-auth',
     async () => {
-      await receiveOnchainFunds(rpc, { sats: 1000 });
+      await receiveOnchainFunds({ sats: 1000 });
 
       // Get LDK node id from the UI
       const ldkNodeID = await getLDKNodeID();
@@ -134,7 +129,7 @@ describe('@lnurl - LNURL', () => {
       await waitForPeerConnection(lnd as any, ldkNodeID);
 
       // Confirm channel by mining and syncing
-      await rpc.generateToAddress(6, await rpc.getNewAddress());
+      await mineBlocks(6);
       await electrum?.waitForSync();
 
       // Wait for channel to be active
