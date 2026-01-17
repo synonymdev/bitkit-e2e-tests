@@ -562,10 +562,11 @@ async function transferToSpending(sats: number): Promise<void> {
   await sleep(1000);
   try {
     const allowButton = await $('android=new UiSelector().text("Allow")');
-    await allowButton.waitForDisplayed({ timeout: 5000 });
+    await allowButton.waitForDisplayed({ timeout: 10000 });
     await allowButton.click();
   } catch {
     // Dialog might not appear, that's fine
+    console.info('→ Notification permission dialog did not appear');
   }
 
   // RN shows "IN TRANSFER" screen - tap "Continue Using Bitkit" to dismiss and let it run in background
@@ -577,6 +578,7 @@ async function transferToSpending(sats: number): Promise<void> {
     console.info('→ Dismissed transfer screen, continuing in background...');
   } catch {
     // Screen might have auto-dismissed
+    console.info('→ Transfer screen did not appear or already dismissed');
   }
 
   // Mine blocks periodically to progress the channel opening
