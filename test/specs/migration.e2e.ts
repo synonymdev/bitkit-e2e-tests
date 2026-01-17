@@ -99,8 +99,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     await driver.activateApp(getAppId());
 
     // Handle migration flow
-    await handleAndroidAlert();
-    await dismissBackupTimedSheet();
+    await handleMigrationFlow({ withSweep: false });
 
     // Verify migration
     await verifyMigration(balance);
@@ -119,8 +118,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     await driver.activateApp(getAppId());
 
     // Handle migration flow
-    await handleAndroidAlert();
-    await dismissBackupTimedSheet();
+    await handleMigrationFlow({ withSweep: false });
 
     // Verify migration
     await verifyMigration(balance);
@@ -141,9 +139,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     await driver.activateApp(getAppId());
 
     // Handle migration flow with sweep
-    await handleAndroidAlert();
-    await handleSweepFlow();
-    await dismissBackupTimedSheet();
+    await handleMigrationFlow({ withSweep: true });
 
     // Verify migration completed (balance should be preserved after sweep, minus fees)
     await verifyMigrationWithSweep(balance);
@@ -285,6 +281,16 @@ async function sendRnToSelf(amountSats: number): Promise<void> {
   // Get a new receive address (will be legacy since we switched)
   const receiveAddress = await getRnReceiveAddress();
   await sendRnOnchain(amountSats, { optionalAddress: receiveAddress });
+}
+
+async function handleMigrationFlow({ withSweep = false }): Promise<void> {
+  console.info('→ Handling migration flow...');
+  await expectText('MIGRATING');
+  await handleAndroidAlert();
+  if (withSweep) {
+    await handleSweepFlow();
+  }
+  await dismissBackupTimedSheet();
 }
 
 /**
@@ -562,29 +568,8 @@ async function transferToSpending(sats: number): Promise<void> {
   // Confirm screen - swipe to transfer (no intermediate button needed)
   await sleep(1000);
   await dragOnElement('GRAB', 'right', 0.95);
-
-  // Handle notification permission dialog if shown
-  await sleep(1000);
-  try {
-    const allowButton = await $('android=new UiSelector().text("Allow")');
-    await allowButton.waitForDisplayed({ timeout: 10000 });
-    await allowButton.click();
-  } catch {
-    // Dialog might not appear, that's fine
-    console.info('→ Notification permission dialog did not appear');
-  }
-
-  // RN shows "IN TRANSFER" screen - tap "Continue Using Bitkit" to dismiss and let it run in background
-  await sleep(2000);
-  try {
-    const continueButton = await $('android=new UiSelector().textContains("Continue")');
-    await continueButton.waitForDisplayed({ timeout: 10000 });
-    await continueButton.click();
-    console.info('→ Dismissed transfer screen, continuing in background...');
-  } catch {
-    // Screen might have auto-dismissed
-    console.info('→ Transfer screen did not appear or already dismissed');
-  }
+  await sleep(5000);
+  await handleAndroidAlert();
 
   // Mine blocks periodically to progress the channel opening
   console.info('→ Mining blocks to confirm channel...');
@@ -592,23 +577,21 @@ async function transferToSpending(sats: number): Promise<void> {
     await mineBlocks(1);
     // Check if spending balance shows the transferred amount (transfer complete)
     try {
-      const expectedBalance = sats.toLocaleString('en').replace(/,/g, ' ');
-      await expectText(expectedBalance);
+      await elementById('TransferSuccess-button').waitForDisplayed();
+      await sleep(1000);
       break;
     } catch {
-      try {
-        await elementById('TransferSuccess-button').waitForDisplayed({ timeout: 5000 });
-        await tap('TransferSuccess-button');
-      } catch {
-        console.info('→ Transfer successful screen did not appear, that is fine');
-      }
+      console.info('→ Transfer successful screen did not appear, waiting...');
     }
   }
 
-  await sleep(1000);
+  await sleep(3000);
+  await tap('TransferSuccess-button');
   await electrumClient?.waitForSync();
   await sleep(3000);
   await dismissSheetRN();
+  const expectedBalance = sats.toLocaleString('en').replace(/,/g, ' ');
+  await expectText(expectedBalance);
   console.info(`→ Created spending balance with ${sats} sats`);
 }
 
