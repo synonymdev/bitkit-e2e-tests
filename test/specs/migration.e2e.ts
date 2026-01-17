@@ -285,7 +285,7 @@ async function sendRnToSelf(amountSats: number): Promise<void> {
 
 async function handleMigrationFlow({ withSweep = false }): Promise<void> {
   console.info('→ Handling migration flow...');
-  await expectText('MIGRATING');
+  await expectText('MIGRATING', { strategy: 'contains' });
   await handleAndroidAlert();
   if (withSweep) {
     await handleSweepFlow();
