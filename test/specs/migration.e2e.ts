@@ -192,7 +192,9 @@ async function setupLegacyWallet(
   } = {}
 ): Promise<LegacyWalletSetupResult> {
   const { passphrase, returnSeed, setLegacyAddress } = options;
-  console.info(`=== Setting up legacy RN wallet${passphrase ? ' (with passphrase)' : ''}${setLegacyAddress ? ' (legacy address)' : ''} ===`);
+  console.info(
+    `=== Setting up legacy RN wallet${passphrase ? ' (with passphrase)' : ''}${setLegacyAddress ? ' (legacy address)' : ''} ===`
+  );
 
   // Install and create wallet
   await installLegacyRnApp();
@@ -484,8 +486,11 @@ async function fundRnWallet(sats: number): Promise<void> {
  * Send on-chain tx from RN wallet and add a tag.
  * Note: This uses a custom flow for RN since camera permission is already granted from receive.
  */
-async function sendRnOnchain(sats: number, {optionalAddress}: {optionalAddress?: string} = {}): Promise<void> {
-  const externalAddress = optionalAddress ?? await getExternalAddress();
+async function sendRnOnchain(
+  sats: number,
+  { optionalAddress }: { optionalAddress?: string } = {}
+): Promise<void> {
+  const externalAddress = optionalAddress ?? (await getExternalAddress());
 
   // RN-specific send flow (camera permission already granted during receive)
   await tap('Send');
@@ -591,11 +596,16 @@ async function transferToSpending(sats: number): Promise<void> {
       await expectText(expectedBalance);
       break;
     } catch {
-      // Still waiting
-      await sleep(3000);
+      try {
+        await elementById('TransferSuccess-button').waitForDisplayed({ timeout: 5000 });
+        await tap('TransferSuccess-button');
+      } catch {
+        console.info('→ Transfer successful screen did not appear, that is fine');
+      }
     }
   }
 
+  await sleep(1000);
   await electrumClient?.waitForSync();
   await sleep(3000);
   await dismissSheetRN();
