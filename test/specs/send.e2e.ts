@@ -68,6 +68,7 @@ describe('@send - Send', () => {
   ciIt('@send_1 - Validates payment data in the manual input', async () => {
     await tap('Send');
     await handleAndroidAlert('permission_allow_foreground_only_button');
+    await sleep(5000);
     await tap('RecipientManual');
 
     // check validation for empty address
@@ -75,24 +76,24 @@ describe('@send - Send', () => {
 
     // check validation for invalid data
     await typeAddressAndVerifyContinue({ address: 'test123', reverse: true });
+    await waitForToast('InvalidAddressToast');
 
-    //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/354 ---//
+    // check validation for invalid address (network mismatch)
+    const mainnetAddress = 'bc1qnc8at2e2navahnz7lvtl39r4dnfzxv3cc9e7ax';
+    await typeAddressAndVerifyContinue({ address: mainnetAddress, reverse: true });
+    await waitForToast('InvalidAddressToast');
 
-    // // check validation for invalid address (network mismatch)
-    // const mainnetAddress = 'bc1qnc8at2e2navahnz7lvtl39r4dnfzxv3cc9e7ax';
-    // await typeAddressAndVerifyContinue({ address: mainnetAddress, reverse: true })
+    // check validation for address when balance is 0
+    const address = await rpc.getNewAddress();
+    console.info({ address });
+    await typeAddressAndVerifyContinue({ address: address, reverse: true });
+    await waitForToast('InsufficientSavingsToast');
 
-    // // check validation for address when balance is 0
-    // const address = await rpc.getNewAddress();
-    // console.info({ address });
-    // await typeAddressAndVerifyContinue({ address: address, reverse: true })
-
-    // // check validation for expired invoice
-    // const invoice =
-    //   'lnbcrt1pn3zpqpdqqnp4qfh2x8nyvvzq4kf8j9wcaau2chr580l93pnyrh5027l8f7qtm48h6pp5lmwkulnpze4ek4zqwfepguahcr2ma3vfhwa6uepxfd378xlldprssp5wnq34d553g50suuvfy387csx5hx6mdv8zezem6f4tky7rhezycas9qyysgqcqpcxqrrssrzjqtr7pzpunxgwjddwdqucegdphm6776xcarz60gw9gxva0rhal5ntmapyqqqqqqqqpqqqqqlgqqqqqqgq2ql9zpeakxvff9cz5rd6ssc3cngl256u8htm860qv3r28vqkwy9xe3wp0l9ms3zcqvys95yf3r34ytmegz6zynuthh5s0kh7cueunm3mspg3uwpt';
-    // await typeAddressAndVerifyContinue({ address: invoice, reverse: true })
-
-    //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/354 ---//
+    // check validation for expired invoice
+    const invoice =
+      'lnbcrt1pn3zpqpdqqnp4qfh2x8nyvvzq4kf8j9wcaau2chr580l93pnyrh5027l8f7qtm48h6pp5lmwkulnpze4ek4zqwfepguahcr2ma3vfhwa6uepxfd378xlldprssp5wnq34d553g50suuvfy387csx5hx6mdv8zezem6f4tky7rhezycas9qyysgqcqpcxqrrssrzjqtr7pzpunxgwjddwdqucegdphm6776xcarz60gw9gxva0rhal5ntmapyqqqqqqqqpqqqqqlgqqqqqqgq2ql9zpeakxvff9cz5rd6ssc3cngl256u8htm860qv3r28vqkwy9xe3wp0l9ms3zcqvys95yf3r34ytmegz6zynuthh5s0kh7cueunm3mspg3uwpt';
+    await typeAddressAndVerifyContinue({ address: invoice, reverse: true });
+    await waitForToast('ExpiredLightningToast');
 
     // Receive funds and check validation w/ balance
     await swipeFullScreen('down');
@@ -120,13 +121,10 @@ describe('@send - Send', () => {
       await typeAddressAndVerifyContinue({ address: unified1 });
     }
 
-    //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/354 ---//
-
-    // // check validation for unified invoice when balance is too low
-    // const unified2 = 'bitcoin:bcrt1q07x3wl76zdxvdsz3qzzkvxrjg3n6t4tz2vnsx8?amount=0.002';
-    // await typeAddressAndVerifyContinue({ address: unified2, reverse: true });
-
-    //--- skip due to: https://github.com/synonymdev/bitkit-android/issues/354 ---//
+    // check validation for unified invoice when balance is too low
+    const unified2 = 'bitcoin:bcrt1q07x3wl76zdxvdsz3qzzkvxrjg3n6t4tz2vnsx8?amount=0.002';
+    await typeAddressAndVerifyContinue({ address: unified2, reverse: true });
+    await waitForToast('InsufficientSavingsToast');
   });
 
   ciIt('@send_2 - Can receive funds and send to different invoices', async () => {
@@ -328,37 +326,31 @@ describe('@send - Send', () => {
 
     // send to unified invoice w/ expired invoice
     let amtAfterUnified3: string;
-    if (driver.isAndroid) {
-      console.info('Sending to unified invoice w/ expired invoice...');
-      const unified3 =
-        'bitcoin:bcrt1qaytrqsrgg75rtxrtr7ur6k75la8p3v95mey48z?lightning=LNBCRT1PN33T20DQQNP4QTNTQ4D2DHDYQ420HAUQF5TS7X32TNW9WGYEPQZQ6R9G69QPHW4RXPP5QU7UYXJYJA9PJV7H6JPEYEFFNZ98N686JDEAAK8AUD5AGC5X70HQSP54V5LEFATCQDEU8TLKAF6MDK3ZLU6MWUA52J4JEMD5XA85KGKMTTQ9QYYSGQCQPCXQRRSSRZJQWU6G4HMGH26EXXQYPQD8XHVWLARA66PL53V7S9CV2EE808UGDRN4APYQQQQQQQGRCQQQQLGQQQQQQGQ2QX7F74RT5SQE0KEYCU47LYMSVY2LM4QA4KLR65PPSY55M0H4VR8AN7WVM9EFVSPYJ5R8EFGVXTGVATAGFTC372VRJ3HEPSEELFZ7FQFCQ9XDU9X';
-      console.info({ unified3 });
+    console.info('Sending to unified invoice w/ expired invoice...');
+    const unified3 =
+      'bitcoin:bcrt1qaytrqsrgg75rtxrtr7ur6k75la8p3v95mey48z?lightning=LNBCRT1PN33T20DQQNP4QTNTQ4D2DHDYQ420HAUQF5TS7X32TNW9WGYEPQZQ6R9G69QPHW4RXPP5QU7UYXJYJA9PJV7H6JPEYEFFNZ98N686JDEAAK8AUD5AGC5X70HQSP54V5LEFATCQDEU8TLKAF6MDK3ZLU6MWUA52J4JEMD5XA85KGKMTTQ9QYYSGQCQPCXQRRSSRZJQWU6G4HMGH26EXXQYPQD8XHVWLARA66PL53V7S9CV2EE808UGDRN4APYQQQQQQQGRCQQQQLGQQQQQQGQ2QX7F74RT5SQE0KEYCU47LYMSVY2LM4QA4KLR65PPSY55M0H4VR8AN7WVM9EFVSPYJ5R8EFGVXTGVATAGFTC372VRJ3HEPSEELFZ7FQFCQ9XDU9X';
+    console.info({ unified3 });
 
-      // const ln =
-      //   'LNBCRT1PN33T20DQQNP4QTNTQ4D2DHDYQ420HAUQF5TS7X32TNW9WGYEPQZQ6R9G69QPHW4RXPP5QU7UYXJYJA9PJV7H6JPEYEFFNZ98N686JDEAAK8AUD5AGC5X70HQSP54V5LEFATCQDEU8TLKAF6MDK3ZLU6MWUA52J4JEMD5XA85KGKMTTQ9QYYSGQCQPCXQRRSSRZJQWU6G4HMGH26EXXQYPQD8XHVWLARA66PL53V7S9CV2EE808UGDRN4APYQQQQQQQGRCQQQQLGQQQQQQGQ2QX7F74RT5SQE0KEYCU47LYMSVY2LM4QA4KLR65PPSY55M0H4VR8AN7WVM9EFVSPYJ5R8EFGVXTGVATAGFTC372VRJ3HEPSEELFZ7FQFCQ9XDU9X';
-      // const dec = await lnd.decodePayReq({ payReq: ln });
-      // console.info(JSON.stringify(dec, null, 2));
+    // const ln =
+    //   'LNBCRT1PN33T20DQQNP4QTNTQ4D2DHDYQ420HAUQF5TS7X32TNW9WGYEPQZQ6R9G69QPHW4RXPP5QU7UYXJYJA9PJV7H6JPEYEFFNZ98N686JDEAAK8AUD5AGC5X70HQSP54V5LEFATCQDEU8TLKAF6MDK3ZLU6MWUA52J4JEMD5XA85KGKMTTQ9QYYSGQCQPCXQRRSSRZJQWU6G4HMGH26EXXQYPQD8XHVWLARA66PL53V7S9CV2EE808UGDRN4APYQQQQQQQGRCQQQQLGQQQQQQGQ2QX7F74RT5SQE0KEYCU47LYMSVY2LM4QA4KLR65PPSY55M0H4VR8AN7WVM9EFVSPYJ5R8EFGVXTGVATAGFTC372VRJ3HEPSEELFZ7FQFCQ9XDU9X';
+    // const dec = await lnd.decodePayReq({ payReq: ln });
+    // console.info(JSON.stringify(dec, null, 2));
 
-      await sleep(1000);
-      await enterAddress(unified3, { acceptCameraPermission: false });
-      await elementById('AssetButton-savings').waitForDisplayed();
-      await tap('N1');
-      await multiTap('N0', 4);
-      await tap('ContinueAmount');
-      await reviewAmt.waitForDisplayed();
-      await expect(reviewAmt).toHaveText('10 000');
-      await dragOnElement('GRAB', 'right', 0.95);
-      await elementById('SendSuccess').waitForDisplayed();
-      await tap('Close');
-      await expect(totalBalance).not.toHaveText(amtAfterUnified2);
-      amtAfterUnified3 = await totalBalance.getText();
-      console.info({ amtAfterUnified3 });
-      await expectTextWithin('ActivitySpending', '7 000');
-    } else {
-      // https://github.com/synonymdev/bitkit-ios/issues/300
-      console.info('Skipping sending to unified invoice w/ expired invoice on iOS due to /bitkit-ios/issues/300');
-      amtAfterUnified3 = amtAfterUnified2;
-    }
+    await sleep(1000);
+    await enterAddress(unified3, { acceptCameraPermission: false });
+    await elementById('AssetButton-savings').waitForDisplayed();
+    await tap('N1');
+    await multiTap('N0', 4);
+    await tap('ContinueAmount');
+    await reviewAmt.waitForDisplayed();
+    await expect(reviewAmt).toHaveText('10 000');
+    await dragOnElement('GRAB', 'right', 0.95);
+    await elementById('SendSuccess').waitForDisplayed();
+    await tap('Close');
+    await expect(totalBalance).not.toHaveText(amtAfterUnified2);
+    amtAfterUnified3 = await totalBalance.getText();
+    console.info({ amtAfterUnified3 });
+    await expectTextWithin('ActivitySpending', '7 000');
 
     // send to unified invoice w/o amount (lightning)
     console.info('Sending to unified invoice w/o amount (lightning)...');

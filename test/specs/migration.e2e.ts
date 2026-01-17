@@ -1,4 +1,11 @@
-import { elementById, restoreWallet, sleep, tap, typeText, waitForSetupWalletScreenFinish } from '../helpers/actions';
+import {
+  elementById,
+  restoreWallet,
+  sleep,
+  tap,
+  typeText,
+  waitForSetupWalletScreenFinish,
+} from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
 import { getNativeAppPath, getRnAppPath, reinstallAppFromPath } from '../helpers/setup';
 
@@ -41,7 +48,7 @@ async function restoreLegacyRnWallet(seed: string) {
   await waitForSetupWalletScreenFinish();
 
   const getStarted = await elementById('GetStartedButton');
-  await getStarted.waitForDisplayed( { timeout: 120000 });
+  await getStarted.waitForDisplayed({ timeout: 120000 });
   await tap('GetStartedButton');
   await sleep(1000);
 }
