@@ -6,7 +6,6 @@ import {
   dragOnElement,
   elementById,
   elementByIdWithin,
-  enterAddress,
   expectText,
   expectTextWithin,
   getAccessibleText,
@@ -420,7 +419,8 @@ async function setRnAddressType(addressType: 'p2pkh' | 'p2sh' | 'p2wpkh'): Promi
 async function getRnReceiveAddress(): Promise<string> {
   const address = await getReceiveAddress('bitcoin');
   console.info(`→ RN receive address: ${address}`);
-  await swipeFullScreen('down'); // close receive sheet
+  // Use Android back button to dismiss RN sheet - more reliable than swipe
+  await dismissSheetRN();
   return address;
 }
 
@@ -442,8 +442,7 @@ async function fundRnWallet(sats: number): Promise<void> {
   console.info(`→ Received ${sats} sats`);
 
   // Ensure we're back on main screen (dismiss any sheets/modals)
-  await swipeFullScreen('down');
-  await sleep(500);
+  await dismissSheetRN();
 }
 
 /**
@@ -487,7 +486,7 @@ async function sendRnOnchain(sats: number, {optionalAddress}: {optionalAddress?:
   await mineBlocks(1);
   await electrumClient?.waitForSync();
   await sleep(1000);
-  await dismissSheet();
+  await dismissSheetRN();
   console.info(`→ Sent ${sats} sats`);
 }
 
@@ -496,12 +495,13 @@ async function sendRnOnchain(sats: number, {optionalAddress}: {optionalAddress?:
  */
 async function transferToSpending(sats: number): Promise<void> {
   // Navigate via ActivitySavings -> TransferToSpending
+  // ActivitySavings should be visible near the top of the wallet screen
   try {
     await elementById('ActivitySavings').waitForDisplayed({ timeout: 5000 });
   } catch {
     console.info('→ Scrolling to find ActivitySavings...');
-    await swipeFullScreen('down', { downEndYPercent: 0.6 });
-    await swipeFullScreen('down');
+    // Scroll down to reveal ActivitySavings if hidden
+    await swipeFullScreenRN('down');
   }
   await tap('ActivitySavings');
   await elementById('TransferToSpending').waitForDisplayed();
@@ -561,7 +561,7 @@ async function transferToSpending(sats: number): Promise<void> {
 
   await electrumClient?.waitForSync();
   await sleep(3000);
-  await dismissSheet();
+  await dismissSheetRN();
   console.info(`→ Created spending balance with ${sats} sats`);
 }
 
@@ -569,16 +569,18 @@ async function transferToSpending(sats: number): Promise<void> {
  * Tag the latest (most recent) transaction in the activity list
  */
 async function tagLatestTransaction(tag: string): Promise<void> {
-  // Go to activity
+  // Go to activity - scroll down to reveal activity section
   await sleep(1000);
-  try {
-    await swipeFullScreen('up', { upStartYPercent: 0.6 });
-    await swipeFullScreen('up', { upStartYPercent: 0.6 });
-    await elementById('ActivityShort-1').waitForDisplayed({ timeout: 5000 });
-  } catch {
-    console.info('→ Scrolling to find latest transaction...');
-    await swipeFullScreen('up');
-    await swipeFullScreen('up');
+
+  // Try to find ActivityShort-1, scroll if needed
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await elementById('ActivityShort-1').waitForDisplayed({ timeout: 3000 });
+      break;
+    } catch {
+      console.info(`→ Scrolling to find latest transaction... (attempt ${attempt + 1})`);
+      await swipeFullScreenRN('up');
+    }
   }
   await tap('ActivityShort-1'); // latest tx
 
@@ -596,10 +598,11 @@ async function tagLatestTransaction(tag: string): Promise<void> {
   // Wait for tag sheet to close and return to Review screen
   await sleep(1000);
 
-  // Go back
+  // Go back to main screen
   await driver.back();
-  await swipeFullScreen('down', { downEndYPercent: 0.6 });
-  await swipeFullScreen('down', { downEndYPercent: 0.6 });
+  // Scroll back up to show balance area
+  await swipeFullScreenRN('down');
+  await swipeFullScreenRN('down');
   console.info(`→ Tagged latest transaction with "${tag}"`);
 }
 
@@ -634,8 +637,9 @@ async function getRnMnemonic(): Promise<string> {
 
   if (!seed) throw new Error('Could not read seed from "SeedContaider"');
   console.info(`→ RN mnemonic retrieved: ${seed}`);
-  await swipeFullScreen('down'); // close mnemonic sheet
-  // wait for backup to be performed
+  // Close mnemonic sheet using back button - more reliable than swipe for RN
+  await dismissSheetRN();
+  // Wait for backup to be performed
   await sleep(10000);
 
   // Navigate back to main screen using Android back button
@@ -721,9 +725,52 @@ async function verifyMigration(): Promise<void> {
   console.info('=== Migration verified successfully ===');
 }
 
-async function dismissSheet(): Promise<void> {
-  //dismiss a sheet if shown
-  await sleep(1000);
-  await swipeFullScreen('down', { downEndYPercent: 0.6 });
-  await sleep(2000);
+// ============================================================================
+// RN-SPECIFIC GESTURE HELPERS
+// ============================================================================
+
+/**
+ * Swipe gesture optimized for React Native apps.
+ * Uses slower gesture timing and longer pause to work better with RN's gesture system.
+ */
+async function swipeFullScreenRN(direction: 'up' | 'down') {
+  // RN apps need slower, more deliberate swipes with longer hold time
+  // This helps RN's gesture recognizers properly detect the swipe intent
+  const params = {
+    durationMs: 400, // Slower swipe for RN
+    pauseMs: 150, // Longer hold before moving
+  };
+
+  if (direction === 'up') {
+    // For scrolling content up (revealing bottom content)
+    await swipeFullScreen('up', {
+      upStartYPercent: 0.75,
+      upEndYPercent: 0.25,
+      ...params,
+    });
+  } else {
+    // For dismissing sheets or scrolling content down
+    await swipeFullScreen('down', {
+      downStartYPercent: 0.35,
+      downEndYPercent: 0.85,
+      ...params,
+    });
+  }
+  await sleep(300); // Extra settle time for RN animations
+}
+
+/**
+ * Dismiss a bottom sheet in RN app.
+ * Uses Android back button which is more reliable than swipe gestures in RN.
+ */
+async function dismissSheetRN() {
+  await sleep(500); // Wait for sheet to fully render
+  if (driver.isAndroid) {
+    // Android back button is the most reliable way to dismiss sheets in RN
+    await driver.back();
+  } else {
+    // iOS: use swipe down gesture
+    await swipeFullScreenRN('down');
+  }
+  await sleep(500); // Wait for dismiss animation
 }

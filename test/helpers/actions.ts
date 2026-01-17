@@ -319,11 +319,15 @@ export async function swipeFullScreen(
     downEndYPercent = 0.8,
     upStartYPercent = 0.8,
     upEndYPercent = 0.2,
+    durationMs = 200,
+    pauseMs = 50,
   }: {
     downStartYPercent?: number;
     downEndYPercent?: number;
     upStartYPercent?: number;
     upEndYPercent?: number;
+    durationMs?: number;
+    pauseMs?: number;
   } = {}
 ) {
   const { width, height } = await driver.getWindowSize();
@@ -360,8 +364,8 @@ export async function swipeFullScreen(
       actions: [
         { type: 'pointerMove', duration: 0, x: startX, y: startY },
         { type: 'pointerDown', button: 0 },
-        { type: 'pause', duration: 50 },
-        { type: 'pointerMove', duration: 200, x: endX, y: endY },
+        { type: 'pause', duration: pauseMs },
+        { type: 'pointerMove', duration: durationMs, x: endX, y: endY },
         { type: 'pointerUp', button: 0 },
       ],
     },
