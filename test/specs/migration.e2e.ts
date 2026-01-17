@@ -67,7 +67,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
   // --------------------------------------------------------------------------
   ciIt('@migration_1 - Uninstall RN, install Native, restore mnemonic', async () => {
     // Setup wallet in RN app and get mnemonic
-    const mnemonic = await setupLegacyWallet({ returnSeed: true });
+    const { mnemonic, balance } = await setupLegacyWallet({ returnSeed: true });
 
     // Uninstall RN app
     console.info('→ Removing legacy RN app...');
@@ -83,7 +83,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     await restoreWallet(mnemonic!, { reinstall: false, expectBackupSheet: true });
 
     // Verify migration
-    await verifyMigration();
+    await verifyMigration(balance);
   });
 
   // --------------------------------------------------------------------------
@@ -91,7 +91,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
   // --------------------------------------------------------------------------
   ciIt('@migration_2 - Install native on top of RN (upgrade)', async () => {
     // Setup wallet in RN app
-    await setupLegacyWallet();
+    const { balance } = await setupLegacyWallet();
 
     // Install native app ON TOP of RN (upgrade)
     console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
@@ -103,15 +103,15 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     await dismissBackupTimedSheet();
 
     // Verify migration
-    await verifyMigration();
+    await verifyMigration(balance);
   });
 
- // --------------------------------------------------------------------------
+  // --------------------------------------------------------------------------
   // Migration Scenario 3: Install native on top of RN with passphrase (upgrade)
   // --------------------------------------------------------------------------
   ciIt('@migration_3 - Install native on top of RN with passphrase (upgrade)', async () => {
     // Setup wallet in RN app WITH passphrase
-    await setupLegacyWallet({ passphrase: TEST_PASSPHRASE });
+    const { balance } = await setupLegacyWallet({ passphrase: TEST_PASSPHRASE });
 
     // Install native app ON TOP of RN (upgrade)
     console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
@@ -123,7 +123,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     await dismissBackupTimedSheet();
 
     // Verify migration
-    await verifyMigration();
+    await verifyMigration(balance);
   });
 
   // --------------------------------------------------------------------------
@@ -133,7 +133,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
   // --------------------------------------------------------------------------
   ciIt('@migration_4 - Migration with sweep (legacy p2pkh addresses)', async () => {
     // Setup wallet with funds on legacy addresses (triggers sweep on migration)
-    await setupWalletWithLegacyFunds();
+    const { balance } = await setupWalletWithLegacyFunds();
 
     // Install native app ON TOP of RN (upgrade)
     console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
@@ -145,14 +145,33 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     await handleSweepFlow();
     await dismissBackupTimedSheet();
 
-    // Verify migration completed (balance should be preserved after sweep)
-    await verifyMigrationWithSweep();
+    // Verify migration completed (balance should be preserved after sweep, minus fees)
+    await verifyMigrationWithSweep(balance);
   });
 });
 
 // ============================================================================
 // WALLET SETUP HELPERS (RN App)
 // ============================================================================
+
+type LegacyWalletSetupResult = {
+  mnemonic?: string;
+  balance: number;
+};
+
+/**
+ * Get the total balance from the RN app's home screen.
+ * Uses MoneyText within TotalBalance, same pattern as RN e2e tests.
+ */
+async function getRnTotalBalance(): Promise<number> {
+  const balanceEl = await elementByIdWithin('TotalBalance', 'MoneyText');
+  await balanceEl.waitForDisplayed();
+  const balanceText = await balanceEl.getText();
+  // Balance is formatted with spaces as thousand separators (e.g., "449 502")
+  const balance = parseInt(balanceText.replace(/\s/g, ''), 10);
+  console.info(`→ RN total balance: ${balance} sats (${balanceText})`);
+  return balance;
+}
 
 /**
  * Complete wallet setup in legacy RN app:
@@ -163,7 +182,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
  *
  * @param options.passphrase - Optional passphrase for the wallet
  * @param options.returnSeed - If true, returns the mnemonic seed
- * @returns The mnemonic seed if returnSeed is true, otherwise undefined
+ * @returns Object with mnemonic (if returnSeed) and final balance
  */
 async function setupLegacyWallet(
   options: {
@@ -171,7 +190,7 @@ async function setupLegacyWallet(
     returnSeed?: boolean;
     setLegacyAddress?: boolean;
   } = {}
-): Promise<string | undefined> {
+): Promise<LegacyWalletSetupResult> {
   const { passphrase, returnSeed, setLegacyAddress } = options;
   console.info(`=== Setting up legacy RN wallet${passphrase ? ' (with passphrase)' : ''}${setLegacyAddress ? ' (legacy address)' : ''} ===`);
 
@@ -206,17 +225,17 @@ async function setupLegacyWallet(
   console.info('→ Step 3: Creating spending balance (channel)...');
   await transferToSpending(TRANSFER_TO_SPENDING_SATS);
 
+  // Get final balance before migration
+  const balance = await getRnTotalBalance();
+
   console.info('=== Legacy wallet setup complete ===');
 
-  if (returnSeed) {
-    return mnemonic;
-  }
+  return { mnemonic, balance };
 }
 
 // Amount constants for sweep scenario
 const SWEEP_INITIAL_FUND_SATS = 200_000;
 const SWEEP_SEND_TO_SELF_SATS = 50_000;
-const SWEEP_SEND_OUT_SATS = 50_000;
 
 /**
  * Setup wallet with funds on legacy addresses (for sweep migration scenario)
@@ -230,7 +249,7 @@ const SWEEP_SEND_OUT_SATS = 50_000;
  *
  * Result: Wallet has funds on legacy address, migration will trigger sweep
  */
-async function setupWalletWithLegacyFunds(): Promise<void> {
+async function setupWalletWithLegacyFunds(): Promise<{ balance: number }> {
   console.info('=== Setting up wallet with legacy funds (sweep scenario) ===');
 
   // Install and create wallet
@@ -249,11 +268,12 @@ async function setupWalletWithLegacyFunds(): Promise<void> {
   console.info('→ Step 3: Sending to self (new legacy address)...');
   await sendRnToSelf(SWEEP_SEND_TO_SELF_SATS);
 
-  // // 4. Send out from wallet (from legacy address)
-  // console.info('→ Step 4: Sending out from wallet...');
-  // await sendRnOnchain(SWEEP_SEND_OUT_SATS);
+  // Get final balance before migration
+  const balance = await getRnTotalBalance();
 
   console.info('=== Legacy funds setup complete ===');
+
+  return { balance };
 }
 
 /**
@@ -309,19 +329,34 @@ async function handleSweepFlow(): Promise<void> {
 
 /**
  * Verify migration completed after sweep
- * Balance should be preserved (minus fees)
+ * Balance should be preserved (minus fees from sweep transaction)
+ * @param expectedBalance - The balance from the RN app before migration
  */
-async function verifyMigrationWithSweep(): Promise<void> {
+async function verifyMigrationWithSweep(expectedBalance: number): Promise<void> {
   console.info('=== Verifying migration with sweep ===');
 
-  // After sweep, we should have balance (original minus fees from transactions)
-  // The exact amount depends on fees, so we just check for non-zero balance
+  // After sweep, we should have balance (original minus fees from sweep tx)
   await elementById('TotalBalance').waitForDisplayed({ timeout: 30_000 });
 
-  // Check that we have some balance
-  const balanceElement = await elementById('TotalBalance');
-  const balanceText = await balanceElement.getText();
-  console.info(`→ Balance after sweep: ${balanceText}`);
+  // Get actual balance
+  const totalBalanceEl = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
+  const balanceText = await totalBalanceEl.getText();
+  const actualBalance = parseInt(balanceText.replace(/\s/g, ''), 10);
+  console.info(`→ Balance after sweep: ${actualBalance} sats (pre-sweep: ${expectedBalance})`);
+
+  // Verify balance is close to expected (allow up to 10k sats for sweep fees)
+  const maxFeeLoss = 10_000;
+  if (actualBalance < expectedBalance - maxFeeLoss) {
+    throw new Error(
+      `Balance too low after sweep! Expected ~${expectedBalance} (minus fees), got ${actualBalance}`
+    );
+  }
+  if (actualBalance > expectedBalance) {
+    throw new Error(
+      `Balance increased after sweep? Expected ~${expectedBalance}, got ${actualBalance}`
+    );
+  }
+  console.info(`→ Balance preserved after sweep (fee: ${expectedBalance - actualBalance} sats)`);
 
   // Verify wallet is functional by checking main screen elements
   await elementById('ActivitySavings').waitForDisplayed();
@@ -580,6 +615,7 @@ async function tagLatestTransaction(tag: string): Promise<void> {
     } catch {
       console.info(`→ Scrolling to find latest transaction... (attempt ${attempt + 1})`);
       await swipeFullScreenRN('up');
+      await swipeFullScreenRN('up');
     }
   }
   await tap('ActivityShort-1'); // latest tx
@@ -657,20 +693,21 @@ async function getRnMnemonic(): Promise<string> {
 // ============================================================================
 
 /**
- * Verify migration was successful (basic version - just checks balance)
+ * Verify migration was successful
+ * @param expectedBalance - The balance from the RN app before migration
  */
-async function verifyMigration(): Promise<void> {
+async function verifyMigration(expectedBalance: number): Promise<void> {
   console.info('=== Verifying migration ===');
 
   // Verify we have balance (should match what we funded)
   const totalBalanceEl = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
   const balanceText = await totalBalanceEl.getText();
-  console.info(`→ Total balance: ${balanceText}`);
+  const actualBalance = parseInt(balanceText.replace(/\s/g, ''), 10);
+  console.info(`→ Total balance: ${actualBalance} sats (expected: ${expectedBalance})`);
 
-  // Basic check - we should have funds
-  const balanceNum = parseInt(balanceText.replace(/\s/g, ''), 10);
-  if (balanceNum <= 0) {
-    throw new Error(`Expected positive balance, got: ${balanceText}`);
+  // Verify balance matches
+  if (actualBalance !== expectedBalance) {
+    throw new Error(`Balance mismatch! Expected ${expectedBalance}, got ${actualBalance}`);
   }
   console.info('→ Balance migrated successfully');
 
