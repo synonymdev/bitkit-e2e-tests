@@ -562,9 +562,10 @@ export async function restoreWallet(
   await elementById('Continue').waitForDisplayed();
   await sleep(1000); // Wait for the app to settle
   await tap('Continue');
-
+  await sleep(500);
   // Skip intro
   await tap('SkipIntro');
+  await sleep(500);
   await tap('RestoreWallet');
   await tap('MultipleDevices-button');
 

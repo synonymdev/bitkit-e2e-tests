@@ -16,6 +16,7 @@ import {
   swipeFullScreen,
   tap,
   typeText,
+  waitForBackup,
   waitForSetupWalletScreenFinish,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
@@ -91,7 +92,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
   // --------------------------------------------------------------------------
   ciIt('@migration_2 - Install native on top of RN (upgrade)', async () => {
     // Setup wallet in RN app
-    const { balance } = await setupLegacyWallet();
+    const { mnemonic, balance } = await setupLegacyWallet({ returnSeed: true });
 
     // Install native app ON TOP of RN (upgrade)
     console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
@@ -103,6 +104,14 @@ describe('@migration - Migration from legacy RN app to native app', () => {
 
     // Verify migration
     await verifyMigration(balance);
+
+    if (driver.isIOS) {
+      // Restore wallet again to verify mnemonic restoration works post-migration
+      console.info('→ Restoring wallet again to verify mnemonic restoration post-migration...');
+      await waitForBackup();
+      await restoreWallet(mnemonic!);
+      await verifyMigration(balance);
+    }
   });
 
   // --------------------------------------------------------------------------
