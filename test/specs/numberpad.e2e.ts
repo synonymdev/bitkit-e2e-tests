@@ -32,11 +32,12 @@ describe('@numberpad - NumberPad', () => {
     electrum = await initElectrum();
     await reinstallApp();
     await completeOnboarding();
-    await receiveOnchainFunds(rpc, { sats: 10_000 });
+    await receiveOnchainFunds({ sats: 10_000 });
   });
 
   beforeEach(async () => {
     await launchFreshApp();
+    await electrum?.waitForSync();
   });
 
   describe('Modern denomination', () => {
