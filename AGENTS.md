@@ -121,6 +121,12 @@ Implication for feature work:
 - It's expected that E2E might fail against the app branch before the matching e2e branch is created/updated.
 - When analyzing failures in the app repos, always check which e2e branch was resolved by the `e2e-branch` step.
 
+## CI Retry + Reporting (app repos)
+
+- The app repos run E2E three times (e.g. "Run E2E Tests 1/2/3").
+- Retries rely on `ciIt()` (see `test/helpers/suite.ts`): on CI it records passing tests in `/tmp/lock` and skips them on subsequent attempts, so only failed tests re-run.
+- Those E2E steps are marked `continue-on-error: true`, so the job can still show green. If attempt 3 fails, it implies the test failed in attempts 1 and 2 as well (only failures are re-run). Check logs/artifacts to confirm.
+
 ## Practical Tips
 
 - The tests expect built artifacts in `./aut`.
