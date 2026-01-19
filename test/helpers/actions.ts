@@ -753,7 +753,11 @@ export type ToastId =
   | 'ReceivedTransactionReplacedToast'
   | 'TransactionReplacedToast'
   | 'TransactionUnconfirmedToast'
-  | 'TransactionRemovedToast';
+  | 'TransactionRemovedToast'
+  | 'InvalidAddressToast'
+  | 'ExpiredLightningToast'
+  | 'InsufficientSpendingToast'
+  | 'InsufficientSavingsToast';
 
 export async function waitForToast(
   toastId: ToastId,
