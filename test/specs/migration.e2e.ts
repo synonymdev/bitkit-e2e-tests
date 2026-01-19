@@ -109,7 +109,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
 
     // Verify migration
     await verifyMigration(balance);
-
+    await mineBlocks(1);
     if (driver.isIOS) {
       // Restore wallet again to verify mnemonic restoration works post-migration
       console.info('→ Restoring wallet again to verify mnemonic restoration post-migration...');
