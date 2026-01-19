@@ -1,0 +1,134 @@
+name: Migration Wallet Setup
+
+on:
+  workflow_call:
+    inputs:
+      e2e_branch:
+        description: "Branch of synonymdev/bitkit-e2e-tests to use"
+        required: true
+        type: string
+      rn_version:
+        description: "Legacy RN app version to use for setup (e.g., v1.1.6)"
+        required: false
+        type: string
+        default: "v1.1.6"
+      setup_type:
+        description: "Wallet setup type (standard | sweep)"
+        required: true
+        type: string
+      scenario_name:
+        description: "Migration scenario name for artifact naming"
+        required: true
+        type: string
+
+env:
+  TERM: xterm-256color
+  FORCE_COLOR: 1
+
+jobs:
+  prepare-wallets:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone E2E tests
+        uses: actions/checkout@v4
+        with:
+          repository: synonymdev/bitkit-e2e-tests
+          path: bitkit-e2e-tests
+          ref: ${{ inputs.e2e_branch }}
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Download RN app for migration
+        run: |
+          mkdir -p bitkit-e2e-tests/aut
+          curl -L -o bitkit-e2e-tests/aut/bitkit_rn_regtest.apk \
+            https://github.com/synonymdev/bitkit-e2e-tests/releases/download/migration-rn-regtest/bitkit_rn_regtest_${{ inputs.rn_version }}.apk
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cache npm cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        working-directory: bitkit-e2e-tests
+        run: npm ci
+
+      - name: Clear previous migration env files
+        working-directory: bitkit-e2e-tests
+        run: |
+          rm -f artifacts/migration_setup_standard.env
+          rm -f artifacts/migration_setup_sweep.env
+
+      - name: Prepare migration wallet 1
+        continue-on-error: true
+        id: prepare1
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          profile: pixel_6
+          api-level: 33
+          arch: x86_64
+          avd-name: Pixel_6
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-front none
+          script: cd bitkit-e2e-tests && ./ci_run_android.sh --mochaOpts.grep "${{ inputs.setup_type == 'sweep' && '@migration_setup_sweep' || '@migration_setup_standard' }}"
+        env:
+          BACKEND: regtest
+
+      - name: Prepare migration wallet 2
+        continue-on-error: true
+        id: prepare2
+        if: steps.prepare1.outcome != 'success'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          profile: pixel_6
+          api-level: 33
+          arch: x86_64
+          avd-name: Pixel_6
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-front none
+          script: cd bitkit-e2e-tests && ./ci_run_android.sh --mochaOpts.grep "${{ inputs.setup_type == 'sweep' && '@migration_setup_sweep' || '@migration_setup_standard' }}"
+        env:
+          BACKEND: regtest
+
+      - name: Prepare migration wallet 3
+        id: prepare3
+        if: steps.prepare1.outcome != 'success' && steps.prepare2.outcome != 'success'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          profile: pixel_6
+          api-level: 33
+          arch: x86_64
+          avd-name: Pixel_6
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-front none
+          script: cd bitkit-e2e-tests && ./ci_run_android.sh --mochaOpts.grep "${{ inputs.setup_type == 'sweep' && '@migration_setup_sweep' || '@migration_setup_standard' }}"
+        env:
+          BACKEND: regtest
+
+      - name: Verify migration env file
+        run: |
+          set -euo pipefail
+          if [[ "${{ inputs.setup_type }}" == "sweep" ]]; then
+            test -f bitkit-e2e-tests/artifacts/migration_setup_sweep.env
+          else
+            test -f bitkit-e2e-tests/artifacts/migration_setup_standard.env
+          fi
+
+      - name: Upload migration env file
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-env_${{ inputs.rn_version }}_${{ inputs.scenario_name }}
+          path: bitkit-e2e-tests/artifacts/migration_setup_${{ inputs.setup_type }}.env
