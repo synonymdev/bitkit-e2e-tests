@@ -19,20 +19,22 @@ fi
 
 mkdir -p "${ARTIFACTS_DIR}"
 
+SIMULATOR_NAME="${SIMULATOR_NAME:-iPhone 16}"
+
 ensure_booted_simulator() {
-  # Check for already booted iPhone 17 simulator
+  # Check for already booted simulator
   local booted_udid
-  booted_udid=$(xcrun simctl list devices booted 2>/dev/null | awk -F '[()]' '/iPhone 17 \(/{print $2; exit}')
+  booted_udid=$(xcrun simctl list devices booted 2>/dev/null | awk -F '[()]' -v name="$SIMULATOR_NAME" '$0 ~ name" \\("{print $2; exit}')
   if [[ -n "$booted_udid" ]]; then
     echo "$booted_udid"
     return
   fi
 
-  # Otherwise, boot iPhone 17 simulator 
+  # Otherwise, boot simulator
   local fallback_udid
-  fallback_udid=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone 17 \(/ {print $2; exit}')
+  fallback_udid=$(xcrun simctl list devices available | awk -F '[()]' -v name="$SIMULATOR_NAME" '$0 ~ name" \\(" {print $2; exit}')
   if [[ -z "$fallback_udid" ]]; then
-    echo "No booted iOS simulator and unable to locate fallback device (iPhone 17*)" >&2
+    echo "No booted iOS simulator and unable to locate fallback device (${SIMULATOR_NAME}*)" >&2
     exit 1
   fi
 
