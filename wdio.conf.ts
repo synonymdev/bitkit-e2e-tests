@@ -84,8 +84,8 @@ export const config: WebdriverIO.Config = {
 
           // 🩹 Stability improvements
           'appium:newCommandTimeout': 300,
-          'appium:wdaLaunchTimeout': 120000,
-          'appium:wdaConnectionTimeout': 120000,
+          'appium:wdaLaunchTimeout': 300000,
+          'appium:wdaConnectionTimeout': 300000,
           'appium:wdaStartupRetries': 3,
           'appium:wdaStartupRetryInterval': 5000,
         },
