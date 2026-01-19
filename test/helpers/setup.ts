@@ -27,18 +27,18 @@ export async function reinstallApp() {
 }
 
 export function getRnAppPath(): string {
-  const fallback = path.join(__dirname, '..', '..', 'aut', 'bitkit_rn_regtest.apk');
+  const appFileName = driver.isIOS ? 'bitkit_rn_regtest_ios.app' : 'bitkit_rn_regtest.apk';
+  const fallback = path.join(__dirname, '..', '..', 'aut', appFileName);
   const appPath = process.env.RN_APK_PATH ?? fallback;
   if (!fs.existsSync(appPath)) {
-    throw new Error(
-      `RN APK not found at: ${appPath}. Set RN_APK_PATH or place it at ${fallback}`
-    );
+    throw new Error(`RN APK not found at: ${appPath}. Set RN_APK_PATH or place it at ${fallback}`);
   }
   return appPath;
 }
 
 export function getNativeAppPath(): string {
-  const fallback = path.join(__dirname, '..', '..', 'aut', 'bitkit_e2e.apk');
+  const appFileName = driver.isIOS ? 'bitkit.app' : 'bitkit_e2e.apk';
+  const fallback = path.join(__dirname, '..', '..', 'aut', appFileName);
   const appPath = process.env.NATIVE_APK_PATH ?? fallback;
   if (!fs.existsSync(appPath)) {
     throw new Error(
@@ -61,7 +61,7 @@ export async function reinstallAppFromPath(appPath: string, appId: string = getA
  * (Wallet data is stored in iOS Keychain and persists even after app uninstall
  *  unless the whole simulator is reset or keychain is reset specifically)
  */
-function resetBootedIOSKeychain() {
+export function resetBootedIOSKeychain() {
   if (!driver.isIOS) return;
 
   let udid = '';

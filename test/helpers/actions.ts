@@ -1,6 +1,6 @@
 import type { ChainablePromiseElement } from 'webdriverio';
 import { reinstallApp } from './setup';
-import BitcoinJsonRpc from 'bitcoin-json-rpc';
+import { deposit, mineBlocks } from './regtest';
 
 export const sleep = (ms: number) => browser.pause(ms);
 
@@ -88,11 +88,11 @@ export function elementByText(
   } else {
     if (strategy === 'exact') {
       return $(
-        `-ios predicate string:(type == "XCUIElementTypeStaticText" OR type == "XCUIElementTypeButton") AND (label == "${text}" OR value == "${text}")`
+        `-ios predicate string:(type == "XCUIElementTypeStaticText" OR type == "XCUIElementTypeButton" OR type == "XCUIElementTypeOther") AND (label == "${text}" OR value == "${text}")`
       );
     }
     return $(
-      `-ios predicate string:(type == "XCUIElementTypeStaticText" OR type == "XCUIElementTypeButton") AND label CONTAINS "${text}"`
+      `-ios predicate string:(type == "XCUIElementTypeStaticText" OR type == "XCUIElementTypeButton" OR type == "XCUIElementTypeOther") AND label CONTAINS "${text}"`
     );
   }
 }
@@ -312,7 +312,24 @@ export async function typeText(testId: string, text: string) {
 
 type Direction = 'left' | 'right' | 'up' | 'down';
 
-export async function swipeFullScreen(direction: Direction) {
+export async function swipeFullScreen(
+  direction: Direction,
+  {
+    downStartYPercent = 0.2,
+    downEndYPercent = 0.8,
+    upStartYPercent = 0.8,
+    upEndYPercent = 0.2,
+    durationMs = 200,
+    pauseMs = 50,
+  }: {
+    downStartYPercent?: number;
+    downEndYPercent?: number;
+    upStartYPercent?: number;
+    upEndYPercent?: number;
+    durationMs?: number;
+    pauseMs?: number;
+  } = {}
+) {
   const { width, height } = await driver.getWindowSize();
 
   let startX = width / 2;
@@ -330,12 +347,12 @@ export async function swipeFullScreen(direction: Direction) {
       endX = width * 0.8;
       break;
     case 'up':
-      startY = height * 0.8;
-      endY = height * 0.2;
+      startY = height * upStartYPercent;
+      endY = height * upEndYPercent;
       break;
     case 'down':
-      startY = height * 0.2;
-      endY = height * 0.8;
+      startY = height * downStartYPercent;
+      endY = height * downEndYPercent;
       break;
   }
 
@@ -347,8 +364,8 @@ export async function swipeFullScreen(direction: Direction) {
       actions: [
         { type: 'pointerMove', duration: 0, x: startX, y: startY },
         { type: 'pointerDown', button: 0 },
-        { type: 'pause', duration: 50 },
-        { type: 'pointerMove', duration: 200, x: endX, y: endY },
+        { type: 'pause', duration: pauseMs },
+        { type: 'pointerMove', duration: durationMs, x: endX, y: endY },
         { type: 'pointerUp', button: 0 },
       ],
     },
@@ -522,22 +539,33 @@ export async function restoreWallet(
   {
     passphrase,
     expectQuickPayTimedSheet = false,
-  }: { passphrase?: string; expectQuickPayTimedSheet?: boolean } = {}
+    expectBackupSheet = false,
+    reinstall = true,
+  }: {
+    passphrase?: string;
+    expectQuickPayTimedSheet?: boolean;
+    expectBackupSheet?: boolean;
+    reinstall?: boolean;
+  } = {}
 ) {
   console.info('→ Restoring wallet with seed:', seed);
   // Let cloud state flush - carried over from Detox
   await sleep(5000);
 
   // Reinstall app to wipe all data
-  await reinstallApp();
+  if (reinstall) {
+    console.info('Reinstalling app to reset state...');
+    await reinstallApp();
+  }
 
   // Terms of service
   await elementById('Continue').waitForDisplayed();
   await sleep(1000); // Wait for the app to settle
   await tap('Continue');
-
+  await sleep(500);
   // Skip intro
   await tap('SkipIntro');
+  await sleep(500);
   await tap('RestoreWallet');
   await tap('MultipleDevices-button');
 
@@ -561,10 +589,14 @@ export async function restoreWallet(
 
   // Wait for Get Started
   const getStarted = await elementById('GetStartedButton');
-  await getStarted.waitForDisplayed();
+  await getStarted.waitForDisplayed({ timeout: 120000 });
   await tap('GetStartedButton');
   await sleep(1000);
   await handleAndroidAlert();
+
+  if (expectBackupSheet) {
+    await dismissBackupTimedSheet();
+  }
 
   if (expectQuickPayTimedSheet) {
     await dismissQuickPayIntro();
@@ -582,7 +614,7 @@ export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise
   return getAddressFromQRCode(which);
 }
 
-export async function getAddressFromQRCode(which: addressType): Promise<string> {
+export async function getUriFromQRCode(): Promise<string> {
   const qrCode = await elementById('QRCode');
   await qrCode.waitForDisplayed();
   let uri = '';
@@ -603,16 +635,28 @@ export async function getAddressFromQRCode(which: addressType): Promise<string> 
     }
   );
   console.info({ uri });
+  return uri;
+}
 
+export async function getAddressFromQRCode(which: addressType): Promise<string> {
+  const uri = await getUriFromQRCode();
   let address = '';
   if (which === 'bitcoin') {
     address = uri.replace(/^bitcoin:/, '').replace(/\?.*$/, '');
-    // Accept Bech32 HRPs across networks: mainnet (bc1), testnet/signet (tb1), regtest (bcrt1)
-    const allowedBitcoinHrp = ['bc1', 'tb1', 'bcrt1'];
-    const addrLower = address.toLowerCase();
-    if (!allowedBitcoinHrp.some((p) => addrLower.startsWith(p))) {
+    // Accept addresses across networks and types:
+    // - Bech32 (native segwit): mainnet (bc1), testnet/signet (tb1), regtest (bcrt1)
+    // - Legacy P2PKH: mainnet (1), testnet/regtest (m, n)
+    // - P2SH: mainnet (3), testnet/regtest (2)
+    const allowedPrefixes = ['bc1', 'tb1', 'bcrt1', '1', '3', 'm', 'n', '2'];
+    const addrStart = address.charAt(0).toLowerCase();
+    const isBech32 =
+      address.toLowerCase().startsWith('bc1') ||
+      address.toLowerCase().startsWith('tb1') ||
+      address.toLowerCase().startsWith('bcrt1');
+    const isLegacyOrP2SH = ['1', '3', 'm', 'n', '2'].includes(addrStart);
+    if (!isBech32 && !isLegacyOrP2SH) {
       throw new Error(
-        `Invalid Bitcoin address HRP: ${address}. Expected one of: ${allowedBitcoinHrp.join(', ')}`
+        `Invalid Bitcoin address: ${address}. Expected prefix is one of: ${allowedPrefixes.join(', ')}`
       );
     }
   } else if (which === 'lightning') {
@@ -640,37 +684,50 @@ export async function getAddressFromQRCode(which: addressType): Promise<string> 
   return address;
 }
 
-export async function mineBlocks(rpc: BitcoinJsonRpc, blocks: number = 1) {
-  for (let i = 0; i < blocks; i++) {
-    await rpc.generateToAddress(1, await rpc.getNewAddress());
+/**
+ * Funds the wallet on regtest.
+ * Gets the receive address from the app, deposits sats, and optionally mines blocks.
+ * Uses local Bitcoin RPC or Blocktank API based on BACKEND env var.
+ */
+export async function fundOnchainWallet({
+  sats,
+  blocksToMine = 1,
+}: {
+  sats?: number;
+  blocksToMine?: number;
+} = {}) {
+  const address = await getReceiveAddress();
+  await swipeFullScreen('down');
+  await deposit(address, sats);
+  if (blocksToMine > 0) {
+    await mineBlocks(blocksToMine);
   }
 }
 
-export async function receiveOnchainFunds(
-  rpc: BitcoinJsonRpc,
-  {
-    sats = 100_000,
-    blocksToMine = 1,
-    expectHighBalanceWarning = false,
-  }: {
-    sats?: number;
-    blocksToMine?: number;
-    expectHighBalanceWarning?: boolean;
-  } = {}
-) {
-  // convert sats → btc string
-  const btc = (sats / 100_000_000).toString();
+/**
+ * Receives onchain funds and verifies the balance.
+ * Uses local Bitcoin RPC or Blocktank API based on BACKEND env var.
+ */
+export async function receiveOnchainFunds({
+  sats = 100_000,
+  blocksToMine = 1,
+  expectHighBalanceWarning = false,
+}: {
+  sats?: number;
+  blocksToMine?: number;
+  expectHighBalanceWarning?: boolean;
+} = {}) {
   // format sats with spaces every 3 digits
   const formattedSats = sats.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
   // receive some first
   const address = await getReceiveAddress();
   await swipeFullScreen('down');
-  await rpc.sendToAddress(address, btc);
+  await deposit(address, sats);
 
   await acknowledgeReceivedPayment();
 
-  await mineBlocks(rpc, blocksToMine);
+  await mineBlocks(blocksToMine);
 
   const moneyText = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
   await expect(moneyText).toHaveText(formattedSats);

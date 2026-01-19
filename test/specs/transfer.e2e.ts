@@ -1,5 +1,3 @@
-import BitcoinJsonRpc from 'bitcoin-json-rpc';
-
 import initElectrum from '../helpers/electrum';
 import {
   completeOnboarding,
@@ -14,7 +12,6 @@ import {
   dragOnElement,
   expectTextWithin,
   swipeFullScreen,
-  mineBlocks,
   elementByIdWithin,
   enterAddress,
   dismissQuickPayIntro,
@@ -33,24 +30,20 @@ import {
   waitForActiveChannel,
   waitForPeerConnection,
 } from '../helpers/lnd';
-import { bitcoinURL, lndConfig } from '../helpers/constants';
+import { lndConfig } from '../helpers/constants';
+import { ensureLocalFunds, getBitcoinRpc, mineBlocks } from '../helpers/regtest';
 
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 
 describe('@transfer - Transfer', () => {
   let electrum: { waitForSync: () => any; stop: () => void };
-  const rpc = new BitcoinJsonRpc(bitcoinURL);
+  // LND tests only work with BACKEND=local
+  let rpc: ReturnType<typeof getBitcoinRpc>;
 
   before(async () => {
-    let balance = await rpc.getBalance();
-    const address = await rpc.getNewAddress();
-
-    while (balance < 10) {
-      await rpc.generateToAddress(10, address);
-      balance = await rpc.getBalance();
-    }
-
+    rpc = getBitcoinRpc();
+    await ensureLocalFunds();
     electrum = await initElectrum();
   });
 
@@ -77,7 +70,7 @@ describe('@transfer - Transfer', () => {
   ciIt(
     '@transfer_1 - Can buy a channel from Blocktank with default and custom receive capacity',
     async () => {
-      await receiveOnchainFunds(rpc, { sats: 1000_000, expectHighBalanceWarning: true });
+      await receiveOnchainFunds({ sats: 1000_000, expectHighBalanceWarning: true });
 
       // switch to EUR
       await tap('HeaderMenu');
@@ -302,7 +295,7 @@ describe('@transfer - Transfer', () => {
   );
 
   ciIt('@transfer_2 - Can open a channel to external node', async () => {
-    await receiveOnchainFunds(rpc, { sats: 100_000 });
+    await receiveOnchainFunds({ sats: 100_000 });
 
     // send funds to LND node and open a channel
     const { lnd, lndNodeID } = await setupLND(rpc, lndConfig);
@@ -362,7 +355,7 @@ describe('@transfer - Transfer', () => {
     await expectTextWithin('ActivityShort-1', 'Received');
     await swipeFullScreen('down');
 
-    await mineBlocks(rpc, 6);
+    await mineBlocks(6);
     await electrum?.waitForSync();
     await waitForToast('SpendingBalanceReadyToast');
     await sleep(1000);

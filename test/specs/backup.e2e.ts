@@ -1,5 +1,3 @@
-import BitcoinJsonRpc from 'bitcoin-json-rpc';
-import { bitcoinURL } from '../helpers/constants';
 import initElectrum from '../helpers/electrum';
 import { reinstallApp } from '../helpers/setup';
 import {
@@ -19,21 +17,13 @@ import {
   waitForBackup,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
+import { ensureLocalFunds } from '../helpers/regtest';
 
 describe('@backup - Backup', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
-  const rpc = new BitcoinJsonRpc(bitcoinURL);
 
   before(async () => {
-    // ensure we have at least 10 BTC on regtest
-    let balance = await rpc.getBalance();
-    const address = await rpc.getNewAddress();
-
-    while (balance < 10) {
-      await rpc.generateToAddress(10, address);
-      balance = await rpc.getBalance();
-    }
-
+    await ensureLocalFunds();
     electrum = await initElectrum();
   });
 
@@ -57,7 +47,7 @@ describe('@backup - Backup', () => {
     // - check if everything was restored
 
     // - receive some money //
-    await receiveOnchainFunds(rpc, { sats: 100_000_000, expectHighBalanceWarning: true });
+    await receiveOnchainFunds({ sats: 100_000_000, expectHighBalanceWarning: true });
 
     // - set tag //
     const tag = 'testtag';
