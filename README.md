@@ -138,7 +138,7 @@ describe('@backup - Backup', () => {
 });
 ```
 
-> 💡 Note: Use `ciIt` instead of `it` in specs. Locally it behaves the same, but on CI it automatically skips tests that already passed in previous attempts, making retries faster.
+> 💡 Note: Use `ciIt` instead of `it` in specs. Locally it behaves the same, but on CI it records passing tests in `/tmp/lock` so retries skip already-green tests and only re-run failures.
 
 You can use Mocha’s `--grep` option to run only the tests that match a given tag (regex supported). For example:
 
@@ -226,4 +226,5 @@ BACKEND=regtest ./ci_run_ios.sh
 - Use `confirmInputOnKeyboard()` to handle keyboard actions across Android/iOS.
 - Tests are designed to work identically on both platforms where possible.
 - To debug, add `console.info()` or enable `wdio` debug logs.
-- Use `ciIt()` instead of `it()` on CI to automatically skip tests that already passed in a previous run.
+- Use `ciIt()` instead of `it()` on CI to skip already-passing tests in retries.
+- In app-repo CI, E2E typically runs in three attempts with `continue-on-error: true`. If attempt 3 fails, it implies the same tests failed in attempts 1 and 2 (only failures are re-run), so check step logs/artifacts even if the job is green.
