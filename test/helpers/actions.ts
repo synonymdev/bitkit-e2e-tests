@@ -614,7 +614,7 @@ export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise
   return getAddressFromQRCode(which);
 }
 
-export async function getAddressFromQRCode(which: addressType): Promise<string> {
+export async function getUriFromQRCode(): Promise<string> {
   const qrCode = await elementById('QRCode');
   await qrCode.waitForDisplayed();
   let uri = '';
@@ -635,7 +635,11 @@ export async function getAddressFromQRCode(which: addressType): Promise<string> 
     }
   );
   console.info({ uri });
+  return uri;
+}
 
+export async function getAddressFromQRCode(which: addressType): Promise<string> {
+  const uri = await getUriFromQRCode();
   let address = '';
   if (which === 'bitcoin') {
     address = uri.replace(/^bitcoin:/, '').replace(/\?.*$/, '');
