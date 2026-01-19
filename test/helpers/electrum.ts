@@ -12,7 +12,7 @@ const peer = {
   ssl: 60002,
 };
 
-const TIMEOUT = 30 * 1000; // 30 seconds
+const TIMEOUT = 120 * 1000; // 120 seconds
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -77,7 +77,7 @@ const initElectrum = async (): Promise<ElectrumClient> => {
         }
 
         if (Date.now() - startTime > TIMEOUT) {
-          throw new Error('Electrum sync timeout');
+          throw new Error('Electrum sync timeout exceeded 120 seconds');
         }
 
         await sleep(1000);
