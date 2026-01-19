@@ -19,7 +19,7 @@ fi
 
 mkdir -p "${ARTIFACTS_DIR}"
 
-SIMULATOR_NAME="${SIMULATOR_NAME:-iPhone 16}"
+SIMULATOR_NAME="${SIMULATOR_NAME:-iPhone 17}"
 
 ensure_booted_simulator() {
   # Check for already booted simulator

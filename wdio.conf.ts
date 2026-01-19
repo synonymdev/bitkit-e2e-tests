@@ -2,6 +2,8 @@ import path from 'node:path';
 import fs from 'node:fs';
 
 const isAndroid = process.env.PLATFORM === 'android';
+const iosDeviceName = process.env.SIMULATOR_NAME || 'iPhone 17';
+const iosPlatformVersion = process.env.SIMULATOR_OS_VERSION || '26.0';
 
 export const config: WebdriverIO.Config = {
   //
@@ -72,8 +74,8 @@ export const config: WebdriverIO.Config = {
           platformName: 'iOS',
           'appium:automationName': 'XCUITest',
           'appium:udid': process.env.SIMULATOR_UDID || 'auto',
-          'appium:deviceName': 'iPhone 17',
-          'appium:platformVersion': '26.0',
+          'appium:deviceName': iosDeviceName,
+          ...(iosPlatformVersion ? { 'appium:platformVersion': iosPlatformVersion } : {}),
           'appium:app': path.join(__dirname, 'aut', 'Bitkit.app'),
           'appium:autoGrantPermissions': true,
           'appium:autoAcceptAlerts': false,
