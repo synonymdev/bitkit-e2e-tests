@@ -29,7 +29,13 @@ import {
 } from '../helpers/setup';
 import { getAppId } from '../helpers/constants';
 import initElectrum, { ElectrumClient } from '../helpers/electrum';
-import { deposit, ensureLocalFunds, getExternalAddress, mineBlocks, payInvoice } from '../helpers/regtest';
+import {
+  deposit,
+  ensureLocalFunds,
+  getExternalAddress,
+  mineBlocks,
+  payInvoice,
+} from '../helpers/regtest';
 
 // Module-level electrum client (set in before hook)
 let electrumClient: ElectrumClient;
@@ -187,7 +193,7 @@ async function getRnTotalBalance(): Promise<number> {
 
 /**
  * Complete wallet setup in legacy RN app:
- * 
+ *
  * On Android:
  * 1. Create new wallet (optionally with passphrase)
  * 2. Fund with on-chain tx (add tag to latest tx)
@@ -270,7 +276,7 @@ async function setupLegacyWallet(
   const balance = await getRnTotalBalance();
 
   console.info('=== Legacy wallet setup complete ===');
-  
+
   // Output for iOS CI to capture
   console.info(`\nexport RN_MNEMONIC="${mnemonic}"`);
   console.info(`export RN_BALANCE="${balance}"\n`);
@@ -728,7 +734,6 @@ async function createCJIT(sats: number): Promise<void> {
       console.info('→ Transfer successful screen did not appear, waiting...');
     }
   }
-
 }
 
 /**
