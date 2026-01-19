@@ -10,6 +10,7 @@ import {
   expectTextWithin,
   getAccessibleText,
   getReceiveAddress,
+  getUriFromQRCode,
   handleAndroidAlert,
   restoreWallet,
   sleep,
@@ -28,7 +29,7 @@ import {
 } from '../helpers/setup';
 import { getAppId } from '../helpers/constants';
 import initElectrum, { ElectrumClient } from '../helpers/electrum';
-import { deposit, ensureLocalFunds, getExternalAddress, mineBlocks } from '../helpers/regtest';
+import { deposit, ensureLocalFunds, getExternalAddress, mineBlocks, payInvoice } from '../helpers/regtest';
 
 // Module-level electrum client (set in before hook)
 let electrumClient: ElectrumClient;
@@ -44,6 +45,7 @@ const TAG_SENT = 'sent';
 // Amounts for testing
 const INITIAL_FUND_SATS = 500_000; // 500k sats initial funding
 const ONCHAIN_SEND_SATS = 50_000; // 50k sats for on-chain send test
+// const CJIT_INVOICE_SATS = 3000; // Unused - Blocktank regtest doesn't support CJIT
 const TRANSFER_TO_SPENDING_SATS = 100_000; // 100k for creating a channel
 
 // Passphrase for passphrase-protected wallet tests
@@ -636,7 +638,7 @@ async function sendRnOnchain(
 /**
  * Transfer savings to spending balance (create channel via Blocktank)
  */
-async function transferToSpending(sats: number): Promise<void> {
+async function transferToSpending(sats: number, existingBalance = 0): Promise<void> {
   // Navigate via ActivitySavings -> TransferToSpending
   // ActivitySavings should be visible near the top of the wallet screen
   try {
@@ -687,9 +689,46 @@ async function transferToSpending(sats: number): Promise<void> {
   await electrumClient?.waitForSync();
   await sleep(3000);
   await dismissSheetRN();
-  const expectedBalance = sats.toLocaleString('en').replace(/,/g, ' ');
+  const expectedBalance = (existingBalance + sats).toLocaleString('en').replace(/,/g, ' ');
   await expectText(expectedBalance);
   console.info(`→ Created spending balance with ${sats} sats`);
+}
+
+// @ts-expect-error - Kept for future use
+async function createCJIT(sats: number): Promise<void> {
+  await tap('Receive');
+  await tap('ReceiveInstantlySwitch');
+
+  // Enter amount
+  await sleep(500);
+  const satsStr = String(sats);
+  for (const digit of satsStr) {
+    await tap(`N${digit}`);
+  }
+  await tap('ReceiveAmountContinue');
+  await sleep(1000);
+  await tap('ReceiveConnectContinue');
+  await sleep(2000);
+  const address = await getUriFromQRCode();
+  await sleep(5000);
+  const tx = await payInvoice(address);
+  console.info(`→ Created CJIT invoice and paid: ${tx}`);
+  await sleep(2000);
+  await swipeFullScreenRN('down');
+  // Mine blocks periodically to progress the channel opening
+  console.info('→ Mining blocks to confirm channel...');
+  for (let i = 0; i < 10; i++) {
+    await mineBlocks(1);
+    // Check if spending balance shows the transferred amount (transfer complete)
+    try {
+      await elementById('TransferSuccess-button').waitForDisplayed();
+      await sleep(1000);
+      break;
+    } catch {
+      console.info('→ Transfer successful screen did not appear, waiting...');
+    }
+  }
+
 }
 
 /**
