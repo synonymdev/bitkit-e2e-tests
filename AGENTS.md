@@ -96,6 +96,31 @@ BACKEND=regtest ./ci_run_android.sh
 BACKEND=regtest ./ci_run_ios.sh
 ```
 
+## CI Branch Selection (bitkit-android / bitkit-ios)
+
+The app repos call a shared workflow in this repo to decide which `bitkit-e2e-tests` branch to use:
+
+```yaml
+e2e-branch:
+  if: github.event.pull_request.draft == false
+  uses: synonymdev/bitkit-e2e-tests/.github/workflows/determine-e2e-branch.yml@main
+  with:
+    app_branch: ${{ github.head_ref || github.ref_name }}
+    e2e_branch_input: ${{ github.event.inputs.e2e_branch || 'default-feature-branch' }}
+```
+
+Resolution rules (from `determine-e2e-branch.yml`):
+
+- `e2e_branch_input=main` -> use `main`.
+- `e2e_branch_input=default-feature-branch` -> use the same branch name as the app repo *if it exists* in `bitkit-e2e-tests`, otherwise fall back to `main`.
+- `e2e_branch_input=<custom>` -> use that branch only if it exists; otherwise the workflow fails.
+
+Implication for feature work:
+
+- If a feature branch exists in `bitkit-android` or `bitkit-ios`, you can create a same-named branch in `bitkit-e2e-tests` to update/add tests.
+- It's expected that E2E might fail against the app branch before the matching e2e branch is created/updated.
+- When analyzing failures in the app repos, always check which e2e branch was resolved by the `e2e-branch` step.
+
 ## Practical Tips
 
 - The tests expect built artifacts in `./aut`.
