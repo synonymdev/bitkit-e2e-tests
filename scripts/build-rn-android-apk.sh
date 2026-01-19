@@ -17,7 +17,7 @@ set -euo pipefail
 E2E_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 RN_ROOT="$(cd "$E2E_ROOT/../bitkit" && pwd)"
 
-BUILD_TYPE="${1:-debug}"
+BUILD_TYPE="${1:-release}"
 BACKEND="${BACKEND:-regtest}"
 
 if [[ "$BUILD_TYPE" != "debug" && "$BUILD_TYPE" != "release" ]]; then
