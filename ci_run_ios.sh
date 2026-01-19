@@ -61,6 +61,8 @@ ensure_booted_simulator() {
 SIMULATOR_UDID="$(ensure_booted_simulator)"
 export SIMULATOR_UDID
 echo "[ci_run_ios] Using iOS Simulator UDID: ${SIMULATOR_UDID}" >&2
+echo "[ci_run_ios] Booted device info:" >&2
+xcrun simctl list devices available | awk -v id="$SIMULATOR_UDID" 'index($0, id) { print; exit }' >&2
 
 # iOS Simulator logs
 LOGFILE_SYS="$ARTIFACTS_DIR/simulator.log"
