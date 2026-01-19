@@ -49,6 +49,11 @@ const TRANSFER_TO_SPENDING_SATS = 100_000; // 100k for creating a channel
 // Passphrase for passphrase-protected wallet tests
 const TEST_PASSPHRASE = 'supersecret';
 
+// iOS: Read mnemonic and balance from env vars (prepared by Android run)
+// This is needed because RN app on iOS has poor Appium support
+const IOS_RN_MNEMONIC = process.env.RN_MNEMONIC;
+const IOS_RN_BALANCE = process.env.RN_BALANCE ? parseInt(process.env.RN_BALANCE, 10) : undefined;
+
 // ============================================================================
 // TEST SUITE
 // ============================================================================
@@ -180,10 +185,15 @@ async function getRnTotalBalance(): Promise<number> {
 
 /**
  * Complete wallet setup in legacy RN app:
+ * 
+ * On Android:
  * 1. Create new wallet (optionally with passphrase)
  * 2. Fund with on-chain tx (add tag to latest tx)
  * 3. Send on-chain tx (add tag to latest tx)
  * 4. Transfer to spending balance (create channel via Blocktank)
+ *
+ * On iOS: RN app has poor Appium support for wallet creation, so we restore
+ * from mnemonic/balance provided via env vars (RN_MNEMONIC, RN_BALANCE).
  *
  * @param options.passphrase - Optional passphrase for the wallet
  * @param options.returnSeed - If true, returns the mnemonic seed
@@ -197,6 +207,28 @@ async function setupLegacyWallet(
   } = {}
 ): Promise<LegacyWalletSetupResult> {
   const { passphrase, returnSeed, setLegacyAddress } = options;
+
+  // iOS: Restore wallet from env vars (prepared by Android run)
+  if (driver.isIOS) {
+    if (!IOS_RN_MNEMONIC || !IOS_RN_BALANCE) {
+      throw new Error(
+        'iOS migration tests require RN_MNEMONIC and RN_BALANCE env vars. ' +
+          'Run Android tests first to prepare the wallet.'
+      );
+    }
+    console.info('=== iOS: Restoring RN wallet from mnemonic (prepared by Android) ===');
+    console.info(`→ Mnemonic: ${IOS_RN_MNEMONIC.split(' ').slice(0, 3).join(' ')}...`);
+    console.info(`→ Expected balance: ${IOS_RN_BALANCE} sats`);
+
+    // Install RN app and restore wallet
+    await installLegacyRnApp();
+    await restoreRnWallet(IOS_RN_MNEMONIC, { passphrase });
+
+    console.info('=== iOS: RN wallet restored ===');
+    return { mnemonic: IOS_RN_MNEMONIC, balance: IOS_RN_BALANCE };
+  }
+
+  // Android: Full RN wallet setup
   console.info(
     `=== Setting up legacy RN wallet${passphrase ? ' (with passphrase)' : ''}${setLegacyAddress ? ' (legacy address)' : ''} ===`
   );
@@ -236,6 +268,10 @@ async function setupLegacyWallet(
   const balance = await getRnTotalBalance();
 
   console.info('=== Legacy wallet setup complete ===');
+  
+  // Output for iOS CI to capture
+  console.info(`\nexport RN_MNEMONIC="${mnemonic}"`);
+  console.info(`export RN_BALANCE="${balance}"\n`);
 
   return { mnemonic, balance };
 }
@@ -423,6 +459,58 @@ async function createLegacyRnWallet(options: { passphrase?: string } = {}): Prom
     }
   }
   console.info('→ Legacy RN wallet created');
+}
+
+/**
+ * Restore wallet in legacy RN app from mnemonic.
+ * Used on iOS where we can't create wallet due to Appium issues.
+ */
+async function restoreRnWallet(
+  mnemonic: string,
+  { passphrase }: { passphrase?: string } = {}
+): Promise<void> {
+  console.info('→ Restoring wallet in legacy RN app...');
+
+  // Terms of service
+  await elementById('Continue').waitForDisplayed();
+  await tap('Check1');
+  await tap('Check2');
+  await tap('Continue');
+
+  // Skip intro and go to restore
+  await tap('SkipIntro');
+  await tap('RestoreWallet');
+  await tap('MultipleDevices-button');
+
+  // Enter seed
+  await typeText('Word-0', mnemonic);
+  await sleep(1500);
+
+  // Passphrase if provided
+  if (passphrase) {
+    await tap('AdvancedButton');
+    await typeText('PassphraseInput', passphrase);
+    await confirmInputOnKeyboard();
+  }
+
+  // Restore wallet
+  await tap('RestoreButton');
+  await waitForSetupWalletScreenFinish();
+
+  // Wait for Get Started
+  const getStarted = await elementById('GetStartedButton');
+  await getStarted.waitForDisplayed({ timeout: 120000 });
+  await tap('GetStartedButton');
+  await sleep(1000);
+
+  // Dismiss wallet onboarding if shown
+  try {
+    await tap('WalletOnboardingClose');
+  } catch {
+    // May not appear after restore
+  }
+
+  console.info('→ Legacy RN wallet restored');
 }
 
 /**
