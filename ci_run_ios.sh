@@ -20,6 +20,9 @@ fi
 mkdir -p "${ARTIFACTS_DIR}"
 
 SIMULATOR_NAME="${SIMULATOR_NAME:-iPhone 17}"
+SIMULATOR_OS_VERSION="${SIMULATOR_OS_VERSION:-26.0.1}"
+export SIMULATOR_NAME
+export SIMULATOR_OS_VERSION
 
 ensure_booted_simulator() {
   # Check for already booted simulator
@@ -43,7 +46,7 @@ ensure_booted_simulator() {
   xcrun simctl bootstatus "${fallback_udid}" -b >/dev/null 2>&1 || true
 
   for _ in {1..30}; do
-    booted_udid=$(xcrun simctl list devices booted 2>/dev/null | awk -F '[()]' '/Booted/ {print $2; exit}')
+    booted_udid=$(xcrun simctl list devices booted 2>/dev/null | awk -F '[()]' -v name="$SIMULATOR_NAME" '$0 ~ name" \\(" {print $2; exit}')
     if [[ -n "$booted_udid" ]]; then
       echo "$booted_udid"
       return

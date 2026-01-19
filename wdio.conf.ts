@@ -3,7 +3,7 @@ import fs from 'node:fs';
 
 const isAndroid = process.env.PLATFORM === 'android';
 const iosDeviceName = process.env.SIMULATOR_NAME || 'iPhone 17';
-const iosPlatformVersion = process.env.SIMULATOR_OS_VERSION || '26.0';
+const iosPlatformVersion = process.env.SIMULATOR_OS_VERSION || '26.0.1';
 
 export const config: WebdriverIO.Config = {
   //
