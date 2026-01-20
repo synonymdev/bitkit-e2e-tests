@@ -35,6 +35,10 @@ describe('@numberpad - NumberPad', () => {
     await receiveOnchainFunds({ sats: 10_000 });
   });
 
+  after(async () => {
+    await electrum?.stop();
+  });
+
   beforeEach(async () => {
     await launchFreshApp();
     await electrum?.waitForSync();
