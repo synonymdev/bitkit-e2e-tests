@@ -70,7 +70,7 @@ export const config: WebdriverIO.Config = {
           'appium:autoGrantPermissions': true,
           // 'appium:waitForIdleTimeout': 1000,
         }
-      : {
+        : {
           platformName: 'iOS',
           'appium:automationName': 'XCUITest',
           'appium:udid': process.env.SIMULATOR_UDID || 'auto',
@@ -88,6 +88,10 @@ export const config: WebdriverIO.Config = {
           'appium:wdaConnectionTimeout': 300000,
           'appium:wdaStartupRetries': 3,
           'appium:wdaStartupRetryInterval': 5000,
+
+          // iOS 26+ compatibility
+          'appium:useNewWDA': true,
+          'appium:derivedDataPath': '/tmp/WDA',
         },
   ],
 
