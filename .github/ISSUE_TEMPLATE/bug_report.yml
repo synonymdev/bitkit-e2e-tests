@@ -18,6 +18,11 @@ body:
         1. Go to...
         2. Tap on...
         3. See error
+
+        **Actual**
+
+        **Expected**
+        
     validations:
       required: false
 
