@@ -884,6 +884,28 @@ export async function dismissQuickPayIntro({
 }
 
 /**
+ * Tries to dismiss the QuickPay intro sheet if it's visible.
+ * Does nothing if the sheet is not visible. Useful for handling
+ * race conditions where the timed sheet may or may not have appeared.
+ *
+ * @example
+ * // Dismiss sheet if visible before interacting with elements
+ * await tryDismissQuickPayIntroIfVisible();
+ * await elementById('SomeElement').waitForDisplayed();
+ */
+export async function tryDismissQuickPayIntroIfVisible({
+  triggerTimedSheet = false,
+}: { triggerTimedSheet?: boolean } = {}) {
+  const testId = driver.isAndroid ? 'QuickpayIntro-button' : 'QuickpayIntroDescription';
+  const el = await elementById(testId);
+  const isVisible = await el.isDisplayed().catch(() => false);
+
+  if (isVisible) {
+    await dismissQuickPayIntro({ triggerTimedSheet });
+  }
+}
+
+/**
  * Acknowledges the high balance warning that appears when wallet balance exceeds a threshold (>$500).
  * This sheet is triggered by onchain balance change if it exceeds a threshold.
  *
