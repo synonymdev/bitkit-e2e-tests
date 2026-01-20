@@ -112,7 +112,7 @@ e2e-branch:
 Resolution rules (from `determine-e2e-branch.yml`):
 
 - `e2e_branch_input=main` -> use `main`.
-- `e2e_branch_input=default-feature-branch` -> use the same branch name as the app repo *if it exists* in `bitkit-e2e-tests`, otherwise fall back to `main`.
+- `e2e_branch_input=default-feature-branch` -> use the same branch name as the app repo _if it exists_ in `bitkit-e2e-tests`, otherwise fall back to `main`.
 - `e2e_branch_input=<custom>` -> use that branch only if it exists; otherwise the workflow fails.
 
 Implication for feature work:
