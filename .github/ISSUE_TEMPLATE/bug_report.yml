@@ -14,7 +14,7 @@ body:
     id: steps
     attributes:
       label: Steps to Reproduce
-      description: |
+      placeholder: |
         1. Go to...
         2. Tap on...
         3. See error
