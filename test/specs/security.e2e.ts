@@ -51,6 +51,7 @@ describe('@security - Security And Privacy', () => {
     await tap('DrawerSettings');
     await tap('SecuritySettings');
     await tap('PINCode');
+    await sleep(1000);
     await tap('SecureWalletContinue');
     await multiTap('N1', PIN_LENGTH); // enter PIN
     await multiTap('N2', PIN_LENGTH); // retype wrong PIN
@@ -63,7 +64,7 @@ describe('@security - Security And Privacy', () => {
     await doNavigationClose();
 
     // - login with PIN
-    await launchFreshApp({ tryHandleAlert: false });
+    await launchFreshApp();
     await elementById('PinPad').waitForDisplayed();
     await sleep(1000);
     await multiTap('N1', PIN_LENGTH);
@@ -104,7 +105,7 @@ describe('@security - Security And Privacy', () => {
     await multiTap('N2', PIN_LENGTH); // correct new pin in the confirmation
     await tap('OK');
 
-    await launchFreshApp({ tryHandleAlert: false });
+    await launchFreshApp();
     await elementById('PinPad').waitForDisplayed();
     await sleep(1000);
     await multiTap('N2', PIN_LENGTH);
@@ -118,7 +119,7 @@ describe('@security - Security And Privacy', () => {
     await tap('DisablePin');
     await multiTap('N2', PIN_LENGTH);
     await sleep(1000);
-    await launchFreshApp({ tryHandleAlert: false });
+    await launchFreshApp();
     await elementById('TotalBalance').waitForDisplayed();
 
     // enable PIN for last test
@@ -126,6 +127,7 @@ describe('@security - Security And Privacy', () => {
     await tap('DrawerSettings');
     await tap('SecuritySettings');
     await tap('PINCode');
+    await sleep(1000);
     await tap('SecureWalletContinue');
     await multiTap('N1', PIN_LENGTH); // enter PIN
     await multiTap('N1', PIN_LENGTH); // retype PIN
@@ -135,7 +137,7 @@ describe('@security - Security And Privacy', () => {
     await sleep(1000);
 
     // now lets restart the app and fail to enter correct PIN 8 times
-    await launchFreshApp({ tryHandleAlert: false });
+    await launchFreshApp();
     await elementById('PinPad').waitForDisplayed();
     for (let i = 1; i <= MAX_ATTEMPTS_BEFORE_LAST; i++) {
       await multiTap('N9', PIN_LENGTH); // wrong PIN
