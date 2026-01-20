@@ -25,7 +25,7 @@ body:
     id: evidence
     attributes:
       label: Logs / Screenshots / Recordings
-      description: Drag and drop files here
+      placeholder: Drag and drop files here
     validations:
       required: false
 
