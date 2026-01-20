@@ -76,6 +76,19 @@ const initElectrum = async (): Promise<ElectrumClient> => {
           break;
         }
 
+        // Actively check if Electrum has the block at nodeHeight
+        // This handles the case where Electrum is catching up but no new blocks are mined
+        const { error } = await electrum.getHeader({
+          height: nodeHeight,
+          network: 'bitcoinRegtest',
+          timeout: 5000,
+        });
+        if (!error) {
+          // Electrum has caught up to nodeHeight
+          electrumHeight = nodeHeight;
+          break;
+        }
+
         if (Date.now() - startTime > TIMEOUT) {
           throw new Error('Electrum sync timeout exceeded 120 seconds');
         }
