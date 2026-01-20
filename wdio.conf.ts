@@ -92,6 +92,8 @@ export const config: WebdriverIO.Config = {
           // iOS 26+ compatibility
           'appium:useNewWDA': true,
           'appium:derivedDataPath': '/tmp/WDA',
+          'appium:waitForIdleTimeout': 30,
+          'appium:iosInstallPause': 5000,
         },
   ],
 
@@ -133,7 +135,8 @@ export const config: WebdriverIO.Config = {
   //
   // Default timeout in milliseconds for request
   // if browser driver or grid doesn't send response
-  connectionRetryTimeout: 120000,
+  // Must be >= wdaLaunchTimeout (300000) to allow WDA time to start
+  connectionRetryTimeout: 360000,
   //
   // Default request retries count
   connectionRetryCount: 3,
