@@ -321,10 +321,6 @@ describe('@transfer - Transfer', () => {
     console.info('channel opening...');
     await sleep(1000);
     await acknowledgeExternalSuccess();
-    if (driver.isAndroid) {
-      await tap('NavigationBack');
-      await doNavigationClose();
-    }
 
     // check transfer card
     // await elementById('Suggestion-lightning_setting_up').waitForDisplayed();
