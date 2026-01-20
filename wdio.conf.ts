@@ -94,6 +94,7 @@ export const config: WebdriverIO.Config = {
           'appium:derivedDataPath': '/tmp/WDA',
           'appium:waitForIdleTimeout': 30,
           'appium:iosInstallPause': 5000,
+          'appium:simulatorStartupTimeout': 300000,
         },
   ],
 
