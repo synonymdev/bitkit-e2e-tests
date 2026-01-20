@@ -316,20 +316,6 @@ describe('@transfer - Transfer', () => {
     await tap('ExternalAmountContinue');
     await sleep(500);
 
-    // change fee
-    // this should be removed from Andorid:
-    // https://github.com/synonymdev/bitkit-android/issues/548
-    if (driver.isAndroid) {
-      await tap('SetCustomFee');
-      await sleep(500);
-      await tap('NRemove');
-      await sleep(1000); // wait for input to register
-      await tap('FeeCustomContinue');
-      await tap('N5');
-      await sleep(1000); // wait for input to register
-      await tap('FeeCustomContinue');
-    }
-
     // Swipe to confirm
     await dragOnElement('GRAB', 'right', 0.95);
     console.info('channel opening...');
