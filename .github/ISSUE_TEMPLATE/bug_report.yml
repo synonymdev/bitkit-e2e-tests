@@ -8,7 +8,7 @@ body:
       label: Description
       description: Brief description of the issue or additional context
     validations:
-      required: true
+      required: false
 
   - type: textarea
     id: steps
@@ -19,7 +19,7 @@ body:
         2. 
         3. 
     validations:
-      required: true
+      required: false
 
   - type: textarea
     id: actual
@@ -27,7 +27,7 @@ body:
       label: Actual Behavior
       description: What actually happened
     validations:
-      required: true
+      required: false
 
   - type: textarea
     id: expected
@@ -35,7 +35,7 @@ body:
       label: Expected Behavior
       description: What you expected to happen
     validations:
-      required: true
+      required: false
 
   - type: textarea
     id: logs
