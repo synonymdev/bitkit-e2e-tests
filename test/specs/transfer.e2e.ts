@@ -15,6 +15,7 @@ import {
   elementByIdWithin,
   enterAddress,
   dismissQuickPayIntro,
+  tryDismissQuickPayIntroIfVisible,
   doNavigationClose,
   waitForToast,
   getTextUnder,
@@ -321,10 +322,6 @@ describe('@transfer - Transfer', () => {
     console.info('channel opening...');
     await sleep(1000);
     await acknowledgeExternalSuccess();
-    if (driver.isAndroid) {
-      await tap('NavigationBack');
-      await doNavigationClose();
-    }
 
     // check transfer card
     // await elementById('Suggestion-lightning_setting_up').waitForDisplayed();
@@ -332,6 +329,11 @@ describe('@transfer - Transfer', () => {
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     const totalAmtAfterChannelOpen = await totalBalance.getText();
     await expect(totalBalance).not.toHaveText('100 000');
+    await sleep(2500);
+    if (driver.isAndroid) {
+      // on Android in CI the sheet sometimes shows up here, so we need to dismiss it
+      await tryDismissQuickPayIntroIfVisible();
+    }
 
     // check activity
     await swipeFullScreen('up');
@@ -349,7 +351,7 @@ describe('@transfer - Transfer', () => {
       await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: driver.isIOS });
       await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
     } else {
-      await dismissQuickPayIntro({ triggerTimedSheet: true });
+      await tryDismissQuickPayIntroIfVisible({ triggerTimedSheet: true });
     }
     await expectNoTextWithin('ActivitySpending', '0');
     await waitForActiveChannel(lnd, ldkNodeId);
