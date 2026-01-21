@@ -923,6 +923,16 @@ export async function toggleWidgets() {
   await doNavigationClose();
 }
 
+export async function typeRecipientInput(
+  address: string,
+  { confirmKeyboard = true }: { confirmKeyboard?: boolean } = {}
+) {
+  await typeText('RecipientInput', address);
+  if (confirmKeyboard) {
+    await confirmInputOnKeyboard();
+  }
+}
+
 export async function typeAddressAndVerifyContinue({
   address,
   reverse = false,
@@ -930,8 +940,7 @@ export async function typeAddressAndVerifyContinue({
   address: string;
   reverse?: boolean;
 }) {
-  await typeText('RecipientInput', address);
-  await confirmInputOnKeyboard();
+  await typeRecipientInput(address);
   await sleep(1000);
   await elementById('AddressContinue').waitForEnabled({ reverse });
 }
