@@ -66,8 +66,9 @@ describe('@send - Send', () => {
 
   ciIt('@send_1 - Validates payment data in the manual input', async () => {
     await tap('Send');
+    await sleep(1000);
     await handleAndroidAlert('permission_allow_foreground_only_button');
-    await sleep(5000);
+    await sleep(4000);
     await tap('RecipientManual');
 
     // check validation for empty address
