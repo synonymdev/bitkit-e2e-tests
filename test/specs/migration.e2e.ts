@@ -116,6 +116,13 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     });
   });
 
+  ciIt('@migration_ios - setupLegacyWallet on iOS', async () => {
+    // Setup wallet in RN app
+    const { mnemonic, balance } = await setupLegacyWallet({ returnSeed: true });
+    console.info(`→ MNEMONIC: ${mnemonic}`);
+    console.info(`→ BALANCE: ${balance}`);
+  });
+
   // --------------------------------------------------------------------------
   // Migration Scenario 1: Uninstall RN, install Native, restore mnemonic
   // --------------------------------------------------------------------------
