@@ -14,6 +14,7 @@ import {
   getReceiveAddress,
   getUriFromQRCode,
   handleAndroidAlert,
+  pasteIOSText,
   restoreWallet,
   sleep,
   swipeFullScreen,
@@ -594,7 +595,11 @@ async function restoreRnWallet(
   await tap('MultipleDevices-button');
 
   // Enter seed
-  await typeText('Word-0', mnemonic);
+  if (driver.isIOS) {
+    await pasteIOSText('Word-0', mnemonic);
+  } else {
+    await typeText('Word-0', mnemonic);
+  }
   await sleep(1500);
 
   // Passphrase if provided

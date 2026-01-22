@@ -282,7 +282,7 @@ export async function multiTap(testId: string, count: number) {
   }
 }
 
-async function pasteIOSText(testId: string, text: string) {
+export async function pasteIOSText(testId: string, text: string) {
   if (!driver.isIOS) {
     throw new Error('pasteIOSText can only be used on iOS devices');
   }
