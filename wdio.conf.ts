@@ -88,13 +88,6 @@ export const config: WebdriverIO.Config = {
           'appium:wdaConnectionTimeout': 300000,
           'appium:wdaStartupRetries': 3,
           'appium:wdaStartupRetryInterval': 5000,
-
-          // iOS 26+ compatibility
-          'appium:useNewWDA': true,
-          'appium:derivedDataPath': '/tmp/WDA',
-          'appium:waitForIdleTimeout': 30,
-          'appium:iosInstallPause': 5000,
-          'appium:simulatorStartupTimeout': 300000,
         },
   ],
 
