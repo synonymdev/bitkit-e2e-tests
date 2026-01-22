@@ -20,8 +20,19 @@ export function getAppPath(): string {
 
 export const bitcoinURL =
   process.env.BITCOIN_RPC_URL ?? 'http://polaruser:polarpass@127.0.0.1:43782';
-export const electrumHost = '127.0.0.1';
-export const electrumPort = 60001;
+
+export type Backend = 'local' | 'regtest';
+
+export function getBackend(): Backend {
+  const backend = process.env.BACKEND || 'local';
+  if (backend !== 'local' && backend !== 'regtest') {
+    throw new Error(`Invalid BACKEND: ${backend}. Expected 'local' or 'regtest'.`);
+  }
+  return backend;
+}
+
+export const electrumHost = getBackend() === 'regtest' ? 'electrs.bitkit.stag0.blocktank.to' : '127.0.0.1';
+export const electrumPort = getBackend() === 'regtest' ? 9999 : 60001;
 
 // Blocktank API for regtest operations (deposit, mine blocks, pay invoices)
 export const blocktankURL =
