@@ -330,10 +330,8 @@ describe('@transfer - Transfer', () => {
     const totalAmtAfterChannelOpen = await totalBalance.getText();
     await expect(totalBalance).not.toHaveText('100 000');
     await sleep(2500);
-    if (driver.isAndroid) {
-      // on Android in CI the sheet sometimes shows up here, so we need to dismiss it
-      await tryDismissQuickPayIntroIfVisible();
-    }
+    // on Android in CI the sheet sometimes shows up here, so we need to dismiss it
+    const quickPayDismissed = driver.isAndroid ? await tryDismissQuickPayIntroIfVisible() : false;
 
     // check activity
     await swipeFullScreen('up');
@@ -352,9 +350,10 @@ describe('@transfer - Transfer', () => {
     if (driver.isIOS) {
       await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: driver.isIOS });
       await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
-    } else {
+    } else if (!quickPayDismissed) {
+      // only try to dismiss if it wasn't already dismissed earlier
       await sleep(2000);
-      await tryDismissQuickPayIntroIfVisible({ triggerTimedSheet: true });
+      await dismissQuickPayIntro({ triggerTimedSheet: true });
     }
     await expectNoTextWithin('ActivitySpending', '0');
     await waitForActiveChannel(lnd, ldkNodeId);

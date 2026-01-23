@@ -889,17 +889,23 @@ export async function dismissQuickPayIntro({
  * Does nothing if the sheet is not visible. Useful for handling
  * race conditions where the timed sheet may or may not have appeared.
  *
+ * @returns true if the sheet was dismissed, false if it wasn't visible
+ *
  * @example
  * // Dismiss sheet if visible before interacting with elements
- * await tryDismissQuickPayIntroIfVisible();
- * await elementById('SomeElement').waitForDisplayed();
+ * const dismissed = await tryDismissQuickPayIntroIfVisible();
+ * if (!dismissed) {
+ *   // sheet wasn't visible, try again later with triggerTimedSheet
+ *   await tryDismissQuickPayIntroIfVisible({ triggerTimedSheet: true });
+ * }
  */
 export async function tryDismissQuickPayIntroIfVisible({
   triggerTimedSheet = false,
-}: { triggerTimedSheet?: boolean } = {}) {
+}: { triggerTimedSheet?: boolean } = {}): Promise<boolean> {
   if (triggerTimedSheet) {
     // if triggerTimedSheet is true, we need to dismiss the sheet first
     await dismissQuickPayIntro({ triggerTimedSheet });
+    return true;
   } else {
     // if triggerTimedSheet is false, we need to check if the sheet is visible and dismiss it if it is
     const testId = driver.isAndroid ? 'QuickpayIntro-button' : 'QuickpayIntroDescription';
@@ -908,7 +914,9 @@ export async function tryDismissQuickPayIntroIfVisible({
 
     if (isVisible) {
       await dismissQuickPayIntro({ triggerTimedSheet });
+      return true;
     }
+    return false;
   }
 }
 
