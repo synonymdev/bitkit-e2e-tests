@@ -337,10 +337,12 @@ describe('@transfer - Transfer', () => {
 
     // check activity
     await swipeFullScreen('up');
+    await swipeFullScreen('up');
     await elementById('ActivityShort-0').waitForDisplayed();
     await expectTextWithin('ActivityShort-0', 'Transfer');
     await elementById('ActivityShort-1').waitForDisplayed();
     await expectTextWithin('ActivityShort-1', 'Received');
+    await swipeFullScreen('down');
     await swipeFullScreen('down');
 
     await mineBlocks(6);
@@ -351,6 +353,7 @@ describe('@transfer - Transfer', () => {
       await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: driver.isIOS });
       await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
     } else {
+      await sleep(2000);
       await tryDismissQuickPayIntroIfVisible({ triggerTimedSheet: true });
     }
     await expectNoTextWithin('ActivitySpending', '0');
@@ -366,6 +369,7 @@ describe('@transfer - Transfer', () => {
     const { paymentRequest } = await lnd.addInvoice({ memo: 'zero' });
 
     // send payment
+    await sleep(1000);
     await enterAddress(paymentRequest);
     await multiTap('N1', 3);
     await tap('ContinueAmount');

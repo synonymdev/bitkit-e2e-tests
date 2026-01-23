@@ -896,12 +896,18 @@ export async function dismissQuickPayIntro({
 export async function tryDismissQuickPayIntroIfVisible({
   triggerTimedSheet = false,
 }: { triggerTimedSheet?: boolean } = {}) {
-  const testId = driver.isAndroid ? 'QuickpayIntro-button' : 'QuickpayIntroDescription';
-  const el = await elementById(testId);
-  const isVisible = await el.isDisplayed().catch(() => false);
-
-  if (isVisible) {
+  if (triggerTimedSheet) {
+    // if triggerTimedSheet is true, we need to dismiss the sheet first
     await dismissQuickPayIntro({ triggerTimedSheet });
+  } else {
+    // if triggerTimedSheet is false, we need to check if the sheet is visible and dismiss it if it is
+    const testId = driver.isAndroid ? 'QuickpayIntro-button' : 'QuickpayIntroDescription';
+    const el = await elementById(testId);
+    const isVisible = await el.isDisplayed().catch(() => false);
+
+    if (isVisible) {
+      await dismissQuickPayIntro({ triggerTimedSheet });
+    }
   }
 }
 
