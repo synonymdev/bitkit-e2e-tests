@@ -514,5 +514,27 @@ describe('@send - Send', () => {
     await enterAddress(invoice9, { acceptCameraPermission: false });
     await elementById('ReviewAmount').waitForDisplayed();
     await swipeFullScreen('down');
+
+    // sanity check activities displayed
+    await sleep(1000);
+    await swipeFullScreen('up');
+    await swipeFullScreen('up');
+    await elementById('ActivityShort-0').waitForDisplayed();
+    await elementById('ActivityShort-1').waitForDisplayed();
+    await elementById('ActivityShort-2').waitForDisplayed();
+    await tap('ActivityShowAll');
+    await elementById('Activity-1').waitForDisplayed();
+    await elementById('Activity-2').waitForDisplayed();
+    await elementById('Activity-3').waitForDisplayed();
+    await doNavigationClose();
+    await swipeFullScreen('down');
+    await swipeFullScreen('down');
+    await tap('ActivitySavings')
+    await elementById('Activity-1').waitForDisplayed();
+    await elementById('Activity-2').waitForDisplayed();
+    await doNavigationClose();
+    await tap('ActivitySpending')
+    await elementById('Activity-1').waitForDisplayed();
+    await elementById('Activity-2').waitForDisplayed();
   });
 });
