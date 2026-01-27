@@ -48,6 +48,8 @@ jobs:
           mkdir -p bitkit-e2e-tests/aut
           curl -L -o bitkit-e2e-tests/aut/bitkit_rn_regtest.apk \
             https://github.com/synonymdev/bitkit-e2e-tests/releases/download/migration-rn-regtest/bitkit_rn_regtest_${{ inputs.rn_version }}.apk
+          # Symlink to bitkit_e2e.apk so wdio.conf.ts can initialize the Appium session
+          cd bitkit-e2e-tests/aut && ln -sf bitkit_rn_regtest.apk bitkit_e2e.apk
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
