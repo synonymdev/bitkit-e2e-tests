@@ -62,11 +62,16 @@ const TEST_PASSPHRASE = 'supersecret';
 
 // iOS: Read mnemonic and balance from env vars (prepared by Android run)
 // This is needed because RN app on iOS has poor Appium support
-const IOS_RN_MNEMONIC = process.env.RN_MNEMONIC;
-const IOS_RN_BALANCE = process.env.RN_BALANCE ? parseInt(process.env.RN_BALANCE, 10) : undefined;
-const IOS_RN_MNEMONIC_SWEEP = process.env.RN_MNEMONIC_SWEEP;
+// Strip quotes if present (GITHUB_ENV format shouldn't have them, but be defensive)
+const stripQuotes = (s: string | undefined): string | undefined =>
+  s?.replace(/^["']|["']$/g, '');
+const IOS_RN_MNEMONIC = stripQuotes(process.env.RN_MNEMONIC);
+const IOS_RN_BALANCE = process.env.RN_BALANCE
+  ? parseInt(stripQuotes(process.env.RN_BALANCE)!, 10)
+  : undefined;
+const IOS_RN_MNEMONIC_SWEEP = stripQuotes(process.env.RN_MNEMONIC_SWEEP);
 const IOS_RN_BALANCE_SWEEP = process.env.RN_BALANCE_SWEEP
-  ? parseInt(process.env.RN_BALANCE_SWEEP, 10)
+  ? parseInt(stripQuotes(process.env.RN_BALANCE_SWEEP)!, 10)
   : undefined;
 
 // ============================================================================
