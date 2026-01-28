@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   acknowledgeReceivedPayment,
   confirmInputOnKeyboard,
@@ -12,6 +14,7 @@ import {
   getReceiveAddress,
   getUriFromQRCode,
   handleAndroidAlert,
+  pasteIOSText,
   restoreWallet,
   sleep,
   swipeFullScreen,
@@ -61,6 +64,10 @@ const TEST_PASSPHRASE = 'supersecret';
 // This is needed because RN app on iOS has poor Appium support
 const IOS_RN_MNEMONIC = process.env.RN_MNEMONIC;
 const IOS_RN_BALANCE = process.env.RN_BALANCE ? parseInt(process.env.RN_BALANCE, 10) : undefined;
+const IOS_RN_MNEMONIC_SWEEP = process.env.RN_MNEMONIC_SWEEP;
+const IOS_RN_BALANCE_SWEEP = process.env.RN_BALANCE_SWEEP
+  ? parseInt(process.env.RN_BALANCE_SWEEP, 10)
+  : undefined;
 
 // ============================================================================
 // TEST SUITE
@@ -74,6 +81,46 @@ describe('@migration - Migration from legacy RN app to native app', () => {
 
   after(async () => {
     await electrumClient?.stop();
+  });
+
+  // --------------------------------------------------------------------------
+  // Migration Setup: Prepare legacy RN wallets on Android for iOS runs
+  // --------------------------------------------------------------------------
+  ciIt('@migration_setup_standard - Prepare legacy RN wallet (Android only)', async () => {
+    if (driver.isIOS) {
+      throw new Error('Migration setup should run on Android only.');
+    }
+
+    const { mnemonic, balance } = await setupLegacyWallet({ returnSeed: true });
+    writeMigrationEnvFile({
+      fileName: 'migration_setup_standard.env',
+      mnemonicVar: 'RN_MNEMONIC',
+      balanceVar: 'RN_BALANCE',
+      mnemonic,
+      balance,
+    });
+  });
+
+  ciIt('@migration_setup_sweep - Prepare legacy sweep wallet (Android only)', async () => {
+    if (driver.isIOS) {
+      throw new Error('Migration setup should run on Android only.');
+    }
+
+    const { mnemonic, balance } = await setupWalletWithLegacyFunds({ returnSeed: true });
+    writeMigrationEnvFile({
+      fileName: 'migration_setup_sweep.env',
+      mnemonicVar: 'RN_MNEMONIC_SWEEP',
+      balanceVar: 'RN_BALANCE_SWEEP',
+      mnemonic,
+      balance,
+    });
+  });
+
+  ciIt('@migration_ios - setupLegacyWallet on iOS', async () => {
+    // Setup wallet in RN app
+    const { mnemonic, balance } = await setupLegacyWallet({ returnSeed: true });
+    console.info(`→ MNEMONIC: ${mnemonic}`);
+    console.info(`→ BALANCE: ${balance}`);
   });
 
   // --------------------------------------------------------------------------
@@ -284,6 +331,36 @@ async function setupLegacyWallet(
   return { mnemonic, balance };
 }
 
+type MigrationEnvFileArgs = {
+  fileName: string;
+  mnemonicVar: string;
+  balanceVar: string;
+  mnemonic?: string;
+  balance: number;
+};
+
+function writeMigrationEnvFile({
+  fileName,
+  mnemonicVar,
+  balanceVar,
+  mnemonic,
+  balance,
+}: MigrationEnvFileArgs): void {
+  if (!mnemonic) {
+    throw new Error(`Missing mnemonic for ${fileName}`);
+  }
+
+  const filePath = path.join(process.cwd(), 'artifacts', fileName);
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+
+  const contents = `${mnemonicVar}="${mnemonic}"\n${balanceVar}="${balance}"\n`;
+  fs.writeFileSync(filePath, contents, 'utf8');
+
+  console.info(`→ Wrote migration env file: ${filePath}`);
+  console.info(`\nexport ${mnemonicVar}="${mnemonic}"`);
+  console.info(`export ${balanceVar}="${balance}"\n`);
+}
+
 // Amount constants for sweep scenario
 const SWEEP_INITIAL_FUND_SATS = 200_000;
 const SWEEP_SEND_TO_SELF_SATS = 50_000;
@@ -300,12 +377,41 @@ const SWEEP_SEND_TO_SELF_SATS = 50_000;
  *
  * Result: Wallet has funds on legacy address, migration will trigger sweep
  */
-async function setupWalletWithLegacyFunds(): Promise<{ balance: number }> {
+async function setupWalletWithLegacyFunds(
+  options: { returnSeed?: boolean } = {}
+): Promise<LegacyWalletSetupResult> {
+  const { returnSeed } = options;
+  if (driver.isIOS) {
+    if (!IOS_RN_MNEMONIC_SWEEP || !IOS_RN_BALANCE_SWEEP) {
+      throw new Error(
+        'iOS migration sweep tests require RN_MNEMONIC_SWEEP and RN_BALANCE_SWEEP env vars. ' +
+          'Run Android setup first to prepare the wallet.'
+      );
+    }
+    console.info('=== iOS: Restoring RN sweep wallet from mnemonic (prepared by Android) ===');
+    console.info(
+      `→ Mnemonic: ${IOS_RN_MNEMONIC_SWEEP.split(' ').slice(0, 3).join(' ')}...`
+    );
+    console.info(`→ Expected balance: ${IOS_RN_BALANCE_SWEEP} sats`);
+
+    await installLegacyRnApp();
+    await restoreRnWallet(IOS_RN_MNEMONIC_SWEEP);
+
+    console.info('=== iOS: RN sweep wallet restored ===');
+    return { mnemonic: IOS_RN_MNEMONIC_SWEEP, balance: IOS_RN_BALANCE_SWEEP };
+  }
+
   console.info('=== Setting up wallet with legacy funds (sweep scenario) ===');
 
   // Install and create wallet
   await installLegacyRnApp();
   await createLegacyRnWallet();
+
+  let mnemonic: string | undefined;
+  if (returnSeed) {
+    mnemonic = await getRnMnemonic();
+    console.info(`→ Legacy RN sweep wallet mnemonic: ${mnemonic}`);
+  }
 
   // 1. Fund wallet on native segwit (works with Blocktank)
   console.info('→ Step 1: Funding wallet on native segwit...');
@@ -324,7 +430,7 @@ async function setupWalletWithLegacyFunds(): Promise<{ balance: number }> {
 
   console.info('=== Legacy funds setup complete ===');
 
-  return { balance };
+  return { balance, mnemonic };
 }
 
 /**
@@ -496,7 +602,11 @@ async function restoreRnWallet(
   await tap('MultipleDevices-button');
 
   // Enter seed
-  await typeText('Word-0', mnemonic);
+  if (driver.isIOS) {
+    await pasteIOSText('Word-0', mnemonic);
+  } else {
+    await typeText('Word-0', mnemonic);
+  }
   await sleep(1500);
 
   // Passphrase if provided
