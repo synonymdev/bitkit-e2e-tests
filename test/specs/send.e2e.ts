@@ -428,6 +428,7 @@ describe('@send - Send', () => {
     await expectText('4 998', { strategy: 'contains' });
     // expect toast about reserve balance
     await expectText('Reserve Balance');
+    await sleep(4000);
     await tap('NavigationBack');
     // max amount (onchain)
     await tap('AssetButton-switch');
