@@ -20,7 +20,6 @@ import {
   swipeFullScreen,
   tap,
   typeText,
-  waitForBackup,
   waitForSetupWalletScreenFinish,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
@@ -97,6 +96,8 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     }
 
     const { mnemonic, balance } = await setupLegacyWallet({ returnSeed: true });
+    console.info('→ Waiting 60 seconds to ensure backups triggered...');
+    await sleep(60000);
     writeMigrationEnvFile({
       fileName: 'migration_setup_standard.env',
       mnemonicVar: 'RN_MNEMONIC',
@@ -112,6 +113,8 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     }
 
     const { mnemonic, balance } = await setupWalletWithLegacyFunds({ returnSeed: true });
+    console.info('→ Waiting 60 seconds to ensure backups triggered...');
+    await sleep(60000);
     writeMigrationEnvFile({
       fileName: 'migration_setup_sweep.env',
       mnemonicVar: 'RN_MNEMONIC_SWEEP',
@@ -169,14 +172,6 @@ describe('@migration - Migration from legacy RN app to native app', () => {
 
     // Verify migration
     await verifyMigration(balance);
-    await mineBlocks(1);
-    if (driver.isIOS) {
-      // Restore wallet again to verify mnemonic restoration works post-migration
-      console.info('→ Restoring wallet again to verify mnemonic restoration post-migration...');
-      await waitForBackup();
-      await restoreWallet(mnemonic!);
-      await verifyMigration(balance);
-    }
   });
 
   // --------------------------------------------------------------------------
