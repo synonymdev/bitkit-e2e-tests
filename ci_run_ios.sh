@@ -19,20 +19,25 @@ fi
 
 mkdir -p "${ARTIFACTS_DIR}"
 
+SIMULATOR_NAME="${SIMULATOR_NAME:-iPhone 17}"
+SIMULATOR_OS_VERSION="${SIMULATOR_OS_VERSION:-26.0.1}"
+export SIMULATOR_NAME
+export SIMULATOR_OS_VERSION
+
 ensure_booted_simulator() {
-  # Check for already booted iPhone 17 simulator
+  # Check for already booted simulator
   local booted_udid
-  booted_udid=$(xcrun simctl list devices booted 2>/dev/null | awk -F '[()]' '/iPhone 17 \(/{print $2; exit}')
+  booted_udid=$(xcrun simctl list devices booted 2>/dev/null | awk -F '[()]' -v name="$SIMULATOR_NAME" '$0 ~ name" \\("{print $2; exit}')
   if [[ -n "$booted_udid" ]]; then
     echo "$booted_udid"
     return
   fi
 
-  # Otherwise, boot iPhone 17 simulator 
+  # Otherwise, boot simulator
   local fallback_udid
-  fallback_udid=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone 17 \(/ {print $2; exit}')
+  fallback_udid=$(xcrun simctl list devices available | awk -F '[()]' -v name="$SIMULATOR_NAME" '$0 ~ name" \\(" {print $2; exit}')
   if [[ -z "$fallback_udid" ]]; then
-    echo "No booted iOS simulator and unable to locate fallback device (iPhone 17*)" >&2
+    echo "No booted iOS simulator and unable to locate fallback device (${SIMULATOR_NAME}*)" >&2
     exit 1
   fi
 
@@ -41,7 +46,7 @@ ensure_booted_simulator() {
   xcrun simctl bootstatus "${fallback_udid}" -b >/dev/null 2>&1 || true
 
   for _ in {1..30}; do
-    booted_udid=$(xcrun simctl list devices booted 2>/dev/null | awk -F '[()]' '/Booted/ {print $2; exit}')
+    booted_udid=$(xcrun simctl list devices booted 2>/dev/null | awk -F '[()]' -v name="$SIMULATOR_NAME" '$0 ~ name" \\(" {print $2; exit}')
     if [[ -n "$booted_udid" ]]; then
       echo "$booted_udid"
       return
@@ -56,6 +61,8 @@ ensure_booted_simulator() {
 SIMULATOR_UDID="$(ensure_booted_simulator)"
 export SIMULATOR_UDID
 echo "[ci_run_ios] Using iOS Simulator UDID: ${SIMULATOR_UDID}" >&2
+echo "[ci_run_ios] Booted device info:" >&2
+xcrun simctl list devices available | awk -v id="$SIMULATOR_UDID" 'index($0, id) { print; exit }' >&2
 
 # iOS Simulator logs
 LOGFILE_SYS="$ARTIFACTS_DIR/simulator.log"

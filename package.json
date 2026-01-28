@@ -36,6 +36,6 @@
     "rn-electrum-client": "^0.0.22"
   },
   "optionalDependencies": {
-    "appium-xcuitest-driver": "10.0.0"
+    "appium-xcuitest-driver": "^10.14.4"
   }
 }

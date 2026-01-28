@@ -8,17 +8,9 @@
  */
 
 import BitcoinJsonRpc from 'bitcoin-json-rpc';
-import { bitcoinURL, blocktankURL } from './constants';
+import { bitcoinURL, blocktankURL, getBackend, type Backend } from './constants';
 
-export type Backend = 'local' | 'regtest';
-
-export function getBackend(): Backend {
-  const backend = process.env.BACKEND || 'local'; // Use || to handle empty string
-  if (backend !== 'local' && backend !== 'regtest') {
-    throw new Error(`Invalid BACKEND: ${backend}. Expected 'local' or 'regtest'.`);
-  }
-  return backend;
-}
+export { getBackend, type Backend };
 
 // Local backend (Bitcoin RPC)
 

@@ -2,6 +2,8 @@ import path from 'node:path';
 import fs from 'node:fs';
 
 const isAndroid = process.env.PLATFORM === 'android';
+const iosDeviceName = process.env.SIMULATOR_NAME || 'iPhone 17';
+const iosPlatformVersion = process.env.SIMULATOR_OS_VERSION || '26.0.1';
 
 export const config: WebdriverIO.Config = {
   //
@@ -68,12 +70,12 @@ export const config: WebdriverIO.Config = {
           'appium:autoGrantPermissions': true,
           // 'appium:waitForIdleTimeout': 1000,
         }
-      : {
+        : {
           platformName: 'iOS',
           'appium:automationName': 'XCUITest',
           'appium:udid': process.env.SIMULATOR_UDID || 'auto',
-          'appium:deviceName': 'iPhone 17',
-          'appium:platformVersion': '26.0',
+          'appium:deviceName': iosDeviceName,
+          ...(iosPlatformVersion ? { 'appium:platformVersion': iosPlatformVersion } : {}),
           'appium:app': path.join(__dirname, 'aut', 'Bitkit.app'),
           'appium:autoGrantPermissions': true,
           'appium:autoAcceptAlerts': false,
@@ -82,8 +84,8 @@ export const config: WebdriverIO.Config = {
 
           // 🩹 Stability improvements
           'appium:newCommandTimeout': 300,
-          'appium:wdaLaunchTimeout': 120000,
-          'appium:wdaConnectionTimeout': 120000,
+          'appium:wdaLaunchTimeout': 300000,
+          'appium:wdaConnectionTimeout': 300000,
           'appium:wdaStartupRetries': 3,
           'appium:wdaStartupRetryInterval': 5000,
         },
@@ -127,7 +129,8 @@ export const config: WebdriverIO.Config = {
   //
   // Default timeout in milliseconds for request
   // if browser driver or grid doesn't send response
-  connectionRetryTimeout: 120000,
+  // Must be >= wdaLaunchTimeout (300000) to allow WDA time to start
+  connectionRetryTimeout: 360000,
   //
   // Default request retries count
   connectionRetryCount: 3,
