@@ -541,11 +541,13 @@ export async function restoreWallet(
     passphrase,
     expectQuickPayTimedSheet = false,
     expectBackupSheet = false,
+    expectBackGroundPaymentsSheet = false,
     reinstall = true,
   }: {
     passphrase?: string;
     expectQuickPayTimedSheet?: boolean;
     expectBackupSheet?: boolean;
+    expectBackGroundPaymentsSheet?: boolean;
     reinstall?: boolean;
   } = {}
 ) {
@@ -601,6 +603,10 @@ export async function restoreWallet(
 
   if (expectQuickPayTimedSheet) {
     await dismissQuickPayIntro();
+  }
+
+  if (expectBackGroundPaymentsSheet) {
+    await dismissBackgroundPaymentsTimedSheet();
   }
 
   // Wait for Suggestions Label to appear

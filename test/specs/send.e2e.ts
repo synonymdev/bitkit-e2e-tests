@@ -530,11 +530,11 @@ describe('@send - Send', () => {
     await doNavigationClose();
     await swipeFullScreen('down');
     await swipeFullScreen('down');
-    await tap('ActivitySavings')
+    await tap('ActivitySavings');
     await elementById('Activity-1').waitForDisplayed();
     await elementById('Activity-2').waitForDisplayed();
     await doNavigationClose();
-    await tap('ActivitySpending')
+    await tap('ActivitySpending');
     await elementById('Activity-1').waitForDisplayed();
     await elementById('Activity-2').waitForDisplayed();
   });
