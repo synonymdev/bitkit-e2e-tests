@@ -31,7 +31,8 @@ export function getBackend(): Backend {
   return backend;
 }
 
-export const electrumHost = getBackend() === 'regtest' ? 'electrs.bitkit.stag0.blocktank.to' : '127.0.0.1';
+export const electrumHost =
+  getBackend() === 'regtest' ? 'electrs.bitkit.stag0.blocktank.to' : '127.0.0.1';
 export const electrumPort = getBackend() === 'regtest' ? 9999 : 60001;
 
 // Blocktank API for regtest operations (deposit, mine blocks, pay invoices)
