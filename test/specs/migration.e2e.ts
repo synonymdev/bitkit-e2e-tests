@@ -68,14 +68,6 @@ const IOS_RN_MNEMONIC = stripQuotes(process.env.RN_MNEMONIC);
 const IOS_RN_BALANCE = process.env.RN_BALANCE
   ? parseInt(stripQuotes(process.env.RN_BALANCE)!, 10)
   : undefined;
-const IOS_RN_MNEMONIC_PASSPHRASE = stripQuotes(process.env.RN_MNEMONIC_PASSPHRASE);
-const IOS_RN_BALANCE_PASSPHRASE = process.env.RN_BALANCE_PASSPHRASE
-  ? parseInt(stripQuotes(process.env.RN_BALANCE_PASSPHRASE)!, 10)
-  : undefined;
-const IOS_RN_MNEMONIC_SWEEP = stripQuotes(process.env.RN_MNEMONIC_SWEEP);
-const IOS_RN_BALANCE_SWEEP = process.env.RN_BALANCE_SWEEP
-  ? parseInt(stripQuotes(process.env.RN_BALANCE_SWEEP)!, 10)
-  : undefined;
 
 // ============================================================================
 // TEST SUITE
@@ -124,8 +116,8 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     await sleep(60000);
     writeMigrationEnvFile({
       fileName: 'migration_setup_passphrase.env',
-      mnemonicVar: 'RN_MNEMONIC_PASSPHRASE',
-      balanceVar: 'RN_BALANCE_PASSPHRASE',
+      mnemonicVar: 'RN_MNEMONIC',
+      balanceVar: 'RN_BALANCE',
       mnemonic,
       balance,
     });
@@ -141,8 +133,8 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     await sleep(60000);
     writeMigrationEnvFile({
       fileName: 'migration_setup_sweep.env',
-      mnemonicVar: 'RN_MNEMONIC_SWEEP',
-      balanceVar: 'RN_BALANCE_SWEEP',
+      mnemonicVar: 'RN_MNEMONIC',
+      balanceVar: 'RN_BALANCE',
       mnemonic,
       balance,
     });
@@ -289,27 +281,22 @@ async function setupLegacyWallet(
 
   // iOS: Restore wallet from env vars (prepared by Android run)
   if (driver.isIOS) {
-    // Use passphrase-specific env vars if passphrase is provided
-    const mnemonic = passphrase ? IOS_RN_MNEMONIC_PASSPHRASE : IOS_RN_MNEMONIC;
-    const balance = passphrase ? IOS_RN_BALANCE_PASSPHRASE : IOS_RN_BALANCE;
-    const envVarPrefix = passphrase ? 'RN_MNEMONIC_PASSPHRASE/RN_BALANCE_PASSPHRASE' : 'RN_MNEMONIC/RN_BALANCE';
-
-    if (!mnemonic || !balance) {
+    if (!IOS_RN_MNEMONIC || !IOS_RN_BALANCE) {
       throw new Error(
-        `iOS migration tests require ${envVarPrefix} env vars. ` +
+        'iOS migration tests require RN_MNEMONIC and RN_BALANCE env vars. ' +
           'Run Android tests first to prepare the wallet.'
       );
     }
     console.info(`=== iOS: Restoring RN wallet from mnemonic (prepared by Android)${passphrase ? ' with passphrase' : ''} ===`);
-    console.info(`→ Mnemonic: ${mnemonic}`);
-    console.info(`→ Expected balance: ${balance} sats`);
+    console.info(`→ Mnemonic: ${IOS_RN_MNEMONIC}`);
+    console.info(`→ Expected balance: ${IOS_RN_BALANCE} sats`);
 
     // Install RN app and restore wallet
     await installLegacyRnApp();
-    await restoreRnWallet(mnemonic, { passphrase });
+    await restoreRnWallet(IOS_RN_MNEMONIC, { passphrase });
 
     console.info('=== iOS: RN wallet restored ===');
-    return { mnemonic, balance };
+    return { mnemonic: IOS_RN_MNEMONIC, balance: IOS_RN_BALANCE };
   }
 
   // Android: Full RN wallet setup
@@ -411,23 +398,21 @@ async function setupWalletWithLegacyFunds(
 ): Promise<LegacyWalletSetupResult> {
   const { returnSeed } = options;
   if (driver.isIOS) {
-    if (!IOS_RN_MNEMONIC_SWEEP || !IOS_RN_BALANCE_SWEEP) {
+    if (!IOS_RN_MNEMONIC || !IOS_RN_BALANCE) {
       throw new Error(
-        'iOS migration sweep tests require RN_MNEMONIC_SWEEP and RN_BALANCE_SWEEP env vars. ' +
+        'iOS migration tests require RN_MNEMONIC and RN_BALANCE env vars. ' +
           'Run Android setup first to prepare the wallet.'
       );
     }
     console.info('=== iOS: Restoring RN sweep wallet from mnemonic (prepared by Android) ===');
-    console.info(
-      `→ Mnemonic: ${IOS_RN_MNEMONIC_SWEEP.split(' ').slice(0, 3).join(' ')}...`
-    );
-    console.info(`→ Expected balance: ${IOS_RN_BALANCE_SWEEP} sats`);
+    console.info(`→ Mnemonic: ${IOS_RN_MNEMONIC}`);
+    console.info(`→ Expected balance: ${IOS_RN_BALANCE} sats`);
 
     await installLegacyRnApp();
-    await restoreRnWallet(IOS_RN_MNEMONIC_SWEEP);
+    await restoreRnWallet(IOS_RN_MNEMONIC);
 
     console.info('=== iOS: RN sweep wallet restored ===');
-    return { mnemonic: IOS_RN_MNEMONIC_SWEEP, balance: IOS_RN_BALANCE_SWEEP };
+    return { mnemonic: IOS_RN_MNEMONIC, balance: IOS_RN_BALANCE };
   }
 
   console.info('=== Setting up wallet with legacy funds (sweep scenario) ===');
