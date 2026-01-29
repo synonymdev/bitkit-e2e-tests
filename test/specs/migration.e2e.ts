@@ -68,6 +68,10 @@ const IOS_RN_MNEMONIC = stripQuotes(process.env.RN_MNEMONIC);
 const IOS_RN_BALANCE = process.env.RN_BALANCE
   ? parseInt(stripQuotes(process.env.RN_BALANCE)!, 10)
   : undefined;
+const IOS_RN_MNEMONIC_PASSPHRASE = stripQuotes(process.env.RN_MNEMONIC_PASSPHRASE);
+const IOS_RN_BALANCE_PASSPHRASE = process.env.RN_BALANCE_PASSPHRASE
+  ? parseInt(stripQuotes(process.env.RN_BALANCE_PASSPHRASE)!, 10)
+  : undefined;
 const IOS_RN_MNEMONIC_SWEEP = stripQuotes(process.env.RN_MNEMONIC_SWEEP);
 const IOS_RN_BALANCE_SWEEP = process.env.RN_BALANCE_SWEEP
   ? parseInt(stripQuotes(process.env.RN_BALANCE_SWEEP)!, 10)
@@ -102,6 +106,26 @@ describe('@migration - Migration from legacy RN app to native app', () => {
       fileName: 'migration_setup_standard.env',
       mnemonicVar: 'RN_MNEMONIC',
       balanceVar: 'RN_BALANCE',
+      mnemonic,
+      balance,
+    });
+  });
+
+  ciIt('@migration_setup_passphrase - Prepare legacy wallet with passphrase (Android only)', async () => {
+    if (driver.isIOS) {
+      throw new Error('Migration setup should run on Android only.');
+    }
+
+    const { mnemonic, balance } = await setupLegacyWallet({
+      returnSeed: true,
+      passphrase: TEST_PASSPHRASE,
+    });
+    console.info('→ Waiting 60 seconds to ensure backups triggered...');
+    await sleep(60000);
+    writeMigrationEnvFile({
+      fileName: 'migration_setup_passphrase.env',
+      mnemonicVar: 'RN_MNEMONIC_PASSPHRASE',
+      balanceVar: 'RN_BALANCE_PASSPHRASE',
       mnemonic,
       balance,
     });
@@ -265,22 +289,27 @@ async function setupLegacyWallet(
 
   // iOS: Restore wallet from env vars (prepared by Android run)
   if (driver.isIOS) {
-    if (!IOS_RN_MNEMONIC || !IOS_RN_BALANCE) {
+    // Use passphrase-specific env vars if passphrase is provided
+    const mnemonic = passphrase ? IOS_RN_MNEMONIC_PASSPHRASE : IOS_RN_MNEMONIC;
+    const balance = passphrase ? IOS_RN_BALANCE_PASSPHRASE : IOS_RN_BALANCE;
+    const envVarPrefix = passphrase ? 'RN_MNEMONIC_PASSPHRASE/RN_BALANCE_PASSPHRASE' : 'RN_MNEMONIC/RN_BALANCE';
+
+    if (!mnemonic || !balance) {
       throw new Error(
-        'iOS migration tests require RN_MNEMONIC and RN_BALANCE env vars. ' +
+        `iOS migration tests require ${envVarPrefix} env vars. ` +
           'Run Android tests first to prepare the wallet.'
       );
     }
-    console.info('=== iOS: Restoring RN wallet from mnemonic (prepared by Android) ===');
-    console.info(`→ Mnemonic: ${IOS_RN_MNEMONIC.split(' ').slice(0, 3).join(' ')}...`);
-    console.info(`→ Expected balance: ${IOS_RN_BALANCE} sats`);
+    console.info(`=== iOS: Restoring RN wallet from mnemonic (prepared by Android)${passphrase ? ' with passphrase' : ''} ===`);
+    console.info(`→ Mnemonic: ${mnemonic}`);
+    console.info(`→ Expected balance: ${balance} sats`);
 
     // Install RN app and restore wallet
     await installLegacyRnApp();
-    await restoreRnWallet(IOS_RN_MNEMONIC, { passphrase });
+    await restoreRnWallet(mnemonic, { passphrase });
 
     console.info('=== iOS: RN wallet restored ===');
-    return { mnemonic: IOS_RN_MNEMONIC, balance: IOS_RN_BALANCE };
+    return { mnemonic, balance };
   }
 
   // Android: Full RN wallet setup

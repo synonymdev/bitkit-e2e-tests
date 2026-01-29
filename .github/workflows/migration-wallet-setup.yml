@@ -13,7 +13,7 @@ on:
         type: string
         default: "v1.1.6"
       setup_type:
-        description: "Wallet setup type (standard | sweep)"
+        description: "Wallet setup type (standard | passphrase | sweep)"
         required: true
         type: string
       scenario_name:
@@ -72,6 +72,7 @@ jobs:
         working-directory: bitkit-e2e-tests
         run: |
           rm -f artifacts/migration_setup_standard.env
+          rm -f artifacts/migration_setup_passphrase.env
           rm -f artifacts/migration_setup_sweep.env
 
       - name: Prepare migration wallet 1
@@ -85,7 +86,7 @@ jobs:
           avd-name: Pixel_6
           force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-front none
-          script: cd bitkit-e2e-tests && ./ci_run_android.sh --mochaOpts.grep "${{ inputs.setup_type == 'sweep' && '@migration_setup_sweep' || '@migration_setup_standard' }}"
+          script: cd bitkit-e2e-tests && ./ci_run_android.sh --mochaOpts.grep "@migration_setup_${{ inputs.setup_type }}"
         env:
           BACKEND: regtest
 
@@ -101,7 +102,7 @@ jobs:
           avd-name: Pixel_6
           force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-front none
-          script: cd bitkit-e2e-tests && ./ci_run_android.sh --mochaOpts.grep "${{ inputs.setup_type == 'sweep' && '@migration_setup_sweep' || '@migration_setup_standard' }}"
+          script: cd bitkit-e2e-tests && ./ci_run_android.sh --mochaOpts.grep "@migration_setup_${{ inputs.setup_type }}"
         env:
           BACKEND: regtest
 
@@ -116,18 +117,14 @@ jobs:
           avd-name: Pixel_6
           force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-front none
-          script: cd bitkit-e2e-tests && ./ci_run_android.sh --mochaOpts.grep "${{ inputs.setup_type == 'sweep' && '@migration_setup_sweep' || '@migration_setup_standard' }}"
+          script: cd bitkit-e2e-tests && ./ci_run_android.sh --mochaOpts.grep "@migration_setup_${{ inputs.setup_type }}"
         env:
           BACKEND: regtest
 
       - name: Verify migration env file
         run: |
           set -euo pipefail
-          if [[ "${{ inputs.setup_type }}" == "sweep" ]]; then
-            test -f bitkit-e2e-tests/artifacts/migration_setup_sweep.env
-          else
-            test -f bitkit-e2e-tests/artifacts/migration_setup_standard.env
-          fi
+          test -f "bitkit-e2e-tests/artifacts/migration_setup_${{ inputs.setup_type }}.env"
 
       - name: Upload migration env file
         uses: actions/upload-artifact@v4
