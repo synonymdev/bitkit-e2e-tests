@@ -156,7 +156,6 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     let mnemonic: string | undefined;
     let balance: number;
     if (driver.isIOS) {
-      await installLegacyRnApp();
       mnemonic = IOS_RN_MNEMONIC!;
       balance = IOS_RN_BALANCE!;
     } else {
@@ -177,7 +176,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     await restoreWallet(mnemonic!, {
       reinstall: false,
       expectBackupSheet: driver.isAndroid,
-      expectBackGroundPaymentsSheet: false,
+      expectBackGroundPaymentsSheet: driver.isIOS,
     });
 
     // Verify migration
