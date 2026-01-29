@@ -91,8 +91,6 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     }
 
     const { mnemonic, balance } = await setupLegacyWallet({ returnSeed: true });
-    console.info('→ Waiting 60 seconds to ensure backups triggered...');
-    await sleep(60000);
     writeMigrationEnvFile({
       fileName: 'migration_setup_standard.env',
       mnemonicVar: 'RN_MNEMONIC',
@@ -100,6 +98,8 @@ describe('@migration - Migration from legacy RN app to native app', () => {
       mnemonic,
       balance,
     });
+    console.info('→ Waiting 20 seconds to ensure backups...');
+    await sleep(20000);
   });
 
   ciIt(
@@ -113,8 +113,6 @@ describe('@migration - Migration from legacy RN app to native app', () => {
         returnSeed: true,
         passphrase: TEST_PASSPHRASE,
       });
-      console.info('→ Waiting 60 seconds to ensure backups triggered...');
-      await sleep(60000);
       writeMigrationEnvFile({
         fileName: 'migration_setup_passphrase.env',
         mnemonicVar: 'RN_MNEMONIC',
@@ -122,6 +120,8 @@ describe('@migration - Migration from legacy RN app to native app', () => {
         mnemonic,
         balance,
       });
+      console.info('→ Waiting 20 seconds to ensure backups...');
+      await sleep(20000);
     }
   );
 
@@ -131,8 +131,6 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     }
 
     const { mnemonic, balance } = await setupWalletWithLegacyFunds({ returnSeed: true });
-    console.info('→ Waiting 60 seconds to ensure backups triggered...');
-    await sleep(60000);
     writeMigrationEnvFile({
       fileName: 'migration_setup_sweep.env',
       mnemonicVar: 'RN_MNEMONIC',
@@ -140,6 +138,8 @@ describe('@migration - Migration from legacy RN app to native app', () => {
       mnemonic,
       balance,
     });
+    console.info('→ Waiting 20 seconds to ensure backups...');
+    await sleep(20000);
   });
 
   ciIt('@migration_ios - setupLegacyWallet on iOS', async () => {
