@@ -62,8 +62,7 @@ const TEST_PASSPHRASE = 'supersecret';
 // iOS: Read mnemonic and balance from env vars (prepared by Android run)
 // This is needed because RN app on iOS has poor Appium support
 // Strip quotes if present (GITHUB_ENV format shouldn't have them, but be defensive)
-const stripQuotes = (s: string | undefined): string | undefined =>
-  s?.replace(/^["']|["']$/g, '');
+const stripQuotes = (s: string | undefined): string | undefined => s?.replace(/^["']|["']$/g, '');
 const IOS_RN_MNEMONIC = stripQuotes(process.env.RN_MNEMONIC);
 const IOS_RN_BALANCE = process.env.RN_BALANCE
   ? parseInt(stripQuotes(process.env.RN_BALANCE)!, 10)
@@ -103,25 +102,28 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     });
   });
 
-  ciIt('@migration_setup_passphrase - Prepare legacy wallet with passphrase (Android only)', async () => {
-    if (driver.isIOS) {
-      throw new Error('Migration setup should run on Android only.');
-    }
+  ciIt(
+    '@migration_setup_passphrase - Prepare legacy wallet with passphrase (Android only)',
+    async () => {
+      if (driver.isIOS) {
+        throw new Error('Migration setup should run on Android only.');
+      }
 
-    const { mnemonic, balance } = await setupLegacyWallet({
-      returnSeed: true,
-      passphrase: TEST_PASSPHRASE,
-    });
-    console.info('→ Waiting 60 seconds to ensure backups triggered...');
-    await sleep(60000);
-    writeMigrationEnvFile({
-      fileName: 'migration_setup_passphrase.env',
-      mnemonicVar: 'RN_MNEMONIC',
-      balanceVar: 'RN_BALANCE',
-      mnemonic,
-      balance,
-    });
-  });
+      const { mnemonic, balance } = await setupLegacyWallet({
+        returnSeed: true,
+        passphrase: TEST_PASSPHRASE,
+      });
+      console.info('→ Waiting 60 seconds to ensure backups triggered...');
+      await sleep(60000);
+      writeMigrationEnvFile({
+        fileName: 'migration_setup_passphrase.env',
+        mnemonicVar: 'RN_MNEMONIC',
+        balanceVar: 'RN_BALANCE',
+        mnemonic,
+        balance,
+      });
+    }
+  );
 
   ciIt('@migration_setup_sweep - Prepare legacy sweep wallet (Android only)', async () => {
     if (driver.isIOS) {
@@ -151,8 +153,15 @@ describe('@migration - Migration from legacy RN app to native app', () => {
   // Migration Scenario 1: Uninstall RN, install Native, restore mnemonic
   // --------------------------------------------------------------------------
   ciIt('@migration_1 - Uninstall RN, install Native, restore mnemonic', async () => {
-    // Setup wallet in RN app and get mnemonic
-    const { mnemonic, balance } = await setupLegacyWallet({ returnSeed: true });
+    let mnemonic: string | undefined;
+    let balance: number;
+    if (driver.isIOS) {
+      await installLegacyRnApp();
+      mnemonic = IOS_RN_MNEMONIC!;
+      balance = IOS_RN_BALANCE!;
+    } else {
+      ({ mnemonic, balance } = await setupLegacyWallet({ returnSeed: true }));
+    }
 
     // Uninstall RN app
     console.info('→ Removing legacy RN app...');
@@ -165,7 +174,11 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     await driver.activateApp(getAppId());
 
     // Restore wallet with mnemonic (uses custom flow to handle backup sheet)
-    await restoreWallet(mnemonic!, { reinstall: false, expectBackupSheet: true });
+    await restoreWallet(mnemonic!, {
+      reinstall: false,
+      expectBackupSheet: driver.isAndroid,
+      expectBackGroundPaymentsSheet: driver.isIOS,
+    });
 
     // Verify migration
     await verifyMigration(balance);
@@ -287,13 +300,19 @@ async function setupLegacyWallet(
           'Run Android tests first to prepare the wallet.'
       );
     }
-    console.info(`=== iOS: Restoring RN wallet from mnemonic (prepared by Android)${passphrase ? ' with passphrase' : ''} ===`);
+    console.info(
+      `=== iOS: Restoring RN wallet from mnemonic (prepared by Android)${passphrase ? ' with passphrase' : ''} ===`
+    );
     console.info(`→ Mnemonic: ${IOS_RN_MNEMONIC}`);
     console.info(`→ Expected balance: ${IOS_RN_BALANCE} sats`);
 
     // Install RN app and restore wallet
     await installLegacyRnApp();
-    await restoreRnWallet(IOS_RN_MNEMONIC, { passphrase });
+    if (passphrase) {
+      await restoreRnWallet(IOS_RN_MNEMONIC, { passphrase });
+    } else {
+      await restoreRnWallet(IOS_RN_MNEMONIC);
+    }
 
     console.info('=== iOS: RN wallet restored ===');
     return { mnemonic: IOS_RN_MNEMONIC, balance: IOS_RN_BALANCE };
