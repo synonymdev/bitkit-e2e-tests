@@ -485,7 +485,11 @@ async function handleMigrationFlow({ withSweep = false }): Promise<void> {
     await dismissBackupTimedSheet();
   } catch {
     console.info('→ Could not dismiss backup timed sheet, trying again...');
-    await dismissBackupTimedSheet({ triggerTimedSheet: true });
+    try {
+      await dismissBackupTimedSheet({ triggerTimedSheet: true });
+    } catch {
+      console.info('→ No backup timed sheet to dismiss, continuing...');
+    }
   }
 }
 
