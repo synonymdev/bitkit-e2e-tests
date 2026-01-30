@@ -176,7 +176,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     await restoreWallet(mnemonic!, {
       reinstall: false,
       expectBackupSheet: false,
-      expectBackGroundPaymentsSheet: driver.isIOS,
+      expectBackGroundPaymentsSheet: true,
     });
 
     // Verify migration
