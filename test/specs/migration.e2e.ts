@@ -175,7 +175,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     // Restore wallet with mnemonic (uses custom flow to handle backup sheet)
     await restoreWallet(mnemonic!, {
       reinstall: false,
-      expectBackupSheet: driver.isAndroid,
+      expectBackupSheet: false,
       expectBackGroundPaymentsSheet: driver.isIOS,
     });
 
