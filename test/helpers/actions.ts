@@ -606,7 +606,12 @@ export async function restoreWallet(
   }
 
   if (expectBackGroundPaymentsSheet) {
-    await dismissBackgroundPaymentsTimedSheet();
+    try { await dismissBackgroundPaymentsTimedSheet();} catch {
+      console.info('→ Could not dismiss background payments timed sheet, trying again...');
+      try { await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });} catch {
+        console.info('→ No background payments timed sheet to dismiss, continuing...');
+      }
+    }
   }
 
   // Wait for Suggestions Label to appear
