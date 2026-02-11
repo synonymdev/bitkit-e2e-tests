@@ -543,12 +543,14 @@ export async function restoreWallet(
     expectBackupSheet = false,
     expectBackGroundPaymentsSheet = false,
     reinstall = true,
+    expectAndroidAlert = true,
   }: {
     passphrase?: string;
     expectQuickPayTimedSheet?: boolean;
     expectBackupSheet?: boolean;
     expectBackGroundPaymentsSheet?: boolean;
     reinstall?: boolean;
+    expectAndroidAlert?: boolean;
   } = {}
 ) {
   console.info('→ Restoring wallet with seed:', seed);
@@ -595,7 +597,9 @@ export async function restoreWallet(
   await getStarted.waitForDisplayed({ timeout: 120000 });
   await tap('GetStartedButton');
   await sleep(1000);
-  await handleAndroidAlert();
+  if (expectAndroidAlert) {
+    await handleAndroidAlert();
+  }
 
   if (expectBackupSheet) {
     await dismissBackupTimedSheet();
@@ -606,9 +610,13 @@ export async function restoreWallet(
   }
 
   if (expectBackGroundPaymentsSheet) {
-    try { await dismissBackgroundPaymentsTimedSheet();} catch {
+    try {
+      await dismissBackgroundPaymentsTimedSheet();
+    } catch {
       console.info('→ Could not dismiss background payments timed sheet, trying again...');
-      try { await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });} catch {
+      try {
+        await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });
+      } catch {
         console.info('→ No background payments timed sheet to dismiss, continuing...');
       }
     }

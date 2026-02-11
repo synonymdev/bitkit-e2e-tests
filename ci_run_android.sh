@@ -27,12 +27,15 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-# regtest port
-adb reverse tcp:60001 tcp:60001
-# lnd port
-adb reverse tcp:9735 tcp:9735
-# lnurl port
-adb reverse tcp:30001 tcp:30001
+# local/regtest helper ports
+if [[ "${BACKEND:-local}" != "mainnet" ]]; then
+  # regtest electrum port
+  adb reverse tcp:60001 tcp:60001
+  # lnd port
+  adb reverse tcp:9735 tcp:9735
+  # lnurl server port
+  adb reverse tcp:30001 tcp:30001
+fi
 # show touches 
 adb shell settings put system show_touches 1
 

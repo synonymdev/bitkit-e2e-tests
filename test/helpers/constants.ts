@@ -1,6 +1,6 @@
 export const APP_ID = {
-  android: 'to.bitkit.dev',
-  ios: 'to.bitkit',
+  android: process.env.APP_ID_ANDROID ?? 'to.bitkit.dev',
+  ios: process.env.APP_ID_IOS ?? 'to.bitkit',
 };
 
 export function getAppId(): string {
@@ -21,19 +21,26 @@ export function getAppPath(): string {
 export const bitcoinURL =
   process.env.BITCOIN_RPC_URL ?? 'http://polaruser:polarpass@127.0.0.1:43782';
 
-export type Backend = 'local' | 'regtest';
+export type Backend = 'local' | 'regtest' | 'mainnet';
 
 export function getBackend(): Backend {
   const backend = process.env.BACKEND || 'local';
-  if (backend !== 'local' && backend !== 'regtest') {
-    throw new Error(`Invalid BACKEND: ${backend}. Expected 'local' or 'regtest'.`);
+  if (backend !== 'local' && backend !== 'regtest' && backend !== 'mainnet') {
+    throw new Error(`Invalid BACKEND: ${backend}. Expected 'local', 'regtest', or 'mainnet'.`);
   }
   return backend;
 }
 
 export const electrumHost =
-  getBackend() === 'regtest' ? 'electrs.bitkit.stag0.blocktank.to' : '127.0.0.1';
-export const electrumPort = getBackend() === 'regtest' ? 9999 : 60001;
+  getBackend() === 'regtest'
+    ? process.env.ELECTRUM_HOST ?? 'electrs.bitkit.stag0.blocktank.to'
+    : getBackend() === 'mainnet'
+      ? process.env.ELECTRUM_HOST ?? 'electrum.bitkit.to'
+      : process.env.ELECTRUM_HOST ?? '127.0.0.1';
+export const electrumPort = Number.parseInt(
+  process.env.ELECTRUM_PORT ?? (getBackend() === 'regtest' ? '9999' : getBackend() === 'mainnet' ? '50001' : '60001'),
+  10
+);
 
 // Blocktank API for regtest operations (deposit, mine blocks, pay invoices)
 export const blocktankURL =
