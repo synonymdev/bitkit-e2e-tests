@@ -6,7 +6,7 @@ Private orchestration (workflows, secrets, logs, artifacts) should live in `bitk
 
 ## Current smoke specs
 
-- `test/specs/mainnet.strike.e2e.ts` (active)
+- `test/specs/mainnet.ln.e2e.ts` (active)
 - `test/specs/mainnet.cjit.e2e.ts` (skipped placeholder for phase 2)
 
 ## Tag-driven selection
