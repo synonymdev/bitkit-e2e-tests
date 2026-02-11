@@ -12,6 +12,12 @@ import { bitcoinURL, blocktankURL, getBackend, type Backend } from './constants'
 
 export { getBackend, type Backend };
 
+function requireRegtestBackend(operation: string): void {
+  if (getBackend() !== 'regtest') {
+    throw new Error(`${operation} is only available with BACKEND=regtest`);
+  }
+}
+
 // Local backend (Bitcoin RPC)
 
 let _rpc: BitcoinJsonRpc | null = null;
@@ -44,6 +50,7 @@ async function localMineBlocks(count: number): Promise<void> {
 // Blocktank backend (regtest API over HTTPS)
 
 async function blocktankDeposit(address: string, amountSat?: number): Promise<string> {
+  requireRegtestBackend('deposit');
   const url = `${blocktankURL}/regtest/chain/deposit`;
   const body: { address: string; amountSat?: number } = { address };
   if (amountSat !== undefined) {
@@ -68,6 +75,7 @@ async function blocktankDeposit(address: string, amountSat?: number): Promise<st
 }
 
 async function blocktankMineBlocks(count: number): Promise<void> {
+  requireRegtestBackend('mineBlocks');
   const url = `${blocktankURL}/regtest/chain/mine`;
 
   console.info(`→ [blocktank] Mining ${count} block(s)...`);
@@ -86,6 +94,7 @@ async function blocktankMineBlocks(count: number): Promise<void> {
 }
 
 async function blocktankPayInvoice(invoice: string, amountSat?: number): Promise<string> {
+  requireRegtestBackend('payInvoice');
   const url = `${blocktankURL}/regtest/channel/pay`;
   const body: { invoice: string; amountSat?: number } = { invoice };
   if (amountSat !== undefined) {
@@ -165,6 +174,9 @@ export async function getExternalAddress(): Promise<string> {
     const rpc = getRpc();
     return rpc.getNewAddress();
   }
+  if (backend === 'mainnet') {
+    throw new Error('getExternalAddress() is not available with BACKEND=mainnet');
+  }
   return REGTEST_TEST_ADDRESS;
 }
 
@@ -188,13 +200,15 @@ export async function sendToAddress(
         ? (amountBtcOrSats / 100_000_000).toString()
         : amountBtcOrSats;
     return rpc.sendToAddress(address, btc);
-  } else {
+  }
+  if (backend === 'regtest') {
     const sats =
       typeof amountBtcOrSats === 'string'
         ? Math.round(parseFloat(amountBtcOrSats) * 100_000_000)
         : amountBtcOrSats;
     return blocktankDeposit(address, sats);
   }
+  throw new Error('sendToAddress() is not available with BACKEND=mainnet');
 }
 
 /**
@@ -209,9 +223,11 @@ export async function deposit(address: string, amountSat?: number): Promise<stri
   const backend = getBackend();
   if (backend === 'local') {
     return localDeposit(address, amountSat);
-  } else {
+  }
+  if (backend === 'regtest') {
     return blocktankDeposit(address, amountSat);
   }
+  throw new Error('deposit() is not available with BACKEND=mainnet');
 }
 
 /**
@@ -224,9 +240,11 @@ export async function mineBlocks(count: number = 1): Promise<void> {
   const backend = getBackend();
   if (backend === 'local') {
     return localMineBlocks(count);
-  } else {
+  }
+  if (backend === 'regtest') {
     return blocktankMineBlocks(count);
   }
+  throw new Error('mineBlocks() is not available with BACKEND=mainnet');
 }
 
 /**
@@ -239,8 +257,8 @@ export async function mineBlocks(count: number = 1): Promise<void> {
  */
 export async function payInvoice(invoice: string, amountSat?: number): Promise<string> {
   const backend = getBackend();
-  if (backend === 'local') {
-    throw new Error('payInvoice is only available with BACKEND=regtest (Blocktank API)');
+  if (backend !== 'regtest') {
+    throw new Error('payInvoice() is only available with BACKEND=regtest (Blocktank API)');
   }
   return blocktankPayInvoice(invoice, amountSat);
 }

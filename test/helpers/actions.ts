@@ -606,9 +606,13 @@ export async function restoreWallet(
   }
 
   if (expectBackGroundPaymentsSheet) {
-    try { await dismissBackgroundPaymentsTimedSheet();} catch {
+    try {
+      await dismissBackgroundPaymentsTimedSheet();
+    } catch {
       console.info('→ Could not dismiss background payments timed sheet, trying again...');
-      try { await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });} catch {
+      try {
+        await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });
+      } catch {
         console.info('→ No background payments timed sheet to dismiss, continuing...');
       }
     }
