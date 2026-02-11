@@ -311,6 +311,13 @@ export async function typeText(testId: string, text: string) {
   await el.setValue(text);
 }
 
+export async function enterAmount(amountSats: number) {
+  for (const digit of `${amountSats}`.split('')) {
+    await tap(`N${digit}`);
+    await sleep(150);
+  }
+}
+
 type Direction = 'left' | 'right' | 'up' | 'down';
 
 export async function swipeFullScreen(
@@ -448,7 +455,9 @@ export async function confirmInputOnKeyboard() {
   if (driver.isAndroid) {
     try {
       await driver.hideKeyboard();
-    } catch {}
+    } catch {
+      return;
+    }
   } else {
     for (const el of ['return', 'done', 'go']) {
       try {
