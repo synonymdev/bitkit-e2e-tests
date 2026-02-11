@@ -1,31 +1,43 @@
-# Mainnet nightly consumption
+# Nightly integration contract
 
-`bitkit-e2e-tests` is intentionally source-only for mainnet smoke coverage.
+`bitkit-e2e-tests` is the public source of test code.
+It should stay environment-agnostic and orchestration-agnostic.
 
-Private orchestration (workflows, secrets, logs, artifacts) should live in `bitkit-nightly`.
+The private companion repository (`bitkit-nightly`) is responsible for running these tests on schedules and with private configuration.
 
-## Current smoke specs
+## Repository responsibilities
 
-- `test/specs/mainnet.ln.e2e.ts` (active)
-- `test/specs/mainnet.cjit.e2e.ts` (skipped placeholder for phase 2)
+`bitkit-e2e-tests` owns:
 
-## Tag-driven selection
+- test specs and helper utilities
+- test tags used for selective execution
+- generic runtime contracts (required env vars, backend mode expectations, app artifact location)
 
-Private orchestration should prefer tag-based filtering over hardcoded single-spec execution.
-In `bitkit-nightly`, grep patterns are hardcoded in a matrix so test targets can be parallelized.
+`bitkit-nightly` owns:
 
-Recommended grep patterns:
+- workflows, schedules, retry policy, and runner setup
+- secrets, private receiver endpoints, and seed material
+- logs, screenshots, videos, and diagnostics retention
 
-- strike only: `@strike_mainnet`
-- cjit only: `@cjit_mainnet`
-- wos only: `@wos_mainnet`
+## Execution model
 
-## Mainnet execution contract
+- tests are selected by tags (for example via `--mochaOpts.grep`)
+- orchestration repo maps tags to matrix shards
+- each shard should run independently and be safe to retry
+- tests should not hardcode CI-only assumptions; those belong in workflow env config
 
-- set `BACKEND=mainnet`
-- provide `APP_ID_ANDROID=to.bitkit`
-- provide test-specific seed variables:
-  - `STRIKE_SEED`
-  - `WOS_SEED`
-  - `CJIT_SEED`
-- provide release APK at `aut/bitkit_e2e.apk` (or set `NATIVE_APK_PATH`)
+## Runtime interface between repos
+
+To execute native E2E tests from an external orchestrator:
+
+- set platform/backend env vars expected by WDIO and helpers
+- provide app artifact at `aut/bitkit_e2e.apk` (or `NATIVE_APK_PATH`)
+- provide all secrets required by the selected tag(s)
+- pass grep/tag filters via CLI args, not by editing spec files
+
+## Adding or changing nightly coverage
+
+1. Add/update spec(s) and tags in `bitkit-e2e-tests`.
+2. Keep secret names and environment contract explicit in spec validation.
+3. Update `bitkit-nightly` matrix/env wiring to include the new tags.
+4. Run a manual dispatch in `bitkit-nightly` before relying on schedule.
