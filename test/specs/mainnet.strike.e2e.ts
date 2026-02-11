@@ -28,9 +28,11 @@ describe('@strike_mainnet - Strike smoke', () => {
   ciIt('@strike_1 - Can pay Strike LN address', async () => {
     await restoreWallet(strikeSeed!, {
       expectBackupSheet: false,
+      reinstall: false,
+      expectAndroidAlert: false,
     });
 
-    await enterAddress(strikeLnAddress!, { acceptCameraPermission: true });
+    await enterAddress(strikeLnAddress!, { acceptCameraPermission: false });
 
     const digits = `${strikeAmountSats}`.split('');
     for (const digit of digits) {
