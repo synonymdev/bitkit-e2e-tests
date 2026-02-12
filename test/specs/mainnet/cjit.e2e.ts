@@ -6,8 +6,8 @@ import {
   restoreWallet,
   sleep,
   tap,
-} from '../helpers/actions';
-import { ciIt } from '../helpers/suite';
+} from '../../helpers/actions';
+import { ciIt } from '../../helpers/suite';
 
 const cjitSeed = process.env.CJIT_SEED;
 const expectedMinimumAmountSats = Number.parseInt(process.env.CJIT_MIN_EXPECTED_SATS ?? '1000', 10);
@@ -65,7 +65,7 @@ async function setupWallet(): Promise<void> {
     return;
   }
 
-  await completeOnboarding( { isFirstTime: false } );
+  await completeOnboarding({ isFirstTime: false });
 }
 
 describe('@cjit_mainnet - CJIT smoke', () => {
