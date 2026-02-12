@@ -7,6 +7,7 @@ import {
   sleep,
   tap,
 } from '../../helpers/actions';
+import { reinstallApp } from '../../helpers/setup';
 import { ciIt } from '../../helpers/suite';
 
 const cjitSeed = process.env.CJIT_SEED;
@@ -60,19 +61,20 @@ async function setupWallet(): Promise<void> {
     await restoreWallet(cjitSeed, {
       expectBackupSheet: false,
       reinstall: false,
-      expectAndroidAlert: false,
+      expectAndroidAlert: true,
     });
     return;
   }
 
-  await completeOnboarding({ isFirstTime: false });
+  await completeOnboarding({ isFirstTime: true });
 }
 
 describe('@cjit_mainnet - CJIT smoke', () => {
-  before(() => {
+  before(async () => {
     if (!Number.isInteger(expectedMinimumAmountSats) || expectedMinimumAmountSats <= 0) {
       throw new Error(`Invalid CJIT_MIN_EXPECTED_SATS value: ${process.env.CJIT_MIN_EXPECTED_SATS}`);
     }
+    await reinstallApp();
   });
 
   ciIt('@cjit_1 - Can create CJIT invoice', async () => {
@@ -113,3 +115,4 @@ describe('@cjit_mainnet - CJIT smoke', () => {
     await sleep(2000);
   });
 });
+
