@@ -5,8 +5,8 @@ import {
   enterAddress,
   restoreWallet,
   tap,
-} from '../helpers/actions';
-import { ciIt } from '../helpers/suite';
+} from '../../helpers/actions';
+import { ciIt } from '../../helpers/suite';
 
 type MainnetLnSuiteConfig = {
   suiteTag: string;
