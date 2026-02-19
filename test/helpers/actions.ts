@@ -639,71 +639,24 @@ export async function restoreWallet(
 type addressType = 'bitcoin' | 'lightning';
 export type addressTypePreference = 'p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh' | 'p2tr';
 
-export async function switchPrimaryAddressType(
-  nextType: addressTypePreference,
-  { closeToWallet = true }: { closeToWallet?: boolean } = {}
-) {
+async function assertAddressTypeSwitchFeedback() {
+  const loadingView = elementById('AddressTypeLoadingView');
+  await loadingView.waitForDisplayed({ timeout: 15_000 });
+  await loadingView.waitForDisplayed({
+    reverse: true,
+    timeout: 70_000,
+  });
+}
+
+export async function switchPrimaryAddressType(nextType: addressTypePreference) {
   await tap('HeaderMenu');
   await tap('DrawerSettings');
   await tap('AdvancedSettings');
   await tap('AddressTypePreference');
   await tap(nextType);
   await sleep(700);
-
-  const waitForWallet = async () =>
-    browser.waitUntil(async () => elementById('Receive').isDisplayed().catch(() => false), {
-      timeout: 60_000,
-      interval: 500,
-      timeoutMsg: 'Timed out waiting for wallet screen after switching address type',
-    });
-
-  try {
-    await waitForWallet();
-    return;
-  } catch {
-    // continue to explicit navigation fallback below
-  }
-
-  if (closeToWallet) {
-    try {
-      await doNavigationClose();
-      await waitForWallet();
-      return;
-    } catch {
-      for (let i = 0; i < 4; i++) {
-        await driver.back();
-        await sleep(400);
-        const isOnWallet = await elementById('Receive').isDisplayed().catch(() => false);
-        if (isOnWallet) {
-          return;
-        }
-      }
-
-      for (let i = 0; i < 4; i++) {
-        const hasNavBack = await elementById('NavigationBack')
-          .isDisplayed()
-          .catch(() => false);
-        if (!hasNavBack) {
-          break;
-        }
-        await tap('NavigationBack');
-        await sleep(400);
-        const isOnWallet = await elementById('Receive').isDisplayed().catch(() => false);
-        if (isOnWallet) {
-          return;
-        }
-      }
-
-      const hasHeaderMenu = await elementById('HeaderMenu').isDisplayed().catch(() => false);
-      if (hasHeaderMenu) {
-        await doNavigationClose();
-        await waitForWallet();
-        return;
-      }
-
-      throw new Error('Could not navigate back to wallet after switching address type');
-    }
-  }
+  await assertAddressTypeSwitchFeedback();
+  await elementById('Receive').waitForDisplayed();
 }
 
 export function assertAddressMatchesType(address: string, selectedType: addressTypePreference) {
