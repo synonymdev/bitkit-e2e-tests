@@ -2,6 +2,7 @@ import initElectrum from '../helpers/electrum';
 import { reinstallApp } from '../helpers/setup';
 import {
   completeOnboarding,
+  assertAddressMatchesType,
   dragOnElement,
   elementById,
   elementByIdWithin,
@@ -22,6 +23,7 @@ import {
   handleOver50PercentAlert,
   handleOver100Alert,
   acknowledgeReceivedPayment,
+  switchPrimaryAddressType,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
 import {
@@ -323,4 +325,68 @@ describe('@onchain - Onchain', () => {
     // await elementByText('OUTPUT').waitForDisplayed();
     // await elementByText('OUTPUT (2)').waitForDisplayed({ reverse: true });
   });
+
+  ciIt(
+    '@onchain_multi_address_1 - Receive to each address type and send max combined',
+    async () => {
+      const addressTypes: ('p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh' | 'p2tr')[] = [
+        'p2pkh',
+        'p2sh-p2wpkh',
+        'p2wpkh',
+        'p2tr',
+      ];
+      const satsPerAddressType = 100_000;
+      const expectedTotal = (addressTypes.length * satsPerAddressType)
+        .toString()
+        .replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+
+      for (let i = 0; i < addressTypes.length; i++) {
+        const addressType = addressTypes[i];
+        await switchPrimaryAddressType(addressType);
+        const address = await getReceiveAddress();
+        assertAddressMatchesType(address, addressType);
+        await swipeFullScreen('down');
+
+        await sendToAddress(address, satsPerAddressType);
+        try {
+          await acknowledgeReceivedPayment();
+        } catch {
+          // iOS may display this prompt only after confirmation/sync
+        }
+        await mineBlocks(1);
+        await electrum?.waitForSync();
+        try {
+          await acknowledgeReceivedPayment();
+        } catch {
+          // prompt may already be dismissed or not shown on this platform/build
+        }
+        await sleep(800);
+
+        if (i === 0) {
+          try {
+            await dismissBackupTimedSheet({ triggerTimedSheet: true });
+          } catch {
+            // backup sheet may already be dismissed depending on timing/platform
+          }
+        }
+      }
+
+      const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
+      await expect(totalBalance).toHaveText(expectedTotal);
+
+      const coreAddress = await getExternalAddress();
+      await enterAddress(coreAddress);
+      await tap('AvailableAmount');
+      await tap('ContinueAmount');
+      await dragOnElement('GRAB', 'right', 0.95);
+      await handleOver50PercentAlert();
+      await elementById('SendSuccess').waitForDisplayed();
+      await tap('Close');
+      await mineBlocks(1);
+      await electrum?.waitForSync();
+
+      const totalBalanceAfter = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
+      await expect(totalBalanceAfter).toHaveText('0');
+    }
+  );
 });

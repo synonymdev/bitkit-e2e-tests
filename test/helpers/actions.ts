@@ -637,6 +637,97 @@ export async function restoreWallet(
 }
 
 type addressType = 'bitcoin' | 'lightning';
+export type addressTypePreference = 'p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh' | 'p2tr';
+
+export async function switchPrimaryAddressType(
+  nextType: addressTypePreference,
+  { closeToWallet = true }: { closeToWallet?: boolean } = {}
+) {
+  await tap('HeaderMenu');
+  await tap('DrawerSettings');
+  await tap('AdvancedSettings');
+  await tap('AddressTypePreference');
+  await tap(nextType);
+  await sleep(700);
+
+  const waitForWallet = async () =>
+    browser.waitUntil(async () => elementById('Receive').isDisplayed().catch(() => false), {
+      timeout: 60_000,
+      interval: 500,
+      timeoutMsg: 'Timed out waiting for wallet screen after switching address type',
+    });
+
+  try {
+    await waitForWallet();
+    return;
+  } catch {
+    // continue to explicit navigation fallback below
+  }
+
+  if (closeToWallet) {
+    try {
+      await doNavigationClose();
+      await waitForWallet();
+      return;
+    } catch {
+      for (let i = 0; i < 4; i++) {
+        await driver.back();
+        await sleep(400);
+        const isOnWallet = await elementById('Receive').isDisplayed().catch(() => false);
+        if (isOnWallet) {
+          return;
+        }
+      }
+
+      for (let i = 0; i < 4; i++) {
+        const hasNavBack = await elementById('NavigationBack')
+          .isDisplayed()
+          .catch(() => false);
+        if (!hasNavBack) {
+          break;
+        }
+        await tap('NavigationBack');
+        await sleep(400);
+        const isOnWallet = await elementById('Receive').isDisplayed().catch(() => false);
+        if (isOnWallet) {
+          return;
+        }
+      }
+
+      const hasHeaderMenu = await elementById('HeaderMenu').isDisplayed().catch(() => false);
+      if (hasHeaderMenu) {
+        await doNavigationClose();
+        await waitForWallet();
+        return;
+      }
+
+      throw new Error('Could not navigate back to wallet after switching address type');
+    }
+  }
+}
+
+export function assertAddressMatchesType(address: string, selectedType: addressTypePreference) {
+  const lower = address.toLowerCase();
+  const matches = (() => {
+    switch (selectedType) {
+      case 'p2pkh':
+        return lower.startsWith('m') || lower.startsWith('n');
+      case 'p2sh-p2wpkh':
+        return lower.startsWith('2');
+      case 'p2wpkh':
+        return lower.startsWith('bcrt1q');
+      case 'p2tr':
+        return lower.startsWith('bcrt1p');
+      default:
+        return false;
+    }
+  })();
+
+  if (!matches) {
+    throw new Error(`Address ${address} does not match selected address type ${selectedType}`);
+  }
+}
+
 export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise<string> {
   await tap('Receive');
   await sleep(500);
