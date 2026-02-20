@@ -738,6 +738,135 @@ export async function switchAndFundEachAddressType({
   };
 }
 
+export async function transferSavingsToSpending({
+  amountSats,
+  waitForSync,
+  mineAttempts = 10,
+}: {
+  amountSats?: number;
+  waitForSync?: () => Promise<void>;
+  mineAttempts?: number;
+} = {}) {
+  try {
+    await elementById('ActivitySavings').waitForDisplayed({ timeout: 5_000 });
+  } catch {
+    await swipeFullScreen('down');
+    await elementById('ActivitySavings').waitForDisplayed({ timeout: 10_000 });
+  }
+
+  await tap('ActivitySavings');
+  await elementById('TransferToSpending').waitForDisplayed({ timeout: 15_000 });
+  await tap('TransferToSpending');
+  await sleep(800);
+
+  const hasSpendingIntro = await elementById('SpendingIntro-button').isDisplayed().catch(() => false);
+  if (hasSpendingIntro) {
+    await tap('SpendingIntro-button');
+    await sleep(800);
+  }
+
+  if (typeof amountSats === 'number') {
+    for (const digit of String(amountSats)) {
+      await tap(`N${digit}`);
+    }
+  } else {
+    await tap('SpendingAmountMax');
+  }
+
+  await elementById('SpendingAmountContinue').waitForEnabled({ timeout: 20_000 });
+  await tap('SpendingAmountContinue');
+  await sleep(1000);
+  await elementById('GRAB').waitForDisplayed({ timeout: 90_000 });
+  await dragOnElement('GRAB', 'right', 0.95);
+  await sleep(1500);
+
+  if (driver.isAndroid) {
+    await handleAndroidAlert().catch(() => undefined);
+  }
+
+  for (let i = 0; i < mineAttempts; i++) {
+    const transferSuccessVisible = await elementById('TransferSuccess-button')
+      .isDisplayed()
+      .catch(() => false);
+    if (transferSuccessVisible) {
+      break;
+    }
+    await mineBlocks(1);
+    if (waitForSync) {
+      await waitForSync();
+    }
+  }
+
+  await elementById('TransferSuccess-button').waitForDisplayed({ timeout: 20_000 });
+  await tap('TransferSuccess-button');
+  if (waitForSync) {
+    await waitForSync();
+  }
+  await sleep(1000);
+}
+
+export async function transferSpendingToSavingsAndCloseChannel({
+  waitForSync,
+  blocksToMineAfterClose = 6,
+}: {
+  waitForSync?: () => Promise<void>;
+  blocksToMineAfterClose?: number;
+} = {}) {
+  await doNavigationClose().catch(() => undefined);
+
+  let hasSpendingActivity = false;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    hasSpendingActivity = await elementById('ActivitySpending')
+      .isDisplayed()
+      .catch(() => false);
+    if (hasSpendingActivity) {
+      break;
+    }
+    await swipeFullScreen('up');
+  }
+  if (!hasSpendingActivity) {
+    throw new Error('ActivitySpending not found on home screen');
+  }
+
+  await tap('ActivitySpending');
+  const hasTransferToSavingsById = await elementById('TransferToSavings')
+    .isDisplayed()
+    .catch(() => false);
+  if (hasTransferToSavingsById) {
+    await tap('TransferToSavings');
+  } else {
+    await elementByText('Transfer to savings').waitForDisplayed({ timeout: 20_000 });
+    await elementByText('Transfer to savings').click();
+  }
+  await sleep(800);
+
+  const hasSavingsIntro = await elementById('SavingsIntro-button').isDisplayed().catch(() => false);
+  if (hasSavingsIntro) {
+    await tap('SavingsIntro-button');
+    await sleep(800);
+  }
+
+  const hasAvailabilityContinue = await elementById('AvailabilityContinue')
+    .isDisplayed()
+    .catch(() => false);
+  if (hasAvailabilityContinue) {
+    await tap('AvailabilityContinue');
+    await sleep(800);
+  }
+
+  await dragOnElement('GRAB', 'right', 0.95);
+  await elementById('TransferSuccess-button').waitForDisplayed({ timeout: 120_000 });
+  await tap('TransferSuccess-button');
+
+  if (blocksToMineAfterClose > 0) {
+    await mineBlocks(blocksToMineAfterClose);
+  }
+  if (waitForSync) {
+    await waitForSync();
+  }
+  await sleep(1000);
+}
+
 export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise<string> {
   await tap('Receive');
   await sleep(500);
