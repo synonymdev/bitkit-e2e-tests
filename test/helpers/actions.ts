@@ -1,6 +1,6 @@
 import type { ChainablePromiseElement } from 'webdriverio';
 import { reinstallApp } from './setup';
-import { deposit, mineBlocks } from './regtest';
+import { deposit, mineBlocks, sendToAddress } from './regtest';
 
 export const sleep = (ms: number) => browser.pause(ms);
 
@@ -679,6 +679,63 @@ export function assertAddressMatchesType(address: string, selectedType: addressT
   if (!matches) {
     throw new Error(`Address ${address} does not match selected address type ${selectedType}`);
   }
+}
+
+export async function switchAndFundEachAddressType({
+  addressTypes = ['p2pkh', 'p2sh-p2wpkh', 'p2wpkh', 'p2tr'],
+  satsPerAddressType = 100_000,
+  waitForSync,
+  dismissBackupAfterFirstFunding = true,
+}: {
+  addressTypes?: addressTypePreference[];
+  satsPerAddressType?: number;
+  waitForSync?: () => Promise<void>;
+  dismissBackupAfterFirstFunding?: boolean;
+} = {}): Promise<{
+  fundedAddresses: { type: addressTypePreference; address: string }[];
+  totalFundedSats: number;
+}> {
+  const fundedAddresses: { type: addressTypePreference; address: string }[] = [];
+
+  for (let i = 0; i < addressTypes.length; i++) {
+    const addressType = addressTypes[i];
+    await switchPrimaryAddressType(addressType);
+    const address = await getReceiveAddress();
+    assertAddressMatchesType(address, addressType);
+    await swipeFullScreen('down');
+
+    await sendToAddress(address, satsPerAddressType);
+    try {
+      await acknowledgeReceivedPayment();
+    } catch {
+      // iOS may display this prompt only after confirmation/sync
+    }
+    await mineBlocks(1);
+    if (waitForSync) {
+      await waitForSync();
+    }
+    try {
+      await acknowledgeReceivedPayment();
+    } catch {
+      // prompt may already be dismissed or not shown on this platform/build
+    }
+    await sleep(800);
+
+    fundedAddresses.push({ type: addressType, address });
+
+    if (dismissBackupAfterFirstFunding && i === 0) {
+      try {
+        await dismissBackupTimedSheet({ triggerTimedSheet: true });
+      } catch {
+        // backup sheet may already be dismissed depending on timing/platform
+      }
+    }
+  }
+
+  return {
+    fundedAddresses,
+    totalFundedSats: addressTypes.length * satsPerAddressType,
+  };
 }
 
 export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise<string> {
