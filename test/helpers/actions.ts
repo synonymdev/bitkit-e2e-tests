@@ -1,6 +1,6 @@
 import type { ChainablePromiseElement } from 'webdriverio';
 import { reinstallApp } from './setup';
-import { deposit, mineBlocks, sendToAddress } from './regtest';
+import { deposit, mineBlocks } from './regtest';
 
 export const sleep = (ms: number) => browser.pause(ms);
 
@@ -639,13 +639,45 @@ export async function restoreWallet(
 type addressType = 'bitcoin' | 'lightning';
 export type addressTypePreference = 'p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh' | 'p2tr';
 
+export async function waitForAnyText(texts: string[], timeout: number) {
+  await browser.waitUntil(
+    async () => {
+      for (const text of texts) {
+        if (await elementByText(text, 'contains').isDisplayed().catch(() => false)) {
+          return true;
+        }
+      }
+      return false;
+    },
+    {
+      timeout,
+      interval: 250,
+      timeoutMsg: `Timed out waiting for one of texts: ${texts.join(', ')}`,
+    }
+  );
+}
+
+export async function waitForTextToDisappear(texts: string[], timeout: number) {
+  await browser.waitUntil(
+    async () => {
+      for (const text of texts) {
+        if (await elementByText(text, 'contains').isDisplayed().catch(() => false)) {
+          return false;
+        }
+      }
+      return true;
+    },
+    {
+      timeout,
+      interval: 250,
+      timeoutMsg: `Timed out waiting for texts to disappear: ${texts.join(', ')}`,
+    }
+  );
+}
+
 async function assertAddressTypeSwitchFeedback() {
-  const loadingView = elementById('AddressTypeLoadingView');
-  await loadingView.waitForDisplayed({ timeout: 15_000 });
-  await loadingView.waitForDisplayed({
-    reverse: true,
-    timeout: 70_000,
-  });
+  await waitForToast('AddressTypeApplyingToast', { dismiss: false });
+  await waitForToast('AddressTypeSettingsUpdatedToast');
 }
 
 export async function switchPrimaryAddressType(nextType: addressTypePreference) {
@@ -654,9 +686,13 @@ export async function switchPrimaryAddressType(nextType: addressTypePreference) 
   await tap('AdvancedSettings');
   await tap('AddressTypePreference');
   await tap(nextType);
-  await sleep(700);
   await assertAddressTypeSwitchFeedback();
-  await elementById('Receive').waitForDisplayed();
+  await doNavigationClose().catch(async () => {
+    await driver.back();
+    await sleep(500);
+    await doNavigationClose();
+  });
+  await elementById('Receive').waitForDisplayed({ timeout: 60_000 });
 }
 
 export function assertAddressMatchesType(address: string, selectedType: addressTypePreference) {
@@ -704,22 +740,29 @@ export async function switchAndFundEachAddressType({
     assertAddressMatchesType(address, addressType);
     await swipeFullScreen('down');
 
-    await sendToAddress(address, satsPerAddressType);
+    await deposit(address, satsPerAddressType);
+    let didAcknowledgeReceivedPayment = false;
     try {
       await acknowledgeReceivedPayment();
+      didAcknowledgeReceivedPayment = true;
     } catch {
-      // iOS may display this prompt only after confirmation/sync
+      // may already be auto-confirmed on some app versions
     }
     await mineBlocks(1);
     if (waitForSync) {
       await waitForSync();
     }
-    try {
-      await acknowledgeReceivedPayment();
-    } catch {
-      // prompt may already be dismissed or not shown on this platform/build
+    if (!didAcknowledgeReceivedPayment) {
+      try {
+        await acknowledgeReceivedPayment();
+      } catch {
+        console.info(
+          '→ Could not acknowledge received payment, probably already confirmed see: synonymdev/bitkit-ios#455, synonymdev/bitkit-android#797...'
+        );
+      }
     }
-    await sleep(800);
+    const moneyText = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
+    await expect(moneyText).toHaveText(formatSats(satsPerAddressType * (i + 1)));
 
     fundedAddresses.push({ type: addressType, address });
 
@@ -963,6 +1006,10 @@ export async function fundOnchainWallet({
   }
 }
 
+function formatSats(sats: number): string {
+  return sats.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
 /**
  * Receives onchain funds and verifies the balance.
  * Uses local Bitcoin RPC or Blocktank API based on BACKEND env var.
@@ -976,8 +1023,7 @@ export async function receiveOnchainFunds({
   blocksToMine?: number;
   expectHighBalanceWarning?: boolean;
 } = {}) {
-  // format sats with spaces every 3 digits
-  const formattedSats = sats.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  const formattedSats = formatSats(sats);
 
   // receive some first
   const address = await getReceiveAddress();
@@ -998,6 +1044,8 @@ export async function receiveOnchainFunds({
 }
 
 export type ToastId =
+  | 'AddressTypeApplyingToast'
+  | 'AddressTypeSettingsUpdatedToast'
   | 'BoostSuccessToast'
   | 'BoostFailureToast'
   | 'LnurlPayAmountTooLowToast'
@@ -1034,8 +1082,8 @@ export async function waitForToast(
 
 /** Acknowledges the received payment notification by tapping the button.
  */
-export async function acknowledgeReceivedPayment() {
-  await elementById('ReceivedTransaction').waitForDisplayed();
+export async function acknowledgeReceivedPayment( { timeout = 20_000 }: { timeout?: number } = {}) {
+  await elementById('ReceivedTransaction').waitForDisplayed({ timeout });
   await sleep(500);
   await tap('ReceivedTransactionButton');
   await sleep(300);
