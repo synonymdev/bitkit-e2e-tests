@@ -1,6 +1,7 @@
 import initElectrum from '../helpers/electrum';
 import { reinstallApp } from '../helpers/setup';
 import {
+  assertAddressMatchesType,
   completeOnboarding,
   dragOnElement,
   elementById,
@@ -23,6 +24,8 @@ import {
   handleOver100Alert,
   acknowledgeReceivedPayment,
   switchAndFundEachAddressType,
+  transferSavingsToSpending,
+  transferSpendingToSavingsAndCloseChannel,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
 import {
@@ -362,6 +365,67 @@ describe('@onchain - Onchain', () => {
 
       const totalBalanceAfter = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
       await expect(totalBalanceAfter).toHaveText('0');
+    }
+  );
+
+  ciIt(
+    '@onchain_multi_address_2 - Receive to each address type, transfer all to spending, close channel to taproot',
+    async () => {
+      const addressTypes: ('p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh' | 'p2tr')[] = [
+        'p2pkh',
+        'p2sh-p2wpkh',
+        'p2wpkh',
+        'p2tr',
+      ];
+      const satsPerAddressType = 25_000;
+      await switchAndFundEachAddressType({
+        addressTypes,
+        satsPerAddressType,
+        waitForSync: async () => {
+          await electrum?.waitForSync();
+        },
+      });
+
+      // Last funded type is Taproot, keep it as primary for channel open/close.
+      const taprootAddressBeforeClose = await getReceiveAddress();
+      assertAddressMatchesType(taprootAddressBeforeClose, 'p2tr');
+      await swipeFullScreen('down');
+
+      await transferSavingsToSpending({
+        waitForSync: async () => {
+          await electrum?.waitForSync();
+        },
+      });
+
+      // Wait for spending balance to become available before cooperative close.
+      let spendingReady = false;
+      for (let i = 0; i < 12; i++) {
+        const spendingBalanceText = await (
+          await elementByIdWithin('ActivitySpending', 'MoneyText')
+        ).getText();
+        const spendingSats = Number(spendingBalanceText.replace(/[^\d]/g, ''));
+        if (spendingSats > 0) {
+          spendingReady = true;
+          break;
+        }
+        await mineBlocks(1);
+        await electrum?.waitForSync();
+        await sleep(1200);
+      }
+      expect(spendingReady).toBe(true);
+
+      await transferSpendingToSavingsAndCloseChannel({
+        waitForSync: async () => {
+          await electrum?.waitForSync();
+        },
+      });
+
+      const totalBalanceAfterClose = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
+      await expect(totalBalanceAfterClose).not.toHaveText('0');
+
+      const taprootAddressAfterClose = await getReceiveAddress();
+      assertAddressMatchesType(taprootAddressAfterClose, 'p2tr');
+      await swipeFullScreen('down');
     }
   );
 });
