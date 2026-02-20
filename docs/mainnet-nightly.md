@@ -31,7 +31,7 @@ The private companion repository (`bitkit-nightly`) is responsible for running t
 To execute native E2E tests from an external orchestrator:
 
 - set platform/backend env vars expected by WDIO and helpers
-- provide app artifact at `aut/bitkit_e2e.apk` (or `NATIVE_APK_PATH`)
+- provide app artifact in `aut/` — default `bitkit_e2e.apk` (Android) / `Bitkit.app` (iOS). Override with `AUT_FILENAME` (e.g. `bitkit_rn_regtest.apk`)
 - provide all secrets required by the selected tag(s)
 - pass grep/tag filters via CLI args, not by editing spec files
 

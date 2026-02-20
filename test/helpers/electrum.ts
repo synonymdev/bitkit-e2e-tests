@@ -29,6 +29,7 @@ const noopElectrum: ElectrumClient = {
     // For regtest backend, we just wait a bit for the app to sync with remote Electrum
     console.info('→ [regtest] Waiting for app to sync with remote Electrum...');
     await sleep(2000);
+    console.info('→ [regtest] App synced with remote Electrum');
   },
   stop: async () => {
     // Nothing to stop for regtest

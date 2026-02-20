@@ -637,6 +637,279 @@ export async function restoreWallet(
 }
 
 type addressType = 'bitcoin' | 'lightning';
+export type addressTypePreference = 'p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh' | 'p2tr';
+
+export async function waitForAnyText(texts: string[], timeout: number) {
+  await browser.waitUntil(
+    async () => {
+      for (const text of texts) {
+        if (await elementByText(text, 'contains').isDisplayed().catch(() => false)) {
+          return true;
+        }
+      }
+      return false;
+    },
+    {
+      timeout,
+      interval: 250,
+      timeoutMsg: `Timed out waiting for one of texts: ${texts.join(', ')}`,
+    }
+  );
+}
+
+export async function waitForTextToDisappear(texts: string[], timeout: number) {
+  await browser.waitUntil(
+    async () => {
+      for (const text of texts) {
+        if (await elementByText(text, 'contains').isDisplayed().catch(() => false)) {
+          return false;
+        }
+      }
+      return true;
+    },
+    {
+      timeout,
+      interval: 250,
+      timeoutMsg: `Timed out waiting for texts to disappear: ${texts.join(', ')}`,
+    }
+  );
+}
+
+async function assertAddressTypeSwitchFeedback() {
+  await waitForToast('AddressTypeApplyingToast', { dismiss: false });
+  await waitForToast('AddressTypeSettingsUpdatedToast');
+}
+
+export async function switchPrimaryAddressType(nextType: addressTypePreference) {
+  await tap('HeaderMenu');
+  await tap('DrawerSettings');
+  await tap('AdvancedSettings');
+  await tap('AddressTypePreference');
+  await tap(nextType);
+  await assertAddressTypeSwitchFeedback();
+  await doNavigationClose().catch(async () => {
+    await driver.back();
+    await sleep(500);
+    await doNavigationClose();
+  });
+  await elementById('Receive').waitForDisplayed({ timeout: 60_000 });
+}
+
+export function assertAddressMatchesType(address: string, selectedType: addressTypePreference) {
+  const lower = address.toLowerCase();
+  const matches = (() => {
+    switch (selectedType) {
+      case 'p2pkh':
+        return lower.startsWith('m') || lower.startsWith('n');
+      case 'p2sh-p2wpkh':
+        return lower.startsWith('2');
+      case 'p2wpkh':
+        return lower.startsWith('bcrt1q');
+      case 'p2tr':
+        return lower.startsWith('bcrt1p');
+      default:
+        return false;
+    }
+  })();
+
+  if (!matches) {
+    throw new Error(`Address ${address} does not match selected address type ${selectedType}`);
+  }
+}
+
+export async function switchAndFundEachAddressType({
+  addressTypes = ['p2pkh', 'p2sh-p2wpkh', 'p2wpkh', 'p2tr'],
+  satsPerAddressType = 100_000,
+  waitForSync,
+  dismissBackupAfterFirstFunding = true,
+}: {
+  addressTypes?: addressTypePreference[];
+  satsPerAddressType?: number;
+  waitForSync?: () => Promise<void>;
+  dismissBackupAfterFirstFunding?: boolean;
+} = {}): Promise<{
+  fundedAddresses: { type: addressTypePreference; address: string }[];
+  totalFundedSats: number;
+}> {
+  const fundedAddresses: { type: addressTypePreference; address: string }[] = [];
+
+  for (let i = 0; i < addressTypes.length; i++) {
+    const addressType = addressTypes[i];
+    await switchPrimaryAddressType(addressType);
+    const address = await getReceiveAddress();
+    assertAddressMatchesType(address, addressType);
+    await swipeFullScreen('down');
+
+    await deposit(address, satsPerAddressType);
+    let didAcknowledgeReceivedPayment = false;
+    try {
+      await acknowledgeReceivedPayment();
+      didAcknowledgeReceivedPayment = true;
+    } catch {
+      // may already be auto-confirmed on some app versions
+    }
+    await mineBlocks(1);
+    if (waitForSync) {
+      await waitForSync();
+    }
+    if (!didAcknowledgeReceivedPayment) {
+      try {
+        await acknowledgeReceivedPayment();
+      } catch {
+        console.info(
+          '→ Could not acknowledge received payment, probably already confirmed see: synonymdev/bitkit-ios#455, synonymdev/bitkit-android#797...'
+        );
+      }
+    }
+    const moneyText = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
+    await expect(moneyText).toHaveText(formatSats(satsPerAddressType * (i + 1)));
+
+    fundedAddresses.push({ type: addressType, address });
+
+    if (dismissBackupAfterFirstFunding && i === 0) {
+      try {
+        await dismissBackupTimedSheet({ triggerTimedSheet: true });
+      } catch {
+        // backup sheet may already be dismissed depending on timing/platform
+      }
+    }
+  }
+
+  return {
+    fundedAddresses,
+    totalFundedSats: addressTypes.length * satsPerAddressType,
+  };
+}
+
+export async function transferSavingsToSpending({
+  amountSats,
+  waitForSync,
+  mineAttempts = 10,
+}: {
+  amountSats?: number;
+  waitForSync?: () => Promise<void>;
+  mineAttempts?: number;
+} = {}) {
+  try {
+    await elementById('ActivitySavings').waitForDisplayed({ timeout: 5_000 });
+  } catch {
+    await swipeFullScreen('down');
+    await elementById('ActivitySavings').waitForDisplayed({ timeout: 10_000 });
+  }
+
+  await tap('ActivitySavings');
+  await elementById('TransferToSpending').waitForDisplayed({ timeout: 15_000 });
+  await tap('TransferToSpending');
+  await sleep(800);
+
+  const hasSpendingIntro = await elementById('SpendingIntro-button').isDisplayed().catch(() => false);
+  if (hasSpendingIntro) {
+    await tap('SpendingIntro-button');
+    await sleep(800);
+  }
+
+  if (typeof amountSats === 'number') {
+    for (const digit of String(amountSats)) {
+      await tap(`N${digit}`);
+    }
+  } else {
+    await tap('SpendingAmountMax');
+  }
+
+  await elementById('SpendingAmountContinue').waitForEnabled({ timeout: 20_000 });
+  await tap('SpendingAmountContinue');
+  await sleep(1000);
+  await elementById('GRAB').waitForDisplayed({ timeout: 90_000 });
+  await dragOnElement('GRAB', 'right', 0.95);
+  await sleep(1500);
+
+  if (driver.isAndroid) {
+    await handleAndroidAlert().catch(() => undefined);
+  }
+
+  for (let i = 0; i < mineAttempts; i++) {
+    const transferSuccessVisible = await elementById('TransferSuccess-button')
+      .isDisplayed()
+      .catch(() => false);
+    if (transferSuccessVisible) {
+      break;
+    }
+    await mineBlocks(1);
+    if (waitForSync) {
+      await waitForSync();
+    }
+  }
+
+  await elementById('TransferSuccess-button').waitForDisplayed({ timeout: 20_000 });
+  await tap('TransferSuccess-button');
+  if (waitForSync) {
+    await waitForSync();
+  }
+  await sleep(1000);
+}
+
+export async function transferSpendingToSavingsAndCloseChannel({
+  waitForSync,
+  blocksToMineAfterClose = 6,
+}: {
+  waitForSync?: () => Promise<void>;
+  blocksToMineAfterClose?: number;
+} = {}) {
+  await doNavigationClose().catch(() => undefined);
+
+  let hasSpendingActivity = false;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    hasSpendingActivity = await elementById('ActivitySpending')
+      .isDisplayed()
+      .catch(() => false);
+    if (hasSpendingActivity) {
+      break;
+    }
+    await swipeFullScreen('up');
+  }
+  if (!hasSpendingActivity) {
+    throw new Error('ActivitySpending not found on home screen');
+  }
+
+  await tap('ActivitySpending');
+  const hasTransferToSavingsById = await elementById('TransferToSavings')
+    .isDisplayed()
+    .catch(() => false);
+  if (hasTransferToSavingsById) {
+    await tap('TransferToSavings');
+  } else {
+    await elementByText('Transfer to savings').waitForDisplayed({ timeout: 20_000 });
+    await elementByText('Transfer to savings').click();
+  }
+  await sleep(800);
+
+  const hasSavingsIntro = await elementById('SavingsIntro-button').isDisplayed().catch(() => false);
+  if (hasSavingsIntro) {
+    await tap('SavingsIntro-button');
+    await sleep(800);
+  }
+
+  const hasAvailabilityContinue = await elementById('AvailabilityContinue')
+    .isDisplayed()
+    .catch(() => false);
+  if (hasAvailabilityContinue) {
+    await tap('AvailabilityContinue');
+    await sleep(800);
+  }
+
+  await dragOnElement('GRAB', 'right', 0.95);
+  await elementById('TransferSuccess-button').waitForDisplayed({ timeout: 120_000 });
+  await tap('TransferSuccess-button');
+
+  if (blocksToMineAfterClose > 0) {
+    await mineBlocks(blocksToMineAfterClose);
+  }
+  if (waitForSync) {
+    await waitForSync();
+  }
+  await sleep(1000);
+}
+
 export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise<string> {
   await tap('Receive');
   await sleep(500);
@@ -733,6 +1006,10 @@ export async function fundOnchainWallet({
   }
 }
 
+function formatSats(sats: number): string {
+  return sats.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
 /**
  * Receives onchain funds and verifies the balance.
  * Uses local Bitcoin RPC or Blocktank API based on BACKEND env var.
@@ -746,8 +1023,7 @@ export async function receiveOnchainFunds({
   blocksToMine?: number;
   expectHighBalanceWarning?: boolean;
 } = {}) {
-  // format sats with spaces every 3 digits
-  const formattedSats = sats.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  const formattedSats = formatSats(sats);
 
   // receive some first
   const address = await getReceiveAddress();
@@ -768,6 +1044,8 @@ export async function receiveOnchainFunds({
 }
 
 export type ToastId =
+  | 'AddressTypeApplyingToast'
+  | 'AddressTypeSettingsUpdatedToast'
   | 'BoostSuccessToast'
   | 'BoostFailureToast'
   | 'LnurlPayAmountTooLowToast'
@@ -804,8 +1082,8 @@ export async function waitForToast(
 
 /** Acknowledges the received payment notification by tapping the button.
  */
-export async function acknowledgeReceivedPayment() {
-  await elementById('ReceivedTransaction').waitForDisplayed();
+export async function acknowledgeReceivedPayment( { timeout = 20_000 }: { timeout?: number } = {}) {
+  await elementById('ReceivedTransaction').waitForDisplayed({ timeout });
   await sleep(500);
   await tap('ReceivedTransactionButton');
   await sleep(300);
