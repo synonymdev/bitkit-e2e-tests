@@ -352,7 +352,7 @@ async function setupLegacyWallet(
 
   // 3. Transfer to spending (create channel via Blocktank)
   console.info('→ Step 3: Creating spending balance (channel)...');
-  await transferToSpending(TRANSFER_TO_SPENDING_SATS);
+  await transferToSpendingRN(TRANSFER_TO_SPENDING_SATS);
 
   // Get final balance before migration
   const balance = await getRnTotalBalance();
@@ -796,7 +796,7 @@ async function sendRnOnchain(
 /**
  * Transfer savings to spending balance (create channel via Blocktank)
  */
-async function transferToSpending(sats: number, existingBalance = 0): Promise<void> {
+async function transferToSpendingRN(sats: number, existingBalance = 0): Promise<void> {
   // Navigate via ActivitySavings -> TransferToSpending
   // ActivitySavings should be visible near the top of the wallet screen
   try {

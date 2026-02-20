@@ -37,12 +37,11 @@ export function getRnAppPath(): string {
 }
 
 export function getNativeAppPath(): string {
-  const appFileName = driver.isIOS ? 'bitkit.app' : 'bitkit_e2e.apk';
-  const fallback = path.join(__dirname, '..', '..', 'aut', appFileName);
-  const appPath = process.env.NATIVE_APK_PATH ?? fallback;
+  const appFileName = process.env.AUT_FILENAME ?? (driver.isIOS ? 'Bitkit.app' : 'bitkit_e2e.apk');
+  const appPath = path.join(__dirname, '..', '..', 'aut', appFileName);
   if (!fs.existsSync(appPath)) {
     throw new Error(
-      `Native APK not found at: ${appPath}. Set NATIVE_APK_PATH or place it at ${fallback}`
+      `Native app not found at: ${appPath}. Set AUT_FILENAME or place it at aut/${appFileName}`
     );
   }
   return appPath;
