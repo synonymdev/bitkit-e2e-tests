@@ -35,7 +35,7 @@ npm install
 
 ```
 artifacts/              # screenshots and (optionally) videos of failed tests
-aut/                    # Place your .apk / .ipa files here
+aut/                    # Place your .apk / .app files here (default: bitkit_e2e.apk, Bitkit.app)
 docker/                 # docker compose regtest based backend for Bitkit wallet
 test/
   ├── specs/            # Test suites (e.g., onboarding.e2e.ts)
@@ -95,6 +95,8 @@ BACKEND=regtest ./scripts/build-ios-sim.sh
 
 > ⚠️ **The `BACKEND` must match how the app was built.** If the app connects to remote electrum, use `BACKEND=regtest`. If it connects to localhost, use `BACKEND=local`.
 
+**App override:** By default tests use `aut/bitkit_e2e.apk` (Android) and `aut/Bitkit.app` (iOS). Set `AUT_FILENAME` to use a different file in `aut/` (e.g. `AUT_FILENAME=bitkit_rn_regtest.apk`)
+
 ```bash
 # Run all tests on Android (local backend - default)
 npm run e2e:android
@@ -120,6 +122,12 @@ To run a **specific test case**:
 
 ```bash
 npm run e2e:android -- --mochaOpts.grep "Can pass onboarding correctly"
+```
+
+To run against a **different app** in `aut/`:
+
+```bash
+AUT_FILENAME=bitkit_rn_regtest.apk npm run e2e:android
 ```
 
 ---
