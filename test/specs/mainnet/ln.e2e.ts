@@ -5,6 +5,7 @@ import {
   enterAddress,
   restoreWallet,
   tap,
+  sleep,
 } from '../../helpers/actions';
 import { ciIt } from '../../helpers/suite';
 
@@ -57,6 +58,8 @@ async function sendPaymentToLnAddress(receiver: MainnetLnReceiver): Promise<void
     reinstall: false,
     expectAndroidAlert: false,
   });
+
+  await sleep(15_000); // wait for wallet to stabilize
 
   await enterAddress(receiver.lnAddress, { acceptCameraPermission: false });
   await enterAmount(receiver.amountSats);
