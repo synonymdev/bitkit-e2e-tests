@@ -51,9 +51,9 @@ jobs:
       - name: Capture initial tip height
         run: |
           MEMPOOL_API="${MEMPOOL_SERVER%/}/api/blocks/tip/height"
-          TIP_BEFORE=$(curl -sS "${MEMPOOL_API}" | tr -dc '0-9')
-          if [[ -z "${TIP_BEFORE}" ]]; then
-            echo "Failed to obtain initial block height" >&2
+          TIP_BEFORE=$(curl -sSf "${MEMPOOL_API}")
+          if [[ -z "${TIP_BEFORE}" ]] || ! [[ "${TIP_BEFORE}" =~ ^[0-9]+$ ]]; then
+            echo "Failed to obtain initial block height (got: ${TIP_BEFORE})" >&2
             exit 1
           fi
           echo "Initial tip height: ${TIP_BEFORE}"
@@ -74,8 +74,8 @@ jobs:
           END=$((SECONDS + 10))
           LAST_TIP=""
           while (( SECONDS < END )); do
-            TIP_AFTER=$(curl -sS "${MEMPOOL_API}" | tr -dc '0-9')
-            if [[ -n "${TIP_AFTER}" ]]; then
+            TIP_AFTER=$(curl -sSf "${MEMPOOL_API}" 2>/dev/null)
+            if [[ "${TIP_AFTER}" =~ ^[0-9]+$ ]]; then
               LAST_TIP="${TIP_AFTER}"
               if (( TIP_AFTER >= EXPECTED )); then
                 echo "New tip height: ${TIP_AFTER}"
@@ -83,7 +83,7 @@ jobs:
                 exit 0
               fi
             else
-              echo "Failed to read tip height, retrying..."
+              echo "Failed to read tip height (got: ${TIP_AFTER:-empty}), retrying..."
             fi
             sleep 1
           done
