@@ -224,8 +224,12 @@ export async function expectTextWithin(
   }
 }
 
-export async function expectNoTextWithin(ancestorId: string, text: string) {
-  await expectTextWithin(ancestorId, text, { visible: false, strategy: 'exact' });
+export async function expectNoTextWithin(
+  ancestorId: string,
+  text: string,
+  { timeout = 30_000 }: { timeout?: number } = {}
+) {
+  await expectTextWithin(ancestorId, text, { visible: false, strategy: 'exact', timeout });
 }
 
 type Index = number | 'first' | 'last';
@@ -784,11 +788,9 @@ export async function switchAndFundEachAddressType({
 export async function transferSavingsToSpending({
   amountSats,
   waitForSync,
-  mineAttempts = 10,
 }: {
   amountSats?: number;
   waitForSync?: () => Promise<void>;
-  mineAttempts?: number;
 } = {}) {
   try {
     await elementById('ActivitySavings').waitForDisplayed({ timeout: 5_000 });
@@ -808,6 +810,8 @@ export async function transferSavingsToSpending({
     await sleep(800);
   }
 
+  await elementById('SpendingAmountContinue').waitForEnabled();
+
   if (typeof amountSats === 'number') {
     for (const digit of String(amountSats)) {
       await tap(`N${digit}`);
@@ -816,36 +820,57 @@ export async function transferSavingsToSpending({
     await tap('SpendingAmountMax');
   }
 
-  await elementById('SpendingAmountContinue').waitForEnabled({ timeout: 20_000 });
+  await elementById('SpendingAmountContinue').waitForEnabled();
   await tap('SpendingAmountContinue');
   await sleep(1000);
-  await elementById('GRAB').waitForDisplayed({ timeout: 90_000 });
+  await elementById('GRAB').waitForDisplayed();
   await dragOnElement('GRAB', 'right', 0.95);
   await sleep(1500);
 
-  if (driver.isAndroid) {
-    await handleAndroidAlert().catch(() => undefined);
-  }
-
-  for (let i = 0; i < mineAttempts; i++) {
-    const transferSuccessVisible = await elementById('TransferSuccess-button')
-      .isDisplayed()
-      .catch(() => false);
-    if (transferSuccessVisible) {
-      break;
-    }
-    await mineBlocks(1);
-    if (waitForSync) {
-      await waitForSync();
-    }
-  }
-
-  await elementById('TransferSuccess-button').waitForDisplayed({ timeout: 20_000 });
-  await tap('TransferSuccess-button');
+  await mineBlocks(1);
   if (waitForSync) {
     await waitForSync();
   }
-  await sleep(1000);
+  await elementById('TransferSuccess-button').waitForDisplayed();
+  await tap('TransferSuccess-button');
+
+  // if (driver.isIOS) {
+  //   await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });
+  //   await dismissQuickPayIntro({ triggerTimedSheet: true });
+  // } else {
+  //   await dismissQuickPayIntro({ triggerTimedSheet: true });
+  // }
+
+  await waitForToast('SpendingBalanceReadyToast', { timeout: 60_000 });
+
+  // verify transfer activity on savings
+  // see : https://github.com/synonymdev/bitkit-ios/issues/464
+  if (driver.isAndroid) {
+    await tap('ActivitySavings');
+    await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
+    await expectTextWithin('Activity-1', '-');
+    await tap('NavigationBack');
+  }
+
+  // for (let i = 0; i < mineAttempts; i++) {
+  //   const transferSuccessVisible = await elementById('TransferSuccess-button')
+  //     .isDisplayed()
+  //     .catch(() => false);
+  //   if (transferSuccessVisible) {
+  //     break;
+  //   }
+  //   await mineBlocks(1);
+  //   if (waitForSync) {
+  //     await waitForSync();
+  //   }
+  // }
+
+  // await elementById('TransferSuccess-button').waitForDisplayed({ timeout: 20_000 });
+  // await tap('TransferSuccess-button');
+  // if (waitForSync) {
+  //   await waitForSync();
+  // }
+  // await sleep(1000);
 }
 
 export async function transferSpendingToSavingsAndCloseChannel({
@@ -1068,9 +1093,9 @@ export type ToastId =
 
 export async function waitForToast(
   toastId: ToastId,
-  { waitToDisappear = false, dismiss = true } = {}
+  { waitToDisappear = false, dismiss = true , timeout = 30_000 }: { waitToDisappear?: boolean; dismiss?: boolean; timeout?: number } = {}
 ) {
-  await elementById(toastId).waitForDisplayed();
+  await elementById(toastId).waitForDisplayed({ timeout });
   if (waitToDisappear) {
     await elementById(toastId).waitForDisplayed({ reverse: true });
     return;
