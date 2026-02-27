@@ -5,6 +5,11 @@ const isAndroid = process.env.PLATFORM === 'android';
 const iosDeviceName = process.env.SIMULATOR_NAME || 'iPhone 17';
 const iosPlatformVersion = process.env.SIMULATOR_OS_VERSION || '26.0.1';
 
+const autDir = path.join(__dirname, 'aut');
+const autFilename = process.env.AUT_FILENAME;
+const androidApp = path.join(autDir, autFilename || 'bitkit_e2e.apk');
+const iosApp = path.join(autDir, autFilename || 'Bitkit.app');
+
 export const config: WebdriverIO.Config = {
   //
   // ====================
@@ -66,7 +71,7 @@ export const config: WebdriverIO.Config = {
           'appium:automationName': 'UiAutomator2',
           'appium:deviceName': 'Pixel_6',
           'appium:platformVersion': '13.0',
-          'appium:app': path.join(__dirname, 'aut', 'bitkit_e2e.apk'),
+          'appium:app': androidApp,
           'appium:autoGrantPermissions': true,
           // 'appium:waitForIdleTimeout': 1000,
         }
@@ -76,7 +81,7 @@ export const config: WebdriverIO.Config = {
           'appium:udid': process.env.SIMULATOR_UDID || 'auto',
           'appium:deviceName': iosDeviceName,
           ...(iosPlatformVersion ? { 'appium:platformVersion': iosPlatformVersion } : {}),
-          'appium:app': path.join(__dirname, 'aut', 'Bitkit.app'),
+          'appium:app': iosApp,
           'appium:autoGrantPermissions': true,
           'appium:autoAcceptAlerts': false,
           // 'appium:fullReset': true,
