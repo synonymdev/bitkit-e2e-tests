@@ -831,6 +831,7 @@ export async function transferSavingsToSpending({
   if (waitForSync) {
     await waitForSync();
   }
+  await mineBlocks(1);
   await elementById('TransferSuccess-button').waitForDisplayed();
   await tap('TransferSuccess-button');
 
