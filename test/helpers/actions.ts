@@ -269,6 +269,32 @@ export async function getTextUnder(containerId: string, index: Index = 'last'): 
   return el.getText();
 }
 
+export async function getAmountUnder(containerId: string, index: Index = 'last'): Promise<number> {
+  const text = await getTextUnder(containerId, index);
+  const digits = text.replace(/[^\d]/g, '');
+  if (!digits) {
+    throw new Error(`No numeric value found under container "${containerId}"`);
+  }
+  return Number(digits);
+}
+
+export async function getSavingsBalance(): Promise<number> {
+  return await getAmountUnder('ActivitySavings');
+}
+
+export async function getSpendingBalance(): Promise<number> {
+  return await getAmountUnder('ActivitySpending');
+}
+
+export async function getTotalBalance(): Promise<number> {
+  const totalText = await (await elementByIdWithin('TotalBalance-primary', 'MoneyText')).getText();
+  const digits = totalText.replace(/[^\d]/g, '');
+  if (!digits) {
+    throw new Error('No numeric value found in TotalBalance-primary/MoneyText');
+  }
+  return Number(digits);
+}
+
 export async function tap(testId: string) {
   const el = await elementById(testId);
   await el.waitForDisplayed();
@@ -800,7 +826,7 @@ export async function transferSavingsToSpending({
   }
 
   await tap('ActivitySavings');
-  await elementById('TransferToSpending').waitForDisplayed({ timeout: 15_000 });
+  await elementById('TransferToSpending').waitForDisplayed();
   await tap('TransferToSpending');
   await sleep(800);
 
@@ -831,18 +857,25 @@ export async function transferSavingsToSpending({
   if (waitForSync) {
     await waitForSync();
   }
-  await mineBlocks(1);
+  for (let i = 0; i < 10; i++) {
+    try {
+      await elementById('TransferSuccess').waitForDisplayed();
+      break;
+    } catch {
+      console.info('→ TransferSuccess not found, waiting...');
+      await mineBlocks(1);
+    }
+  }
+  await elementById('TransferSuccess').waitForDisplayed();
   await elementById('TransferSuccess-button').waitForDisplayed();
   await tap('TransferSuccess-button');
 
-  // if (driver.isIOS) {
-  //   await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });
-  //   await dismissQuickPayIntro({ triggerTimedSheet: true });
-  // } else {
-  //   await dismissQuickPayIntro({ triggerTimedSheet: true });
+  // try {
+  //   console.info('→ Waiting for SpendingBalanceReadyToast...');
+  //   await waitForToast('SpendingBalanceReadyToast');
+  // } catch {
+  //   console.info('→ SpendingBalanceReadyToast not found, continuing...');
   // }
-
-  await waitForToast('SpendingBalanceReadyToast', { timeout: 60_000 });
 
   // verify transfer activity on savings
   // see : https://github.com/synonymdev/bitkit-ios/issues/464
@@ -851,89 +884,48 @@ export async function transferSavingsToSpending({
     await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
     await expectTextWithin('Activity-1', '-');
     await tap('NavigationBack');
+
+    await dismissQuickPayIntro({ triggerTimedSheet: true });
+  } else {
+    await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: false });
+    await dismissQuickPayIntro({ triggerTimedSheet: true });
   }
-
-  // for (let i = 0; i < mineAttempts; i++) {
-  //   const transferSuccessVisible = await elementById('TransferSuccess-button')
-  //     .isDisplayed()
-  //     .catch(() => false);
-  //   if (transferSuccessVisible) {
-  //     break;
-  //   }
-  //   await mineBlocks(1);
-  //   if (waitForSync) {
-  //     await waitForSync();
-  //   }
-  // }
-
-  // await elementById('TransferSuccess-button').waitForDisplayed({ timeout: 20_000 });
-  // await tap('TransferSuccess-button');
-  // if (waitForSync) {
-  //   await waitForSync();
-  // }
-  // await sleep(1000);
+  await sleep(2000);
 }
 
-export async function transferSpendingToSavingsAndCloseChannel({
-  waitForSync,
-  blocksToMineAfterClose = 6,
-}: {
-  waitForSync?: () => Promise<void>;
-  blocksToMineAfterClose?: number;
-} = {}) {
-  await doNavigationClose().catch(() => undefined);
-
-  let hasSpendingActivity = false;
-  for (let attempt = 0; attempt < 4; attempt++) {
-    hasSpendingActivity = await elementById('ActivitySpending')
-      .isDisplayed()
-      .catch(() => false);
-    if (hasSpendingActivity) {
-      break;
-    }
-    await swipeFullScreen('up');
-  }
-  if (!hasSpendingActivity) {
-    throw new Error('ActivitySpending not found on home screen');
-  }
+export async function transferSpendingToSavings() {
 
   await tap('ActivitySpending');
-  const hasTransferToSavingsById = await elementById('TransferToSavings')
-    .isDisplayed()
-    .catch(() => false);
-  if (hasTransferToSavingsById) {
-    await tap('TransferToSavings');
-  } else {
-    await elementByText('Transfer to savings').waitForDisplayed({ timeout: 20_000 });
-    await elementByText('Transfer to savings').click();
-  }
+  await tap('TransferToSavings');
   await sleep(800);
-
-  const hasSavingsIntro = await elementById('SavingsIntro-button').isDisplayed().catch(() => false);
-  if (hasSavingsIntro) {
-    await tap('SavingsIntro-button');
-    await sleep(800);
-  }
-
-  const hasAvailabilityContinue = await elementById('AvailabilityContinue')
-    .isDisplayed()
-    .catch(() => false);
-  if (hasAvailabilityContinue) {
-    await tap('AvailabilityContinue');
-    await sleep(800);
-  }
-
+  await tap('SavingsIntro-button');
+  await tap('AvailabilityContinue');
+  await sleep(1000);
   await dragOnElement('GRAB', 'right', 0.95);
-  await elementById('TransferSuccess-button').waitForDisplayed({ timeout: 120_000 });
+  await elementById('TransferSuccess-button').waitForDisplayed();
   await tap('TransferSuccess-button');
 
-  if (blocksToMineAfterClose > 0) {
-    await mineBlocks(blocksToMineAfterClose);
+  if (driver.isAndroid) {
+    await doNavigationClose();
   }
-  if (waitForSync) {
-    await waitForSync();
-  }
-  await sleep(1000);
+
+  const balanceSettleTimeoutMs = 90_000;
+  await browser.waitUntil(
+    async () => {
+      const spendingBalance = await getSpendingBalance();
+      const savingsBalance = await getSavingsBalance();
+      return spendingBalance === 0 && savingsBalance > 0;
+    },
+    {
+      timeout: balanceSettleTimeoutMs,
+      interval: 2_000,
+      timeoutMsg: `Timed out after ${balanceSettleTimeoutMs}ms waiting for spending=0 and savings>0`,
+    }
+  );
+
+  await expect(await getSpendingBalance()).toEqual(0);
+  await expect(await getSavingsBalance()).toBeGreaterThan(0);
+  await expect(await getTotalBalance()).toEqual(await getSavingsBalance());
 }
 
 export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise<string> {
@@ -1032,7 +1024,7 @@ export async function fundOnchainWallet({
   }
 }
 
-function formatSats(sats: number): string {
+export function formatSats(sats: number): string {
   return sats.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 

@@ -5,17 +5,23 @@ import {
   completeOnboarding,
   dragOnElement,
   elementById,
-  elementByIdWithin,
   enterAddress,
   getReceiveAddress,
   handleOver50PercentAlert,
-  sleep,
   switchAndFundEachAddressType,
   swipeFullScreen,
   tap,
   transferSavingsToSpending,
-  transferSpendingToSavingsAndCloseChannel,
+  transferSpendingToSavings,
   type addressTypePreference,
+  getSpendingBalance,
+  getSavingsBalance,
+  getTotalBalance,
+  attemptRefreshOnHomeScreen,
+  expectText,
+  formatSats,
+  elementByText,
+  sleep,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
 import { ensureLocalFunds, getExternalAddress, mineBlocks } from '../helpers/regtest';
@@ -48,10 +54,13 @@ describe('@multi_address - Multi address', () => {
         await electrum?.waitForSync();
       },
     });
-    const expectedTotal = totalFundedSats.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
-    const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
-    await expect(totalBalance).toHaveText(expectedTotal);
+    const totalBalance = await getTotalBalance();
+    const savingsBalance = await getSavingsBalance();
+    const spendingBalance = await getSpendingBalance();
+    await expect(savingsBalance).toEqual(totalFundedSats);
+    await expect(spendingBalance).toEqual(0);
+    await expect(totalBalance).toEqual(totalFundedSats);
 
     const coreAddress = await getExternalAddress();
     await enterAddress(coreAddress);
@@ -64,14 +73,19 @@ describe('@multi_address - Multi address', () => {
     await mineBlocks(1);
     await electrum?.waitForSync();
 
-    const totalBalanceAfter = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
-    await expect(totalBalanceAfter).toHaveText('0');
+    const totalBalanceAfter = await getTotalBalance();
+    const savingsBalanceAfter = await getSavingsBalance();
+    const spendingBalanceAfter = await getSpendingBalance();
+    await expect(totalBalanceAfter).toEqual(0);
+    await expect(savingsBalanceAfter).toEqual(0);
+    await expect(spendingBalanceAfter).toEqual(0);
   });
 
   ciIt(
     '@multi_address_2 - Receive to each address type, transfer all to spending, close channel to taproot',
     async () => {
       const addressTypes: addressTypePreference[] = ['p2pkh', 'p2sh-p2wpkh', 'p2wpkh', 'p2tr'];
+      // const addressTypes: addressTypePreference[] = ['p2tr'];
       const satsPerAddressType = 25_000;
       await switchAndFundEachAddressType({
         addressTypes,
@@ -86,7 +100,7 @@ describe('@multi_address - Multi address', () => {
       assertAddressMatchesType(taprootAddressBeforeClose, 'p2tr');
       await swipeFullScreen('down');
       await swipeFullScreen('down');
-      
+
       await mineBlocks(1);
       await electrum?.waitForSync();
 
@@ -95,36 +109,41 @@ describe('@multi_address - Multi address', () => {
           await electrum?.waitForSync();
         },
       });
+      await expect(await getSpendingBalance()).toBeGreaterThan(0);
+      await expect(await getSavingsBalance()).toEqual(0);
 
-      // // Wait for spending balance to become available before cooperative close.
-      // let spendingReady = false;
-      // for (let i = 0; i < 12; i++) {
-      //   const spendingBalanceText = await (
-      //     await elementByIdWithin('ActivitySpending', 'MoneyText')
-      //   ).getText();
-      //   const spendingSats = Number(spendingBalanceText.replace(/[^\d]/g, ''));
-      //   if (spendingSats > 0) {
-      //     spendingReady = true;
-      //     break;
-      //   }
-      //   await mineBlocks(1);
-      //   await electrum?.waitForSync();
-      //   await sleep(1200);
-      // }
-      // expect(spendingReady).toBe(true);
+      if (driver.isAndroid) {
+        // pull to refresh due to:
+        // https://github.com/synonymdev/bitkit-android/issues/810
+        await attemptRefreshOnHomeScreen();
+        await attemptRefreshOnHomeScreen();
+      }
 
-      // await transferSpendingToSavingsAndCloseChannel({
-      //   waitForSync: async () => {
-      //     await electrum?.waitForSync();
-      //   },
-      // });
+      await transferSpendingToSavings();
 
-      // const totalBalanceAfterClose = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
-      // await expect(totalBalanceAfterClose).not.toHaveText('0');
+      await mineBlocks(1);
+      await electrum?.waitForSync();
+      const totalBalanceAfter = await getTotalBalance();
+      const spendingBalanceAfter = await getSpendingBalance();
+      const savingsBalanceAfter = await getSavingsBalance();
+      await expect(totalBalanceAfter).toEqual(savingsBalanceAfter + spendingBalanceAfter);
+      await expect(spendingBalanceAfter).toEqual(0);
+      await expect(savingsBalanceAfter).toBeGreaterThan(0);
 
-      // const taprootAddressAfterClose = await getReceiveAddress();
-      // assertAddressMatchesType(taprootAddressAfterClose, 'p2tr');
-      // await swipeFullScreen('down');
+      const taprootAddressAfterClose = await getReceiveAddress();
+      assertAddressMatchesType(taprootAddressAfterClose, 'p2tr');
+      await swipeFullScreen('down');
+
+      // check in address viewer all savings are in taproot address
+      await tap('HeaderMenu');
+      await tap('DrawerSettings');
+      await sleep(1000);
+      await tap('AdvancedSettings');
+      await sleep(1000);
+      await tap('AddressViewer');
+      await sleep(1000);
+      await elementByText('Taproot').click();
+      await expectText(formatSats(savingsBalanceAfter));
     }
   );
 });
