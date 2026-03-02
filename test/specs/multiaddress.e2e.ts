@@ -1,6 +1,7 @@
 import initElectrum from '../helpers/electrum';
 import { reinstallApp } from '../helpers/setup';
 import {
+  acknowledgeExternalSuccess,
   assertAddressMatchesType,
   completeOnboarding,
   doNavigationClose,
@@ -28,12 +29,23 @@ import {
   sleep,
   waitForToast,
   enterAmount,
+  dismissQuickPayIntro,
+  dismissBackgroundPaymentsTimedSheet,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
-import { ensureLocalFunds, getExternalAddress, mineBlocks } from '../helpers/regtest';
+import {
+  checkChannelStatus,
+  connectToLND,
+  getLDKNodeID,
+  setupLND,
+  waitForPeerConnection,
+} from '../helpers/lnd';
+import { lndConfig } from '../helpers/constants';
+import { ensureLocalFunds, getBitcoinRpc, getExternalAddress, mineBlocks } from '../helpers/regtest';
 
 describe('@multi_address - Multi address', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
+  const rpc = getBitcoinRpc();
 
   before(async () => {
     await ensureLocalFunds();
@@ -88,7 +100,7 @@ describe('@multi_address - Multi address', () => {
   });
 
   ciIt(
-    '@multi_address_2 - Receive to each address type, transfer all to spending, close channel to taproot',
+    '@multi_address_2, @regtest_only - Receive to each address type, transfer all to spending, close channel to taproot',
     async () => {
       const addressTypes: addressTypePreference[] = ['p2pkh', 'p2sh-p2wpkh', 'p2wpkh', 'p2tr'];
       // const addressTypes: addressTypePreference[] = ['p2tr'];
@@ -224,4 +236,55 @@ describe('@multi_address - Multi address', () => {
     await elementByText('Change Addresses').click();
     await expectText(formatSats(remainingTotal));
   });
+
+  ciIt(
+    '@multi_address_4 - Receive to each type, open external channel with max, keep Legacy untouched',
+    async () => {
+      const addressTypes: addressTypePreference[] = ['p2pkh', 'p2sh-p2wpkh', 'p2wpkh', 'p2tr'];
+      const satsPerAddressType = 25_000;
+      await switchAndFundEachAddressType({
+        addressTypes,
+        satsPerAddressType,
+        waitForSync: async () => {
+          await electrum?.waitForSync();
+        },
+      });
+
+      const { lnd, lndNodeID } = await setupLND(rpc, lndConfig);
+      await electrum?.waitForSync();
+      const ldkNodeId = await getLDKNodeID();
+      await connectToLND(lndNodeID, { navigationClose: false });
+      await waitForPeerConnection(lnd, ldkNodeId);
+
+      const channelSize = 70_000;
+      await tap('ExternalAmountMax');
+      // await enterAmount(channelSize);
+      await tap('ExternalAmountContinue');
+      await sleep(1000);
+      await dragOnElement('GRAB', 'right', 0.95);
+      await acknowledgeExternalSuccess();
+
+      await mineBlocks(6);
+      await electrum?.waitForSync();
+      await waitForToast('SpendingBalanceReadyToast');
+      if (driver.isIOS) {
+        await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });
+        await dismissQuickPayIntro({ triggerTimedSheet: true })
+      } else {
+        await dismissQuickPayIntro({ triggerTimedSheet: true });
+      }
+      await checkChannelStatus({ size: formatSats(channelSize) });
+
+      await tap('HeaderMenu');
+      await tap('DrawerSettings');
+      await sleep(1000);
+      await tap('AdvancedSettings');
+      await sleep(1000);
+      await tap('AddressViewer');
+      await sleep(1000);
+      await elementByText('Legacy').click();
+      await expectText(formatSats(satsPerAddressType));
+      await doNavigationClose();
+    }
+  );
 });

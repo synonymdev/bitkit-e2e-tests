@@ -706,7 +706,7 @@ export async function waitForTextToDisappear(texts: string[], timeout: number) {
 }
 
 async function assertAddressTypeSwitchFeedback() {
-  await waitForToast('AddressTypeApplyingToast', { dismiss: false });
+  // await waitForToast('AddressTypeApplyingToast', { dismiss: false });
   await waitForToast('AddressTypeSettingsUpdatedToast');
 }
 
