@@ -3,9 +3,13 @@ import { reinstallApp } from '../helpers/setup';
 import {
   assertAddressMatchesType,
   completeOnboarding,
+  doNavigationClose,
   dragOnElement,
   elementById,
+  elementByIdWithin,
   enterAddress,
+  expectTextWithin,
+  getTextUnder,
   getReceiveAddress,
   handleOver50PercentAlert,
   switchAndFundEachAddressType,
@@ -22,6 +26,8 @@ import {
   formatSats,
   elementByText,
   sleep,
+  waitForToast,
+  enterAmount,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
 import { ensureLocalFunds, getExternalAddress, mineBlocks } from '../helpers/regtest';
@@ -146,4 +152,76 @@ describe('@multi_address - Multi address', () => {
       await expectText(formatSats(savingsBalanceAfter));
     }
   );
+
+  ciIt('@multi_address_3 - Receive to each type, send almost max, verify change to primary, then RBF', async () => {
+    const addressTypes: addressTypePreference[] = ['p2pkh', 'p2sh-p2wpkh', 'p2wpkh', 'p2tr'];
+    const satsPerAddressType = 10_000;
+    const sendAmountSats = 37_000;
+    await switchAndFundEachAddressType({
+      addressTypes,
+      satsPerAddressType,
+      waitForSync: async () => {
+        await electrum?.waitForSync();
+      },
+    });
+
+    const coreAddress = await getExternalAddress();
+    await enterAddress(coreAddress);
+    await enterAmount(sendAmountSats);
+    await expectText(formatSats(sendAmountSats));
+    await tap('ContinueAmount');
+    await dragOnElement('GRAB', 'right', 0.95);
+    await handleOver50PercentAlert().catch(async () => {});
+    await elementById('SendSuccess').waitForDisplayed();
+    await tap('Close');
+
+    await sleep(1000);
+    await swipeFullScreen('up');
+    await swipeFullScreen('up');
+    await tap('ActivityShort-0');
+    await expectTextWithin('ActivityAmount', formatSats(sendAmountSats));
+    const oldFee = await (await elementByIdWithin('ActivityFee', 'MoneyText')).getText();
+    await tap('ActivityTxDetails');
+    const oldTxId = await getTextUnder('TXID');
+    await tap('NavigationBack');
+
+    await tap('BoostButton');
+    await elementById('RBFBoost').waitForDisplayed();
+    await tap('CustomFeeButton');
+    await tap('Plus');
+    await tap('Minus');
+    await tap('RecommendedFeeButton');
+    await dragOnElement('GRAB', 'right', 0.95);
+    await waitForToast('BoostSuccessToast');
+
+    await tap('ActivityShort-0');
+    await expectTextWithin('ActivityAmount', formatSats(sendAmountSats));
+    const newFee = await (await elementByIdWithin('ActivityFee', 'MoneyText')).getText();
+    await tap('ActivityTxDetails');
+    const newTxId = await getTextUnder('TXID');
+    await expect(Number(oldFee.replace(' ', '')) < Number(newFee.replace(' ', ''))).toBe(true);
+    await expect(oldTxId !== newTxId).toBe(true);
+    await elementById('RBFBoosted').waitForDisplayed();
+    await doNavigationClose();
+
+    await sleep(1000);
+    await swipeFullScreen('down');
+    await swipeFullScreen('down');
+
+    await mineBlocks(1);
+    await electrum?.waitForSync();
+    const remainingTotal = await getTotalBalance();
+    await expect(remainingTotal).toBeGreaterThan(0);
+
+    await tap('HeaderMenu');
+    await tap('DrawerSettings');
+    await sleep(1000);
+    await tap('AdvancedSettings');
+    await sleep(1000);
+    await tap('AddressViewer');
+    await sleep(1000);
+    await elementByText('Taproot').click();
+    await elementByText('Change Addresses').click();
+    await expectText(formatSats(remainingTotal));
+  });
 });
