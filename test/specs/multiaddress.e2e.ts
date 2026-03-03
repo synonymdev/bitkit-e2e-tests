@@ -162,11 +162,7 @@ describe('@multi_address - Multi address', () => {
       await tap('AddressViewer');
       await sleep(1000);
       await elementByText('Taproot').click();
-
-      await expectText(formatSats(savingsBalanceAfter), { timeout: 5_000 }).catch(async () => {
-        await swipeFullScreen('up');
-        await expectText(formatSats(savingsBalanceAfter));
-      });
+      await expectText(formatSats(savingsBalanceAfter));
     }
   );
 
@@ -230,6 +226,7 @@ describe('@multi_address - Multi address', () => {
     const remainingTotal = await getTotalBalance();
     await expect(remainingTotal).toBeGreaterThan(0);
 
+    // verify change is in taproot address
     await tap('HeaderMenu');
     await tap('DrawerSettings');
     await sleep(1000);
@@ -239,12 +236,7 @@ describe('@multi_address - Multi address', () => {
     await sleep(1000);
     await elementByText('Taproot').click();
     await elementByText('Change Addresses').click();
-
-    await expectText(formatSats(remainingTotal), { timeout: 5_000 }).catch(async () => {
-      console.info('remainingTotal not found, swiping up');
-      await swipeFullScreen('up');
-      await expectText(formatSats(remainingTotal));
-    });
+    await expectText(formatSats(remainingTotal));
   });
 
   ciIt(
