@@ -295,6 +295,74 @@ export async function getTotalBalance(): Promise<number> {
   return Number(digits);
 }
 
+export type BalanceCondition = 'eq' | 'gt' | 'gte' | 'lt' | 'lte';
+
+function checkBalanceCondition(value: number, expected: number, condition: BalanceCondition): boolean {
+  switch (condition) {
+    case 'eq':
+      return value === expected;
+    case 'gt':
+      return value > expected;
+    case 'gte':
+      return value >= expected;
+    case 'lt':
+      return value < expected;
+    case 'lte':
+      return value <= expected;
+  }
+}
+
+async function expectBalanceWithWait(
+  getter: () => Promise<number>,
+  name: string,
+  expected: number,
+  {
+    condition = 'eq',
+    timeout = 90_000,
+    interval = 2_000,
+  }: {
+    condition?: BalanceCondition;
+    timeout?: number;
+    interval?: number;
+  } = {}
+): Promise<number> {
+  let lastValue = -1;
+  await browser.waitUntil(
+    async () => {
+      const value = await getter();
+      lastValue = value;
+      return checkBalanceCondition(value, expected, condition);
+    },
+    {
+      timeout,
+      interval,
+      timeoutMsg: `Timed out after ${timeout}ms waiting for ${name} balance ${condition} ${expected}, last value: ${lastValue}`,
+    }
+  );
+  return lastValue;
+}
+
+export async function expectSavingsBalance(
+  expected: number,
+  options: { condition?: BalanceCondition; timeout?: number; interval?: number } = {}
+): Promise<number> {
+  return expectBalanceWithWait(getSavingsBalance, 'savings', expected, options);
+}
+
+export async function expectSpendingBalance(
+  expected: number,
+  options: { condition?: BalanceCondition; timeout?: number; interval?: number } = {}
+): Promise<number> {
+  return expectBalanceWithWait(getSpendingBalance, 'spending', expected, options);
+}
+
+export async function expectTotalBalance(
+  expected: number,
+  options: { condition?: BalanceCondition; timeout?: number; interval?: number } = {}
+): Promise<number> {
+  return expectBalanceWithWait(getTotalBalance, 'total', expected, options);
+}
+
 export async function tap(testId: string) {
   const el = await elementById(testId);
   await el.waitForDisplayed();

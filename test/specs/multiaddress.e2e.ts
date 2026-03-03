@@ -9,6 +9,9 @@ import {
   elementById,
   elementByIdWithin,
   enterAddress,
+  expectSavingsBalance,
+  expectSpendingBalance,
+  expectTotalBalance,
   expectTextWithin,
   getTextUnder,
   getReceiveAddress,
@@ -91,6 +94,10 @@ describe('@multi_address - Multi address', () => {
     await mineBlocks(1);
     await electrum?.waitForSync();
 
+    await expectTotalBalance(0);
+    await expectSavingsBalance(0);
+    await expectSpendingBalance(0);
+
     const totalBalanceAfter = await getTotalBalance();
     const savingsBalanceAfter = await getSavingsBalance();
     const spendingBalanceAfter = await getSpendingBalance();
@@ -127,8 +134,8 @@ describe('@multi_address - Multi address', () => {
           await electrum?.waitForSync();
         },
       });
-      await expect(await getSpendingBalance()).toBeGreaterThan(0);
-      await expect(await getSavingsBalance()).toEqual(0);
+      await expectSpendingBalance(0, { condition: 'gt' });
+      await expectSavingsBalance(0);
 
       if (driver.isAndroid) {
         // pull to refresh due to:
