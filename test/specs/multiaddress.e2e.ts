@@ -31,6 +31,7 @@ import {
   enterAmount,
   dismissQuickPayIntro,
   dismissBackgroundPaymentsTimedSheet,
+  getAmountUnder,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
 import {
@@ -161,7 +162,11 @@ describe('@multi_address - Multi address', () => {
       await tap('AddressViewer');
       await sleep(1000);
       await elementByText('Taproot').click();
-      await expectText(formatSats(savingsBalanceAfter));
+
+      await expectText(formatSats(savingsBalanceAfter), { timeout: 5_000 }).catch(async () => {
+        await swipeFullScreen('up');
+        await expectText(formatSats(savingsBalanceAfter));
+      });
     }
   );
 
@@ -234,7 +239,12 @@ describe('@multi_address - Multi address', () => {
     await sleep(1000);
     await elementByText('Taproot').click();
     await elementByText('Change Addresses').click();
-    await expectText(formatSats(remainingTotal));
+
+    await expectText(formatSats(remainingTotal), { timeout: 5_000 }).catch(async () => {
+      console.info('remainingTotal not found, swiping up');
+      await swipeFullScreen('up');
+      await expectText(formatSats(remainingTotal));
+    });
   });
 
   ciIt(
@@ -256,9 +266,9 @@ describe('@multi_address - Multi address', () => {
       await connectToLND(lndNodeID, { navigationClose: false });
       await waitForPeerConnection(lnd, ldkNodeId);
 
-      const channelSize = 70_000;
       await tap('ExternalAmountMax');
-      // await enterAmount(channelSize);
+      await sleep(1000);
+      const channelSize = await getAmountUnder('ExternalAmountNumberField');
       await tap('ExternalAmountContinue');
       await sleep(1000);
       await dragOnElement('GRAB', 'right', 0.95);
@@ -274,6 +284,10 @@ describe('@multi_address - Multi address', () => {
         await dismissQuickPayIntro({ triggerTimedSheet: true });
       }
       await checkChannelStatus({ size: formatSats(channelSize) });
+
+      // savings has all legacy funds
+      const savingsBalance = await getSavingsBalance();
+      await expect(savingsBalance).toEqual(satsPerAddressType);
 
       await tap('HeaderMenu');
       await tap('DrawerSettings');

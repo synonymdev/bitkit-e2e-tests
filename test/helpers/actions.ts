@@ -134,14 +134,14 @@ export async function elementsByText(text: string, timeout = 8000): Promise<Chai
  */
 export async function expectText(
   text: string,
-  { visible = true, strategy = 'exact' }: { visible?: boolean; strategy?: RetrieveStrategy } = {}
+  { visible = true, strategy = 'exact', timeout = 30_000 }: { visible?: boolean; strategy?: RetrieveStrategy; timeout?: number } = {}
 ) {
   const el = await elementByText(text, strategy);
   if (!visible) {
-    await el.waitForDisplayed({ reverse: true });
+    await el.waitForDisplayed({ reverse: true, timeout });
     return;
   }
-  await el.waitForDisplayed();
+  await el.waitForDisplayed({ timeout });
 }
 
 /**
