@@ -837,7 +837,7 @@ export async function transferSavingsToSpending({
   }
 
   await elementById('SpendingAmountContinue').waitForEnabled();
-
+  await sleep(1000);
   if (typeof amountSats === 'number') {
     for (const digit of String(amountSats)) {
       await tap(`N${digit}`);
