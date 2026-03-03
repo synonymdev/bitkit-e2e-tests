@@ -46,7 +46,6 @@ import { ensureLocalFunds, getBitcoinRpc, getExternalAddress, mineBlocks } from 
 
 describe('@multi_address - Multi address', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
-  const rpc = getBitcoinRpc();
 
   before(async () => {
     await ensureLocalFunds();
@@ -242,6 +241,7 @@ describe('@multi_address - Multi address', () => {
   ciIt(
     '@multi_address_4 - Receive to each type, open external channel with max, keep Legacy untouched',
     async () => {
+      const rpc = getBitcoinRpc();
       const addressTypes: addressTypePreference[] = ['p2pkh', 'p2sh-p2wpkh', 'p2wpkh', 'p2tr'];
       const satsPerAddressType = 25_000;
       await switchAndFundEachAddressType({
