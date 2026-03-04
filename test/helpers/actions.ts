@@ -938,22 +938,22 @@ export async function transferSavingsToSpending({
   await elementById('TransferSuccess-button').waitForDisplayed();
   await tap('TransferSuccess-button');
 
-  // try {
-  //   console.info('→ Waiting for SpendingBalanceReadyToast...');
-  //   await waitForToast('SpendingBalanceReadyToast');
-  // } catch {
-  //   console.info('→ SpendingBalanceReadyToast not found, continuing...');
-  // }
+  try {
+    console.info('→ Waiting for SpendingBalanceReadyToast...');
+    await waitForToast('SpendingBalanceReadyToast');
+  } catch {
+    console.info('→ SpendingBalanceReadyToast not found, continuing...');
+  }
 
   // verify transfer activity on savings
   // see : https://github.com/synonymdev/bitkit-ios/issues/464
   if (driver.isAndroid) {
+    await dismissQuickPayIntro({ triggerTimedSheet: false });
     await tap('ActivitySavings');
     await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
     await expectTextWithin('Activity-1', '-');
     await tap('NavigationBack');
 
-    await dismissQuickPayIntro({ triggerTimedSheet: true });
   } else {
     await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: false });
     await dismissQuickPayIntro({ triggerTimedSheet: true });
@@ -977,23 +977,10 @@ export async function transferSpendingToSavings() {
     await doNavigationClose();
   }
 
-  const balanceSettleTimeoutMs = 90_000;
-  await browser.waitUntil(
-    async () => {
-      const spendingBalance = await getSpendingBalance();
-      const savingsBalance = await getSavingsBalance();
-      return spendingBalance === 0 && savingsBalance > 0;
-    },
-    {
-      timeout: balanceSettleTimeoutMs,
-      interval: 2_000,
-      timeoutMsg: `Timed out after ${balanceSettleTimeoutMs}ms waiting for spending=0 and savings>0`,
-    }
-  );
-
-  await expect(await getSpendingBalance()).toEqual(0);
-  await expect(await getSavingsBalance()).toBeGreaterThan(0);
-  await expect(await getTotalBalance()).toEqual(await getSavingsBalance());
+  await sleep(1000);
+  await expectSavingsBalance(0, { condition: 'gt' });
+  await expectSpendingBalance(0);
+  await expectTotalBalance(await getSavingsBalance());
 }
 
 export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise<string> {

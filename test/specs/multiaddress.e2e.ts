@@ -148,12 +148,10 @@ describe('@multi_address - Multi address', () => {
 
       await mineBlocks(1);
       await electrum?.waitForSync();
-      const totalBalanceAfter = await getTotalBalance();
-      const spendingBalanceAfter = await getSpendingBalance();
+      await expectSavingsBalance(0, { condition: 'gt' });
+      await expectSpendingBalance(0);
       const savingsBalanceAfter = await getSavingsBalance();
-      await expect(totalBalanceAfter).toEqual(savingsBalanceAfter + spendingBalanceAfter);
-      await expect(spendingBalanceAfter).toEqual(0);
-      await expect(savingsBalanceAfter).toBeGreaterThan(0);
+      await expectTotalBalance(savingsBalanceAfter);
 
       const taprootAddressAfterClose = await getReceiveAddress();
       assertAddressMatchesType(taprootAddressAfterClose, 'p2tr');
