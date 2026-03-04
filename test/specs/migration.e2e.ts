@@ -227,7 +227,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
   // This scenario tests migration when wallet has funds on legacy addresses,
   // which triggers a sweep flow during migration.
   // --------------------------------------------------------------------------
-  ciIt('@migration_4 - Migration with sweep (legacy p2pkh addresses)', async () => {
+  ciIt('@migration_4 - Migration (legacy p2pkh addresses)', async () => {
     // Setup wallet with funds on legacy addresses (triggers sweep on migration)
     const { balance } = await setupWalletWithLegacyFunds();
 
@@ -236,8 +236,8 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     await driver.installApp(getNativeAppPath());
     await driver.activateApp(getAppId());
 
-    // Handle migration flow with sweep
-    await handleMigrationFlow({ withSweep: true });
+    // Handle migration flow
+    await handleMigrationFlow({ withSweep: false });
 
     // Verify migration completed (balance should be preserved after sweep, minus fees)
     await verifyMigrationWithSweep(balance);
@@ -780,6 +780,7 @@ async function sendRnOnchain(
 
   // Send using swipe gesture
   console.info(`→ About to send ${sats} sats...`);
+  await sleep(1000);
   await dragOnElement('GRAB', 'right', 0.95);
   await elementById('SendSuccess').waitForDisplayed();
   await tap('Close');
