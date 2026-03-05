@@ -193,8 +193,6 @@ describe('@multi_address - Multi address', () => {
     await tap('Close');
 
     await sleep(1000);
-    await swipeFullScreen('up');
-    await swipeFullScreen('up');
     await tap('ActivityShort-0');
     await expectTextWithin('ActivityAmount', formatSats(sendAmountSats));
     const oldFee = await (await elementByIdWithin('ActivityFee', 'MoneyText')).getText();

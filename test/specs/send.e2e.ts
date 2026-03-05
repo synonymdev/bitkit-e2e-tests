@@ -518,8 +518,6 @@ describe('@send - Send', () => {
 
     // sanity check activities displayed
     await sleep(1000);
-    await swipeFullScreen('up');
-    await swipeFullScreen('up');
     await elementById('ActivityShort-0').waitForDisplayed();
     await elementById('ActivityShort-1').waitForDisplayed();
     await elementById('ActivityShort-2').waitForDisplayed();
