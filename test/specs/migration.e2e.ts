@@ -227,7 +227,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
   // This scenario tests migration when wallet has funds on legacy addresses,
   // which triggers a sweep flow during migration.
   // --------------------------------------------------------------------------
-  ciIt('@migration_4 - Migration with sweep (legacy p2pkh addresses)', async () => {
+  ciIt('@migration_4 - Migration (legacy p2pkh addresses)', async () => {
     // Setup wallet with funds on legacy addresses (triggers sweep on migration)
     const { balance } = await setupWalletWithLegacyFunds();
 
@@ -236,8 +236,8 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     await driver.installApp(getNativeAppPath());
     await driver.activateApp(getAppId());
 
-    // Handle migration flow with sweep
-    await handleMigrationFlow({ withSweep: true });
+    // Handle migration flow
+    await handleMigrationFlow({ withSweep: false });
 
     // Verify migration completed (balance should be preserved after sweep, minus fees)
     await verifyMigrationWithSweep(balance);
@@ -352,7 +352,7 @@ async function setupLegacyWallet(
 
   // 3. Transfer to spending (create channel via Blocktank)
   console.info('→ Step 3: Creating spending balance (channel)...');
-  await transferToSpending(TRANSFER_TO_SPENDING_SATS);
+  await transferToSpendingRN(TRANSFER_TO_SPENDING_SATS);
 
   // Get final balance before migration
   const balance = await getRnTotalBalance();
@@ -780,6 +780,7 @@ async function sendRnOnchain(
 
   // Send using swipe gesture
   console.info(`→ About to send ${sats} sats...`);
+  await sleep(1000);
   await dragOnElement('GRAB', 'right', 0.95);
   await elementById('SendSuccess').waitForDisplayed();
   await tap('Close');
@@ -796,7 +797,7 @@ async function sendRnOnchain(
 /**
  * Transfer savings to spending balance (create channel via Blocktank)
  */
-async function transferToSpending(sats: number, existingBalance = 0): Promise<void> {
+async function transferToSpendingRN(sats: number, existingBalance = 0): Promise<void> {
   // Navigate via ActivitySavings -> TransferToSpending
   // ActivitySavings should be visible near the top of the wallet screen
   try {

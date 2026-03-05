@@ -3,13 +3,15 @@
 set -euo pipefail
 
 CLI_NAME="$(basename $0)"
-CLI_DIR="$(dirname "$(readlink -f "$0")")"
-CONTAINER="bitcoind"
+BITCOIN_CONTAINER="bitcoind"
+LND_CONTAINER="lnd"
+LND_DIR="/home/lnd/.lnd"
 RPC_USER=polaruser
 RPC_PASS=polarpass
 RPC_PORT=43782
 
-BASE_COMMAND=(docker compose exec $CONTAINER bitcoin-cli -rpcport=$RPC_PORT -rpcuser=$RPC_USER -rpcpassword=$RPC_PASS)
+BASE_COMMAND=(docker compose exec $BITCOIN_CONTAINER bitcoin-cli -rpcport=$RPC_PORT -rpcuser=$RPC_USER -rpcpassword=$RPC_PASS)
+LNCLI_CMD=(docker compose exec -T $LND_CONTAINER lncli --lnddir "$LND_DIR" --network regtest)
 
 DEFAULT_AMOUNT=0.001
 
@@ -21,9 +23,14 @@ Flags:
     -h, --help                         Show this help message
 Commands:
     fund <amount>                      Fund the wallet
-    mine <amount> [--auto]             Generate a number of blocks
-    send <address> <amount>            Send to address or BIP21 URI
+    mine [count] [--auto]              Generate blocks (default: 1)
+    send [amount] [address] [-m N]     Send to address and optionally mine N blocks (default: 1)
     getInvoice <amount>                Get a new BIP21 URI with a bech32 address
+  LND:
+    getinfo                            Show LND node info (for connectivity debugging)
+    holdinvoice [amount] [-m memo]     Create a hold invoice
+    settleinvoice <preimage>           Reveal a preimage and use it to settle the corresponding invoice
+    cancelinvoice <payment_hash>       Cancels a currently open invoice
 EOF
 }
 
@@ -43,14 +50,7 @@ fi
 if [[ "$command" = "mine" ]]; then
   shift
 
-  if [ -z ${1+x} ]; then
-    echo "Specify the number of blocks to generate."
-    echo "Usage: \`$CLI_NAME $command <amount>\`"
-    exit 1
-  fi
-
   POSITIONAL_ARGS=()
-
   auto=false
 
   while [[ $# -gt 0 ]]; do
@@ -72,7 +72,9 @@ if [[ "$command" = "mine" ]]; then
 
   set -- "${POSITIONAL_ARGS[@]}"
 
-  # default to 5 seconds
+  # Default to 1 block if not specified
+  count=${1:-1}
+  # Default to 5 seconds interval for auto mode
   interval=${2:-5}
 
   if $auto; then
@@ -83,7 +85,7 @@ if [[ "$command" = "mine" ]]; then
       sleep $interval
     done
   else
-    "${BASE_COMMAND[@]}" -generate "$@"
+    "${BASE_COMMAND[@]}" -generate "$count"
   fi
 
   exit
@@ -93,31 +95,59 @@ fi
 if [[ "$command" = "send" ]]; then
   shift
 
+  mine_blocks=0
+  POSITIONAL_ARGS=()
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      -m|--mine)
+        # Check if next arg is a number
+        if [[ "${2:-}" =~ ^[0-9]+$ ]]; then
+          mine_blocks="$2"
+          shift 2
+        else
+          mine_blocks=1
+          shift
+        fi
+        ;;
+      *)
+        POSITIONAL_ARGS+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  set -- "${POSITIONAL_ARGS[@]}"
+
   if [ -z ${1+x} ]; then
     read -p "Enter a BIP21 URI or address: " uri
     echo
-  else
-    uri="$1"
-  fi
-
-  if [ -z ${2+x} ]; then
     amount=$DEFAULT_AMOUNT
   else
-    amount="$2"
+    amount="$1"
+    if [ -z ${2+x} ]; then
+      read -p "Enter a BIP21 URI or address: " uri
+      echo
+    else
+      uri="$2"
+    fi
   fi
 
-  protocol=$(echo "${uri%%:*}")
+  protocol="${uri%%:*}"
 
   if [[ "$protocol" == "bitcoin" ]]; then
-    # BIP21 URI
-    # Remove the protocol
-    url_no_protocol=$(echo "${uri/$protocol/}" | cut -d":" -f2-)
+    # BIP21 URI: bitcoin:address?amount=X&message=Y&...
+    url_no_protocol="${uri#bitcoin:}"
 
-    address=$(echo $url_no_protocol | grep "?" | cut -d"/" -f1 | rev | cut -d"?" -f2- | rev || echo $url_no_protocol)
-    uri_amount=$(echo $url_no_protocol | cut -d'?' -f 2 | cut -d'=' -f 2 | cut -d'&' -f 1)
+    # Extract address (everything before ?)
+    address="${url_no_protocol%%\?*}"
 
-    if echo "$uri_amount" | grep -qE '^[0-9]*\.?[0-9]+$'; then
-      amount=$uri_amount
+    # Extract amount if present (look for amount= parameter specifically)
+    if [[ "$url_no_protocol" == *"?"* ]]; then
+      query_string="${url_no_protocol#*\?}"
+      if [[ "$query_string" =~ (^|&)amount=([0-9]*\.?[0-9]+) ]]; then
+        amount="${BASH_REMATCH[2]}"
+      fi
     fi
   else
     address=$uri
@@ -127,6 +157,12 @@ if [[ "$command" = "send" ]]; then
 
   echo "Sent $amount BTC to $address"
   echo "Transaction ID: $tx_id"
+
+  # Mine blocks if requested
+  if [[ $mine_blocks -gt 0 ]]; then
+    "${BASE_COMMAND[@]}" -generate "$mine_blocks"
+    echo "Mined $mine_blocks block(s)"
+  fi
 
   exit
 fi
@@ -151,6 +187,100 @@ if [[ "$command" = "getInvoice" ]]; then
   echo $uri | pbcopy
   echo "Copied to clipboard."
 
+  exit
+fi
+
+# Show LND node info (LND)
+if [[ "$command" = "getinfo" ]]; then
+  "${LNCLI_CMD[@]}" getinfo
+  exit
+fi
+
+# Create a hold invoice (LND)
+if [[ "$command" = "holdinvoice" ]]; then
+  shift
+
+  amount=""
+  memo=""
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      -m|--memo)
+        memo="${2:-}"
+        shift 2
+        ;;
+      -*)
+        echo "Unknown option $1"
+        exit 1
+        ;;
+      *)
+        if [[ "$1" =~ ^[0-9]+$ ]]; then
+          amount="$1"
+        fi
+        shift
+        ;;
+    esac
+  done
+
+  preimage=$(openssl rand -hex 32)
+  hash=$(echo -n "$preimage" | xxd -r -p | openssl dgst -sha256 | awk '{print $2}')
+
+  if [[ -n "$amount" ]]; then
+    result=$("${LNCLI_CMD[@]}" addholdinvoice --amt "$amount" --memo "$memo" "$hash" 2>&1) || true
+  else
+    result=$("${LNCLI_CMD[@]}" addholdinvoice --memo "$memo" "$hash" 2>&1) || true
+  fi
+
+  payment_request=$(echo "$result" | jq -r '.payment_request // empty' 2>/dev/null) || payment_request=""
+  if [ -z "$payment_request" ]; then
+    payment_request=$(echo "$result" | sed -n 's/.*"payment_request"[^:]*:[^"]*"\([^"]*\)".*/\1/p') || payment_request=""
+  fi
+
+  if [ -n "$payment_request" ]; then
+    echo "Hold invoice created:"
+    echo ""
+    echo "$payment_request"
+    echo ""
+    echo "Hash: $hash"
+    echo "Preimage: $preimage"
+    echo ""
+
+    if command -v pbcopy &>/dev/null; then
+      echo "$payment_request" | pbcopy
+      echo "Invoice copied to clipboard."
+    fi
+  else
+    echo "${result:-LND command produced no output}"
+    exit 1
+  fi
+
+  exit
+fi
+
+# Settle a hold invoice (LND)
+if [[ "$command" = "settleinvoice" ]]; then
+  shift
+
+  if [ -z ${1+x} ]; then
+    echo "Usage: $CLI_NAME settleinvoice <preimage_hex>"
+    exit 1
+  fi
+
+  preimage="$1"
+  "${LNCLI_CMD[@]}" settleinvoice "$preimage"
+  exit
+fi
+
+# Cancel a hold invoice (LND)
+if [[ "$command" = "cancelinvoice" ]]; then
+  shift
+
+  if [ -z ${1+x} ]; then
+    echo "Usage: $CLI_NAME cancelinvoice <payment_hash>"
+    exit 1
+  fi
+
+  "${LNCLI_CMD[@]}" cancelinvoice "$1"
   exit
 fi
 

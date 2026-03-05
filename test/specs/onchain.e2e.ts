@@ -22,6 +22,8 @@ import {
   handleOver50PercentAlert,
   handleOver100Alert,
   acknowledgeReceivedPayment,
+  enterAmount,
+  formatSats,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
 import {
@@ -51,15 +53,14 @@ describe('@onchain - Onchain', () => {
 
   ciIt('@onchain_1 - Receive and send some out', async () => {
     // receive some first
-    await receiveOnchainFunds({ sats: 100_000_000, expectHighBalanceWarning: true });
+    const satsToReceive = 100_000_000;
+    await receiveOnchainFunds({ sats: satsToReceive, expectHighBalanceWarning: true });
 
     // then send out 10 000
     const coreAddress = await getExternalAddress();
     console.info({ coreAddress });
     await enterAddress(coreAddress);
-    await tap('N1');
-    await tap('N000');
-    await tap('N0');
+    await enterAmount(10_000);
 
     await tap('ContinueAmount');
     await dragOnElement('GRAB', 'right', 0.95);
@@ -82,7 +83,7 @@ describe('@onchain - Onchain', () => {
     await expectTextWithin(sentShort, 'Sent');
     await expectTextWithin(receiveShort, '+');
     await expectTextWithin(receiveShort, 'Received');
-    await expectTextWithin(receiveShort, '100 000 000');
+    await expectTextWithin(receiveShort, formatSats(satsToReceive));
 
     await swipeFullScreen('up');
     await tap('ActivityShowAll');
@@ -92,7 +93,7 @@ describe('@onchain - Onchain', () => {
     await expectTextWithin(sentDetail, 'Sent');
     await expectTextWithin(receiveDetail, '+');
     await expectTextWithin(receiveDetail, 'Received');
-    await expectTextWithin(receiveDetail, '100 000 000');
+    await expectTextWithin(receiveDetail, formatSats(satsToReceive));
   });
 
   // Test plan
@@ -323,4 +324,5 @@ describe('@onchain - Onchain', () => {
     // await elementByText('OUTPUT').waitForDisplayed();
     // await elementByText('OUTPUT (2)').waitForDisplayed({ reverse: true });
   });
+
 });
