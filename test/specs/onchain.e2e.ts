@@ -24,6 +24,9 @@ import {
   acknowledgeReceivedPayment,
   enterAmount,
   formatSats,
+  expectTotalBalance,
+  expectSpendingBalance,
+  expectSavingsBalance,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
 import {
@@ -70,11 +73,11 @@ describe('@onchain - Onchain', () => {
     await mineBlocks(1);
     await electrum?.waitForSync();
 
-    const moneyTextAfter = (await elementsById('MoneyText'))[1];
-    await expect(moneyTextAfter).not.toHaveText('100 000 000');
+    await expectTotalBalance(satsToReceive, { condition: 'lt' });
+    await expectSavingsBalance(satsToReceive, { condition: 'lt' });
+    await expectSpendingBalance(0);
 
     // review activity list
-    await swipeFullScreen('up');
     const sentShort = 'ActivityShort-0';
     const receiveShort = 'ActivityShort-1';
     await elementById(sentShort).waitForDisplayed();
@@ -85,7 +88,6 @@ describe('@onchain - Onchain', () => {
     await expectTextWithin(receiveShort, 'Received');
     await expectTextWithin(receiveShort, formatSats(satsToReceive));
 
-    await swipeFullScreen('up');
     await tap('ActivityShowAll');
     const sentDetail = 'Activity-1';
     const receiveDetail = 'Activity-2';
@@ -163,17 +165,14 @@ describe('@onchain - Onchain', () => {
 
     await mineBlocks(1);
 
-    const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
-    await expect(totalBalance).toHaveText('0');
+    await expectTotalBalance(0);
+    await expectSavingsBalance(0);
+    await expectSpendingBalance(0);
 
     // Check Activity
-    await swipeFullScreen('up');
     await elementById('ActivityShort-0').waitForDisplayed();
     await elementById('ActivityShort-1').waitForDisplayed();
     await elementById('ActivityShort-2').waitForDisplayed();
-
-    await swipeFullScreen('up');
-    await sleep(1000); // wait for the app to settle
     await tap('ActivityShowAll');
     // All 3 transactions should be present
     await elementById('Activity-1').waitForDisplayed();
@@ -296,7 +295,6 @@ describe('@onchain - Onchain', () => {
     await expect(totalBalanceAfter).toHaveText('0');
 
     // review activity list
-    await swipeFullScreen('up');
     const sentShort = 'ActivityShort-0';
     const receiveShort = 'ActivityShort-1';
     await elementById(sentShort).waitForDisplayed();
@@ -307,7 +305,6 @@ describe('@onchain - Onchain', () => {
     await expectTextWithin(receiveShort, 'Received');
     await expectTextWithin(receiveShort, '100 000 000');
 
-    await swipeFullScreen('up');
     await tap('ActivityShowAll');
     const sentDetail = 'Activity-1';
     const receiveDetail = 'Activity-2';

@@ -295,7 +295,7 @@ export async function getTotalBalance(): Promise<number> {
   return Number(digits);
 }
 
-export type BalanceCondition = 'eq' | 'gt' | 'gte' | 'lt' | 'lte';
+export type BalanceCondition = 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'neq';
 
 function checkBalanceCondition(value: number, expected: number, condition: BalanceCondition): boolean {
   switch (condition) {
@@ -309,6 +309,8 @@ function checkBalanceCondition(value: number, expected: number, condition: Balan
       return value < expected;
     case 'lte':
       return value <= expected;
+    case 'neq':
+      return value !== expected;
   }
 }
 
@@ -632,14 +634,7 @@ export async function completeOnboarding({ isFirstTime = true } = {}) {
   }
 
   // Wait for wallet to be created
-  for (let i = 1; i <= 3; i++) {
-    try {
-      await tap('WalletOnboardingClose');
-      break;
-    } catch {
-      if (i === 3) throw new Error('Tapping "WalletOnboardingClose" timeout');
-    }
-  }
+  await elementById('TotalBalance').waitForDisplayed();
 }
 
 export async function restoreWallet(
@@ -1118,8 +1113,9 @@ export async function receiveOnchainFunds({
 
   await mineBlocks(blocksToMine);
 
-  const moneyText = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
-  await expect(moneyText).toHaveText(formattedSats);
+  await expectTotalBalance(sats);
+  await expectSavingsBalance(sats);
+  await expectSpendingBalance(0);
 
   await dismissBackupTimedSheet({ triggerTimedSheet: true });
   if (expectHighBalanceWarning) {
