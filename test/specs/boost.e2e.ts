@@ -44,7 +44,6 @@ describe('@boost - Boost', () => {
     await receiveOnchainFunds({ sats: 100_000, blocksToMine: 0 });
 
     // check Activity
-    await swipeFullScreen('up');
     await expectTextWithin('ActivityShort-0', '100 000');
     await expectTextWithin('ActivityShort-0', '+');
 
@@ -77,7 +76,6 @@ describe('@boost - Boost', () => {
     await expectTextWithin('ActivityShort-1', '+');
 
     // orig tx still there
-    await swipeFullScreen('up');
     await tap('ActivityShort-1');
     await expectText('100 000', { strategy: 'contains' });
     await elementById('BoostedButton').waitForDisplayed();
@@ -106,7 +104,6 @@ describe('@boost - Boost', () => {
     await restoreWallet(seed);
 
     // check activity after restore
-    await swipeFullScreen('up');
     await elementById('BoostingIcon').waitForDisplayed();
     await elementById('ActivityShort-1').waitForDisplayed();
     await tap('ActivityShort-1');
@@ -148,7 +145,6 @@ describe('@boost - Boost', () => {
     await expect(moneyText).not.toHaveText('100 000');
 
     // check Activity
-    await swipeFullScreen('up');
     await elementById('ActivityShort-0').waitForDisplayed();
     await expectTextWithin('ActivityShort-0', '-');
     await elementById('ActivityShort-1').waitForDisplayed();
@@ -212,7 +208,6 @@ describe('@boost - Boost', () => {
     await restoreWallet(seed);
 
     // check activity after restore
-    await swipeFullScreen('up');
     (await elementByIdWithin('ActivityShort-0', 'BoostingIcon')).waitForDisplayed();
     await tap('ActivityShort-0');
     await elementById('BoostedButton').waitForDisplayed();
