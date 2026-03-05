@@ -493,7 +493,7 @@ describe('@settings - Settings', () => {
       try {
         await elementById('Suggestions').waitForDisplayed();
       } catch {
-        await tap('WalletOnboardingClose');
+        await swipeFullScreen('up');
         await elementById('Suggestions').waitForDisplayed();
       }
 
