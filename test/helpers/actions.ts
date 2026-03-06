@@ -634,7 +634,7 @@ export async function completeOnboarding({ isFirstTime = true } = {}) {
   }
 
   // Wait for wallet to be created
-  await elementById('TotalBalance').waitForDisplayed();
+  await elementById('TotalBalance-primary').waitForDisplayed( { timeout: 60_000 } );
 }
 
 export async function restoreWallet(
