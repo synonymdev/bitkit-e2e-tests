@@ -180,7 +180,7 @@ describe('@multi_address - Multi address', () => {
     async () => {
       const addressTypes: addressTypePreference[] = ['p2pkh', 'p2sh-p2wpkh', 'p2wpkh', 'p2tr'];
       const satsPerAddressType = 10_000;
-      const sendAmountSats = 37_000;
+      const sendAmountSats = 36_000;
       await switchAndFundEachAddressType({
         addressTypes,
         satsPerAddressType,
