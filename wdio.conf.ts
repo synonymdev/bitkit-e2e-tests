@@ -75,7 +75,7 @@ export const config: WebdriverIO.Config = {
           'appium:autoGrantPermissions': true,
           // 'appium:waitForIdleTimeout': 1000,
         }
-        : {
+      : {
           platformName: 'iOS',
           'appium:automationName': 'XCUITest',
           'appium:udid': process.env.SIMULATOR_UDID || 'auto',

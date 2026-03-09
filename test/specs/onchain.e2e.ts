@@ -6,7 +6,6 @@ import {
   elementById,
   elementByIdWithin,
   elementByText,
-  elementsById,
   expectTextWithin,
   doNavigationClose,
   getReceiveAddress,
@@ -321,5 +320,4 @@ describe('@onchain - Onchain', () => {
     // await elementByText('OUTPUT').waitForDisplayed();
     // await elementByText('OUTPUT (2)').waitForDisplayed({ reverse: true });
   });
-
 });
