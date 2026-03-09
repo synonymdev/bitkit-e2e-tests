@@ -134,7 +134,11 @@ export async function elementsByText(text: string, timeout = 8000): Promise<Chai
  */
 export async function expectText(
   text: string,
-  { visible = true, strategy = 'exact', timeout = 30_000 }: { visible?: boolean; strategy?: RetrieveStrategy; timeout?: number } = {}
+  {
+    visible = true,
+    strategy = 'exact',
+    timeout = 30_000,
+  }: { visible?: boolean; strategy?: RetrieveStrategy; timeout?: number } = {}
 ) {
   const el = await elementByText(text, strategy);
   if (!visible) {
@@ -297,7 +301,11 @@ export async function getTotalBalance(): Promise<number> {
 
 export type BalanceCondition = 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'neq';
 
-function checkBalanceCondition(value: number, expected: number, condition: BalanceCondition): boolean {
+function checkBalanceCondition(
+  value: number,
+  expected: number,
+  condition: BalanceCondition
+): boolean {
   switch (condition) {
     case 'eq':
       return value === expected;
@@ -365,9 +373,9 @@ export async function expectTotalBalance(
   return expectBalanceWithWait(getTotalBalance, 'total', expected, options);
 }
 
-export async function tap(testId: string) {
+export async function tap(testId: string, { timeout = 30_000 }: { timeout?: number } = {}) {
   const el = await elementById(testId);
-  await el.waitForDisplayed();
+  await el.waitForDisplayed({ timeout });
   await sleep(150); // Allow time for the element to settle
   await el.click();
   await sleep(100);
@@ -634,7 +642,7 @@ export async function completeOnboarding({ isFirstTime = true } = {}) {
   }
 
   // Wait for wallet to be created
-  await elementById('TotalBalance-primary').waitForDisplayed( { timeout: 60_000 } );
+  await elementById('TotalBalance-primary').waitForDisplayed({ timeout: 60_000 });
 }
 
 export async function restoreWallet(
@@ -747,7 +755,11 @@ export async function waitForAnyText(texts: string[], timeout: number) {
   await browser.waitUntil(
     async () => {
       for (const text of texts) {
-        if (await elementByText(text, 'contains').isDisplayed().catch(() => false)) {
+        if (
+          await elementByText(text, 'contains')
+            .isDisplayed()
+            .catch(() => false)
+        ) {
           return true;
         }
       }
@@ -765,7 +777,11 @@ export async function waitForTextToDisappear(texts: string[], timeout: number) {
   await browser.waitUntil(
     async () => {
       for (const text of texts) {
-        if (await elementByText(text, 'contains').isDisplayed().catch(() => false)) {
+        if (
+          await elementByText(text, 'contains')
+            .isDisplayed()
+            .catch(() => false)
+        ) {
           return false;
         }
       }
@@ -904,7 +920,9 @@ export async function transferSavingsToSpending({
   await tap('TransferToSpending');
   await sleep(800);
 
-  const hasSpendingIntro = await elementById('SpendingIntro-button').isDisplayed().catch(() => false);
+  const hasSpendingIntro = await elementById('SpendingIntro-button')
+    .isDisplayed()
+    .catch(() => false);
   if (hasSpendingIntro) {
     await tap('SpendingIntro-button');
     await sleep(800);
@@ -959,7 +977,6 @@ export async function transferSavingsToSpending({
     await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
     await expectTextWithin('Activity-1', '-');
     await tap('NavigationBack');
-
   } else {
     await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: false });
     await dismissQuickPayIntro({ triggerTimedSheet: true });
@@ -968,7 +985,6 @@ export async function transferSavingsToSpending({
 }
 
 export async function transferSpendingToSavings() {
-
   await tap('ActivitySpending');
   await tap('TransferToSavings');
   await sleep(800);
@@ -1102,8 +1118,6 @@ export async function receiveOnchainFunds({
   blocksToMine?: number;
   expectHighBalanceWarning?: boolean;
 } = {}) {
-  const formattedSats = formatSats(sats);
-
   // receive some first
   const address = await getReceiveAddress();
   await swipeFullScreen('down');
@@ -1148,7 +1162,11 @@ export type ToastId =
 
 export async function waitForToast(
   toastId: ToastId,
-  { waitToDisappear = false, dismiss = true , timeout = 30_000 }: { waitToDisappear?: boolean; dismiss?: boolean; timeout?: number } = {}
+  {
+    waitToDisappear = false,
+    dismiss = true,
+    timeout = 30_000,
+  }: { waitToDisappear?: boolean; dismiss?: boolean; timeout?: number } = {}
 ) {
   await elementById(toastId).waitForDisplayed({ timeout });
   if (waitToDisappear) {
@@ -1162,7 +1180,7 @@ export async function waitForToast(
 
 /** Acknowledges the received payment notification by tapping the button.
  */
-export async function acknowledgeReceivedPayment( { timeout = 20_000 }: { timeout?: number } = {}) {
+export async function acknowledgeReceivedPayment({ timeout = 20_000 }: { timeout?: number } = {}) {
   await elementById('ReceivedTransaction').waitForDisplayed({ timeout });
   await sleep(500);
   await tap('ReceivedTransactionButton');

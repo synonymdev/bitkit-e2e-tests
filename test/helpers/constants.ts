@@ -33,12 +33,13 @@ export function getBackend(): Backend {
 
 export const electrumHost =
   getBackend() === 'regtest'
-    ? process.env.ELECTRUM_HOST ?? 'electrs.bitkit.stag0.blocktank.to'
+    ? (process.env.ELECTRUM_HOST ?? 'electrs.bitkit.stag0.blocktank.to')
     : getBackend() === 'mainnet'
-      ? process.env.ELECTRUM_HOST ?? 'electrum.bitkit.to'
-      : process.env.ELECTRUM_HOST ?? '127.0.0.1';
+      ? (process.env.ELECTRUM_HOST ?? 'electrum.bitkit.to')
+      : (process.env.ELECTRUM_HOST ?? '127.0.0.1');
 export const electrumPort = Number.parseInt(
-  process.env.ELECTRUM_PORT ?? (getBackend() === 'regtest' ? '9999' : getBackend() === 'mainnet' ? '50001' : '60001'),
+  process.env.ELECTRUM_PORT ??
+    (getBackend() === 'regtest' ? '9999' : getBackend() === 'mainnet' ? '50001' : '60001'),
   10
 );
 
