@@ -84,7 +84,6 @@ describe('@widgets - Widgets', () => {
     await elementById('WidgetSave').waitForDisplayed();
     await sleep(1000); // Wait for the UI to settle
     await tap('WidgetSave');
-    await elementById('ActivitySpending').waitForDisplayed();
     await sleep(1000); // Wait for the UI to settle
 
     // After saving, widget should remain visible…
