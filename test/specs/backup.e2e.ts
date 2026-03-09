@@ -12,6 +12,7 @@ import {
   receiveOnchainFunds,
   restoreWallet,
   sleep,
+  swipeFullScreen,
   tap,
   typeText,
   waitForBackup,
@@ -90,7 +91,8 @@ describe('@backup - Backup', () => {
       await tap('WidgetSave');
     }
     await elementById('PriceWidget').waitForDisplayed();
-
+    await elementById('SuggestionsWidget').waitForDisplayed({ reverse: true });
+    await elementById('BlocksWidget').waitForDisplayed({ reverse: true });
     // - backup seed and restore wallet //
     const seed = await getSeed();
     await waitForBackup();
@@ -102,7 +104,11 @@ describe('@backup - Backup', () => {
     const moneyFiatSymbol = await elementByIdWithin('TotalBalance', 'MoneyFiatSymbol');
     await expect(moneyFiatSymbol).toHaveText('£');
     // check widget
+    await swipeFullScreen('up');
     await elementById('PriceWidget').waitForDisplayed();
+    await elementById('SuggestionsWidget').waitForDisplayed({ reverse: true });
+    await elementById('BlocksWidget').waitForDisplayed({ reverse: true });
+    await swipeFullScreen('down');
     // check metadata
     await tap('ActivitySavings');
     await tap('Activity-1');
