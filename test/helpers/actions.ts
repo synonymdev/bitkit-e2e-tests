@@ -881,8 +881,7 @@ export async function switchAndFundEachAddressType({
         );
       }
     }
-    const moneyText = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
-    await expect(moneyText).toHaveText(formatSats(satsPerAddressType * (i + 1)));
+    await expectTotalBalance(satsPerAddressType * (i + 1));
 
     fundedAddresses.push({ type: addressType, address });
 
