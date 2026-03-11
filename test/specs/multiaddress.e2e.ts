@@ -199,7 +199,7 @@ describe('@multi_address - Multi address', () => {
       await elementById('SendSuccess').waitForDisplayed();
       await tap('Close');
 
-      await sleep(1000);
+      await expectTextWithin('ActivityShort-0', 'Sent');
       await tap('ActivityShort-0');
       await expectTextWithin('ActivityAmount', formatSats(sendAmountSats));
       const oldFee = await (await elementByIdWithin('ActivityFee', 'MoneyText')).getText();
@@ -216,6 +216,8 @@ describe('@multi_address - Multi address', () => {
       await dragOnElement('GRAB', 'right', 0.95);
       await waitForToast('BoostSuccessToast');
 
+      await sleep(1000);
+      await elementById('ActivityShort-0').waitForDisplayed();
       await tap('ActivityShort-0');
       await expectTextWithin('ActivityAmount', formatSats(sendAmountSats));
       const newFee = await (await elementByIdWithin('ActivityFee', 'MoneyText')).getText();
