@@ -88,6 +88,7 @@ describe('@transfer - Transfer', () => {
       await sleep(2000); // let the animation finish
 
       // can continue with default client balance (0)
+      await elementById('SpendingAmountContinue').waitForEnabled();
       await tap('SpendingAmountContinue');
       await sleep(700);
       await tap('SpendingConfirmAdvanced');

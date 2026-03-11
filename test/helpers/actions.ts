@@ -376,7 +376,7 @@ export async function expectTotalBalance(
 export async function tap(testId: string, { timeout = 30_000 }: { timeout?: number } = {}) {
   const el = await elementById(testId);
   await el.waitForDisplayed({ timeout });
-  await sleep(150); // Allow time for the element to settle
+  await sleep(200); // Allow time for the element to settle
   await el.click();
   await sleep(100);
 }
