@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 )
 
 type LocalBackend struct {
@@ -64,7 +65,7 @@ func (b *LocalBackend) EnsureFunds() error {
 	if balance >= 1.0 {
 		return nil
 	}
-	fmt.Println("Mining 101 blocks to generate funds...")
+	fmt.Fprintln(os.Stderr, "Mining 101 blocks to generate funds...")
 	return b.Mine(101)
 }
 

@@ -2,6 +2,7 @@ package scenario
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/synonymdev/bitkit-e2e-tests/tools/seedkit/internal/backend"
 	"github.com/synonymdev/bitkit-e2e-tests/tools/seedkit/internal/wallet"
@@ -63,7 +64,7 @@ func (s *Scenario) Execute(w *wallet.Wallet, b backend.Backend) (*Result, error)
 			return nil, fmt.Errorf("step %d: derive address: %w", i+1, err)
 		}
 
-		fmt.Printf("  [%d/%d] %s: %d sat -> %s\n", i+1, len(s.Steps), step.Description, step.AmountSat, addr)
+		fmt.Fprintf(os.Stderr, "  [%d/%d] %s: %d sat -> %s\n", i+1, len(s.Steps), step.Description, step.AmountSat, addr)
 
 		if err := b.Deposit(addr, step.AmountSat); err != nil {
 			return nil, fmt.Errorf("step %d: deposit: %w", i+1, err)

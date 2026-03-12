@@ -53,8 +53,8 @@ var runCmd = &cobra.Command{
 			return fmt.Errorf("backend: %w", err)
 		}
 
-		fmt.Printf("Running scenario: %s\n", s.Name)
-		fmt.Printf("Backend: %s\n\n", label)
+		fmt.Fprintf(os.Stderr, "Running scenario: %s\n", s.Name)
+		fmt.Fprintf(os.Stderr, "Backend: %s\n\n", label)
 
 		if err := b.EnsureFunds(); err != nil {
 			return fmt.Errorf("ensure funds: %w", err)
