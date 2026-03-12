@@ -671,7 +671,7 @@ export async function restoreWallet(
   }
 
   // Terms of service
-  await elementById('Continue').waitForDisplayed();
+  await elementById('Continue').waitForDisplayed({ timeout: 60_000 });
   await sleep(1000); // Wait for the app to settle
   await tap('Continue');
   await sleep(500);
@@ -688,6 +688,16 @@ export async function restoreWallet(
     await typeText('Word-0', seed);
   }
   await sleep(1500); // wait for the app to settle
+
+  if (driver.isAndroid) {
+    try {
+      await driver.hideKeyboard();
+    } catch {
+      // keyboard may already be hidden
+    }
+    await sleep(500);
+  }
+
   // Passphrase
   if (passphrase) {
     await tap('AdvancedButton');
@@ -696,7 +706,10 @@ export async function restoreWallet(
   }
 
   // Restore wallet
-  await tap('RestoreButton');
+  const restoreBtn = await elementById('RestoreButton');
+  await restoreBtn.waitForDisplayed({ timeout: 60_000 });
+  await sleep(150);
+  await restoreBtn.click();
   await waitForSetupWalletScreenFinish();
 
   // Wait for Get Started
@@ -729,9 +742,7 @@ export async function restoreWallet(
     }
   }
 
-  // Wait for Suggestions Label to appear
-  const suggestions = await elementById('Suggestions');
-  await suggestions.waitForDisplayed();
+  await elementById('TotalBalance-primary').waitForDisplayed({ timeout: 90_000 });
 }
 
 type addressType = 'bitcoin' | 'lightning';
@@ -1352,23 +1363,28 @@ export async function typeRecipientInput(
 export async function typeAddressAndVerifyContinue({
   address,
   reverse = false,
+  timeout = 30_000,
 }: {
   address: string;
   reverse?: boolean;
+  timeout?: number;
 }) {
   await typeRecipientInput(address);
   await sleep(1000);
-  await elementById('AddressContinue').waitForEnabled({ reverse });
+  await elementById('AddressContinue').waitForEnabled({ reverse, timeout });
 }
 
-export async function enterAddress(address: string, { acceptCameraPermission = true } = {}) {
+export async function enterAddress(
+  address: string,
+  { acceptCameraPermission = true, addressTimeout = 30_000 } = {},
+) {
   await tap('Send');
   await sleep(700);
   if (acceptCameraPermission) {
     await handleAndroidAlert('permission_allow_one_time_button');
   }
   await tap('RecipientManual');
-  await typeAddressAndVerifyContinue({ address });
+  await typeAddressAndVerifyContinue({ address, timeout: addressTimeout });
   await tap('AddressContinue');
 }
 
