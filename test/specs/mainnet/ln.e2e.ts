@@ -9,6 +9,13 @@ import {
 } from '../../helpers/actions';
 import { ciIt } from '../../helpers/suite';
 
+const PAYMENT_TIMEOUT_MS = 300_000;
+const WALLET_SYNC_TIMEOUT_MS = 90_000;
+const SCREEN_TRANSITION_TIMEOUT_MS = 60_000;
+const LN_STABILIZE_DELAY_MS = 10_000;
+
+const ERROR_TOASTS = ['PaymentFailedToast', 'ExpiredLightningToast', 'InsufficientSpendingToast'];
+
 type MainnetLnSuiteConfig = {
   suiteTag: string;
   testTag: string;
@@ -52,22 +59,76 @@ function resolveMainnetLnReceiver(config: MainnetLnSuiteConfig): MainnetLnReceiv
   };
 }
 
+async function waitForWalletReady(): Promise<void> {
+  console.info('→ [LN] Waiting for wallet home screen...');
+  await elementById('TotalBalance-primary').waitForDisplayed({ timeout: WALLET_SYNC_TIMEOUT_MS });
+  console.info('→ [LN] Home screen ready, letting LN node stabilize...');
+  await sleep(LN_STABILIZE_DELAY_MS);
+}
+
+async function waitForAmountScreen(): Promise<void> {
+  console.info('→ [LN] Waiting for amount entry screen...');
+  await elementById('N0').waitForDisplayed({ timeout: SCREEN_TRANSITION_TIMEOUT_MS });
+}
+
+async function waitForConfirmScreen(): Promise<void> {
+  console.info('→ [LN] Waiting for send confirmation screen...');
+  await elementById('GRAB').waitForDisplayed({ timeout: SCREEN_TRANSITION_TIMEOUT_MS });
+  await sleep(500);
+}
+
+async function waitForPaymentResult(): Promise<void> {
+  console.info(`→ [LN] Waiting for payment result (timeout: ${PAYMENT_TIMEOUT_MS / 1000}s)...`);
+  await browser.waitUntil(
+    async () => {
+      const success = await elementById('SendSuccess').isDisplayed().catch(() => false);
+      if (success) {
+        console.info('→ [LN] Payment succeeded');
+        return true;
+      }
+
+      for (const toastId of ERROR_TOASTS) {
+        const visible = await elementById(toastId).isDisplayed().catch(() => false);
+        if (visible) {
+          throw new Error(`Payment failed with error toast: ${toastId}`);
+        }
+      }
+
+      return false;
+    },
+    {
+      timeout: PAYMENT_TIMEOUT_MS,
+      interval: 3_000,
+      timeoutMsg: `Payment did not complete within ${PAYMENT_TIMEOUT_MS / 1000}s`,
+    },
+  );
+}
+
 async function sendPaymentToLnAddress(receiver: MainnetLnReceiver): Promise<void> {
+  console.info('→ [LN] Restoring wallet...');
   await restoreWallet(receiver.seed, {
     expectBackupSheet: false,
     reinstall: false,
     expectAndroidAlert: false,
   });
 
-  await sleep(15_000); // wait for wallet to stabilize
+  await waitForWalletReady();
 
-  await enterAddress(receiver.lnAddress, { acceptCameraPermission: false });
+  console.info(`→ [LN] Entering address: ${receiver.lnAddress}`);
+  await enterAddress(receiver.lnAddress, { acceptCameraPermission: false, addressTimeout: 60_000 });
+  await waitForAmountScreen();
+
+  console.info(`→ [LN] Entering amount: ${receiver.amountSats} sats`);
   await enterAmount(receiver.amountSats);
-
   await tap('ContinueAmount');
+
+  await waitForConfirmScreen();
+  console.info('→ [LN] Swiping to send...');
   await dragOnElement('GRAB', 'right', 0.95);
-  await elementById('SendSuccess').waitForDisplayed({ timeout: 60_000 });
+
+  await waitForPaymentResult();
   await tap('Close');
+  console.info('→ [LN] Test complete');
 }
 
 function defineMainnetLnSuite(config: MainnetLnSuiteConfig): void {
