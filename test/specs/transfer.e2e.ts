@@ -39,11 +39,8 @@ import { ciIt } from '../helpers/suite';
 
 describe('@transfer - Transfer', () => {
   let electrum: { waitForSync: () => any; stop: () => void };
-  // LND tests only work with BACKEND=local
-  let rpc: ReturnType<typeof getBitcoinRpc>;
 
   before(async () => {
-    rpc = getBitcoinRpc();
     await ensureLocalFunds();
     electrum = await initElectrum();
   });
@@ -296,6 +293,7 @@ describe('@transfer - Transfer', () => {
   );
 
   ciIt('@transfer_2 - Can open a channel to external node', async () => {
+    const rpc = getBitcoinRpc();
     await receiveOnchainFunds({ sats: 100_000 });
 
     // send funds to LND node and open a channel
