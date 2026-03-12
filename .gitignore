@@ -6,3 +6,4 @@ docker/lnd
 artifacts
 WARP.md
 .ai
+tools/seedkit/seedkit
