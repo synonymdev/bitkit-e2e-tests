@@ -2,7 +2,6 @@ import initElectrum from '../helpers/electrum';
 import {
   completeOnboarding,
   receiveOnchainFunds,
-  expectText,
   enterAddress,
   multiTap,
   tap,
@@ -186,8 +185,6 @@ describe('@lightning - Lightning', () => {
     await expectTextWithin('ActivitySpending', '9 000');
 
     // check tx history
-    await swipeFullScreen('up');
-    await swipeFullScreen('up');
     await expectTextWithin('ActivityShort-0', '1 000');
     await expectTextWithin('ActivityShort-1', '111');
     await expectTextWithin('ActivityShort-2', '111');
@@ -200,8 +197,6 @@ describe('@lightning - Lightning', () => {
 
     // check activity filters & tags
     await sleep(500); // wait for the app to settle
-    await swipeFullScreen('up');
-    await swipeFullScreen('up');
     await tap('ActivityShowAll');
 
     // All transactions
@@ -257,8 +252,6 @@ describe('@lightning - Lightning', () => {
     await expectTextWithin('ActivitySpending', '9 000');
 
     // check tx history
-    await swipeFullScreen('up');
-    await swipeFullScreen('up');
     await expectTextWithin('ActivityShort-0', '1 000');
     await expectTextWithin('ActivityShort-1', '111');
     await expectTextWithin('ActivityShort-2', '111');
@@ -295,7 +288,6 @@ describe('@lightning - Lightning', () => {
     }
     await doNavigationClose();
 
-    await swipeFullScreen('up');
     await expectTextWithin('ActivityShort-0', '9 000');
   });
 });

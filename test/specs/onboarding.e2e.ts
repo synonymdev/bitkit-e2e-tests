@@ -73,14 +73,7 @@ describe('@onboarding - Onboarding', () => {
     await handleAndroidAlert();
 
     // Wait for wallet to be created
-    for (let i = 1; i <= 3; i++) {
-      try {
-        await tap('WalletOnboardingClose');
-        break;
-      } catch {
-        if (i === 3) throw new Error('Tapping "WalletOnboardingClose" timeout');
-      }
-    }
+    await elementById('TotalBalance').waitForDisplayed();
 
     const seed = await getSeed();
 

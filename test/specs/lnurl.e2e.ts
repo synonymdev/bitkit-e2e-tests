@@ -185,8 +185,6 @@ describe('@lnurl - LNURL', () => {
       await elementById('SendSuccess').waitForDisplayed();
       await tap('Close');
       await expectTextWithin('ActivitySpending', '19 851'); // 20 001 - 150
-      await swipeFullScreen('up');
-      await swipeFullScreen('up');
       await elementById('ActivityShort-0').waitForDisplayed();
       await expectTextWithin('ActivityShort-0', '150');
       await expectTextWithin('ActivityShort-0', '-');
@@ -224,8 +222,6 @@ describe('@lnurl - LNURL', () => {
       await elementById('SendSuccess').waitForDisplayed();
       await tap('Close');
       await expectTextWithin('ActivitySpending', '19 629'); // 19 851 - 222 = 19 629
-      await swipeFullScreen('up');
-      await swipeFullScreen('up');
       await elementById('ActivityShort-0').waitForDisplayed();
       await expectTextWithin('ActivityShort-0', '222');
       await expectTextWithin('ActivityShort-0', '-');
@@ -255,8 +251,6 @@ describe('@lnurl - LNURL', () => {
       await elementById('SendSuccess').waitForDisplayed();
       await tap('Close');
       await expectTextWithin('ActivitySpending', '19 308'); // 19 629 - 321 = 19 308
-      await swipeFullScreen('up');
-      await swipeFullScreen('up');
       await elementById('ActivityShort-0').waitForDisplayed();
       await expectTextWithin('ActivityShort-0', '321');
       await expectTextWithin('ActivityShort-0', '-');
@@ -283,8 +277,6 @@ describe('@lnurl - LNURL', () => {
       await tap('WithdrawConfirmButton');
       await acknowledgeReceivedPayment();
       await expectTextWithin('ActivitySpending', '19 410'); // 19 308 + 102 = 19 410
-      await swipeFullScreen('up');
-      await swipeFullScreen('up');
       await elementById('ActivityShort-0').waitForDisplayed();
       await expectTextWithin('ActivityShort-0', '102');
       await expectTextWithin('ActivityShort-0', '+');
@@ -308,8 +300,6 @@ describe('@lnurl - LNURL', () => {
       await tap('WithdrawConfirmButton');
       await acknowledgeReceivedPayment();
       await expectTextWithin('ActivitySpending', '19 713'); // 19 410 + 303 = 19 713
-      await swipeFullScreen('up');
-      await swipeFullScreen('up');
       await elementById('ActivityShort-0').waitForDisplayed();
       await expectTextWithin('ActivityShort-0', '303');
       await expectTextWithin('ActivityShort-0', '+');

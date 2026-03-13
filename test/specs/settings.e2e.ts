@@ -490,12 +490,10 @@ describe('@settings - Settings', () => {
     });
 
     ciIt('@settings_12 - Can reset suggestions', async () => {
-      try {
-        await elementById('Suggestions').waitForDisplayed();
-      } catch {
-        await tap('WalletOnboardingClose');
-        await elementById('Suggestions').waitForDisplayed();
-      }
+
+      await elementById('TotalBalance-primary').waitForDisplayed();
+      await swipeFullScreen('up');
+      await elementById('SuggestionsWidget').waitForDisplayed();
 
       // hide lightningTodo suggestion card
       await (await elementByIdWithin('Suggestion-lightning', 'SuggestionDismiss')).click();
@@ -510,6 +508,9 @@ describe('@settings - Settings', () => {
 
       // lightning should be visible again
       await sleep(1000);
+      // if (driver.isIOS) {
+      //   await swipeFullScreen('up');
+      // }
       await elementById('Suggestion-lightning').waitForDisplayed();
     });
   });

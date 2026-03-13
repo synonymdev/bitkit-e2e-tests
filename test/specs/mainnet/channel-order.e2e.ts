@@ -11,7 +11,10 @@ import { ciIt } from '../../helpers/suite';
 const channelOrderSeed = process.env.CHANNEL_ORDER_SEED ?? process.env.CJIT_SEED;
 const transferAmountSats = Number.parseInt(process.env.CHANNEL_ORDER_AMOUNT_SATS ?? '20000', 10);
 const minimumFeeSats = Number.parseInt(process.env.CHANNEL_ORDER_MIN_FEE_SATS ?? '100', 10);
-const minimumReceivingCapacitySats = Number.parseInt(process.env.CHANNEL_ORDER_MIN_RECEIVING_SATS ?? '100000', 10);
+const minimumReceivingCapacitySats = Number.parseInt(
+  process.env.CHANNEL_ORDER_MIN_RECEIVING_SATS ?? '100000',
+  10
+);
 
 function parseSats(value: string): number {
   const digits = value.replace(/[^\d]/g, '');
@@ -58,7 +61,7 @@ async function getMoneyTextValues(minCount: number): Promise<number[]> {
       timeout: 15_000,
       interval: 300,
       timeoutMsg: `Timed out waiting for at least ${minCount} MoneyText values`,
-    },
+    }
   );
 
   const moneyValues = await elementsById('MoneyText');
@@ -84,14 +87,18 @@ describe('@channel_order_mainnet - Channel order smoke', () => {
     }
     walletSeed = channelOrderSeed;
     if (!Number.isInteger(transferAmountSats) || transferAmountSats <= 0) {
-      throw new Error(`Invalid CHANNEL_ORDER_AMOUNT_SATS value: ${process.env.CHANNEL_ORDER_AMOUNT_SATS}`);
+      throw new Error(
+        `Invalid CHANNEL_ORDER_AMOUNT_SATS value: ${process.env.CHANNEL_ORDER_AMOUNT_SATS}`
+      );
     }
     if (!Number.isInteger(minimumFeeSats) || minimumFeeSats <= 0) {
-      throw new Error(`Invalid CHANNEL_ORDER_MIN_FEE_SATS value: ${process.env.CHANNEL_ORDER_MIN_FEE_SATS}`);
+      throw new Error(
+        `Invalid CHANNEL_ORDER_MIN_FEE_SATS value: ${process.env.CHANNEL_ORDER_MIN_FEE_SATS}`
+      );
     }
     if (!Number.isInteger(minimumReceivingCapacitySats) || minimumReceivingCapacitySats <= 0) {
       throw new Error(
-        `Invalid CHANNEL_ORDER_MIN_RECEIVING_SATS value: ${process.env.CHANNEL_ORDER_MIN_RECEIVING_SATS}`,
+        `Invalid CHANNEL_ORDER_MIN_RECEIVING_SATS value: ${process.env.CHANNEL_ORDER_MIN_RECEIVING_SATS}`
       );
     }
   });
@@ -122,7 +129,9 @@ describe('@channel_order_mainnet - Channel order smoke', () => {
     }
 
     if (toSpendingAmountSats !== transferAmountSats) {
-      throw new Error(`To spending amount ${toSpendingAmountSats} should equal ${transferAmountSats}`);
+      throw new Error(
+        `To spending amount ${toSpendingAmountSats} should equal ${transferAmountSats}`
+      );
     }
 
     if (!(totalSats > transferAmountSats)) {
@@ -135,12 +144,14 @@ describe('@channel_order_mainnet - Channel order smoke', () => {
     const [spendingLiquiditySats, receivingLiquiditySats] = liquidityValues;
 
     if (spendingLiquiditySats !== transferAmountSats) {
-      throw new Error(`Spending liquidity ${spendingLiquiditySats} should equal ${transferAmountSats}`);
+      throw new Error(
+        `Spending liquidity ${spendingLiquiditySats} should equal ${transferAmountSats}`
+      );
     }
 
     if (!(receivingLiquiditySats > minimumReceivingCapacitySats)) {
       throw new Error(
-        `Receiving liquidity ${receivingLiquiditySats} should be greater than ${minimumReceivingCapacitySats}`,
+        `Receiving liquidity ${receivingLiquiditySats} should be greater than ${minimumReceivingCapacitySats}`
       );
     }
   });

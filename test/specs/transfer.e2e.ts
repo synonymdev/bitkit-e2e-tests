@@ -78,16 +78,19 @@ describe('@transfer - Transfer', () => {
       await elementByText('EUR (€)').click();
       await doNavigationClose();
 
-      if (driver.isAndroid) await launchFreshApp();
+      await sleep(1000);
+      await swipeFullScreen('up');
+      await sleep(1000);
       await tap('Suggestion-lightning');
       await tap('TransferIntro-button');
       await tap('FundTransfer');
       await tap('SpendingIntro-button');
-      await sleep(3000); // let the animation finish
+      await sleep(2000); // let the animation finish
 
       // can continue with default client balance (0)
+      await elementById('SpendingAmountContinue').waitForEnabled();
       await tap('SpendingAmountContinue');
-      await sleep(100);
+      await sleep(700);
       await tap('SpendingConfirmAdvanced');
       await tap('SpendingAdvancedMin');
       await expectText('100 000', { strategy: 'contains' });
@@ -99,15 +102,23 @@ describe('@transfer - Transfer', () => {
       await expect(eurBalance).toBeLessThan(460);
       await tap('SpendingAdvancedNumberField'); // change back to sats
       await tap('SpendingAdvancedContinue');
+      await sleep(500);
       await tap('NavigationBack');
+      await sleep(1000);
 
       // can continue with max client balance
-      await tap('SpendingAmountMax');
+      await tap('SpendingAmountMax').catch(async () => {
+        console.info('→ SpendingAmountMax not found, navigating back and trying again...');
+        await tap('NavigationBack');
+        await sleep(500);
+        await tap('SpendingAmountMax');
+      });
       await elementById('SpendingAmountContinue').waitForEnabled();
       await sleep(500);
       await tap('SpendingAmountContinue');
       await elementById('SpendingConfirmAdvanced').waitForDisplayed();
       await tap('NavigationBack');
+      await sleep(1000);
 
       // can continue with 25% client balance
       await elementById('SpendingAmountQuarter').waitForEnabled();
@@ -118,7 +129,9 @@ describe('@transfer - Transfer', () => {
       await elementById('SpendingConfirmAdvanced').waitForDisplayed();
       await tap('NavigationBack');
       await tap('NavigationBack');
+      await sleep(1000);
       await tap('SpendingIntro-button');
+      await sleep(500);
 
       // can change client balance
       await tap('N2');
@@ -134,15 +147,19 @@ describe('@transfer - Transfer', () => {
       await tap('TransferSuccess-button');
 
       // verify transfer activity on savings
+      await sleep(1000);
+      await swipeFullScreen('down');
+      await expectText('TRANSFER IN PROGRESS');
       await tap('ActivitySavings');
       await elementById('Activity-1').waitForDisplayed();
       await elementById('Activity-2').waitForDisplayed();
       await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
       await expectTextWithin('Activity-1', '-');
       await tap('NavigationBack');
+      await sleep(1000);
 
       // transfer in progress
-      //await elementById('Suggestion-lightning_setting_up').waitForDisplayed();
+      await expectText('TRANSFER IN PROGRESS');
 
       // Get another channel with custom receiving capacity
       await tap('ActivitySavings');
@@ -213,14 +230,17 @@ describe('@transfer - Transfer', () => {
       await expectTextWithin('Activity-2', 'Transfer', { timeout: 60_000 });
       await expectTextWithin('Activity-2', '-');
       await tap('NavigationBack');
+      await sleep(1000);
+
       // transfer in progress
-      //await elementById('Suggestion-lightning_setting_up').waitForDisplayed();
+      await expectText('TRANSFER IN PROGRESS');
 
       // check channel status
       await tap('HeaderMenu');
       await tap('DrawerSettings');
       await tap('AdvancedSettings');
       await tap('Channels');
+      await sleep(1000);
       const channels = await elementsById('Channel');
       channels[driver.isAndroid ? 1 : 0].click();
       await expectTextWithin('TotalSize', '₿ 250 000');
@@ -229,8 +249,6 @@ describe('@transfer - Transfer', () => {
 
       // check activities
       await sleep(1000);
-      await swipeFullScreen('up');
-      await swipeFullScreen('up');
       await elementById('ActivityShort-0').waitForDisplayed();
       await expectTextWithin('ActivityShort-0', 'Transfer');
       await elementById('ActivityShort-1').waitForDisplayed();
@@ -257,38 +275,6 @@ describe('@transfer - Transfer', () => {
       await expectTextWithin('Activity-1', '-');
       await expectTextWithin('Activity-2', '-');
       await elementById('Activity-3').waitForDisplayed({ reverse: true });
-
-      // TODO: enable when boost backup is operational
-      // https://github.com/synonymdev/bitkit-android/issues/321
-      //const seed = await getSeed();
-      //await waitForBackup();
-      //await restoreWallet(seed);
-
-      // check transfer card
-      //await elementById('Suggestion-lightning_setting_up').waitForDisplayed();
-
-      // check activity after restore
-      //await swipeFullScreen('up');
-      //await tap('ActivityShort-1');
-      //await elementById('StatusTransfer').waitForDisplayed();
-
-      // boost the transfer
-      //await tap('BoostButton');
-      //await elementById('CPFPBoost').waitForDisplayed();
-      //await dragOnElement('GRAB', 'right', 0.95); // Swipe to confirm
-
-      // check Activity
-      //await elementById('BoostingIcon').waitForDisplayed();
-
-      // reset & restore again
-      // await waitForBackup();
-      // await restoreWallet(seed);
-
-      // // check activity after restore
-      // await swipeFullScreen('up');
-      // await elementById('BoostingIcon').waitForDisplayed();
-      // await tap('ActivityShort-1');
-      // await elementById('StatusBoosting').waitForDisplayed();
     }
   );
 
@@ -332,8 +318,6 @@ describe('@transfer - Transfer', () => {
     const quickPayDismissed = driver.isAndroid ? await tryDismissQuickPayIntroIfVisible() : false;
 
     // check activity
-    await swipeFullScreen('up');
-    await swipeFullScreen('up');
     await elementById('ActivityShort-0').waitForDisplayed();
     await expectTextWithin('ActivityShort-0', 'Transfer');
     await elementById('ActivityShort-1').waitForDisplayed();
@@ -385,6 +369,7 @@ describe('@transfer - Transfer', () => {
     await elementById('TransferSuccess').waitForDisplayed();
     await tap('TransferSuccess-button');
     if (driver.isAndroid) await tap('NavigationBack');
+    await sleep(1000);
 
     // check channel is closed
     await tap('HeaderMenu');
