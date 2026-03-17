@@ -30,9 +30,28 @@ jobs:
           APP_BRANCH="${{ inputs.app_branch }}"
           INPUT_BRANCH="${{ inputs.e2e_branch_input }}"
           TEST_REPO="synonymdev/bitkit-e2e-tests"
+          CALLER_REPO="${{ github.repository }}"
+
+          # Platform-specific base branch overrides.
+          # When a platform needs a different base than 'main', update it here.
+          # Set both back to 'main' once platforms are aligned again.
+          declare -A BASE_OVERRIDES=(
+            ["ios"]="feat/home-redesign"
+            ["android"]="main"
+          )
+
+          PLATFORM=""
+          if [[ "$CALLER_REPO" == */bitkit-ios ]]; then
+            PLATFORM="ios"
+          elif [[ "$CALLER_REPO" == */bitkit-android ]]; then
+            PLATFORM="android"
+          fi
+          BASE_BRANCH="${BASE_OVERRIDES[$PLATFORM]:-main}"
 
           echo "🧭 App branch: $APP_BRANCH"
           echo "🧭 Input branch: $INPUT_BRANCH"
+          echo "🧭 Caller repo: $CALLER_REPO (platform: ${PLATFORM:-unknown})"
+          echo "🧭 Base branch: $BASE_BRANCH"
           echo "🧭 Checking repo: $TEST_REPO"
 
           if [[ "$INPUT_BRANCH" == "main" ]]; then
@@ -42,8 +61,8 @@ jobs:
               BRANCH="$APP_BRANCH"
               echo "✅ Found matching branch: $BRANCH"
             else
-              BRANCH="main"
-              echo "⚠️ No '$APP_BRANCH' branch in $TEST_REPO, using 'main'."
+              BRANCH="$BASE_BRANCH"
+              echo "⚠️ No '$APP_BRANCH' branch in $TEST_REPO, using '$BASE_BRANCH'."
             fi
           else
             if git ls-remote --exit-code https://github.com/$TEST_REPO.git "refs/heads/$INPUT_BRANCH" >/dev/null 2>&1; then
