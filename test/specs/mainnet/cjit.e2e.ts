@@ -21,7 +21,7 @@ function parseNumber(value: string): number {
 
 function parseCjitFees(value: string): { networkFee: number; serviceProviderFee: number } {
   const labeledMatch = value.match(
-    /\$([0-9]+(?:\.[0-9]+)?) network fee and \$([0-9]+(?:\.[0-9]+)?) service provider fee/i,
+    /\$([0-9]+(?:\.[0-9]+)?) network fee and \$([0-9]+(?:\.[0-9]+)?) service provider fee/i
   );
   if (labeledMatch) {
     return {
@@ -72,7 +72,9 @@ async function setupWallet(): Promise<void> {
 describe('@cjit_mainnet - CJIT smoke', () => {
   before(async () => {
     if (!Number.isInteger(expectedMinimumAmountSats) || expectedMinimumAmountSats <= 0) {
-      throw new Error(`Invalid CJIT_MIN_EXPECTED_SATS value: ${process.env.CJIT_MIN_EXPECTED_SATS}`);
+      throw new Error(
+        `Invalid CJIT_MIN_EXPECTED_SATS value: ${process.env.CJIT_MIN_EXPECTED_SATS}`
+      );
     }
     await reinstallApp();
   });
@@ -88,7 +90,7 @@ describe('@cjit_mainnet - CJIT smoke', () => {
     const minAmountSats = await waitForNonZeroMinimumAmount();
     if (minAmountSats <= expectedMinimumAmountSats) {
       throw new Error(
-        `Minimum receive amount ${minAmountSats} should be greater than ${expectedMinimumAmountSats}`,
+        `Minimum receive amount ${minAmountSats} should be greater than ${expectedMinimumAmountSats}`
       );
     }
 
@@ -98,16 +100,23 @@ describe('@cjit_mainnet - CJIT smoke', () => {
     const reviewAmountText = await getTextUnder('-primary');
     const reviewAmountSats = parseNumber(reviewAmountText);
     if (reviewAmountSats !== minAmountSats) {
-      throw new Error(`Review amount ${reviewAmountSats} should equal minimum receive amount ${minAmountSats}`);
+      throw new Error(
+        `Review amount ${reviewAmountSats} should equal minimum receive amount ${minAmountSats}`
+      );
     }
 
-    const serviceProviderFeeText = await elementByText('service provider fee', 'contains').getText();
+    const serviceProviderFeeText = await elementByText(
+      'service provider fee',
+      'contains'
+    ).getText();
     const { networkFee, serviceProviderFee } = parseCjitFees(serviceProviderFeeText);
     if (!(networkFee > 0)) {
       throw new Error(`Network fee should be greater than 0. Found: "${serviceProviderFeeText}"`);
     }
     if (!(serviceProviderFee > 0)) {
-      throw new Error(`Service provider fee should be greater than 0. Found: "${serviceProviderFeeText}"`);
+      throw new Error(
+        `Service provider fee should be greater than 0. Found: "${serviceProviderFeeText}"`
+      );
     }
 
     await elementByText('Continue').click();
@@ -115,4 +124,3 @@ describe('@cjit_mainnet - CJIT smoke', () => {
     await sleep(2000);
   });
 });
-

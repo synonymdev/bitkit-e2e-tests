@@ -1002,7 +1002,6 @@ async function verifyMigration(expectedBalance: number): Promise<void> {
 
   // Go to activity list to verify transactions exist
   await swipeFullScreen('up');
-  await swipeFullScreen('up');
   await tap('ActivityShowAll');
 
   // All transactions (Transfer, Sent, Received = 3 items)
