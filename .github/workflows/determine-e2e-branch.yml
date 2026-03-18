@@ -36,7 +36,7 @@ jobs:
           # When a platform needs a different base than 'main', update it here.
           # Set both back to 'main' once platforms are aligned again.
           declare -A BASE_OVERRIDES=(
-            ["ios"]="feat/home-redesign"
+            ["ios"]="main"
             ["android"]="main"
           )
 
