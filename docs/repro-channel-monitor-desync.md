@@ -43,7 +43,7 @@ Failed to start wallet
 
 ---
 
-## Repro: Blocktank channel (staging regtest)
+## Repro Case #1: Blocktank channel (staging regtest)
 
 Reproduces the bug using a Blocktank LSP channel opened via "transfer to spending".
 
@@ -58,7 +58,7 @@ Reproduces the bug using a Blocktank LSP channel opened via "transfer to spendin
 ### Steps
 
 1. Install v1.1.6 (RN), create wallet, fund on-chain, open Lightning channel (transfer to spending), make 1 LN payment
-2. Install v2.0.6/v2.0.3 (native) **over** RN app — migration runs automatically
+2. Install v2.0.6 (iOS) or v2.0.3 (Android) **over** RN app — migration runs automatically
 3. Make 21+ Lightning payments on native:
    ```bash
    # iOS
@@ -70,7 +70,7 @@ Reproduces the bug using a Blocktank LSP channel opened via "transfer to spendin
 
 ---
 
-## Repro: 3rd-party channel (local docker)
+## Repro Case #2: 3rd-party channel (local docker)
 
 Reproduces the bug using a manually opened channel to the local docker LND node.
 
@@ -82,7 +82,7 @@ Reproduces the bug using a manually opened channel to the local docker LND node.
 
 ### Build Notes
 
-RN v1.1.6 local builds use `.env.test.template` (regtest + localhost Electrum). For release builds, `react-native-dotenv` reads `.env.production`, so that file must be overwritten with the local config.
+RN v1.1.6 local builds use `.env.test.template` (regtest + localhost Electrum). For release builds, `react-native-dotenv` reads `.env.production`, so that file must be overwritten with the local regtest config.
 
 **Critical**: The RN app's `.env.production` must point the backup server to **staging** (not localhost), because the native apps have `rnBackupServerHost` hardcoded to staging. If the RN app pushes to `127.0.0.1:3003` but the native app queries `bitkit.stag0.blocktank.to`, it will never find the channel monitors and the bug won't trigger.
 
@@ -106,8 +106,8 @@ All other settings (Electrum, network, etc.) stay local.
    ./bitcoin-cli send 0.01 <address>
    ./bitcoin-cli mine 6
    ```
-4. In the app, go to **Settings > Advanced > Channels > + > Fund Custom > Manual** and enter the local LND connection:
-   - Node ID: `02cfdfd683aca2561621870fe50ab9ef2d0c887b3729ce6797ff68fde6f044feb9`
+4. In the app, go to **Settings > Advanced > Channels > + > Fund Custom > Manual** and enter the local LND connection (get the node ID from `./bitcoin-cli getinfo`):
+   - Node ID: LND's pubkey
    - Host: `0.0.0.0`
    - Port: `9735`
 5. Set amount (e.g. 50,000 sats) and confirm the channel open
@@ -116,7 +116,7 @@ All other settings (Electrum, network, etc.) stay local.
 
 #### 2. Open channel from LND to the app
 
-The app's channel has all balance on the app side. LND needs outbound liquidity to pay invoices to the app:
+The app's channel has all balance on the app side. LND needs outbound liquidity to pay invoices to the app. Get the app's node ID from **Settings > Advanced > Lightning Node Info**, then:
 
 ```bash
 ./bitcoin-cli openchannel <app_node_id> 500000
@@ -185,7 +185,7 @@ Matrix of upgrade/recovery scenarios to validate v2.1.2. Each scenario should be
 | B1 | v2.0.6 (wallet with 21+ payment gap) → v2.1.0 → confirm broken | Reproduces |
 | B2 | Restore broken v2.1.0 wallet into v2.1.2 (clean install + restore) | ✅ Recovered |
 | B3 | Update broken v2.1.0 wallet to v2.1.2 (in-place upgrade) | ✅ Recovered |
-| B4 | v2.0.6 (wallet with gap) → v2.1.2 (skip v2.1.0) | ✅ Recovered |
+| B4 | v2.0.6 (wallet with gap) → v2.1.2 (skip v2.1.0) | ✅ No issues |
 | B5 | v2.0.6 (wallet with gap) → v2.1.1 → v2.1.2 | ✅ Recovered |
 | B6 | v2.1.0 healthy wallet (no gap) → v2.1.2 (regression check) | ✅ No issues |
 | B7 | v2.1.0 broken wallet + 600 blocks mined → v2.1.2 (stale chain state) | ✅ Recovered |
@@ -196,7 +196,7 @@ Matrix of upgrade/recovery scenarios to validate v2.1.2. Each scenario should be
 |---|----------|--------|
 | T1 | v2.0.6 (wallet with 30+ payment gap) → v2.1.0 → confirm broken | Reproduces |
 | T2 | Update broken v2.1.0 wallet to v2.1.2 (in-place upgrade) | ✅ Recovered |
-| T3 | v2.0.6 (wallet with gap) → v2.1.2 (skip v2.1.0) | ✅ Recovered |
+| T3 | v2.0.6 (wallet with gap) → v2.1.2 (skip v2.1.0) | ✅ No issues |
 | T4 | v2.1.0 healthy wallet (no gap) → v2.1.2 (regression check) | ✅ No issues |
 | T5 | v2.1.0 broken wallet + 600 blocks mined → v2.1.2 (stale chain state) | ✅ Recovered |
 
