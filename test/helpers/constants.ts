@@ -49,12 +49,16 @@ export const blocktankURL =
 
 export type LndConfig = {
   server: string;
+  restHost: string;
+  restPort: number;
   tls: string;
   macaroonPath: string;
 };
 
 export const lndConfig: LndConfig = {
   server: 'localhost:10009',
+  restHost: 'localhost',
+  restPort: 8080,
   tls: `${__dirname}/../../docker/lnd/tls.cert`,
   macaroonPath: `${__dirname}/../../docker/lnd/data/chain/bitcoin/regtest/admin.macaroon`,
 };

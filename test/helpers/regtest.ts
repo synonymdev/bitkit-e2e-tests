@@ -7,8 +7,10 @@
  * Default is 'local' for backwards compatibility with existing tests.
  */
 
+import * as fs from 'node:fs';
+import * as https from 'node:https';
 import BitcoinJsonRpc from 'bitcoin-json-rpc';
-import { bitcoinURL, blocktankURL, getBackend, type Backend } from './constants';
+import { bitcoinURL, blocktankURL, lndConfig, getBackend, type Backend } from './constants';
 
 export { getBackend, type Backend };
 
@@ -45,6 +47,65 @@ async function localMineBlocks(count: number): Promise<void> {
     await rpc.generateToAddress(1, await rpc.getNewAddress());
   }
   console.info(`→ [local] Mined ${count} block(s)`);
+}
+
+function lndRestRequest(
+  path: string,
+  body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const tlsCert = fs.readFileSync(lndConfig.tls);
+  const macaroon = fs.readFileSync(lndConfig.macaroonPath).toString('hex');
+  const payload = JSON.stringify(body);
+
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      {
+        hostname: lndConfig.restHost,
+        port: lndConfig.restPort,
+        path,
+        method: 'POST',
+        ca: tlsCert,
+        rejectUnauthorized: false,
+        headers: {
+          'Grpc-Metadata-macaroon': macaroon,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(payload),
+        },
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk: Buffer) => { data += chunk.toString(); });
+        res.on('end', () => {
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            resolve(JSON.parse(data) as Record<string, unknown>);
+          } else {
+            reject(new Error(`LND REST ${res.statusCode}: ${data}`));
+          }
+        });
+      },
+    );
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
+}
+
+async function localPayInvoice(invoice: string, amountSat?: number): Promise<string> {
+  const body: Record<string, unknown> = { payment_request: invoice };
+  if (amountSat !== undefined) {
+    body.amt = amountSat;
+  }
+
+  console.info(`→ [local] Paying invoice via LND REST...`);
+  const result = await lndRestRequest('/v1/channels/transactions', body);
+
+  if (result.payment_error && result.payment_error !== '') {
+    throw new Error(`LND payment error: ${result.payment_error}`);
+  }
+
+  const paymentHash = (result.payment_hash as string) ?? 'unknown';
+  console.info(`→ [local] Payment hash: ${paymentHash}`);
+  return paymentHash;
 }
 
 // Blocktank backend (regtest API over HTTPS)
@@ -249,16 +310,20 @@ export async function mineBlocks(count: number = 1): Promise<void> {
 
 /**
  * Pays a Lightning invoice on regtest.
- * Only available with Blocktank backend (regtest).
+ * - BACKEND=local: uses the local LND node via REST API
+ * - BACKEND=regtest: uses Blocktank API
  *
  * @param invoice - The BOLT11 invoice to pay
  * @param amountSat - Amount in satoshis (optional, for amount-less invoices)
- * @returns The payment ID
+ * @returns The payment ID / payment hash
  */
 export async function payInvoice(invoice: string, amountSat?: number): Promise<string> {
   const backend = getBackend();
-  if (backend !== 'regtest') {
-    throw new Error('payInvoice() is only available with BACKEND=regtest (Blocktank API)');
+  if (backend === 'local') {
+    return localPayInvoice(invoice, amountSat);
   }
-  return blocktankPayInvoice(invoice, amountSat);
+  if (backend === 'regtest') {
+    return blocktankPayInvoice(invoice, amountSat);
+  }
+  throw new Error('payInvoice() is not available with BACKEND=mainnet');
 }
