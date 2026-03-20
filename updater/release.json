@@ -1,0 +1,20 @@
+{
+  "platforms": {
+    "ios": {
+      "version": "v0.0.0",
+      "buildNumber": 0,
+      "notes": "",
+      "pub_date": "2026-01-01T00:00:00Z",
+      "url": "https://apps.apple.com/app/bitkit-wallet/id6502440655",
+      "critical": false
+    },
+    "android": {
+      "version": "v0.0.0",
+      "buildNumber": 0,
+      "notes": "",
+      "pub_date": "2026-01-01T00:00:00Z",
+      "url": "https://play.google.com/store/apps/details?id=to.bitkit",
+      "critical": false
+    }
+  }
+}
