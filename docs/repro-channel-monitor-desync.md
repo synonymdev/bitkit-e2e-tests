@@ -131,10 +131,7 @@ Verify with a test payment:
 
 1. Install native build **over** RN app (upgrade, not clean install)
 2. Wait for migration and sync
-3. **Re-connect to LND** — custom peer connection is lost after migration ([#435](https://github.com/synonymdev/bitkit-ios/issues/435)). Paste the URI in the app:
-   ```
-   02cfdfd683aca2561621870fe50ab9ef2d0c887b3729ce6797ff68fde6f044feb9@0.0.0.0:9735
-   ```
+3. Verify the channel is active and LND is connected as a peer
 
 #### 4. Make 30 Lightning payments on native
 
