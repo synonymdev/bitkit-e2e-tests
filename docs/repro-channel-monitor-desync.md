@@ -168,7 +168,9 @@ Fix branches:
 3. Launch the app
 4. Verify: node starts, channels are active, LN payments work
 
-> **Note (3rd-party channels)**: After recovery, 3rd-party channels may be force-closed. Final behavior for non-LSP channels after recovery is still being evaluated.
+### Post-recovery channel closure
+
+Whether healed channels should be closed after recovery is under discussion. For testing: verify wallet is operational after recovery regardless of channel closure outcome. On-chain balance should be intact even if healed channels are subsequently closed.
 
 ---
 
@@ -196,8 +198,7 @@ Matrix of upgrade/recovery scenarios to validate v2.1.2. Each scenario should be
 | T2 | Update broken v2.1.0 wallet to v2.1.2 (in-place upgrade) | ✅ Recovered |
 | T3 | v2.0.6 (wallet with gap) → v2.1.2 (skip v2.1.0) | ✅ Recovered |
 | T4 | v2.1.0 healthy wallet (no gap) → v2.1.2 (regression check) | ✅ No issues |
-
-> T2-T4: After recovery, 3rd-party channels may be force-closed. Verify wallet is operational and on-chain balance is intact even if LN channels close.
+| T5 | v2.1.0 broken wallet + 600 blocks mined → v2.1.2 (stale chain state) | ✅ Recovered |
 
 ### Version reference
 
