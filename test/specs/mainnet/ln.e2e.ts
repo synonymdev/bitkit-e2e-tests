@@ -81,14 +81,18 @@ async function waitForPaymentResult(): Promise<void> {
   console.info(`→ [LN] Waiting for payment result (timeout: ${PAYMENT_TIMEOUT_MS / 1000}s)...`);
   await browser.waitUntil(
     async () => {
-      const success = await elementById('SendSuccess').isDisplayed().catch(() => false);
+      const success = await elementById('SendSuccess')
+        .isDisplayed()
+        .catch(() => false);
       if (success) {
         console.info('→ [LN] Payment succeeded');
         return true;
       }
 
       for (const toastId of ERROR_TOASTS) {
-        const visible = await elementById(toastId).isDisplayed().catch(() => false);
+        const visible = await elementById(toastId)
+          .isDisplayed()
+          .catch(() => false);
         if (visible) {
           throw new Error(`Payment failed with error toast: ${toastId}`);
         }
@@ -100,7 +104,7 @@ async function waitForPaymentResult(): Promise<void> {
       timeout: PAYMENT_TIMEOUT_MS,
       interval: 3_000,
       timeoutMsg: `Payment did not complete within ${PAYMENT_TIMEOUT_MS / 1000}s`,
-    },
+    }
   );
 }
 

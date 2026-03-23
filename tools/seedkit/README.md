@@ -53,13 +53,13 @@ seedkit preview --backend staging
 
 ## Scenarios
 
-| Scenario | Description |
-|----------|-------------|
-| `first-time` | Clean wallet with one confirmed receive (50,000 sat) |
+| Scenario     | Description                                                 |
+| ------------ | ----------------------------------------------------------- |
+| `first-time` | Clean wallet with one confirmed receive (50,000 sat)        |
 | `fragmented` | 18 small UTXOs (2,000-9,100 sat) for coin selection testing |
-| `dust` | Tiny UTXOs at spendability edge cases (330-1,000 sat) |
-| `merchant` | 12 inbound payments across multiple blocks |
-| `savings` | Single large UTXO (1,000,000 sat) |
+| `dust`       | Tiny UTXOs at spendability edge cases (330-1,000 sat)       |
+| `merchant`   | 12 inbound payments across multiple blocks                  |
+| `savings`    | Single large UTXO (1,000,000 sat)                           |
 
 ## Backends
 
@@ -86,9 +86,7 @@ When used with `--output json`, the `run` command outputs structured JSON for pr
 {
   "scenario": "first-time",
   "mnemonic": "word1 word2 ...",
-  "addresses": [
-    {"index": 0, "address": "bcrt1q...", "amountSat": 50000, "confirmed": true}
-  ],
+  "addresses": [{ "index": 0, "address": "bcrt1q...", "amountSat": 50000, "confirmed": true }],
   "totalSat": 50000,
   "utxoCount": 1,
   "blocksMined": 1

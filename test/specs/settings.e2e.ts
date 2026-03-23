@@ -490,7 +490,6 @@ describe('@settings - Settings', () => {
     });
 
     ciIt('@settings_12 - Can reset suggestions', async () => {
-
       await elementById('TotalBalance-primary').waitForDisplayed();
       await swipeFullScreen('up');
       await elementById('SuggestionsWidget').waitForDisplayed();
