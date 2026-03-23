@@ -106,10 +106,15 @@ All other settings (Electrum, network, etc.) stay local.
    ./bitcoin-cli send 0.01 <address>
    ./bitcoin-cli mine 6
    ```
-4. In the app, go to **Settings > Advanced > Channels > + > Fund Custom > Manual** and enter the local LND connection (get the node ID from `./bitcoin-cli getinfo`):
-   - Node ID: LND's pubkey
-   - Host: `0.0.0.0`
-   - Port: `9735`
+4. In the app, go to **Settings > Advanced > Lightning Connections > Add Connection > Advanced > Manual Setup** and enter the local LND connection (get the node ID from `./bitcoin-cli getinfo | jq .uris`):
+
+```bash
+./bitcoin-cli getinfo | jq .uris
+[
+  "0359857213bc4a4a26ddfc0410b04a01cdec6ba514735d18e3c337cf7afc454643@127.0.0.1:9735"
+]
+```
+
 5. Set amount (e.g. 50,000 sats) and confirm the channel open
 6. Mine blocks: `./bitcoin-cli mine 6`
 7. Wait for the channel to be active
@@ -131,7 +136,11 @@ Verify with a test payment:
 
 1. Install native build **over** RN app (upgrade, not clean install)
 2. Wait for migration and sync
-3. Verify the channel is active and LND is connected as a peer
+3. **Android v2.0.3 only**: re-connect to LND — custom peer reconnection after migration was not fixed until v2.1.0 ([#784](https://github.com/synonymdev/bitkit-android/pull/784)). Paste the LND URI in the app:
+   ```
+   <lnd_pubkey>@127.0.0.1:9735
+   ```
+4. Verify the channel is active and LND is connected as a peer
 
 #### 4. Make 30 Lightning payments on native
 
