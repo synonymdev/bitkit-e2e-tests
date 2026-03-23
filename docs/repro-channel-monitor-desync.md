@@ -1,5 +1,7 @@
 # ChannelMonitor Desync: Repro, Recovery & Test Plan
 
+See also: [Lightning primer for QA](./lightning-primer-for-qa.md) (monitors, HTLCs, gaps, risks).
+
 Related issues:
 - [#847 (bitkit-android)](https://github.com/synonymdev/bitkit-android/issues/847)
 - iOS support ticket (user logs from 2026-03-18)
@@ -178,6 +180,10 @@ Fix branches:
 
 Whether healed channels should be closed after recovery is under discussion. For testing: verify wallet is operational after recovery regardless of channel closure outcome. On-chain balance should be intact even if healed channels are subsequently closed.
 
+### Timing (T2 in-place upgrade)
+
+After installing v2.1.2 over a broken v2.1.0 wallet, Lightning can take **over one minute** to become ready: first load hits `DangerousValue`, then `accept_stale_channel_monitors` retry, chain sync, and monitor healing. This is **expected on both iOS and Android** — not a hang. Wait for balances/channels before running payments or automation.
+
 ---
 
 ## Test Plan
@@ -192,7 +198,7 @@ Matrix of upgrade/recovery scenarios to validate v2.1.2. Each scenario should be
 | B2 | Restore broken v2.1.0 wallet into v2.1.2 (clean install + restore) | ✅ Recovered |
 | B3 | Update broken v2.1.0 wallet to v2.1.2 (in-place upgrade) | ✅ Recovered |
 | B4 | v2.0.6 (wallet with gap) → v2.1.2 (skip v2.1.0) | ✅ No issues |
-| B5 | v2.0.6 (wallet with gap) → v2.1.1 → v2.1.2 | ✅ Recovered |
+| B5 | v2.0.6 (wallet with gap) → v2.1.1 → v2.1.2 | ✅ No issues |
 | B6 | v2.1.0 healthy wallet (no gap) → v2.1.2 (regression check) | ✅ No issues |
 | B7 | v2.1.0 broken wallet + 600 blocks mined → v2.1.2 (stale chain state) | ✅ Recovered |
 
@@ -229,6 +235,7 @@ Matrix of upgrade/recovery scenarios to validate v2.1.2. Each scenario should be
 
 | File | Purpose |
 |------|---------|
+| `docs/lightning-primer-for-qa.md` | Background: ChannelManager vs ChannelMonitor, HTLCs, gaps, test focus |
 | `test/specs/receive-ln-payments.e2e.ts` | Automated spec to receive N Lightning payments |
 | `wdio.no-install.conf.ts` | WDIO config that attaches to existing app (no reinstall) |
 | `docker/bitcoin-cli` | Local docker CLI with `openchannel`, `payinvoice`, `mine`, `send` commands |
