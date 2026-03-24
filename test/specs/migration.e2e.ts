@@ -26,6 +26,7 @@ import { ciIt } from '../helpers/suite';
 import {
   getNativeAppPath,
   getRnAppPath,
+  grantIOSCameraPermission,
   reinstallAppFromPath,
   resetBootedIOSKeychain,
 } from '../helpers/setup';
@@ -170,6 +171,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     // Install native app
     console.info(`→ Installing native app from: ${getNativeAppPath()}`);
     await driver.installApp(getNativeAppPath());
+    grantIOSCameraPermission();
     await driver.activateApp(getAppId());
 
     // Restore wallet with mnemonic (uses custom flow to handle backup sheet)
@@ -194,6 +196,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     // Install native app ON TOP of RN (upgrade)
     console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
     await driver.installApp(getNativeAppPath());
+    grantIOSCameraPermission();
     await driver.activateApp(getAppId());
 
     // Handle migration flow
@@ -213,6 +216,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     // Install native app ON TOP of RN (upgrade)
     console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
     await driver.installApp(getNativeAppPath());
+    grantIOSCameraPermission();
     await driver.activateApp(getAppId());
 
     // Handle migration flow
@@ -234,6 +238,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     // Install native app ON TOP of RN (upgrade)
     console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
     await driver.installApp(getNativeAppPath());
+    grantIOSCameraPermission();
     await driver.activateApp(getAppId());
 
     // Handle migration flow
