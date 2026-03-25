@@ -39,6 +39,7 @@ import {
   mineBlocks,
   payInvoice,
 } from '../helpers/regtest';
+import { openSettings } from '../helpers/settings';
 
 // Module-level electrum client (set in before hook)
 let electrumClient: ElectrumClient;

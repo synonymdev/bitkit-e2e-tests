@@ -10,6 +10,7 @@ import {
   typeText,
 } from './actions';
 import { LndConfig } from './constants';
+import { openSettings } from './settings';
 import createLndRpc, { LnRpc, WalletUnlockerRpc } from '@radar/lnrpc';
 
 export async function setupLND(
@@ -94,9 +95,7 @@ export async function waitForActiveChannel(
 }
 
 export async function getLDKNodeID(): Promise<string> {
-  await tap('HeaderMenu');
-  await tap('DrawerSettings');
-  await tap('AdvancedSettings');
+  await openSettings('advanced');
   // wait for LDK to start
   await sleep(5000);
   await tap('LightningNodeInfo');
@@ -123,9 +122,7 @@ export async function connectToLND(lndNodeID: string, { navigationClose = true }
 }
 
 export async function checkChannelStatus({ size = '100 000' } = {}) {
-  await tap('HeaderMenu');
-  await tap('DrawerSettings');
-  await tap('AdvancedSettings');
+  await openSettings('advanced');
   await tap('Channels');
   await sleep(1000);
   await tap('Channel');
