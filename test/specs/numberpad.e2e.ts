@@ -15,6 +15,7 @@ import initElectrum from '../helpers/electrum';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 import { ensureLocalFunds } from '../helpers/regtest';
+import { openSettings } from '../helpers/settings';
 
 describe('@numberpad - NumberPad', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
@@ -178,9 +179,7 @@ async function makeSureIsBitcoinInput(mode: NumberpadMode) {
 }
 
 async function switchToClassicDenomination() {
-  await tap('HeaderMenu');
-  await tap('DrawerSettings');
-  await tap('GeneralSettings');
+  await openSettings();
   await tap('UnitSettings');
   await tap('DenominationClassic');
   await doNavigationClose();

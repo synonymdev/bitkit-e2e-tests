@@ -39,6 +39,7 @@ import {
 } from '../helpers/lnd';
 import { ciIt } from '../helpers/suite';
 import { ensureLocalFunds, getBitcoinRpc, mineBlocks } from '../helpers/regtest';
+import { openSettings } from '../helpers/settings';
 
 describe('@lightning - Lightning', () => {
   let electrum: { waitForSync: any; stop: any };
@@ -262,9 +263,7 @@ describe('@lightning - Lightning', () => {
     await doNavigationClose();
 
     // check channel status
-    await tap('HeaderMenu');
-    await tap('DrawerSettings');
-    await tap('AdvancedSettings');
+    await openSettings('advanced');
     await tap('Channels');
     await sleep(2000);
     await tap('Channel');

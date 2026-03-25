@@ -51,7 +51,7 @@ async function localMineBlocks(count: number): Promise<void> {
 
 function lndRestRequest(
   path: string,
-  body: Record<string, unknown>,
+  body: Record<string, unknown>
 ): Promise<Record<string, unknown>> {
   const tlsCert = fs.readFileSync(lndConfig.tls);
   const macaroon = fs.readFileSync(lndConfig.macaroonPath).toString('hex');
@@ -74,7 +74,9 @@ function lndRestRequest(
       },
       (res) => {
         let data = '';
-        res.on('data', (chunk: Buffer) => { data += chunk.toString(); });
+        res.on('data', (chunk: Buffer) => {
+          data += chunk.toString();
+        });
         res.on('end', () => {
           if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
             resolve(JSON.parse(data) as Record<string, unknown>);
@@ -82,7 +84,7 @@ function lndRestRequest(
             reject(new Error(`LND REST ${res.statusCode}: ${data}`));
           }
         });
-      },
+      }
     );
     req.on('error', reject);
     req.write(payload);

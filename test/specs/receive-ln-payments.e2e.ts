@@ -78,7 +78,9 @@ describe('Receive LN payments (utility)', () => {
         console.error(`${label} ✗ Failed: ${error}`);
         try {
           await swipeFullScreen('down');
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
         await sleep(2000);
       }
     }

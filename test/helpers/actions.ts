@@ -1,6 +1,7 @@
 import type { ChainablePromiseElement } from 'webdriverio';
 import { reinstallApp } from './setup';
 import { deposit, mineBlocks } from './regtest';
+import { openSettings } from './settings';
 
 export const sleep = (ms: number) => browser.pause(ms);
 
@@ -610,9 +611,7 @@ export async function doNavigationClose() {
 }
 
 export async function getSeed(): Promise<string> {
-  await tap('HeaderMenu');
-  await tap('DrawerSettings');
-  await tap('BackupSettings');
+  await openSettings('security');
   await tap('BackupWallet');
 
   // get seed from SeedContainer
@@ -810,9 +809,7 @@ async function assertAddressTypeSwitchFeedback() {
 }
 
 export async function switchPrimaryAddressType(nextType: addressTypePreference) {
-  await tap('HeaderMenu');
-  await tap('DrawerSettings');
-  await tap('AdvancedSettings');
+  await openSettings('advanced');
   await tap('AddressTypePreference');
   await tap(nextType);
   await assertAddressTypeSwitchFeedback();
@@ -1165,6 +1162,8 @@ export type ToastId =
   | 'TransactionRemovedToast'
   | 'InvalidAddressToast'
   | 'ExpiredLightningToast'
+  | 'DevModeEnabledToast'
+  | 'DevModeDisabledToast'
   | 'InsufficientSpendingToast'
   | 'InsufficientSavingsToast';
 
@@ -1363,9 +1362,7 @@ export async function acknowledgeHighBalanceWarning({
 // enable/disable widgets in settings
 export async function toggleWidgets() {
   await sleep(3000);
-  await tap('HeaderMenu');
-  await tap('DrawerSettings');
-  await tap('GeneralSettings');
+  await openSettings();
   await tap('WidgetsSettings');
   const widgets = await elementsByText('Widgets');
   await widgets[1].click();
@@ -1476,8 +1473,7 @@ export async function attemptRefreshOnHomeScreen() {
 }
 
 export async function waitForBackup() {
-  await tap('HeaderMenu');
-  await tap('DrawerSettings');
+  await openSettings('security');
   await tap('BackupSettings');
   await elementById('AllSynced').waitForDisplayed();
   await doNavigationClose();

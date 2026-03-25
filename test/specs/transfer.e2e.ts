@@ -36,6 +36,7 @@ import { ensureLocalFunds, getBitcoinRpc, mineBlocks } from '../helpers/regtest'
 
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
+import { openSettings } from '../helpers/settings';
 
 describe('@transfer - Transfer', () => {
   let electrum: { waitForSync: () => any; stop: () => void };
@@ -71,9 +72,7 @@ describe('@transfer - Transfer', () => {
       await receiveOnchainFunds({ sats: 1000_000, expectHighBalanceWarning: true });
 
       // switch to EUR
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await tap('GeneralSettings');
+      await openSettings();
       await tap('CurrenciesSettings');
       await elementByText('EUR (€)').click();
       await doNavigationClose();
@@ -236,9 +235,7 @@ describe('@transfer - Transfer', () => {
       await expectText('TRANSFER IN PROGRESS');
 
       // check channel status
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await tap('AdvancedSettings');
+      await openSettings('advanced');
       await tap('Channels');
       await sleep(1000);
       const channels = await elementsById('Channel');
@@ -372,9 +369,7 @@ describe('@transfer - Transfer', () => {
     await sleep(1000);
 
     // check channel is closed
-    await tap('HeaderMenu');
-    await tap('DrawerSettings');
-    await tap('AdvancedSettings');
+    await openSettings('advanced');
     await tap('Channels');
     await expectText('Connection 1', { visible: false });
   });

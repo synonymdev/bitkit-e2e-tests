@@ -46,6 +46,7 @@ import {
   getExternalAddress,
   mineBlocks,
 } from '../helpers/regtest';
+import { openSettings } from '../helpers/settings';
 
 describe('@send - Send', () => {
   let electrum: { waitForSync: any; stop: any };
@@ -471,9 +472,7 @@ describe('@send - Send', () => {
 
     // enable quickpay
     console.info('Enabling quickpay...');
-    await tap('HeaderMenu');
-    await tap('DrawerSettings');
-    await tap('GeneralSettings');
+    await openSettings();
     await tap('QuickpaySettings');
     // no quickpay intro as we already dismissed it after getting lightning balance
     await tap('QuickpayToggle');
