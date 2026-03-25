@@ -1382,6 +1382,28 @@ export async function typeRecipientInput(
   }
 }
 
+export async function editRecipientAddress(address: string) {
+  if (driver.isIOS) {
+    await tap('SendConfirmToggleDetails');
+  }
+  await tap('ReviewUri');
+  await sleep(2000);
+  await elementById('RecipientInput').waitForDisplayed();
+  await sleep(500);
+  try {
+    console.info('Typing on the RecipientInput...');
+    console.info({ address });
+    await typeRecipientInput(address);
+    await elementById('AddressContinue').waitForEnabled();
+    await sleep(500);
+  } catch {
+    console.warn('Typing on the RecipientInput failed, trying again...');
+    await typeRecipientInput(address);
+    await elementById('AddressContinue').waitForEnabled();
+    await sleep(500);
+  }
+}
+
 export async function typeAddressAndVerifyContinue({
   address,
   reverse = false,
