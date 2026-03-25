@@ -419,6 +419,15 @@ export async function typeText(testId: string, text: string) {
   await el.setValue(text);
 }
 
+export async function addSendTag(tag: string) {
+  if (driver.isIOS) {
+    await tap('SendConfirmToggleDetails');
+  }
+  await tap('TagsAddSend');
+  await typeText('TagInputSend', tag);
+  await tap('SendTagsSubmit');
+}
+
 export async function enterAmount(amountSats: number) {
   for (const digit of `${amountSats}`.split('')) {
     await tap(`N${digit}`);
@@ -1389,7 +1398,7 @@ export async function typeAddressAndVerifyContinue({
 
 export async function enterAddress(
   address: string,
-  { acceptCameraPermission = true, addressTimeout = 30_000 } = {},
+  { acceptCameraPermission = true, addressTimeout = 30_000 } = {}
 ) {
   await tap('Send');
   await sleep(700);
