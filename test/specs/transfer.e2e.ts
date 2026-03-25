@@ -34,9 +34,9 @@ import {
 import { lndConfig } from '../helpers/constants';
 import { ensureLocalFunds, getBitcoinRpc, mineBlocks } from '../helpers/regtest';
 
-import { launchFreshApp, reinstallApp } from '../helpers/setup';
+import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
-import { openSettings } from '../helpers/settings';
+import { openSettings } from '../helpers/navigation';
 
 describe('@transfer - Transfer', () => {
   let electrum: { waitForSync: () => any; stop: () => void };

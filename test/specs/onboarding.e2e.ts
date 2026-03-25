@@ -14,7 +14,7 @@ import {
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
-import { openSettings } from '../helpers/settings';
+import { openSettings } from '../helpers/navigation';
 
 describe('@onboarding - Onboarding', () => {
   beforeEach(async () => {

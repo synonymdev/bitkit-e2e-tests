@@ -1,7 +1,9 @@
 import type { ChainablePromiseElement } from 'webdriverio';
 import { reinstallApp } from './setup';
 import { deposit, mineBlocks } from './regtest';
-import { openSettings } from './settings';
+import { doNavigationClose, doTriggerTimedSheet, openSettings } from './navigation';
+
+export { doNavigationClose, doTriggerTimedSheet } from './navigation';
 
 export const sleep = (ms: number) => browser.pause(ms);
 
@@ -604,12 +606,6 @@ export async function handleAndroidAlert(
   }
 }
 
-export async function doNavigationClose() {
-  await tap('HeaderMenu');
-  await tap('DrawerWallet');
-  await sleep(500);
-}
-
 export async function getSeed(): Promise<string> {
   await openSettings('security');
   await tap('BackupWallet');
@@ -1201,23 +1197,6 @@ export async function acknowledgeExternalSuccess() {
   await sleep(500);
   await tap('ExternalSuccess-button');
   await sleep(300);
-}
-
-/**
- * Triggers the timed backup sheet by navigating to settings and back.
- * Since timed sheets are sometimes triggered by user behavior (when user goes back to home screen),
- * we need to trigger them manually.
- *
- * @example
- * // Trigger backup sheet before testing dismissal
- * await doTriggerTimedSheet();
- */
-export async function doTriggerTimedSheet() {
-  await sleep(700); // wait for any previous animations to finish
-  await tap('HeaderMenu');
-  await tap('DrawerSettings');
-  await sleep(500); // wait for the app to settle
-  await doNavigationClose();
 }
 
 export async function dismissBackgroundPaymentsTimedSheet({

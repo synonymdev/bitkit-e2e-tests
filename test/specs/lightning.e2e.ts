@@ -39,7 +39,7 @@ import {
 } from '../helpers/lnd';
 import { ciIt } from '../helpers/suite';
 import { ensureLocalFunds, getBitcoinRpc, mineBlocks } from '../helpers/regtest';
-import { openSettings } from '../helpers/settings';
+import { openSettings } from '../helpers/navigation';
 
 describe('@lightning - Lightning', () => {
   let electrum: { waitForSync: any; stop: any };

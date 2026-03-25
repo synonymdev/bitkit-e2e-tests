@@ -15,7 +15,7 @@ import initElectrum from '../helpers/electrum';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 import { ensureLocalFunds, getExternalAddress } from '../helpers/regtest';
-import { openSettings } from '../helpers/settings';
+import { openSettings } from '../helpers/navigation';
 
 describe('@security - Security And Privacy', () => {
   let electrum: { waitForSync: any; stop: any };

@@ -51,7 +51,7 @@ import {
   getExternalAddress,
   mineBlocks,
 } from '../helpers/regtest';
-import { openSettings } from '../helpers/settings';
+import { openSettings } from '../helpers/navigation';
 
 describe('@multi_address - Multi address', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;

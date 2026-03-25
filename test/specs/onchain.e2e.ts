@@ -35,7 +35,7 @@ import {
   mineBlocks,
   sendToAddress,
 } from '../helpers/regtest';
-import { openSettings } from '../helpers/settings';
+import { openSettings } from '../helpers/navigation';
 
 describe('@onchain - Onchain', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;

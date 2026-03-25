@@ -46,7 +46,7 @@ import {
   getExternalAddress,
   mineBlocks,
 } from '../helpers/regtest';
-import { openSettings } from '../helpers/settings';
+import { openSettings } from '../helpers/navigation';
 
 describe('@send - Send', () => {
   let electrum: { waitForSync: any; stop: any };
