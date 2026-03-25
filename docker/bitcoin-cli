@@ -28,6 +28,8 @@ Commands:
     getInvoice <amount>                Get a new BIP21 URI with a bech32 address
   LND:
     getinfo                            Show LND node info (for connectivity debugging)
+    openchannel <node_id> [amount]     Open channel from LND to node (default: 500000 sats)
+    payinvoice <invoice> [amount]      Pay a Lightning invoice via LND
     holdinvoice [amount] [-m memo]     Create a hold invoice
     settleinvoice <preimage>           Reveal a preimage and use it to settle the corresponding invoice
     cancelinvoice <payment_hash>       Cancels a currently open invoice
@@ -193,6 +195,127 @@ fi
 # Show LND node info (LND)
 if [[ "$command" = "getinfo" ]]; then
   "${LNCLI_CMD[@]}" getinfo
+  exit
+fi
+
+# Open channel from LND to a node
+if [[ "$command" = "openchannel" ]]; then
+  shift
+
+  node_id="${1:-}"
+  amount="${2:-500000}"
+
+  if [ -z "$node_id" ]; then
+    echo "Usage: $CLI_NAME openchannel <node_id> [amount_sats]"
+    echo ""
+    echo "  node_id: app's Lightning node ID (Settings > Advanced > Lightning Node Info)"
+    echo "  amount:  channel size in sats (default: 500000)"
+    exit 1
+  fi
+
+  # Check peer connection
+  echo "→ Checking peer connection..."
+  peer_count=$("${LNCLI_CMD[@]}" listpeers 2>/dev/null | jq "[.peers[] | select(.pub_key==\"$node_id\")] | length")
+
+  if [ "$peer_count" = "0" ]; then
+    lnd_pubkey=$("${LNCLI_CMD[@]}" getinfo 2>/dev/null | jq -r '.identity_pubkey')
+    echo "✗ Node is not connected as a peer."
+    echo ""
+    echo "  Paste this in the app (Settings > Advanced > Channels > Add Connection):"
+    echo "    ${lnd_pubkey}@0.0.0.0:9735"
+    echo ""
+    echo "  Then re-run this command."
+    exit 1
+  fi
+
+  echo "✓ Peer connected"
+
+  # Fund LND if needed
+  balance=$("${LNCLI_CMD[@]}" walletbalance 2>/dev/null | jq -r '.confirmed_balance')
+  echo "→ LND on-chain balance: $balance sats"
+
+  if [ "$balance" -lt "$amount" ]; then
+    echo "→ Funding LND..."
+    lnd_addr=$("${LNCLI_CMD[@]}" newaddress p2wkh 2>/dev/null | jq -r '.address')
+    "${BASE_COMMAND[@]}" -named sendtoaddress address="$lnd_addr" amount=1 fee_rate=25 > /dev/null
+    "${BASE_COMMAND[@]}" -generate 6 > /dev/null
+    echo "✓ Funded LND with 1 BTC"
+    sleep 2
+  fi
+
+  # Open channel
+  echo "→ Opening ${amount} sat channel to ${node_id:0:20}..."
+  result=$("${LNCLI_CMD[@]}" openchannel --node_key "$node_id" --local_amt "$amount" --private 2>&1) || {
+    echo "✗ Failed: $result"
+    exit 1
+  }
+
+  txid=$(echo "$result" | jq -r '.funding_txid // empty' 2>/dev/null)
+  if [ -z "$txid" ]; then
+    echo "✗ Failed: $result"
+    exit 1
+  fi
+
+  echo "✓ Channel opened, funding txid: $txid"
+
+  # Mine and wait
+  echo "→ Mining 6 blocks..."
+  "${BASE_COMMAND[@]}" -generate 6 > /dev/null
+  echo "✓ Mined 6 blocks"
+
+  echo "→ Waiting for channel to become active..."
+  for i in $(seq 1 30); do
+    sleep 2
+    active=$("${LNCLI_CMD[@]}" listchannels --peer "$node_id" --active_only 2>/dev/null | jq '.channels | length')
+    if [ "$active" != "0" ]; then
+      echo "✓ Channel is active!"
+      break
+    fi
+    if [ $((i % 5)) -eq 0 ]; then echo "  still waiting... ($i)"; fi
+  done
+
+  if [ "$active" = "0" ]; then
+    echo "⚠ Channel not active yet. May need more time or app needs to sync."
+  fi
+
+  # Summary
+  echo ""
+  echo "══════════════════════════════════"
+  "${LNCLI_CMD[@]}" channelbalance 2>/dev/null | jq -r '"  LND outbound:  \(.local_balance.sat) sats (can pay app)\n  LND inbound:   \(.remote_balance.sat) sats (can receive from app)"'
+  echo "══════════════════════════════════"
+  exit
+fi
+
+# Pay a Lightning invoice via LND
+if [[ "$command" = "payinvoice" ]]; then
+  shift
+
+  invoice="${1:-}"
+  amount="${2:-}"
+
+  if [ -z "$invoice" ]; then
+    echo "Usage: $CLI_NAME payinvoice <invoice> [amount_sats]"
+    exit 1
+  fi
+
+  if [ -n "$amount" ]; then
+    echo "→ Paying invoice via LND (${amount} sats)..."
+    result=$("${LNCLI_CMD[@]}" payinvoice --force --amt "$amount" "$invoice" 2>&1)
+  else
+    echo "→ Paying invoice via LND..."
+    result=$("${LNCLI_CMD[@]}" payinvoice --force "$invoice" 2>&1)
+  fi
+
+  status=$(echo "$result" | grep -i "status" | head -1)
+  if echo "$result" | grep -qi "SUCCEEDED"; then
+    echo "✓ Payment succeeded"
+    echo "$result" | grep -i "payment_hash\|payment_preimage" | head -2
+  else
+    echo "✗ Payment failed"
+    echo "$result"
+    exit 1
+  fi
+
   exit
 fi
 
