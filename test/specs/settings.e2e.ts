@@ -21,7 +21,7 @@ import {
 import { electrumHost, electrumPort } from '../helpers/constants';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
-import { openSettings, openSupport } from '../helpers/settings';
+import { openSettings, openSupport } from '../helpers/navigation';
 
 describe('@settings - Settings', () => {
   before(async () => {

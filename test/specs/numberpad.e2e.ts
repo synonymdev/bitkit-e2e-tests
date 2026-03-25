@@ -15,7 +15,7 @@ import initElectrum from '../helpers/electrum';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 import { ensureLocalFunds } from '../helpers/regtest';
-import { openSettings } from '../helpers/settings';
+import { openSettings } from '../helpers/navigation';
 
 describe('@numberpad - NumberPad', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;

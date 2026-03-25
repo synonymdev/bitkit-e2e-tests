@@ -10,7 +10,7 @@ import {
   typeText,
 } from './actions';
 import { LndConfig } from './constants';
-import { openSettings } from './settings';
+import { openSettings } from './navigation';
 import createLndRpc, { LnRpc, WalletUnlockerRpc } from '@radar/lnrpc';
 
 export async function setupLND(

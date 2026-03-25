@@ -19,7 +19,7 @@ import {
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
 import { ensureLocalFunds } from '../helpers/regtest';
-import { openSettings } from '../helpers/settings';
+import { openSettings } from '../helpers/navigation';
 
 describe('@backup - Backup', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
