@@ -34,13 +34,13 @@ The **fix path** uses **`accept_stale_channel_monitors`** so ldk-node can align 
 
 ## What to test when Lightning / LDK storage changes
 
-| Area | Why |
-|------|-----|
-| **Cold start** | Any path that reads/writes ChannelManager, monitors, or VSS must not pair **new** manager with **old** monitor. |
-| **Backup / restore** | Restoring must be **consistent snapshots**; partial or older monitor alone is high risk. |
-| **Migration** | RN → native or schema changes: avoid overwriting live data with **stale** remote copies. |
-| **Recovery** | After `DangerousValue` / `accept_stale`: peers reconnect, chain sync completes, **inbound and outbound** payments work, **second launch** does not repeat recovery forever. |
-| **Infra noise** | On regtest, **stale RGS** / gossip can cause transient **“route not found”** — distinguish from persistence bugs (see logs for `DangerousValue` vs routing errors). |
+| Area                 | Why                                                                                                                                                                         |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cold start**       | Any path that reads/writes ChannelManager, monitors, or VSS must not pair **new** manager with **old** monitor.                                                             |
+| **Backup / restore** | Restoring must be **consistent snapshots**; partial or older monitor alone is high risk.                                                                                    |
+| **Migration**        | RN → native or schema changes: avoid overwriting live data with **stale** remote copies.                                                                                    |
+| **Recovery**         | After `DangerousValue` / `accept_stale`: peers reconnect, chain sync completes, **inbound and outbound** payments work, **second launch** does not repeat recovery forever. |
+| **Infra noise**      | On regtest, **stale RGS** / gossip can cause transient **“route not found”** — distinguish from persistence bugs (see logs for `DangerousValue` vs routing errors).         |
 
 ## Risks of incorrect “fixes”
 
@@ -50,13 +50,13 @@ The **fix path** uses **`accept_stale_channel_monitors`** so ldk-node can align 
 
 ## Glossary
 
-| Term | Meaning |
-|------|--------|
-| **Commitment update** | New off-chain state (balances + HTLC set). |
-| **`update_id`** | LDK’s persisted notion of how far the ChannelMonitor has advanced vs the ChannelManager for that channel. |
-| **HTLC** | **Hash Time-Locked Contract** — conditional payment inside a commitment (hash lock + time lock). |
-| **ChannelMonitor** | Per-channel persisted state for chain watching and dispute handling. |
-| **DangerousValue** | LDK/ldk-node refusing to load because continuing would violate safety assumptions (e.g. stale monitor). |
+| Term                              | Meaning                                                                                                           |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Commitment update**             | New off-chain state (balances + HTLC set).                                                                        |
+| **`update_id`**                   | LDK’s persisted notion of how far the ChannelMonitor has advanced vs the ChannelManager for that channel.         |
+| **HTLC**                          | **Hash Time-Locked Contract** — conditional payment inside a commitment (hash lock + time lock).                  |
+| **ChannelMonitor**                | Per-channel persisted state for chain watching and dispute handling.                                              |
+| **DangerousValue**                | LDK/ldk-node refusing to load because continuing would violate safety assumptions (e.g. stale monitor).           |
 | **accept_stale_channel_monitors** | Explicit recovery mode to load despite mismatch, then heal via protocol + sync (use only in controlled recovery). |
 
 ## See also
