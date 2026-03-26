@@ -23,6 +23,8 @@ import {
   dismissBackgroundPaymentsTimedSheet,
   acknowledgeReceivedPayment,
   typeRecipientInput,
+  enterAmount,
+  verifyAmountToSend,
 } from '../helpers/actions';
 import { lndConfig } from '../helpers/constants';
 import { reinstallApp } from '../helpers/setup';
@@ -123,7 +125,8 @@ describe('@send - Send', () => {
 
     // Receive funds and check validation w/ balance
     await swipeFullScreen('down');
-    await receiveOnchainFunds();
+    const amount = 15000;
+    await receiveOnchainFunds({ sats: amount });
 
     await tap('Send');
     await sleep(500);
@@ -138,7 +141,13 @@ describe('@send - Send', () => {
       await typeAddressAndVerifyContinue({ address: address2 });
     }
 
-    // check validation for unified invoice when balance is enough
+    // type amount over balance and verify you cannot continue
+    await tap('AddressContinue');
+    await enterAmount(amount + 1);
+    await elementById('ContinueAmount').waitForEnabled({ reverse: true });
+    await tap('NavigationBack');
+
+    // check validation for unified invoice when balance is enough (10_000 sats)
     const unified1 = 'bitcoin:bcrt1q07x3wl76zdxvdsz3qzzkvxrjg3n6t4tz2vnsx8?amount=0.0001';
     try {
       await typeAddressAndVerifyContinue({ address: unified1 });
@@ -147,7 +156,13 @@ describe('@send - Send', () => {
       await typeAddressAndVerifyContinue({ address: unified1 });
     }
 
-    // check validation for unified invoice when balance is too low
+    // verify amount is set correctly
+    await tap('AddressContinue');
+    await verifyAmountToSend(10_000);
+    await elementById('ContinueAmount').waitForEnabled();
+    await tap('NavigationBack');
+
+    // check validation for unified invoice when balance is too low (200_000 sats)
     const unified2 = 'bitcoin:bcrt1q07x3wl76zdxvdsz3qzzkvxrjg3n6t4tz2vnsx8?amount=0.002';
     try {
       await typeRecipientInput(unified2, { confirmKeyboard: false });
@@ -169,6 +184,7 @@ describe('@send - Send', () => {
     // - receive lightning funds
 
     // Send
+    // - try to send amount over balance
     // - send to onchain address
     // - send to lightning invoice
     // - send to unified invoice
@@ -239,11 +255,20 @@ describe('@send - Send', () => {
     await expect(totalBalance).toHaveText('110 000'); // 100k onchain + 10k lightning
     await expectTextWithin('ActivitySpending', '10 000');
 
+    // try to send amount over balance and verify you cannot continue
+    console.info('Trying to send ln amount over balance...');
+    const { paymentRequest: invoice0 } = await lnd.addInvoice({});
+    console.info({ invoice0 });
+    await enterAddress(invoice0);
+    await enterAmount(10_000 + 1);
+    await elementById('ContinueAmount').waitForEnabled({ reverse: true });
+    await swipeFullScreen('down');
+
     // send to onchain address
     console.info('Sending to onchain address...');
     const { address: onchainAddress } = await lnd.newAddress();
     console.info({ onchainAddress });
-    await enterAddress(onchainAddress);
+    await enterAddress(onchainAddress, { acceptCameraPermission: false });
     await elementById('AssetButton-savings').waitForDisplayed();
     await tap('N1');
     await multiTap('N0', 4);
