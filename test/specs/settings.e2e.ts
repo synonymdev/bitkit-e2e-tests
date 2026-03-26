@@ -454,12 +454,9 @@ describe('@settings - Settings', () => {
       await tap('WidgetsSettings');
       await tap('ResetSuggestions');
       await tap('DialogConfirm');
-      await tap('NavigationBack');
-      await doNavigationClose();
 
       // lightning should be visible again
       await sleep(1000);
-      await swipeFullScreen('up');
       await elementById('Suggestion-lightning').waitForDisplayed();
     });
   });
