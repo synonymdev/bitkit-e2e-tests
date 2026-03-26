@@ -471,24 +471,20 @@ describe('@settings - Settings', () => {
       await elementById('DevSettings').waitForDisplayed();
       await tap('DevSettings');
       await sleep(1000);
-      await doNavigationClose();
 
       // disable dev mode via Support screen (DevOptions = version multi-tap)
       await openSupport();
       await multiTap('DevOptions', 5);
       await waitForToast('DevModeDisabledToast');
-      await doNavigationClose();
 
       // DevSettings should be hidden in Advanced tab
       await openSettings('advanced');
       await elementById('DevSettings').waitForDisplayed({ reverse: true });
-      await doNavigationClose();
 
       // re-enable dev mode
       await openSupport();
       await multiTap('DevOptions', 5);
       await waitForToast('DevModeEnabledToast');
-      await doNavigationClose();
 
       await openSettings('advanced');
       await elementById('DevSettings').waitForDisplayed();
