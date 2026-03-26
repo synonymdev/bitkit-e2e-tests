@@ -149,6 +149,7 @@ describe('@security - Security And Privacy', () => {
     await multiTap('N7', PIN_LENGTH); // wrong PIN on the last attempt
     await sleep(1000);
     // app should reset itself and show onboarding
+    await expectText('Privacy Policy');
     await elementById('Continue').waitForDisplayed();
   });
 });
