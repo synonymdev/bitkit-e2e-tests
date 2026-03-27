@@ -1389,7 +1389,7 @@ export async function typeAddressAndVerifyContinue({
 
 export async function enterAddress(
   address: string,
-  { acceptCameraPermission = true, addressTimeout = 30_000 } = {},
+  { acceptCameraPermission = true, addressTimeout = 30_000 } = {}
 ) {
   await tap('Send');
   await sleep(700);
@@ -1414,6 +1414,10 @@ export async function enterAddressViaScanPrompt(
   await typeText('QRInput', address);
   await confirmInputOnKeyboard();
   await tap('DialogConfirm');
+}
+
+export async function verifyAmountToSend(amount: number) {
+  await expectTextWithin('SendNumberField', formatSats(amount));
 }
 
 export async function deleteAllDefaultWidgets() {
