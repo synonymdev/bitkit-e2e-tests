@@ -42,13 +42,13 @@ Connection details from existing infra:
 
 These scenarios only need deposit + mine, no outgoing tx signing:
 
-| Scenario | What it creates | Addresses | Deposits |
-|----------|----------------|-----------|----------|
-| **first-time** | Clean wallet, one confirmed receive | 1 | 1 x 50,000 sat, mine 1 block |
-| **fragmented** | Many small UTXOs for coin selection testing | 18 | 18 x 2,000-9,100 sat each, mine |
-| **dust** | Tiny UTXOs at spendability edge | 5 | Mix of 330, 546, 600, 800, 1000 sat, mine |
-| **merchant** | Many inbound payments, rich history | 12 | 12 varied amounts (2k-85k sat), mined across multiple blocks |
-| **savings** | Large single UTXO, simple balance | 1 | 1 x 1,000,000 sat, mine |
+| Scenario       | What it creates                             | Addresses | Deposits                                                     |
+| -------------- | ------------------------------------------- | --------- | ------------------------------------------------------------ |
+| **first-time** | Clean wallet, one confirmed receive         | 1         | 1 x 50,000 sat, mine 1 block                                 |
+| **fragmented** | Many small UTXOs for coin selection testing | 18        | 18 x 2,000-9,100 sat each, mine                              |
+| **dust**       | Tiny UTXOs at spendability edge             | 5         | Mix of 330, 546, 600, 800, 1000 sat, mine                    |
+| **merchant**   | Many inbound payments, rich history         | 12        | 12 varied amounts (2k-85k sat), mined across multiple blocks |
+| **savings**    | Large single UTXO, simple balance           | 1         | 1 x 1,000,000 sat, mine                                      |
 
 ### Future scenarios (require transaction building - Phase 2)
 

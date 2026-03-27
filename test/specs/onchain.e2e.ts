@@ -21,6 +21,7 @@ import {
   handleOver50PercentAlert,
   handleOver100Alert,
   acknowledgeReceivedPayment,
+  addSendTag,
   enterAmount,
   formatSats,
   expectTotalBalance,
@@ -151,10 +152,7 @@ describe('@onchain - Onchain', () => {
     await tap('ContinueAmount');
 
     // Review & Send
-    await elementById('TagsAddSend').waitForDisplayed();
-    await tap('TagsAddSend');
-    await typeText('TagInputSend', 'stag');
-    await elementByText('Add', 'exact').click();
+    await addSendTag('stag');
     await dragOnElement('GRAB', 'right', 0.95);
 
     await sleep(1000);

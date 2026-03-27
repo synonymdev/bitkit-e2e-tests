@@ -22,6 +22,7 @@ import {
   doNavigationClose,
   dismissBackgroundPaymentsTimedSheet,
   acknowledgeReceivedPayment,
+  addSendTag,
   waitForBackup,
   waitForToast,
 } from '../helpers/actions';
@@ -174,9 +175,7 @@ describe('@lightning - Lightning', () => {
     await expect(reviewAmt).toHaveText('1 000');
     await console.info('I cannot edit the amount on Review screen');
     await tap('ReviewAmount-primary');
-    await tap('TagsAddSend');
-    await typeText('TagInputSend', 'stag');
-    await tap('SendTagsSubmit');
+    await addSendTag('stag');
     await sleep(500); // wait for keyboard to close
     await dragOnElement('GRAB', 'right', 0.95); // Swipe to confirm
     await elementById('SendSuccess').waitForDisplayed();

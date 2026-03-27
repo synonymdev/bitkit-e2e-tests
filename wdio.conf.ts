@@ -1,6 +1,8 @@
 import path from 'node:path';
 import fs from 'node:fs';
 
+import { grantIOSCameraPermission } from './test/helpers/setup';
+
 const isAndroid = process.env.PLATFORM === 'android';
 const iosDeviceName = process.env.SIMULATOR_NAME || 'iPhone 17';
 const iosPlatformVersion = process.env.SIMULATOR_OS_VERSION || '26.0.1';
@@ -334,6 +336,11 @@ export const config: WebdriverIO.Config = {
    */
   // afterAssertion: function(params) {
   // }
+  before: async function () {
+    if (!isAndroid) {
+      grantIOSCameraPermission();
+    }
+  },
   beforeTest: async function (test) {
     if (process.env.RECORD_VIDEO === 'true') {
       const recordingOptions = isAndroid

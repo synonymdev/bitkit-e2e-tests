@@ -4,6 +4,44 @@ import path from 'node:path';
 import { sleep } from './actions';
 import { getAppId, getAppPath } from './constants';
 
+function getIosSimulatorUdidForSimctl(): string {
+  try {
+    let udid =
+      (driver.capabilities as Record<string, unknown>)['appium:udid']?.toString() ??
+      (driver.capabilities as Record<string, unknown>).udid?.toString() ??
+      (driver.capabilities as Record<string, unknown>).deviceUDID?.toString() ??
+      process.env.SIMULATOR_UDID ??
+      '';
+    if (udid && udid !== 'auto') return udid;
+  } catch {
+    /* ignore */
+  }
+  try {
+    const line = execSync('xcrun simctl list devices booted', { encoding: 'utf8' });
+    const match = line.match(/\(([0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})\)/i);
+    if (match) return match[1] ?? '';
+  } catch {
+    /* ignore */
+  }
+  return '';
+}
+
+export function grantIOSCameraPermission(appIdParam?: string) {
+  if (typeof driver === 'undefined' || !driver.isIOS) return;
+  const appId = appIdParam ?? getAppId();
+  const udid = getIosSimulatorUdidForSimctl();
+  if (!udid) {
+    console.warn('⚠ grantIOSCameraPermission: could not resolve simulator UDID');
+    return;
+  }
+  try {
+    execSync(`xcrun simctl privacy "${udid}" grant camera "${appId}"`, { stdio: 'ignore' });
+    console.info(`→ Granted iOS camera permission for '${appId}' (simulator ${udid})`);
+  } catch (error) {
+    console.warn('⚠ grantIOSCameraPermission failed', error);
+  }
+}
+
 export async function launchFreshApp() {
   const appId = getAppId();
 
@@ -23,6 +61,7 @@ export async function reinstallApp() {
   await driver.removeApp(appId);
   resetBootedIOSKeychain();
   await driver.installApp(appPath);
+  grantIOSCameraPermission(appId);
   await driver.activateApp(appId);
 }
 
@@ -52,6 +91,7 @@ export async function reinstallAppFromPath(appPath: string, appId: string = getA
   await driver.removeApp(appId);
   resetBootedIOSKeychain();
   await driver.installApp(appPath);
+  grantIOSCameraPermission(appId);
   await driver.activateApp(appId);
 }
 

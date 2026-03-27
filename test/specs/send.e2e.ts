@@ -22,13 +22,14 @@ import {
   handleAndroidAlert,
   dismissBackgroundPaymentsTimedSheet,
   acknowledgeReceivedPayment,
+  editRecipientAddress,
   typeRecipientInput,
+  tap,
   enterAmount,
   verifyAmountToSend,
 } from '../helpers/actions';
 import { lndConfig } from '../helpers/constants';
 import { reinstallApp } from '../helpers/setup';
-import { confirmInputOnKeyboard, tap, typeText } from '../helpers/actions';
 import {
   connectToLND,
   getLDKNodeID,
@@ -309,24 +310,7 @@ describe('@send - Send', () => {
     const reviewAmt = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
     await reviewAmt.waitForDisplayed();
     await expect(reviewAmt).toHaveText('2 000');
-    await tap('ReviewUri');
-    await sleep(2000);
-    await elementById('RecipientInput').waitForDisplayed();
-    await sleep(500);
-    try {
-      console.info('Typing on the RecipientInput...');
-      console.info({ onchainAddress });
-      await typeText('RecipientInput', onchainAddress);
-      await confirmInputOnKeyboard();
-      await elementById('AddressContinue').waitForEnabled();
-      await sleep(500);
-    } catch {
-      console.warn('Typing on the RecipientInput failed, trying again...');
-      await typeText('RecipientInput', onchainAddress);
-      await confirmInputOnKeyboard();
-      await elementById('AddressContinue').waitForEnabled();
-      await sleep(500);
-    }
+    await editRecipientAddress(onchainAddress);
     await tap('AddressContinue');
     await elementById('AssetButton-savings').waitForDisplayed();
     await tap('N2');

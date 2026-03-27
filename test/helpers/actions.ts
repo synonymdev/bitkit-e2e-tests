@@ -419,6 +419,15 @@ export async function typeText(testId: string, text: string) {
   await el.setValue(text);
 }
 
+export async function addSendTag(tag: string) {
+  if (driver.isIOS) {
+    await tap('SendConfirmToggleDetails');
+  }
+  await tap('TagsAddSend');
+  await typeText('TagInputSend', tag);
+  await tap('SendTagsSubmit');
+}
+
 export async function enterAmount(amountSats: number) {
   for (const digit of `${amountSats}`.split('')) {
     await tap(`N${digit}`);
@@ -1370,6 +1379,28 @@ export async function typeRecipientInput(
   await typeText('RecipientInput', address);
   if (confirmKeyboard) {
     await confirmInputOnKeyboard();
+  }
+}
+
+export async function editRecipientAddress(address: string) {
+  if (driver.isIOS) {
+    await tap('SendConfirmToggleDetails');
+  }
+  await tap('ReviewUri');
+  await sleep(2000);
+  await elementById('RecipientInput').waitForDisplayed();
+  await sleep(500);
+  try {
+    console.info('Typing on the RecipientInput...');
+    console.info({ address });
+    await typeRecipientInput(address);
+    await elementById('AddressContinue').waitForEnabled();
+    await sleep(500);
+  } catch {
+    console.warn('Typing on the RecipientInput failed, trying again...');
+    await typeRecipientInput(address);
+    await elementById('AddressContinue').waitForEnabled();
+    await sleep(500);
   }
 }
 
