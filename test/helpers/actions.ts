@@ -1,6 +1,9 @@
 import type { ChainablePromiseElement } from 'webdriverio';
 import { reinstallApp } from './setup';
 import { deposit, mineBlocks } from './regtest';
+import { doNavigationClose, doTriggerTimedSheet, openSettings } from './navigation';
+
+export { doNavigationClose, doTriggerTimedSheet } from './navigation';
 
 export const sleep = (ms: number) => browser.pause(ms);
 
@@ -603,16 +606,8 @@ export async function handleAndroidAlert(
   }
 }
 
-export async function doNavigationClose() {
-  await tap('HeaderMenu');
-  await tap('DrawerWallet');
-  await sleep(500);
-}
-
 export async function getSeed(): Promise<string> {
-  await tap('HeaderMenu');
-  await tap('DrawerSettings');
-  await tap('BackupSettings');
+  await openSettings('security');
   await tap('BackupWallet');
 
   // get seed from SeedContainer
@@ -810,9 +805,7 @@ async function assertAddressTypeSwitchFeedback() {
 }
 
 export async function switchPrimaryAddressType(nextType: addressTypePreference) {
-  await tap('HeaderMenu');
-  await tap('DrawerSettings');
-  await tap('AdvancedSettings');
+  await openSettings('advanced');
   await tap('AddressTypePreference');
   await tap(nextType);
   await assertAddressTypeSwitchFeedback();
@@ -1165,6 +1158,8 @@ export type ToastId =
   | 'TransactionRemovedToast'
   | 'InvalidAddressToast'
   | 'ExpiredLightningToast'
+  | 'DevModeEnabledToast'
+  | 'DevModeDisabledToast'
   | 'InsufficientSpendingToast'
   | 'InsufficientSavingsToast';
 
@@ -1202,23 +1197,6 @@ export async function acknowledgeExternalSuccess() {
   await sleep(500);
   await tap('ExternalSuccess-button');
   await sleep(300);
-}
-
-/**
- * Triggers the timed backup sheet by navigating to settings and back.
- * Since timed sheets are sometimes triggered by user behavior (when user goes back to home screen),
- * we need to trigger them manually.
- *
- * @example
- * // Trigger backup sheet before testing dismissal
- * await doTriggerTimedSheet();
- */
-export async function doTriggerTimedSheet() {
-  await sleep(700); // wait for any previous animations to finish
-  await tap('HeaderMenu');
-  await tap('DrawerSettings');
-  await sleep(500); // wait for the app to settle
-  await doNavigationClose();
 }
 
 export async function dismissBackgroundPaymentsTimedSheet({
@@ -1363,9 +1341,7 @@ export async function acknowledgeHighBalanceWarning({
 // enable/disable widgets in settings
 export async function toggleWidgets() {
   await sleep(3000);
-  await tap('HeaderMenu');
-  await tap('DrawerSettings');
-  await tap('GeneralSettings');
+  await openSettings();
   await tap('WidgetsSettings');
   const widgets = await elementsByText('Widgets');
   await widgets[1].click();
@@ -1476,8 +1452,7 @@ export async function attemptRefreshOnHomeScreen() {
 }
 
 export async function waitForBackup() {
-  await tap('HeaderMenu');
-  await tap('DrawerSettings');
+  await openSettings('security');
   await tap('BackupSettings');
   await elementById('AllSynced').waitForDisplayed();
   await doNavigationClose();

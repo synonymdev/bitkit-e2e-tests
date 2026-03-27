@@ -19,6 +19,7 @@ import {
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
 import { ensureLocalFunds } from '../helpers/regtest';
+import { openSettings } from '../helpers/navigation';
 
 describe('@backup - Backup', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
@@ -66,9 +67,7 @@ describe('@backup - Backup', () => {
     await tap('NavigationBack');
 
     // - change settings (currency to GBP) //
-    await tap('HeaderMenu');
-    await tap('DrawerSettings');
-    await tap('GeneralSettings');
+    await openSettings();
     await tap('CurrenciesSettings');
     const gbp_opt = await elementByText('GBP (£)');
     await gbp_opt.waitForDisplayed();

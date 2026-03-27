@@ -14,6 +14,7 @@ import {
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
+import { openSettings } from '../helpers/navigation';
 
 describe('@onboarding - Onboarding', () => {
   beforeEach(async () => {
@@ -85,9 +86,7 @@ describe('@onboarding - Onboarding', () => {
 
     // Go to Address Viewer
     await swipeFullScreen('down');
-    await tap('HeaderMenu');
-    await tap('DrawerSettings');
-    await tap('AdvancedSettings');
+    await openSettings('advanced');
     await tap('AddressViewer');
 
     const address0Element = await elementById('Address-0');

@@ -51,6 +51,7 @@ import {
   getExternalAddress,
   mineBlocks,
 } from '../helpers/regtest';
+import { openSettings } from '../helpers/navigation';
 
 describe('@multi_address - Multi address', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
@@ -163,10 +164,7 @@ describe('@multi_address - Multi address', () => {
       await swipeFullScreen('down');
 
       // check in address viewer all savings are in taproot address
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await sleep(1000);
-      await tap('AdvancedSettings');
+      await openSettings('advanced');
       await sleep(1000);
       await tap('AddressViewer');
       await sleep(1000);
@@ -238,10 +236,7 @@ describe('@multi_address - Multi address', () => {
       await expect(remainingTotal).toBeGreaterThan(0);
 
       // verify change is in taproot address
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await sleep(1000);
-      await tap('AdvancedSettings');
+      await openSettings('advanced');
       await sleep(1000);
       await tap('AddressViewer');
       await sleep(1000);
@@ -294,10 +289,7 @@ describe('@multi_address - Multi address', () => {
       const savingsBalance = await getSavingsBalance();
       await expect(savingsBalance).toEqual(satsPerAddressType);
 
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await sleep(1000);
-      await tap('AdvancedSettings');
+      await openSettings('advanced');
       await sleep(1000);
       await tap('AddressViewer');
       await sleep(1000);

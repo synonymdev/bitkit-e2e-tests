@@ -15,6 +15,7 @@ import initElectrum from '../helpers/electrum';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 import { ensureLocalFunds, getExternalAddress } from '../helpers/regtest';
+import { openSettings } from '../helpers/navigation';
 
 describe('@security - Security And Privacy', () => {
   let electrum: { waitForSync: any; stop: any };
@@ -47,12 +48,11 @@ describe('@security - Security And Privacy', () => {
     // - enter wrong PIN 8 times and reset the app
 
     // - set up PIN
-    await tap('HeaderMenu');
-    await tap('DrawerSettings');
-    await tap('SecuritySettings');
+    await openSettings('security');
     await tap('PINCode');
     await sleep(1000);
-    await tap('SecureWalletContinue');
+    await tap('EnablePin');
+    await sleep(1000);
     await multiTap('N1', PIN_LENGTH); // enter PIN
     await multiTap('N2', PIN_LENGTH); // retype wrong PIN
     await elementById('WrongPIN').waitForDisplayed(); // WrongPIN warning should appear
@@ -89,10 +89,9 @@ describe('@security - Security And Privacy', () => {
     await expect(totalBalance).not.toHaveText('100 000');
 
     // change PIN, restart the app and try it
-    await tap('HeaderMenu');
-    await tap('DrawerSettings');
-    await tap('SecuritySettings');
-    await tap('PINChange');
+    await openSettings('security');
+    await tap('PINCode');
+    await tap('ChangePIN');
     await multiTap('N3', PIN_LENGTH);
     await elementById('AttemptsRemaining').waitForDisplayed();
     await sleep(1000);
@@ -112,9 +111,7 @@ describe('@security - Security And Privacy', () => {
     await elementById('TotalBalance').waitForDisplayed();
 
     // disable PIN, restart the app, it should not ask for it
-    await tap('HeaderMenu');
-    await tap('DrawerSettings');
-    await tap('SecuritySettings');
+    await openSettings('security');
     await tap('PINCode');
     await tap('DisablePin');
     await multiTap('N2', PIN_LENGTH);
@@ -123,12 +120,11 @@ describe('@security - Security And Privacy', () => {
     await elementById('TotalBalance').waitForDisplayed();
 
     // enable PIN for last test
-    await tap('HeaderMenu');
-    await tap('DrawerSettings');
-    await tap('SecuritySettings');
+    await openSettings('security');
     await tap('PINCode');
     await sleep(1000);
-    await tap('SecureWalletContinue');
+    await tap('EnablePin');
+    await sleep(1000);
     await multiTap('N1', PIN_LENGTH); // enter PIN
     await multiTap('N1', PIN_LENGTH); // retype PIN
     await tap('SkipButton'); // skip Biometrics for now
@@ -151,6 +147,7 @@ describe('@security - Security And Privacy', () => {
     await multiTap('N7', PIN_LENGTH); // wrong PIN on the last attempt
     await sleep(1000);
     // app should reset itself and show onboarding
+    await expectText('Privacy Policy');
     await elementById('Continue').waitForDisplayed();
   });
 });

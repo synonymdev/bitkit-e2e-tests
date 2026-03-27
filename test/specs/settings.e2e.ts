@@ -21,6 +21,7 @@ import {
 import { electrumHost, electrumPort } from '../helpers/constants';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
+import { openSettings, openSupport } from '../helpers/navigation';
 
 describe('@settings - Settings', () => {
   before(async () => {
@@ -48,9 +49,7 @@ describe('@settings - Settings', () => {
       }
 
       // - change settings (currency to EUR) //
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await tap('GeneralSettings');
+      await openSettings();
       await tap('CurrenciesSettings');
       const eur_opt = await elementByText('EUR (€)');
       await eur_opt.waitForDisplayed();
@@ -65,9 +64,7 @@ describe('@settings - Settings', () => {
       await expect(fiatSymbol).toHaveText('₿');
 
       // switch to USD
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await tap('GeneralSettings');
+      await openSettings();
       await tap('CurrenciesSettings');
       const usd_opt = await elementByText('USD ($)');
       await usd_opt.waitForDisplayed();
@@ -79,9 +76,7 @@ describe('@settings - Settings', () => {
       const fiatSymbol = await elementByIdWithin('TotalBalance-primary', 'MoneyFiatSymbol');
       const balance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
 
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await tap('GeneralSettings');
+      await openSettings();
 
       // switch to USD
       await tap('UnitSettings');
@@ -94,9 +89,7 @@ describe('@settings - Settings', () => {
       await expect(balance).toHaveText('0.00');
 
       // switch back to BTC
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await tap('GeneralSettings');
+      await openSettings();
       await tap('UnitSettings');
       await tap('Bitcoin');
       await tap('NavigationBack');
@@ -105,10 +98,7 @@ describe('@settings - Settings', () => {
       await expect(balance).toHaveText('0');
 
       // switch to classic denomination
-      await tap('HeaderMenu');
-      await sleep(500);
-      await tap('DrawerSettings');
-      await tap('GeneralSettings');
+      await openSettings();
       await tap('UnitSettings');
       await tap('DenominationClassic');
       await tap('NavigationBack');
@@ -118,9 +108,7 @@ describe('@settings - Settings', () => {
     });
 
     ciIt('@settings_03 - Can switch transaction speed', async () => {
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await tap('GeneralSettings');
+      await openSettings();
 
       // switch to Fast
       await tap('TransactionSpeedSettings');
@@ -152,9 +140,7 @@ describe('@settings - Settings', () => {
 
     ciIt('@settings_04 - Can remove last used tags', async () => {
       // no tags, menu entry should be hidden
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await tap('GeneralSettings');
+      await openSettings();
       await elementById('TagsSettings').waitForDisplayed({ reverse: true });
       await doNavigationClose();
 
@@ -175,12 +161,11 @@ describe('@settings - Settings', () => {
       await sleep(1000); // wait for the app to settle
 
       // open tag manager, delete tag
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await tap('GeneralSettings');
+      await openSettings();
       await tap('TagsSettings');
       (await elementByText(tag)).waitForDisplayed();
       await tap(`Tag-${tag}-delete`);
+      await tap('NavigationBack');
       await doNavigationClose();
 
       // open receive tags, check tags are gone
@@ -192,10 +177,8 @@ describe('@settings - Settings', () => {
       (await elementByText(tag)).waitForDisplayed({ reverse: true });
     });
 
-    ciIt('@settings_05 - Can show About screen', async () => {
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await tap('About');
+    ciIt('@settings_05 - Can show Support screen', async () => {
+      await openSupport();
       await elementById('AboutLogo').waitForDisplayed();
     });
   });
@@ -229,9 +212,7 @@ describe('@settings - Settings', () => {
       }
 
       // Disable 'swipe to hide balance'
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await tap('SecuritySettings');
+      await openSettings('security');
       await tap('SwipeBalanceToHide');
       await doNavigationClose();
 
@@ -243,9 +224,7 @@ describe('@settings - Settings', () => {
       await elementById('ShowBalance').waitForDisplayed({ reverse: true });
 
       // Enable 'hide balance on open'
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await tap('SecuritySettings');
+      await openSettings('security');
       await tap('SwipeBalanceToHide');
       await tap('HideBalanceOnOpen');
 
@@ -260,11 +239,9 @@ describe('@settings - Settings', () => {
     });
   });
 
-  describe('Backup or restore', () => {
+  describe('Security - Backup or reset', () => {
     ciIt('@settings_07 - Can show backup and validate it', async () => {
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await tap('BackupSettings');
+      await openSettings('security');
       await sleep(1000);
       await tap('ResetAndRestore');
       await sleep(1000);
@@ -315,9 +292,7 @@ describe('@settings - Settings', () => {
       await sleep(1000);
 
       // switch to Legacy
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await tap('AdvancedSettings');
+      await openSettings('advanced');
       await tap('AddressTypePreference');
       await tap('p2pkh');
       await sleep(1000); // We need a second after switching address types.
@@ -332,9 +307,7 @@ describe('@settings - Settings', () => {
       await sleep(1000);
 
       // switch back to Native segwit
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await tap('AdvancedSettings');
+      await openSettings('advanced');
       await tap('AddressTypePreference');
       await tap('p2wpkh');
       await doNavigationClose();
@@ -342,35 +315,15 @@ describe('@settings - Settings', () => {
     });
 
     ciIt('@settings_09 - Can open LN settings screens', async () => {
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      // LDKDebug, CopyNodeId, RefreshLDK, RestartLDK and RebroadcastLDKTXS N/A in DevSettings
-      //   for (let i = 1; i <= 5; i++) {
-      //     await tap('DevOptions');
-      //   }
-      //   await tap('DevSettings');
-      //   await tap('LDKDebug');
-      //   await tap('CopyNodeId');
-      //   await tap('RefreshLDK');
-      //   await tap('RestartLDK');
-      //   await tap('RebroadcastLDKTXS');
-      //   await tap('NavigationBack');
-      //   await tap('NavigationBack');
-      await tap('AdvancedSettings');
+      await openSettings('advanced');
       await tap('LightningNodeInfo');
       await elementById('LDKNodeID').waitForDisplayed();
       await tap('NavigationBack');
-      await tap('NavigationBack');
-      //   for (let i = 1; i <= 5; i++) {
-      //     await tap('DevOptions');
-      //   }
       await sleep(1000);
     });
 
     ciIt('@settings_10 - Can enter wrong Electrum server and get an error message', async () => {
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await tap('AdvancedSettings');
+      await openSettings('advanced');
       await tap('ElectrumConfig');
 
       // enter wrong electrum server address
@@ -461,9 +414,7 @@ describe('@settings - Settings', () => {
     });
 
     ciIt('@settings_11 - Can connect to different Rapid Gossip Sync Server', async () => {
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await tap('AdvancedSettings');
+      await openSettings('advanced');
       await tap('RGSServer');
       await sleep(1000);
 
@@ -498,44 +449,48 @@ describe('@settings - Settings', () => {
       await (await elementByIdWithin('Suggestion-lightning', 'SuggestionDismiss')).click();
       await elementById('Suggestion-lightning').waitForDisplayed({ reverse: true });
 
-      // reset suggestions
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await tap('AdvancedSettings');
+      // reset suggestions (now in Widgets settings)
+      await openSettings();
+      await tap('WidgetsSettings');
       await tap('ResetSuggestions');
       await tap('DialogConfirm');
 
       // lightning should be visible again
       await sleep(1000);
-      // if (driver.isIOS) {
-      //   await swipeFullScreen('up');
-      // }
       await elementById('Suggestion-lightning').waitForDisplayed();
     });
   });
 
   describe('Dev Settings', () => {
     ciIt('@settings_13 - Can show/hide Dev Settings', async () => {
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
+      // verify DevSettings is visible in Advanced tab
+      await openSettings('advanced');
       await elementById('DevSettings').waitForDisplayed();
       await tap('DevSettings');
       await sleep(1000);
-      await tap('NavigationBack');
 
+      // disable dev mode via Support screen (DevOptions = version multi-tap)
+      await openSupport();
       await multiTap('DevOptions', 5);
+      await waitForToast('DevModeDisabledToast');
+
+      // DevSettings should be hidden in Advanced tab
+      await openSettings('advanced');
       await elementById('DevSettings').waitForDisplayed({ reverse: true });
 
+      // re-enable dev mode
+      await openSupport();
       await multiTap('DevOptions', 5);
+      await waitForToast('DevModeEnabledToast');
+
+      await openSettings('advanced');
       await elementById('DevSettings').waitForDisplayed();
     });
   });
 
   describe('Support', () => {
     ciIt('@settings_14 - Can see app status', async () => {
-      await tap('HeaderMenu');
-      await tap('DrawerSettings');
-      await tap('Support');
+      await openSupport();
       await tap('AppStatus');
 
       await elementById('Status-internet').waitForDisplayed();

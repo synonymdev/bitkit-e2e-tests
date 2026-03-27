@@ -35,6 +35,7 @@ import {
   mineBlocks,
   sendToAddress,
 } from '../helpers/regtest';
+import { openSettings } from '../helpers/navigation';
 
 describe('@onchain - Onchain', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
@@ -252,9 +253,7 @@ describe('@onchain - Onchain', () => {
     await receiveOnchainFunds({ sats: 100_000_000, expectHighBalanceWarning: true });
 
     // enable warning for sending over 100$ to test multiple warning dialogs
-    await tap('HeaderMenu');
-    await tap('DrawerSettings');
-    await tap('SecuritySettings');
+    await openSettings('security');
     await tap('SendAmountWarning');
     await doNavigationClose();
 

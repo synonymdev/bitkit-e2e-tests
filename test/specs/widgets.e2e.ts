@@ -6,7 +6,9 @@ import {
   swipeFullScreen,
   completeOnboarding,
   deleteAllDefaultWidgets,
+  doNavigationClose,
 } from '../helpers/actions';
+import { openSettings } from '../helpers/navigation';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 
@@ -107,5 +109,67 @@ describe('@widgets - Widgets', () => {
     await elementByText('Yes, Delete').waitForDisplayed();
     await elementByText('Yes, Delete').click();
     await elementById('WidgetsAdd').waitForDisplayed();
+  });
+
+  ciIt('@widgets_2 - Widget settings: reset, show/hide, titles', async () => {
+    await deleteAllDefaultWidgets();
+
+    // Reset widgets via Widget Settings
+    await openSettings();
+    await tap('WidgetsSettings');
+    await tap('ResetWidgets');
+    await tap('DialogConfirm');
+    await sleep(1000);
+
+    // Verify widgets are restored
+    await swipeFullScreen('up');
+    await elementById('PriceWidget').waitForDisplayed();
+    await elementById('SuggestionsWidget').waitForDisplayed();
+    await elementById('BlocksWidget').waitForDisplayed();
+
+    // Toggle off "Show Widgets"
+    await openSettings();
+    await tap('WidgetsSettings');
+    await tap('ShowWidgets');
+    await tap('NavigationBack');
+    await doNavigationClose();
+
+    // Verify widgets are hidden on home
+    await swipeFullScreen('up');
+    await elementById('PriceWidget').waitForDisplayed({
+      reverse: true,
+      timeout: 5000,
+    });
+    await elementById('SuggestionsWidget').waitForDisplayed({
+      reverse: true,
+      timeout: 5000,
+    });
+    await elementById('BlocksWidget').waitForDisplayed({
+      reverse: true,
+      timeout: 5000,
+    });
+
+    // Toggle on "Show Widgets" + enable "Show Widget Titles"
+    await openSettings();
+    await tap('WidgetsSettings');
+    await tap('ShowWidgets');
+    await tap('ShowWidgetTitles');
+    await tap('NavigationBack');
+    await doNavigationClose();
+
+    // Verify widgets visible with titles
+    await swipeFullScreen('up');
+    await elementById('PriceWidget').waitForDisplayed();
+    await elementById('SuggestionsWidget').waitForDisplayed();
+    await elementById('BlocksWidget').waitForDisplayed();
+    await elementByText('Bitcoin Price').waitForDisplayed();
+    await elementByText('Bitcoin Blocks').waitForDisplayed();
+
+    // Cleanup: disable widget titles to restore defaults
+    await openSettings();
+    await tap('WidgetsSettings');
+    await tap('ShowWidgetTitles');
+    await tap('NavigationBack');
+    await doNavigationClose();
   });
 });
