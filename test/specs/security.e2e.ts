@@ -53,7 +53,6 @@ describe('@security - Security And Privacy', () => {
     await sleep(1000);
     await tap('EnablePin');
     await sleep(1000);
-    await tap('SecureWalletContinue');
     await multiTap('N1', PIN_LENGTH); // enter PIN
     await multiTap('N2', PIN_LENGTH); // retype wrong PIN
     await elementById('WrongPIN').waitForDisplayed(); // WrongPIN warning should appear
@@ -126,7 +125,6 @@ describe('@security - Security And Privacy', () => {
     await sleep(1000);
     await tap('EnablePin');
     await sleep(1000);
-    await tap('SecureWalletContinue');
     await multiTap('N1', PIN_LENGTH); // enter PIN
     await multiTap('N1', PIN_LENGTH); // retype PIN
     await tap('SkipButton'); // skip Biometrics for now
