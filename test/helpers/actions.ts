@@ -1447,6 +1447,10 @@ export async function enterAddressViaScanPrompt(
   await tap('DialogConfirm');
 }
 
+export async function verifyAmountToSend(amount: number) {
+  await expectTextWithin('SendNumberField', formatSats(amount));
+}
+
 export async function deleteAllDefaultWidgets() {
   await swipeFullScreen('up');
   await swipeFullScreen('up');
