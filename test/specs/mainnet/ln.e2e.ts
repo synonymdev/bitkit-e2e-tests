@@ -6,13 +6,26 @@ import {
   restoreWallet,
   tap,
   sleep,
+  expectTextWithin,
+  doNavigationClose,
 } from '../../helpers/actions';
 import { ciIt } from '../../helpers/suite';
 
-const PAYMENT_TIMEOUT_MS = 300_000;
+const PAYMENT_TIMEOUT_MS = 90_000;
 const WALLET_SYNC_TIMEOUT_MS = 90_000;
-const SCREEN_TRANSITION_TIMEOUT_MS = 60_000;
-const LN_STABILIZE_DELAY_MS = 10_000;
+const APP_STATUS_ROW_TIMEOUT_MS = 90_000;
+const SCREEN_TRANSITION_TIMEOUT_MS = 30_000;
+
+function resolveLnStabilizeDelayMs(): number {
+  const fromEnv = process.env.LN_STABILIZE_DELAY_MS;
+  if (fromEnv) {
+    const parsed = Number.parseInt(fromEnv, 10);
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      return parsed;
+    }
+  }
+  return process.env.CI ? 45_000 : 10_000;
+}
 
 const ERROR_TOASTS = ['PaymentFailedToast', 'ExpiredLightningToast', 'InsufficientSpendingToast'];
 
@@ -62,8 +75,20 @@ function resolveMainnetLnReceiver(config: MainnetLnSuiteConfig): MainnetLnReceiv
 async function waitForWalletReady(): Promise<void> {
   console.info('→ [LN] Waiting for wallet home screen...');
   await elementById('TotalBalance-primary').waitForDisplayed({ timeout: WALLET_SYNC_TIMEOUT_MS });
-  console.info('→ [LN] Home screen ready, letting LN node stabilize...');
-  await sleep(LN_STABILIZE_DELAY_MS);
+  const stabilizeMs = resolveLnStabilizeDelayMs();
+  console.info(`→ [LN] Home screen ready, letting LN node stabilize (${stabilizeMs / 1000}s)...`);
+  await sleep(stabilizeMs);
+  console.info('→ [LN] Verify app status is ready');
+  await tap('HeaderMenu');
+  await tap('DrawerAppStatus');
+
+  await expectTextWithin('Status-internet', 'Connected', { timeout: APP_STATUS_ROW_TIMEOUT_MS });
+  await expectTextWithin('Status-electrum', 'Connected', { timeout: APP_STATUS_ROW_TIMEOUT_MS });
+  await expectTextWithin('Status-lightning_node', 'Running', { timeout: APP_STATUS_ROW_TIMEOUT_MS });
+  await expectTextWithin('Status-lightning_connection', 'Open', { timeout: APP_STATUS_ROW_TIMEOUT_MS });
+
+  await doNavigationClose();
+  console.info('→ [LN] App status verified');
 }
 
 async function waitForAmountScreen(): Promise<void> {
