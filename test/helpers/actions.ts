@@ -423,9 +423,7 @@ export async function typeText(testId: string, text: string) {
 }
 
 export async function addSendTag(tag: string) {
-  if (driver.isIOS) {
-    await tap('SendConfirmToggleDetails');
-  }
+  await tap('SendConfirmToggleDetails');
   await tap('TagsAddSend');
   await typeText('TagInputSend', tag);
   await tap('SendTagsSubmit');
@@ -1359,9 +1357,7 @@ export async function typeRecipientInput(
 }
 
 export async function editRecipientAddress(address: string) {
-  if (driver.isIOS) {
-    await tap('SendConfirmToggleDetails');
-  }
+  await tap('SendConfirmToggleDetails');
   await tap('ReviewUri');
   await sleep(2000);
   await elementById('RecipientInput').waitForDisplayed();
