@@ -27,6 +27,7 @@ Commands:
     send [amount] [address] [-m N]     Send to address and optionally mine N blocks (default: 1)
     getInvoice <amount>                Get a new BIP21 URI with a bech32 address
   LND:
+    getlninvoice [sats] [--msat N]     Create Lightning invoice (supports msat precision)
     getinfo                            Show LND node info (for connectivity debugging)
     openchannel <node_id> [amount]     Open channel from LND to node (default: 500000 sats)
     payinvoice <invoice> [amount]      Pay a Lightning invoice via LND
@@ -195,6 +196,80 @@ fi
 # Show LND node info (LND)
 if [[ "$command" = "getinfo" ]]; then
   "${LNCLI_CMD[@]}" getinfo
+  exit
+fi
+
+# Create a Lightning invoice (LND)
+if [[ "$command" = "getlninvoice" ]]; then
+  shift
+
+  sats=""
+  msat=""
+  memo=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --msat)
+        msat="${2:-}"
+        shift 2
+        ;;
+      --sats)
+        sats="${2:-}"
+        shift 2
+        ;;
+      -m|--memo)
+        memo="${2:-}"
+        shift 2
+        ;;
+      -*)
+        echo "Unknown option $1"
+        echo "Usage: $CLI_NAME getlninvoice [sats] [--msat N] [--memo TEXT]"
+        exit 1
+        ;;
+      *)
+        # Positional value is treated as sats if numeric.
+        if [[ "$1" =~ ^[0-9]+$ ]]; then
+          sats="$1"
+          shift
+        else
+          echo "Invalid amount '$1' (expected integer sats)"
+          exit 1
+        fi
+        ;;
+    esac
+  done
+
+  if [[ -n "$sats" && -n "$msat" ]]; then
+    echo "Use either sats or --msat, not both."
+    exit 1
+  fi
+
+  if [[ -n "$msat" ]]; then
+    echo "→ Creating Lightning invoice (${msat} msat)..."
+    result=$("${LNCLI_CMD[@]}" addinvoice --amt_msat "$msat" --memo "$memo" 2>&1) || true
+  elif [[ -n "$sats" ]]; then
+    echo "→ Creating Lightning invoice (${sats} sats)..."
+    result=$("${LNCLI_CMD[@]}" addinvoice --amt "$sats" --memo "$memo" 2>&1) || true
+  else
+    echo "→ Creating amountless Lightning invoice..."
+    result=$("${LNCLI_CMD[@]}" addinvoice --memo "$memo" 2>&1) || true
+  fi
+
+  payment_request=$(echo "$result" | jq -r '.payment_request // empty' 2>/dev/null) || payment_request=""
+  if [ -z "$payment_request" ]; then
+    echo "${result:-LND command produced no output}"
+    exit 1
+  fi
+
+  echo ""
+  echo "$payment_request"
+  echo ""
+
+  if command -v pbcopy &>/dev/null; then
+    echo "$payment_request" | pbcopy
+    echo "Invoice copied to clipboard."
+  fi
+
   exit
 fi
 
