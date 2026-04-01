@@ -3,10 +3,12 @@
 See also: [Lightning primer for QA](./lightning-primer-for-qa.md) (monitors, HTLCs, gaps, risks).
 
 Related issues:
+
 - [#847 (bitkit-android)](https://github.com/synonymdev/bitkit-android/issues/847)
 - iOS support ticket (user logs from 2026-03-18)
 
 Fix branches:
+
 - **iOS**: `fix/stale-monitor-recovery-release`
 - **Android**: `fix/stale-monitor-recovery-v2`
 
@@ -17,6 +19,7 @@ Build 182 (v2.1.0) introduced `fetchOrphanedChannelMonitorsIfNeeded` which fetch
 ## Root Cause
 
 On v2.1.0 startup:
+
 1. `fetchOrphanedChannelMonitorsIfNeeded` fetches stale channel monitor from RN backup server
 2. Injects it via `setChannelDataMigration` with `channelManager: nil` (monitors only)
 3. ldk-node persists the stale monitor to VSS/local storage
@@ -33,6 +36,7 @@ Failed to read channel manager from store: Value would be dangerous to continue 
 ```
 
 In app logs:
+
 ```
 Running pre-startup channel monitor recovery check
 Found 1 monitors on RN backup for pre-startup recovery
@@ -89,6 +93,7 @@ RN v1.1.6 local builds use `.env.test.template` (regtest + localhost Electrum). 
 **Critical**: The RN app's `.env.production` must point the backup server to **staging** (not localhost), because the native apps have `rnBackupServerHost` hardcoded to staging. If the RN app pushes to `127.0.0.1:3003` but the native app queries `bitkit.stag0.blocktank.to`, it will never find the channel monitors and the bug won't trigger.
 
 In `.env.production` for the RN v1.1.6 build, set:
+
 ```
 BACKUPS_SERVER_HOST=https://bitkit.stag0.blocktank.to/backups-ldk
 BACKUPS_SERVER_PUBKEY=02c03b8b8c1b5500b622646867d99bf91676fac0f38e2182c91a9ff0d053a21d6d
@@ -130,6 +135,7 @@ The app's channel has all balance on the app side. LND needs outbound liquidity 
 ```
 
 Verify with a test payment:
+
 ```bash
 ./bitcoin-cli payinvoice <bolt11_invoice> 10
 ```
@@ -166,6 +172,7 @@ Install v2.1.0 **over** the native app → app fails to start LN node (see error
 Upgrading from a broken v2.1.0 wallet to v2.1.2 (fix candidate) recovers the wallet. Channels are healed and LN transactions work after recovery.
 
 Fix branches:
+
 - **iOS**: `fix/stale-monitor-recovery-release`
 - **Android**: `fix/stale-monitor-recovery-v2`
 
@@ -192,34 +199,34 @@ Matrix of upgrade/recovery scenarios to validate v2.1.2. Each scenario should be
 
 ### Blocktank channel (staging regtest)
 
-| # | Scenario | Result |
-|---|----------|--------|
-| B1 | v2.0.6 (wallet with 21+ payment gap) → v2.1.0 → confirm broken | Reproduces |
-| B2 | Restore broken v2.1.0 wallet into v2.1.2 (clean install + restore) | ✅ Recovered |
-| B3 | Update broken v2.1.0 wallet to v2.1.2 (in-place upgrade) | ✅ Recovered |
-| B4 | v2.0.6 (wallet with gap) → v2.1.2 (skip v2.1.0) | ✅ No issues |
-| B5 | v2.0.6 (wallet with gap) → v2.1.1 → v2.1.2 | ✅ No issues |
-| B6 | v2.1.0 healthy wallet (no gap) → v2.1.2 (regression check) | ✅ No issues |
-| B7 | v2.1.0 broken wallet + 600 blocks mined → v2.1.2 (stale chain state) | ✅ Recovered |
+| #   | Scenario                                                             | Result       |
+| --- | -------------------------------------------------------------------- | ------------ |
+| B1  | v2.0.6 (wallet with 21+ payment gap) → v2.1.0 → confirm broken       | Reproduces   |
+| B2  | Restore broken v2.1.0 wallet into v2.1.2 (clean install + restore)   | ✅ Recovered |
+| B3  | Update broken v2.1.0 wallet to v2.1.2 (in-place upgrade)             | ✅ Recovered |
+| B4  | v2.0.6 (wallet with gap) → v2.1.2 (skip v2.1.0)                      | ✅ No issues |
+| B5  | v2.0.6 (wallet with gap) → v2.1.1 → v2.1.2                           | ✅ No issues |
+| B6  | v2.1.0 healthy wallet (no gap) → v2.1.2 (regression check)           | ✅ No issues |
+| B7  | v2.1.0 broken wallet + 600 blocks mined → v2.1.2 (stale chain state) | ✅ Recovered |
 
 ### 3rd-party channel (local docker)
 
-| # | Scenario | Result |
-|---|----------|--------|
-| T1 | v2.0.6 (wallet with 30+ payment gap) → v2.1.0 → confirm broken | Reproduces |
-| T2 | Update broken v2.1.0 wallet to v2.1.2 (in-place upgrade) | ✅ Recovered |
-| T3 | v2.0.6 (wallet with gap) → v2.1.2 (skip v2.1.0) | ✅ No issues |
-| T4 | v2.1.0 healthy wallet (no gap) → v2.1.2 (regression check) | ✅ No issues |
-| T5 | v2.1.0 broken wallet + 600 blocks mined → v2.1.2 (stale chain state) | ✅ Recovered |
+| #   | Scenario                                                             | Result       |
+| --- | -------------------------------------------------------------------- | ------------ |
+| T1  | v2.0.6 (wallet with 30+ payment gap) → v2.1.0 → confirm broken       | Reproduces   |
+| T2  | Update broken v2.1.0 wallet to v2.1.2 (in-place upgrade)             | ✅ Recovered |
+| T3  | v2.0.6 (wallet with gap) → v2.1.2 (skip v2.1.0)                      | ✅ No issues |
+| T4  | v2.1.0 healthy wallet (no gap) → v2.1.2 (regression check)           | ✅ No issues |
+| T5  | v2.1.0 broken wallet + 600 blocks mined → v2.1.2 (stale chain state) | ✅ Recovered |
 
 ### Version reference
 
-| Version | iOS branch | Android branch |
-|---------|-----------|---------------|
-| v1.1.6 | tag `v1.1.6` (RN) | tag `v1.1.6` (RN) |
-| v2.0.6 | `chore/e2e-updater-url` | — |
-| v2.0.3 | — | `chore/e2e-updater-url` |
-| v2.1.0 | build 182 | build 182 |
+| Version      | iOS branch                           | Android branch                  |
+| ------------ | ------------------------------------ | ------------------------------- |
+| v1.1.6       | tag `v1.1.6` (RN)                    | tag `v1.1.6` (RN)               |
+| v2.0.6       | `chore/e2e-updater-url`              | —                               |
+| v2.0.3       | —                                    | `chore/e2e-updater-url`         |
+| v2.1.0       | build 182                            | build 182                       |
 | v2.1.2 (fix) | `fix/stale-monitor-recovery-release` | `fix/stale-monitor-recovery-v2` |
 
 ---
@@ -233,11 +240,11 @@ Matrix of upgrade/recovery scenarios to validate v2.1.2. Each scenario should be
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `docs/lightning-primer-for-qa.md` | Background: ChannelManager vs ChannelMonitor, HTLCs, gaps, test focus |
-| `test/specs/receive-ln-payments.e2e.ts` | Automated spec to receive N Lightning payments |
-| `wdio.no-install.conf.ts` | WDIO config that attaches to existing app (no reinstall) |
-| `docker/bitcoin-cli` | Local docker CLI with `openchannel`, `payinvoice`, `mine`, `send` commands |
-| `scripts/pay-lightning-address.sh` | Shell script to pay BOLT11/BIP21/LN address via Blocktank |
-| `scripts/pay-lightning-address-loop.sh` | Shell script to send N payments to a Lightning address |
+| File                                    | Purpose                                                                    |
+| --------------------------------------- | -------------------------------------------------------------------------- |
+| `docs/lightning-primer-for-qa.md`       | Background: ChannelManager vs ChannelMonitor, HTLCs, gaps, test focus      |
+| `test/specs/receive-ln-payments.e2e.ts` | Automated spec to receive N Lightning payments                             |
+| `wdio.no-install.conf.ts`               | WDIO config that attaches to existing app (no reinstall)                   |
+| `docker/bitcoin-cli`                    | Local docker CLI with `openchannel`, `payinvoice`, `mine`, `send` commands |
+| `scripts/pay-lightning-address.sh`      | Shell script to pay BOLT11/BIP21/LN address via Blocktank                  |
+| `scripts/pay-lightning-address-loop.sh` | Shell script to send N payments to a Lightning address                     |
