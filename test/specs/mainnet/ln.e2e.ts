@@ -84,8 +84,12 @@ async function waitForWalletReady(): Promise<void> {
 
   await expectTextWithin('Status-internet', 'Connected', { timeout: APP_STATUS_ROW_TIMEOUT_MS });
   await expectTextWithin('Status-electrum', 'Connected', { timeout: APP_STATUS_ROW_TIMEOUT_MS });
-  await expectTextWithin('Status-lightning_node', 'Running', { timeout: APP_STATUS_ROW_TIMEOUT_MS });
-  await expectTextWithin('Status-lightning_connection', 'Open', { timeout: APP_STATUS_ROW_TIMEOUT_MS });
+  await expectTextWithin('Status-lightning_node', 'Running', {
+    timeout: APP_STATUS_ROW_TIMEOUT_MS,
+  });
+  await expectTextWithin('Status-lightning_connection', 'Open', {
+    timeout: APP_STATUS_ROW_TIMEOUT_MS,
+  });
 
   await doNavigationClose();
   console.info('→ [LN] App status verified');
