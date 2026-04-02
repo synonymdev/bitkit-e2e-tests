@@ -13,7 +13,7 @@ import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 
 describe('@widgets - Widgets', () => {
-  before(async () => {
+  beforeEach(async () => {
     await reinstallApp();
     await completeOnboarding();
   });
