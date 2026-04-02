@@ -424,8 +424,16 @@ describe('@settings - Settings', () => {
       const newUrl = `${rgsUrl}/`;
 
       // url should be updated
-      await typeText('RGSUrl', newUrl);
-      await confirmInputOnKeyboard();
+      try {
+        await typeText('RGSUrl', newUrl);
+        await confirmInputOnKeyboard();
+        await elementById('ConnectToHost').waitForEnabled();
+      } catch {
+        console.info('→ [Settings] RGSUrl is not updated properly, trying again...');
+        await typeText('RGSUrl', newUrl);
+        await confirmInputOnKeyboard();
+        await elementById('ConnectToHost').waitForEnabled();
+      }
       await tap('ConnectToHost');
       await waitForToast('RgsUpdatedToast');
       const updatedUrl = await (await elementById('ConnectedUrl')).getText();
@@ -433,6 +441,7 @@ describe('@settings - Settings', () => {
 
       // switch back to default
       await tap('ResetToDefault');
+      await sleep(2000);
       await tap('ConnectToHost');
       await waitForToast('RgsUpdatedToast', { waitToDisappear: false });
 
