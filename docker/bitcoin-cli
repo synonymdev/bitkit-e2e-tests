@@ -3,12 +3,15 @@
 set -euo pipefail
 
 CLI_NAME="$(basename $0)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BITCOIN_CONTAINER="bitcoind"
 LND_CONTAINER="lnd"
 LND_DIR="/home/lnd/.lnd"
 RPC_USER=polaruser
 RPC_PASS=polarpass
 RPC_PORT=43782
+LNURL_SERVER_PORT="${LNURL_SERVER_PORT:-30001}"
+LNURL_SERVER_URL="${LNURL_SERVER_URL:-http://localhost:${LNURL_SERVER_PORT}}"
 
 BASE_COMMAND=(docker compose exec $BITCOIN_CONTAINER bitcoin-cli -rpcport=$RPC_PORT -rpcuser=$RPC_USER -rpcpassword=$RPC_PASS)
 LNCLI_CMD=(docker compose exec -T $LND_CONTAINER lncli --lnddir "$LND_DIR" --network regtest)
@@ -34,6 +37,12 @@ Commands:
     holdinvoice [amount] [-m memo]     Create a hold invoice
     settleinvoice <preimage>           Reveal a preimage and use it to settle the corresponding invoice
     cancelinvoice <payment_hash>       Cancels a currently open invoice
+  LNURL (requires LNURL server, default: ${LNURL_SERVER_URL}):
+    startlnurlserver [--port N]        Start LNURL server using current e2e Bitcoin/LND
+    stoplnurlserver                    Stop LNURL server container
+    checklnurl                         Diagnose LNURL health, routing, and adb reverse
+    getlnurlpay --msat N               Create LNURL-pay with fixed msat amount
+    getlnurlwithdraw --msat N          Create LNURL-withdraw with fixed msat amount
 EOF
 }
 
@@ -268,6 +277,333 @@ if [[ "$command" = "getlninvoice" ]]; then
   if command -v pbcopy &>/dev/null; then
     echo "$payment_request" | pbcopy
     echo "Invoice copied to clipboard."
+  fi
+
+  exit
+fi
+
+# Start LNURL server stack (bitkit-docker)
+if [[ "$command" = "startlnurlserver" ]]; then
+  shift
+
+  BITKIT_DOCKER_DIR="${BITKIT_DOCKER_DIR:-$SCRIPT_DIR/../../bitkit-docker}"
+  LNURL_IMAGE="${LNURL_IMAGE:-bitkit-lnurl-server:local}"
+  E2E_DOCKER_DIR="$SCRIPT_DIR"
+  LNURL_DATA_DIR="${LNURL_DATA_DIR:-$SCRIPT_DIR/lnurl-server-data}"
+  runtime_port="$LNURL_SERVER_PORT"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --port)
+        runtime_port="${2:-}"
+        shift 2
+        ;;
+      -*)
+        echo "Unknown option $1"
+        echo "Usage: $CLI_NAME startlnurlserver [--port N]"
+        exit 1
+        ;;
+      *)
+        if [[ "$1" =~ ^[0-9]+$ ]]; then
+          runtime_port="$1"
+          shift
+        else
+          echo "Invalid port '$1' (expected integer)"
+          exit 1
+        fi
+        ;;
+    esac
+  done
+
+  if ! [[ "$runtime_port" =~ ^[0-9]+$ ]]; then
+    echo "Invalid port '$runtime_port' (expected integer)"
+    exit 1
+  fi
+
+  if [[ ! -d "$BITKIT_DOCKER_DIR" ]]; then
+    echo "bitkit-docker directory not found at '$BITKIT_DOCKER_DIR'"
+    echo "Tip: set BITKIT_DOCKER_DIR to your path, e.g."
+    echo "  BITKIT_DOCKER_DIR=../bitkit-docker $CLI_NAME startlnurlserver"
+    exit 1
+  fi
+
+  if [[ ! -f "$BITKIT_DOCKER_DIR/docker-compose.yml" ]]; then
+    echo "No docker-compose.yml found in '$BITKIT_DOCKER_DIR'"
+    exit 1
+  fi
+
+  if [[ ! -d "$E2E_DOCKER_DIR/lnd" ]]; then
+    echo "Expected LND data at '$E2E_DOCKER_DIR/lnd' but it was not found."
+    exit 1
+  fi
+
+  if ! docker image inspect "$LNURL_IMAGE" >/dev/null 2>&1; then
+    echo "→ Building LNURL image '$LNURL_IMAGE' from '$BITKIT_DOCKER_DIR/lnurl-server'..."
+    docker build -t "$LNURL_IMAGE" "$BITKIT_DOCKER_DIR/lnurl-server" >/dev/null || {
+      echo "Failed to build LNURL image"
+      exit 1
+    }
+  fi
+
+  mkdir -p "$LNURL_DATA_DIR"
+
+  echo "→ Starting LNURL server wired to current e2e docker stack on port ${runtime_port}..."
+  docker rm -f lnurl-server >/dev/null 2>&1 || true
+  docker run -d \
+    --name lnurl-server \
+    -p "${runtime_port}:3000" \
+    -e NODE_ENV=production \
+    -e PORT=3000 \
+    -e DOMAIN="http://localhost:${runtime_port}" \
+    -e BITCOIN_RPC_HOST=host.docker.internal \
+    -e BITCOIN_RPC_PORT=43782 \
+    -e BITCOIN_RPC_USER=polaruser \
+    -e BITCOIN_RPC_PASS=polarpass \
+    -e LND_REST_HOST=host.docker.internal \
+    -e LND_REST_PORT=8080 \
+    -e LND_MACAROON_PATH=/lnd-certs/data/chain/bitcoin/regtest/admin.macaroon \
+    -e LND_TLS_CERT_PATH=/lnd-certs/tls.cert \
+    -v "$E2E_DOCKER_DIR/lnd:/lnd-certs:ro" \
+    -v "$LNURL_DATA_DIR:/data" \
+    "$LNURL_IMAGE" >/dev/null || {
+    echo "Failed to start LNURL server container"
+    exit 1
+  }
+
+  echo "✓ LNURL server started"
+  echo "Health check:"
+  echo "  curl -s http://localhost:${runtime_port}/health | jq"
+  exit
+fi
+
+# Stop LNURL server
+if [[ "$command" = "stoplnurlserver" ]]; then
+  container_id=$(docker ps -a --filter "name=^lnurl-server$" --format "{{.ID}}" | head -n 1)
+  if [[ -n "$container_id" ]]; then
+    docker rm -f lnurl-server >/dev/null 2>&1 || true
+    echo "✓ LNURL server stopped"
+  else
+    echo "LNURL server is not running"
+  fi
+  exit
+fi
+
+# Check LNURL setup and prerequisites
+if [[ "$command" = "checklnurl" ]]; then
+  health_url="${LNURL_SERVER_URL%/}/health"
+
+  echo "→ Checking LNURL health at ${health_url}..."
+  health_json=""
+  for _ in $(seq 1 10); do
+    health_json=$(curl -s "$health_url" 2>/dev/null || true)
+    if [[ -n "$health_json" ]]; then
+      break
+    fi
+    sleep 1
+  done
+  if [[ -z "$health_json" ]]; then
+    echo "✗ LNURL health endpoint is unreachable"
+    echo "  Start server: $CLI_NAME startlnurlserver --port ${LNURL_SERVER_PORT}"
+    echo "  Or set LNURL_SERVER_URL to your endpoint."
+    exit 1
+  fi
+
+  status=$(echo "$health_json" | jq -r '.status // "unknown"' 2>/dev/null || echo "unknown")
+  btc_ok=$(echo "$health_json" | jq -r '.bitcoin_connected // false' 2>/dev/null || echo "false")
+  lnd_ok=$(echo "$health_json" | jq -r '.lnd_connected // false' 2>/dev/null || echo "false")
+  block_height=$(echo "$health_json" | jq -r '.block_height // "n/a"' 2>/dev/null || echo "n/a")
+
+  echo "  status:            $status"
+  echo "  bitcoin_connected: $btc_ok"
+  echo "  lnd_connected:     $lnd_ok"
+  echo "  block_height:      $block_height"
+
+  echo ""
+  echo "→ Checking local LND channel/liquidity..."
+  channel_balance=$(docker compose -f "$SCRIPT_DIR/docker-compose.yml" exec -T "$LND_CONTAINER" \
+    lncli --lnddir "$LND_DIR" --network regtest channelbalance 2>/dev/null || true)
+  channels=$(docker compose -f "$SCRIPT_DIR/docker-compose.yml" exec -T "$LND_CONTAINER" \
+    lncli --lnddir "$LND_DIR" --network regtest listchannels 2>/dev/null || true)
+
+  if [[ -z "$channel_balance" || -z "$channels" ]]; then
+    echo "  ⚠ Could not read local LND state from e2e docker stack."
+  else
+    local_sat=$(echo "$channel_balance" | jq -r '.local_balance.sat // "0"' 2>/dev/null || echo "0")
+    remote_sat=$(echo "$channel_balance" | jq -r '.remote_balance.sat // "0"' 2>/dev/null || echo "0")
+    active_count=$(echo "$channels" | jq -r '[.channels[] | select(.active==true)] | length' 2>/dev/null || echo "0")
+    total_count=$(echo "$channels" | jq -r '.channels | length // 0' 2>/dev/null || echo "0")
+
+    echo "  channels:          ${active_count} active / ${total_count} total"
+    echo "  lnd outbound:      ${local_sat} sats (can pay)"
+    echo "  lnd inbound:       ${remote_sat} sats (can receive)"
+  fi
+
+  echo ""
+  echo "→ Checking Android adb reverse for port ${LNURL_SERVER_PORT}..."
+  if ! command -v adb >/dev/null 2>&1; then
+    echo "  adb not found (skip)"
+  else
+    devices=$(adb devices 2>/dev/null | awk 'NR>1 && $2=="device" {print $1}')
+    if [[ -z "$devices" ]]; then
+      echo "  no connected Android devices/emulators"
+    else
+      reverse_list=$(adb reverse --list 2>/dev/null || true)
+      if echo "$reverse_list" | grep -q "tcp:${LNURL_SERVER_PORT}[[:space:]]\+tcp:${LNURL_SERVER_PORT}"; then
+        echo "  ✓ adb reverse is configured for tcp:${LNURL_SERVER_PORT}"
+      else
+        echo "  ⚠ adb reverse missing for tcp:${LNURL_SERVER_PORT}"
+        echo "    Run: adb reverse tcp:${LNURL_SERVER_PORT} tcp:${LNURL_SERVER_PORT}"
+      fi
+    fi
+  fi
+
+  echo ""
+  if [[ "$status" = "healthy" && "$btc_ok" = "true" && "$lnd_ok" = "true" ]]; then
+    echo "✓ LNURL diagnostics look good."
+    exit 0
+  fi
+
+  echo "⚠ LNURL diagnostics found issues."
+  exit 1
+fi
+
+# Create LNURL-pay (fixed msat amount)
+if [[ "$command" = "getlnurlpay" ]]; then
+  shift
+
+  msat=""
+  comment_allowed=0
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --msat)
+        msat="${2:-}"
+        shift 2
+        ;;
+      --comment-allowed)
+        comment_allowed="${2:-0}"
+        shift 2
+        ;;
+      -*)
+        echo "Unknown option $1"
+        echo "Usage: $CLI_NAME getlnurlpay --msat N [--comment-allowed N]"
+        exit 1
+        ;;
+      *)
+        if [[ "$1" =~ ^[0-9]+$ ]]; then
+          msat="$1"
+          shift
+        else
+          echo "Invalid value '$1' (expected integer msats)"
+          exit 1
+        fi
+        ;;
+    esac
+  done
+
+  if [[ -z "$msat" ]]; then
+    echo "Usage: $CLI_NAME getlnurlpay --msat N [--comment-allowed N]"
+    exit 1
+  fi
+
+  if ! [[ "$msat" =~ ^[0-9]+$ ]]; then
+    echo "Invalid msat '$msat' (expected integer)"
+    exit 1
+  fi
+
+  if ! [[ "$comment_allowed" =~ ^[0-9]+$ ]]; then
+    echo "Invalid comment length '$comment_allowed' (expected integer)"
+    exit 1
+  fi
+
+  url="${LNURL_SERVER_URL%/}/generate/pay?minSendable=${msat}&maxSendable=${msat}&commentAllowed=${comment_allowed}"
+  echo "→ Creating LNURL-pay (${msat} msat fixed amount) via ${LNURL_SERVER_URL}..."
+
+  result=$(curl -sf "$url") || {
+    echo "Failed to reach LNURL server at ${LNURL_SERVER_URL}"
+    echo "Tip: verify server with '$CLI_NAME checklnurl' or set LNURL_SERVER_URL."
+    exit 1
+  }
+
+  lnurl=$(echo "$result" | jq -r '.lnurl // empty' 2>/dev/null) || lnurl=""
+  if [[ -z "$lnurl" ]]; then
+    echo "${result:-LNURL server returned no output}"
+    exit 1
+  fi
+
+  echo ""
+  echo "$lnurl"
+  echo ""
+
+  if command -v pbcopy &>/dev/null; then
+    echo "$lnurl" | pbcopy
+    echo "LNURL copied to clipboard."
+  fi
+
+  exit
+fi
+
+# Create LNURL-withdraw (fixed msat amount)
+if [[ "$command" = "getlnurlwithdraw" ]]; then
+  shift
+
+  msat=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --msat)
+        msat="${2:-}"
+        shift 2
+        ;;
+      -*)
+        echo "Unknown option $1"
+        echo "Usage: $CLI_NAME getlnurlwithdraw --msat N"
+        exit 1
+        ;;
+      *)
+        if [[ "$1" =~ ^[0-9]+$ ]]; then
+          msat="$1"
+          shift
+        else
+          echo "Invalid value '$1' (expected integer msats)"
+          exit 1
+        fi
+        ;;
+    esac
+  done
+
+  if [[ -z "$msat" ]]; then
+    echo "Usage: $CLI_NAME getlnurlwithdraw --msat N"
+    exit 1
+  fi
+
+  if ! [[ "$msat" =~ ^[0-9]+$ ]]; then
+    echo "Invalid msat '$msat' (expected integer)"
+    exit 1
+  fi
+
+  url="${LNURL_SERVER_URL%/}/generate/withdraw?minWithdrawable=${msat}&maxWithdrawable=${msat}"
+  echo "→ Creating LNURL-withdraw (${msat} msat fixed amount) via ${LNURL_SERVER_URL}..."
+
+  result=$(curl -sf "$url") || {
+    echo "Failed to reach LNURL server at ${LNURL_SERVER_URL}"
+    echo "Tip: verify server with '$CLI_NAME checklnurl' or set LNURL_SERVER_URL."
+    exit 1
+  }
+
+  lnurl=$(echo "$result" | jq -r '.lnurl // empty' 2>/dev/null) || lnurl=""
+  if [[ -z "$lnurl" ]]; then
+    echo "${result:-LNURL server returned no output}"
+    exit 1
+  fi
+
+  echo ""
+  echo "$lnurl"
+  echo ""
+
+  if command -v pbcopy &>/dev/null; then
+    echo "$lnurl" | pbcopy
+    echo "LNURL copied to clipboard."
   fi
 
   exit
