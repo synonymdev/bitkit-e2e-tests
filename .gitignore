@@ -4,6 +4,7 @@ aut
 node_modules
 docker/lnd
 docker/lnurl-server-data
+docker/lnurl-server/data
 artifacts
 WARP.md
 .ai
