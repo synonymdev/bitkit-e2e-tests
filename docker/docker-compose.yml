@@ -133,6 +133,34 @@ services:
       SECRET_KEY: 'e3e2d2e410569be1f2219e1ef21f188f7ccff1ce721ea2624263d3fe9878f69e'
       PUBLIC_KEY: '0319c4ff23820afec0c79ce3a42031d7fef1dff78b7bdd69b5560684f3e1827675'
 
+  lnurl-server:
+    profiles:
+      - adhoc
+    build:
+      context: ./lnurl-server
+    restart: unless-stopped
+    depends_on:
+      - bitcoind
+      - lnd
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DOMAIN=http://localhost:${LNURL_SERVER_PORT:-30001}
+      - DATABASE_URL=sqlite:///data/lnurl.db
+      - BITCOIN_RPC_HOST=bitcoind
+      - BITCOIN_RPC_PORT=43782
+      - BITCOIN_RPC_USER=polaruser
+      - BITCOIN_RPC_PASS=polarpass
+      - LND_REST_HOST=lnd
+      - LND_REST_PORT=8080
+      - LND_MACAROON_PATH=/lnd-certs/data/chain/bitcoin/regtest/admin.macaroon
+      - LND_TLS_CERT_PATH=/lnd-certs/tls.cert
+    volumes:
+      - ./lnurl-server-data:/data
+      - ./lnd:/lnd-certs:ro
+    ports:
+      - '${LNURL_SERVER_PORT:-30001}:3000'
+
 volumes:
   bitcoin_home:
 
