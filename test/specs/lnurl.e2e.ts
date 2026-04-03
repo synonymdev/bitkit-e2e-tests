@@ -327,6 +327,7 @@ describe('@lnurl - LNURL', () => {
       await enterAddressViaScanPrompt(withdrawRequest2.encoded, { acceptCameraPermission: false });
       const reviewAmtWithdraw = await elementByIdWithin('WithdrawAmount-primary', 'MoneyText');
       await expect(reviewAmtWithdraw).toHaveText('303');
+      await sleep(1000);
       await tap('WithdrawConfirmButton');
       await acknowledgeReceivedPayment();
       await expectTextWithin('ActivitySpending', '19 713'); // 19 410 + 303 = 19 713
