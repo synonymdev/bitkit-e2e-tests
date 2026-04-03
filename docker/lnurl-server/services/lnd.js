@@ -111,6 +111,14 @@ class LNDService {
         });
     }
 
+    async createInvoiceMsat(valueMsat, memo, expiry = 3600) {
+        return this.call('invoices', {
+            value_msat: valueMsat.toString(),
+            memo: memo,
+            expiry: expiry
+        });
+    }
+
     async getInvoice(paymentHash) {
         return this.rest(`/v1/invoice/${paymentHash}`, 'GET');
     }

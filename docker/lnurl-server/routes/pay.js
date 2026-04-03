@@ -47,12 +47,12 @@ router.get('/:paymentId/callback', asyncHandler(async (req, res) => {
         throw new ValidationError(validationErrors.join(', '));
     }
 
-    const amountMsat = parseInt(amount);
+    const amountMsat = parseInt(amount, 10);
     const amountSats = Math.floor(amountMsat / 1000);
 
     // Create invoice
-    const invoice = await lndService.createInvoice(
-        amountSats,
+    const invoice = await lndService.createInvoiceMsat(
+        amountMsat,
         comment ? `LNURL Payment ${paymentId} - ${comment}` : `LNURL Payment ${paymentId}`,
         3600
     );

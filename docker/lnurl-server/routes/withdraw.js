@@ -59,20 +59,19 @@ router.get('/callback', asyncHandler(async (req, res) => {
     const minValue = minWithdrawable ? parseInt(minWithdrawable, 10) : config.limits.minWithdrawable;
     const maxValue = maxWithdrawable ? parseInt(maxWithdrawable, 10) : config.limits.maxWithdrawable;
 
-    // Convert msats to sats for validation
-    const minSats = Math.ceil(minValue / 1000);
-    const maxSats = Math.floor(maxValue / 1000);
-
     try {
         // Decode the invoice to get the amount
         const decodedInvoice = await lndService.decodePayReq(pr);
-        const invoiceAmountSats = decodedInvoice.num_satoshis;
+        const invoiceAmountSats = parseInt(decodedInvoice.num_satoshis, 10);
+        const invoiceAmountMsat = decodedInvoice.num_msat
+            ? parseInt(decodedInvoice.num_msat, 10)
+            : invoiceAmountSats * 1000;
 
-        Logger.withdrawal('processing', { k1, amount: invoiceAmountSats, minSats, maxSats });
+        Logger.withdrawal('processing', { k1, amountSats: invoiceAmountSats, amountMsat: invoiceAmountMsat, minWithdrawable: minValue, maxWithdrawable: maxValue });
 
-        // Validate amount is within limits
-        if (!Validation.isAmountInRange(invoiceAmountSats, minSats, maxSats)) {
-            throw new ValidationError(`Amount out of range (${minSats} - ${maxSats} sats)`);
+        // Validate msat amount is within limits
+        if (!Validation.isAmountInRange(invoiceAmountMsat, minValue, maxValue)) {
+            throw new ValidationError(`Amount out of range (${minValue} - ${maxValue} msat)`);
         }
 
         // Pay the invoice
