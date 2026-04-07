@@ -54,6 +54,21 @@ function waitForEvent(lnurlServer: any, name: string): Promise<void> {
   });
 }
 
+function spendingBalanceLabelSats(satsInteger: number): string {
+  return satsInteger.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
+/** Balance in msats after pay (subtract) or withdraw (add) from a prior msat total. */
+function applyLnurlMsatDelta(balanceMsats: bigint, deltaMsats: number, direction: 'pay' | 'withdraw'): bigint {
+  const d = BigInt(deltaMsats);
+  return direction === 'pay' ? balanceMsats - d : balanceMsats + d;
+}
+
+/** Displayed sats string for msat-precision amounts (matches bitkit-core div_ceil / send.e2e payMsatInvoice). */
+function msatsToCeilSatsString(msats: number): string {
+  return Math.ceil(msats / 1000).toString();
+}
+
 describe('@lnurl - LNURL', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
   let lnurlServer: any;
@@ -98,7 +113,7 @@ describe('@lnurl - LNURL', () => {
   });
 
   ciIt(
-    '@lnurl_1 - Can process lnurl-channel, lnurl-pay, lnurl-withdraw, and lnurl-auth',
+    '@lnurl_1 - Can process lnurl-channel, lnurl-pay, lnurl-withdraw, lnurl-auth, and msat-precision pay/withdraw',
     async () => {
       await receiveOnchainFunds({ sats: 1000 });
 
@@ -297,6 +312,7 @@ describe('@lnurl - LNURL', () => {
       await enterAddressViaScanPrompt(withdrawRequest2.encoded, { acceptCameraPermission: false });
       const reviewAmtWithdraw = await elementByIdWithin('WithdrawAmount-primary', 'MoneyText');
       await expect(reviewAmtWithdraw).toHaveText('303');
+      await sleep(1000);
       await tap('WithdrawConfirmButton');
       await acknowledgeReceivedPayment();
       await expectTextWithin('ActivitySpending', '19 713'); // 19 410 + 303 = 19 713
@@ -308,6 +324,82 @@ describe('@lnurl - LNURL', () => {
       await sleep(1000);
       await swipeFullScreen('down');
       await swipeFullScreen('down');
+
+      // Fixed min==max LNURL amounts in msats (LND invoice uses value_msat). Each pair pays then withdraws the same amount so balance returns to 19 713 sats.
+      // 222538 — remainder 538 msats (regression: payment must not truncate msats).
+      // 222222 — remainder 222 msats (< 500).
+      // 500500 — remainder 500 msats exactly.
+      // UI shows ceil sats for msat-precision amounts (same as send.e2e payMsatInvoice).
+      let balanceMsats = 19713000n;
+
+      async function msatPayWithdraw(label: string, msats: number) {
+        const valueSatsStr = msatsToCeilSatsString(msats);
+        const afterPay = applyLnurlMsatDelta(balanceMsats, msats, 'pay');
+        const afterWithdraw = applyLnurlMsatDelta(afterPay, msats, 'withdraw');
+
+        const payReq = await lnurlServer.generateNewUrl('payRequest', {
+          minSendable: msats,
+          maxSendable: msats,
+          metadata: `[["text/plain","lnurl-msat-${label}"]]`,
+          commentAllowed: 0,
+        });
+        console.log(`payRequest msat ${label}`, payReq);
+
+        await enterAddressViaScanPrompt(payReq.encoded, { acceptCameraPermission: false });
+        await sleep(2000);
+        await elementById('ReviewAmount-primary').waitForDisplayed({ timeout: 5000 });
+        await elementById('CommentInput').waitForDisplayed({ reverse: true });
+        const reviewMoneyPay = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
+        await expect(reviewMoneyPay).toHaveText(valueSatsStr);
+        await dragOnElement('GRAB', 'right', 0.95);
+        await elementById('SendSuccess').waitForDisplayed();
+        await expectText(valueSatsStr);
+        await tap('Close');
+        balanceMsats = afterPay;
+        await expectTextWithin(
+          'ActivitySpending',
+          spendingBalanceLabelSats(Number(balanceMsats / 1000n)),
+        );
+        await elementById('ActivityShort-0').waitForDisplayed();
+        await expectTextWithin('ActivityShort-0', '-');
+        await expectTextWithin('ActivityShort-0', 'Sent');
+        await expectTextWithin('ActivityShort-0', valueSatsStr);
+        await sleep(1000);
+        await swipeFullScreen('down');
+        await swipeFullScreen('down');
+
+        const wReq = await lnurlServer.generateNewUrl('withdrawRequest', {
+          minWithdrawable: msats,
+          maxWithdrawable: msats,
+          defaultDescription: `lnurl-withdraw-msat-${label}`,
+        });
+        console.log(`withdrawRequest msat ${label}`, wReq);
+
+        await enterAddressViaScanPrompt(wReq.encoded, { acceptCameraPermission: false });
+        await sleep(2000);
+        await elementById('WithdrawAmount-primary').waitForDisplayed({ timeout: 5000 });
+        const reviewMoneyWithdraw = await elementByIdWithin('WithdrawAmount-primary', 'MoneyText');
+        await expect(reviewMoneyWithdraw).toHaveText(valueSatsStr);
+        await tap('WithdrawConfirmButton');
+        await acknowledgeReceivedPayment();
+        balanceMsats = afterWithdraw;
+        await expectTextWithin(
+          'ActivitySpending',
+          spendingBalanceLabelSats(Number(balanceMsats / 1000n)),
+        );
+        await elementById('ActivityShort-0').waitForDisplayed();
+        await expectTextWithin('ActivityShort-0', '+');
+        await expectTextWithin('ActivityShort-0', valueSatsStr);
+        await expectTextWithin('ActivityShort-0', `lnurl-withdraw-msat-${label}`);
+        await expectTextWithin('ActivityShort-0', 'Received');
+        await sleep(1000);
+        await swipeFullScreen('down');
+        await swipeFullScreen('down');
+      }
+
+      await msatPayWithdraw('222538', 222_538);
+      await msatPayWithdraw('222222', 222_222);
+      await msatPayWithdraw('500500', 500_500);
 
       // lnurl-auth
       const loginRequest1 = await lnurlServer.generateNewUrl('login');

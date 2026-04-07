@@ -1,0 +1,19 @@
+{
+  "name": "lnurl-server",
+  "version": "1.0.0",
+  "description": "LNURL server",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "bolt11": "^1.4.1",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "lnurl": "^0.25.0",
+    "qrcode": "^1.5.3",
+    "secp256k1": "^5.0.1",
+    "sqlite3": "^5.1.6"
+  }
+}

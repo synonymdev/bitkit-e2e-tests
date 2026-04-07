@@ -544,4 +544,79 @@ describe('@send - Send', () => {
     await elementById('Activity-1').waitForDisplayed();
     await elementById('Activity-2').waitForDisplayed();
   });
+
+  ciIt('@send_3 - Can pay regular invoices with msat precision', async () => {
+    await receiveOnchainFunds();
+
+    // send funds to LND node and open a channel
+    const { lnd, lndNodeID } = await setupLND(rpc, lndConfig);
+    await electrum?.waitForSync();
+
+    // get LDK Node id
+    const ldkNodeId = await getLDKNodeID();
+
+    // connect to LND
+    await connectToLND(lndNodeID);
+
+    // wait for peer to be connected
+    await waitForPeerConnection(lnd, ldkNodeId);
+
+    // open a channel and wait until active
+    await openLNDAndSync(lnd, rpc, ldkNodeId);
+    await electrum?.waitForSync();
+    await waitForActiveChannel(lnd, ldkNodeId);
+
+    await waitForToast('SpendingBalanceReadyToast');
+
+    // Ensure spending balance by paying ourselves from LND.
+    let receive: string;
+    try {
+      receive = await getReceiveAddress('lightning');
+    } catch {
+      await swipeFullScreen('down');
+      await sleep(10_000);
+      await attemptRefreshOnHomeScreen();
+      await sleep(10_000);
+      await attemptRefreshOnHomeScreen();
+      await sleep(1000);
+      receive = await getReceiveAddress('lightning');
+    }
+    if (!receive) throw new Error('No lightning invoice received');
+    await swipeFullScreen('down');
+    await lnd.sendPaymentSync({ paymentRequest: receive, amt: '10000' });
+    await acknowledgeReceivedPayment();
+    if (driver.isIOS) {
+      await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: driver.isIOS });
+      await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
+    } else {
+      await dismissQuickPayIntro({ triggerTimedSheet: true });
+    }
+    await expectTextWithin('ActivitySpending', '10 000');
+
+    async function payMsatInvoice(valueMsat: string, valueSats: string, acceptCameraPermission: boolean) {
+      const { paymentRequest } = await lnd.addInvoice({ valueMsat });
+      console.info({ valueMsat, paymentRequest });
+      await sleep(1000);
+      await enterAddress(paymentRequest, { acceptCameraPermission });
+      await elementById('ReviewAmount-primary').waitForDisplayed({ timeout: 15_000 });
+      await dragOnElement('GRAB', 'right', 0.95);
+      await elementById('SendSuccess').waitForDisplayed();
+      await expectText(valueSats);
+      await tap('Close');
+      await elementById('ActivityShort-0').waitForDisplayed();
+      await expectTextWithin('ActivityShort-0', '-');
+      await expectTextWithin('ActivityShort-0', 'Sent');
+      await expectTextWithin('ActivityShort-0', valueSats);
+      await sleep(1000);
+      await swipeFullScreen('down');
+      await swipeFullScreen('down');
+    }
+
+    // >500 msat remainder
+    await payMsatInvoice('222538', '223', true);
+    // <500 msat remainder
+    await payMsatInvoice('222222', '223', false);
+    // exactly 500 msat remainder
+    await payMsatInvoice('500500', '501', false);
+  });
 });
