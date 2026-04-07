@@ -593,7 +593,7 @@ describe('@send - Send', () => {
     }
     await expectTextWithin('ActivitySpending', '10 000');
 
-    async function payMsatInvoice(valueMsat: string, acceptCameraPermission: boolean) {
+    async function payMsatInvoice(valueMsat: string, valueSats: string, acceptCameraPermission: boolean) {
       const { paymentRequest } = await lnd.addInvoice({ valueMsat });
       console.info({ valueMsat, paymentRequest });
       await sleep(1000);
@@ -601,20 +601,22 @@ describe('@send - Send', () => {
       await elementById('ReviewAmount-primary').waitForDisplayed({ timeout: 15_000 });
       await dragOnElement('GRAB', 'right', 0.95);
       await elementById('SendSuccess').waitForDisplayed();
+      await expectText(valueSats);
       await tap('Close');
       await elementById('ActivityShort-0').waitForDisplayed();
       await expectTextWithin('ActivityShort-0', '-');
       await expectTextWithin('ActivityShort-0', 'Sent');
+      await expectTextWithin('ActivityShort-0', valueSats);
       await sleep(1000);
       await swipeFullScreen('down');
       await swipeFullScreen('down');
     }
 
     // >500 msat remainder
-    await payMsatInvoice('222538', true);
+    await payMsatInvoice('222538', '223', true);
     // <500 msat remainder
-    await payMsatInvoice('222222', false);
+    await payMsatInvoice('222222', '223', false);
     // exactly 500 msat remainder
-    await payMsatInvoice('500500', false);
+    await payMsatInvoice('500500', '501', false);
   });
 });

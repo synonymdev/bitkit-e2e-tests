@@ -64,24 +64,9 @@ function applyLnurlMsatDelta(balanceMsats: bigint, deltaMsats: number, direction
   return direction === 'pay' ? balanceMsats - d : balanceMsats + d;
 }
 
-async function expectMoneyTextRoundedSats(
-  parentTestId: 'ReviewAmount-primary' | 'WithdrawAmount-primary',
-  msats: number,
-) {
-  const money = await elementByIdWithin(parentTestId, 'MoneyText');
-  const raw = await money.getText();
-  const digits = raw.replace(/[^\d]/g, '');
-  const displayed = Number(digits);
-  if (Number.isNaN(displayed)) {
-    throw new Error(`MoneyText is not numeric: raw=${JSON.stringify(raw)} msats=${msats}`);
-  }
-  const floorSats = Math.floor(msats / 1000);
-  const ceilSats = Math.ceil(msats / 1000);
-  if (displayed !== floorSats && displayed !== ceilSats) {
-    throw new Error(
-      `Unexpected MoneyText: raw=${JSON.stringify(raw)} displayed=${displayed} expected=${floorSats}|${ceilSats} msats=${msats}`,
-    );
-  }
+/** Displayed sats string for msat-precision amounts (matches bitkit-core div_ceil / send.e2e payMsatInvoice). */
+function msatsToCeilSatsString(msats: number): string {
+  return Math.ceil(msats / 1000).toString();
 }
 
 describe('@lnurl - LNURL', () => {
@@ -344,9 +329,11 @@ describe('@lnurl - LNURL', () => {
       // 222538 — remainder 538 msats (regression: payment must not truncate msats).
       // 222222 — remainder 222 msats (< 500).
       // 500500 — remainder 500 msats exactly.
+      // UI shows ceil sats for msat-precision amounts (same as send.e2e payMsatInvoice).
       let balanceMsats = 19713000n;
 
       async function msatPayWithdraw(label: string, msats: number) {
+        const valueSatsStr = msatsToCeilSatsString(msats);
         const afterPay = applyLnurlMsatDelta(balanceMsats, msats, 'pay');
         const afterWithdraw = applyLnurlMsatDelta(afterPay, msats, 'withdraw');
 
@@ -362,9 +349,11 @@ describe('@lnurl - LNURL', () => {
         await sleep(2000);
         await elementById('ReviewAmount-primary').waitForDisplayed({ timeout: 5000 });
         await elementById('CommentInput').waitForDisplayed({ reverse: true });
-        await expectMoneyTextRoundedSats('ReviewAmount-primary', msats);
+        const reviewMoneyPay = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
+        await expect(reviewMoneyPay).toHaveText(valueSatsStr);
         await dragOnElement('GRAB', 'right', 0.95);
         await elementById('SendSuccess').waitForDisplayed();
+        await expectText(valueSatsStr);
         await tap('Close');
         balanceMsats = afterPay;
         await expectTextWithin(
@@ -374,6 +363,7 @@ describe('@lnurl - LNURL', () => {
         await elementById('ActivityShort-0').waitForDisplayed();
         await expectTextWithin('ActivityShort-0', '-');
         await expectTextWithin('ActivityShort-0', 'Sent');
+        await expectTextWithin('ActivityShort-0', valueSatsStr);
         await sleep(1000);
         await swipeFullScreen('down');
         await swipeFullScreen('down');
@@ -388,7 +378,8 @@ describe('@lnurl - LNURL', () => {
         await enterAddressViaScanPrompt(wReq.encoded, { acceptCameraPermission: false });
         await sleep(2000);
         await elementById('WithdrawAmount-primary').waitForDisplayed({ timeout: 5000 });
-        await expectMoneyTextRoundedSats('WithdrawAmount-primary', msats);
+        const reviewMoneyWithdraw = await elementByIdWithin('WithdrawAmount-primary', 'MoneyText');
+        await expect(reviewMoneyWithdraw).toHaveText(valueSatsStr);
         await tap('WithdrawConfirmButton');
         await acknowledgeReceivedPayment();
         balanceMsats = afterWithdraw;
@@ -398,6 +389,7 @@ describe('@lnurl - LNURL', () => {
         );
         await elementById('ActivityShort-0').waitForDisplayed();
         await expectTextWithin('ActivityShort-0', '+');
+        await expectTextWithin('ActivityShort-0', valueSatsStr);
         await expectTextWithin('ActivityShort-0', `lnurl-withdraw-msat-${label}`);
         await expectTextWithin('ActivityShort-0', 'Received');
         await sleep(1000);
