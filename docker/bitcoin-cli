@@ -42,6 +42,7 @@ Commands:
     stoplnurlserver                    Stop LNURL server service
     checklnurl                         Diagnose LNURL health, routing, and adb reverse
     getlnurlpay --msat N               Create LNURL-pay with fixed msat amount
+    getlnurlpay --min-msat A --max-msat B   LNURL-pay with a min/max msat range
     getlnurlwithdraw --msat N          Create LNURL-withdraw with fixed msat amount
 EOF
 }
@@ -425,17 +426,27 @@ if [[ "$command" = "checklnurl" ]]; then
   exit 1
 fi
 
-# Create LNURL-pay (fixed msat amount)
+# Create LNURL-pay (fixed msat amount or min/max range)
 if [[ "$command" = "getlnurlpay" ]]; then
   shift
 
   msat=""
+  min_msat=""
+  max_msat=""
   comment_allowed=0
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --msat)
         msat="${2:-}"
+        shift 2
+        ;;
+      --min-msat)
+        min_msat="${2:-}"
+        shift 2
+        ;;
+      --max-msat)
+        max_msat="${2:-}"
         shift 2
         ;;
       --comment-allowed)
@@ -445,6 +456,7 @@ if [[ "$command" = "getlnurlpay" ]]; then
       -*)
         echo "Unknown option $1"
         echo "Usage: $CLI_NAME getlnurlpay --msat N [--comment-allowed N]"
+        echo "       $CLI_NAME getlnurlpay --min-msat A --max-msat B [--comment-allowed N]"
         exit 1
         ;;
       *)
@@ -459,14 +471,38 @@ if [[ "$command" = "getlnurlpay" ]]; then
     esac
   done
 
-  if [[ -z "$msat" ]]; then
+  range_mode=false
+  if [[ -n "$min_msat" || -n "$max_msat" ]]; then
+    if [[ -n "$msat" ]]; then
+      echo "Cannot combine --msat (or positional msat) with --min-msat/--max-msat"
+      exit 1
+    fi
+    if [[ -z "$min_msat" || -z "$max_msat" ]]; then
+      echo "For a range, both --min-msat and --max-msat are required"
+      echo "Usage: $CLI_NAME getlnurlpay --min-msat A --max-msat B [--comment-allowed N]"
+      exit 1
+    fi
+    range_mode=true
+  elif [[ -z "$msat" ]]; then
     echo "Usage: $CLI_NAME getlnurlpay --msat N [--comment-allowed N]"
+    echo "       $CLI_NAME getlnurlpay --min-msat A --max-msat B [--comment-allowed N]"
     exit 1
   fi
 
-  if ! [[ "$msat" =~ ^[0-9]+$ ]]; then
-    echo "Invalid msat '$msat' (expected integer)"
-    exit 1
+  if [[ "$range_mode" = true ]]; then
+    if ! [[ "$min_msat" =~ ^[0-9]+$ && "$max_msat" =~ ^[0-9]+$ ]]; then
+      echo "Invalid min/max msat (expected non-negative integers)"
+      exit 1
+    fi
+    if (( min_msat > max_msat )); then
+      echo "min-msat must be <= max-msat"
+      exit 1
+    fi
+  else
+    if ! [[ "$msat" =~ ^[0-9]+$ ]]; then
+      echo "Invalid msat '$msat' (expected integer)"
+      exit 1
+    fi
   fi
 
   if ! [[ "$comment_allowed" =~ ^[0-9]+$ ]]; then
@@ -474,8 +510,13 @@ if [[ "$command" = "getlnurlpay" ]]; then
     exit 1
   fi
 
-  url="${LNURL_SERVER_URL%/}/generate/pay?minSendable=${msat}&maxSendable=${msat}&commentAllowed=${comment_allowed}"
-  echo "→ Creating LNURL-pay (${msat} msat fixed amount) via ${LNURL_SERVER_URL}..."
+  if [[ "$range_mode" = true ]]; then
+    url="${LNURL_SERVER_URL%/}/generate/pay?minSendable=${min_msat}&maxSendable=${max_msat}&commentAllowed=${comment_allowed}"
+    echo "→ Creating LNURL-pay (${min_msat}–${max_msat} msat range) via ${LNURL_SERVER_URL}..."
+  else
+    url="${LNURL_SERVER_URL%/}/generate/pay?minSendable=${msat}&maxSendable=${msat}&commentAllowed=${comment_allowed}"
+    echo "→ Creating LNURL-pay (${msat} msat fixed amount) via ${LNURL_SERVER_URL}..."
+  fi
 
   result=$(curl -sf "$url") || {
     echo "Failed to reach LNURL server at ${LNURL_SERVER_URL}"
