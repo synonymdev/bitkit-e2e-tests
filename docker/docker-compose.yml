@@ -187,6 +187,8 @@ services:
     build:
       context: ./homegate
     restart: unless-stopped
+    depends_on:
+      - postgres
     environment:
       HG_DATABASE_URL: "postgres://${POSTGRES_USER:-test}:${POSTGRES_PASSWORD:-test}@postgres:5432/${POSTGRES_DB:-homegate}"
       HG_HOMESERVER_ADMIN_API_URL: "${HG_HOMESERVER_ADMIN_API_URL:-https://admin.homeserver.staging.pubky.app}"
