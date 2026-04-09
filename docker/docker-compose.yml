@@ -174,11 +174,6 @@ services:
       POSTGRES_DB: "${POSTGRES_DB:-homegate}"
     ports:
       - 5432:5432
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
   homegate:
     container_name: homegate
@@ -200,6 +195,7 @@ services:
       HG_PRELUDE_API_KEY: "${HG_PRELUDE_API_KEY:-}"
       HG_MAX_IP_VERIFICATIONS_PER_WEEK: 9999
       HG_MAX_IP_VERIFICATIONS_PER_YEAR: 9999
+      HG_PHOENIXD_API_URL: "${HG_PHOENIXD_API_URL:-http://127.0.0.1:9700}"
     ports:
       - '18080:8080'
 
