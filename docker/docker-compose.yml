@@ -161,6 +161,21 @@ services:
     ports:
       - '${LNURL_SERVER_PORT:-30001}:3000'
 
+  homegate:
+    profiles:
+      - homegate
+    build:
+      context: ./homegate
+    restart: unless-stopped
+    environment:
+      HG_HOMESERVER_ADMIN_API_URL: "${HG_HOMESERVER_ADMIN_API_URL:-https://admin.homeserver.staging.pubky.app}"
+      HG_HOMESERVER_ADMIN_PASSWORD: "${HG_HOMESERVER_ADMIN_PASSWORD:-test}"
+      HG_HOMESERVER_PUBKY: "${HG_HOMESERVER_PUBKY:-ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy}"
+      HG_MAX_IP_VERIFICATIONS_PER_WEEK: 9999
+      HG_MAX_IP_VERIFICATIONS_PER_YEAR: 9999
+    ports:
+      - '18080:8080'
+
 volumes:
   bitcoin_home:
 
