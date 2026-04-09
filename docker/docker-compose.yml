@@ -197,7 +197,7 @@ services:
       HG_MAX_IP_VERIFICATIONS_PER_YEAR: 9999
       HG_PHOENIXD_API_URL: "${HG_PHOENIXD_API_URL:-http://127.0.0.1:9700}"
     ports:
-      - '18080:8080'
+      - '6288:8080'
 
 volumes:
   bitcoin_home:
