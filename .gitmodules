@@ -1,0 +1,3 @@
+[submodule "docker/homegate"]
+	path = docker/homegate
+	url = https://github.com/pubky/homegate
