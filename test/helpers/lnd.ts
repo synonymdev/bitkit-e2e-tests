@@ -110,7 +110,6 @@ export async function getLDKNodeID(): Promise<string> {
 export async function connectToLND(lndNodeID: string, { navigationClose = true } = {}) {
   await tap('Channels');
   await tap('NavigationAction');
-  if(driver.isIOS) { await tap('FundCustom'); }
   await tap('FundManual');
   await typeText('NodeIdInput', lndNodeID);
   await typeText('PortInput', '9735');
