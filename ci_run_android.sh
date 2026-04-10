@@ -35,6 +35,8 @@ if [[ "${BACKEND:-local}" != "mainnet" ]]; then
   adb reverse tcp:9735 tcp:9735
   # lnurl server port
   adb reverse tcp:30001 tcp:30001
+  # homegate port
+  adb reverse tcp:6288 tcp:6288
 fi
 # show touches 
 adb shell settings put system show_touches 1
