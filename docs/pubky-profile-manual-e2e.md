@@ -152,13 +152,13 @@ Reproduce by simulating an unreachable homeserver, expired session, or forced lo
 
 Use this table to verify persistence expectations. Fill in observed behavior if it differs from the stated expectation.
 
-| Action                                       | Seed | Pubky | Remote profile | Local contacts | Local notes on contacts |
-| -------------------------------------------- | ---- | ----- | -------------- | -------------- | ----------------------- |
-| Disconnect from empty state + reconnect      | same | same  | preserved      | re-synced      | preserved               |
-| Delete profile + recreate (same wallet)      | same | same  | wiped then new | tbd — verify   | tbd — verify            |
-| Wipe wallet, restore same seed               | same | same  | preserved      | re-synced      | tbd — verify            |
-| Wipe wallet, new seed                        | new  | new   | none           | none           | none                    |
-| App reinstall, same seed                     | same | same  | preserved      | re-synced      | tbd — verify            |
+| Action                                  | Seed | Pubky | Remote profile | Local contacts | Local notes on contacts |
+| --------------------------------------- | ---- | ----- | -------------- | -------------- | ----------------------- |
+| Disconnect from empty state + reconnect | same | same  | preserved      | re-synced      | preserved               |
+| Delete profile + recreate (same wallet) | same | same  | wiped then new | tbd — verify   | tbd — verify            |
+| Wipe wallet, restore same seed          | same | same  | preserved      | re-synced      | tbd — verify            |
+| Wipe wallet, new seed                   | new  | new   | none           | none           | none                    |
+| App reinstall, same seed                | same | same  | preserved      | re-synced      | tbd — verify            |
 
 ---
 
@@ -200,18 +200,18 @@ Use this table to verify persistence expectations. Fill in observed behavior if 
 
 Use the **same string** on Android and iOS so specs stay platform-agnostic (`elementById` in helpers).
 
-| Area | IDs |
-|------|-----|
-| Header / drawer | `ProfileButton`, `DrawerContacts`, `DrawerProfile`, `DrawerWallet`, … (existing app IDs) |
-| Intros | `ProfileIntro`, `ProfileIntro-button`, `ContactsIntro`, `ContactsIntro-button` |
-| Pubky choice | `PubkyChoiceCreate`, `PubkyChoiceImport` |
-| Create profile | `CreateProfileAvatar`, `CreateProfileUsername`, `CreateProfileSave` |
-| Pay contacts | `PayContactsToggle`, `PayContactsContinue` |
-| Profile (view) | `ProfileEdit`, `ProfileCopy`, `ProfileShare`; empty/error: `ProfileRetry`, `ProfileEmptySignOut` (iOS) |
+| Area                   | IDs                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Header / drawer        | `ProfileButton`, `DrawerContacts`, `DrawerProfile`, `DrawerWallet`, … (existing app IDs)                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Intros                 | `ProfileIntro`, `ProfileIntro-button`, `ContactsIntro`, `ContactsIntro-button`                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Pubky choice           | `PubkyChoiceCreate`, `PubkyChoiceImport`                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Create profile         | `CreateProfileAvatar`, `CreateProfileUsername`, `CreateProfileSave`                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Pay contacts           | `PayContactsToggle`, `PayContactsContinue`                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Profile (view)         | `ProfileEdit`, `ProfileCopy`, `ProfileShare`; empty/error: `ProfileRetry`, `ProfileEmptySignOut` (iOS)                                                                                                                                                                                                                                                                                                                                                                                                                |
 | Profile (presentation) | **`ProfileViewName`**, **`ProfileViewNotes`** (own profile only; `CenteredProfileHeader` passes tags on **Profile** screen). **`QRCode`** — same test id as Receive; pubky is read in E2E via **`getUriFromQRCode()`** in `test/helpers/actions.ts` (shared with receive flows). Links: **`ProfileLinkLabel_0`**, **`ProfileLinkValue_0`**, … (index matches link order). Tags section header: **`ProfileViewTagsHeader`**. Each tag chip text: **`Tag-<tagtext>`** (e.g. `Tag-ere`) on the label `Text` / `BodySSB`. |
-| Edit profile | `EditProfileAvatar`, `ProfileEditName`, `ProfileEditBio`, `ProfileEditAddLink`, `ProfileEditLink_0`, `ProfileEditLink_1`, …, `ProfileEditAddTag`, `ProfileEditDelete`, **`ProfileEditCancel`**, **`ProfileEditSave`** |
-| Add link sheet | `AddLinkLabel`, `AddLinkUrl`, `AddLinkSave`, `AddLinkSuggestions` |
-| Add tag sheet | `AddTagInput`, `AddTagSave`, `AddTagSuggestions` |
+| Edit profile           | `EditProfileAvatar`, `ProfileEditName`, `ProfileEditBio`, `ProfileEditAddLink`, `ProfileEditLink_0`, `ProfileEditLink_1`, …, `ProfileEditAddTag`, `ProfileEditDelete`, **`ProfileEditCancel`**, **`ProfileEditSave`**                                                                                                                                                                                                                                                                                                 |
+| Add link sheet         | `AddLinkLabel`, `AddLinkUrl`, `AddLinkSave`, `AddLinkSuggestions`                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Add tag sheet          | `AddTagInput`, `AddTagSave`, `AddTagSuggestions`                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 
 Ring-only / iOS-only extras (when automating C.x): `PubkyChoiceCancelRing`, `PubkyRingAuthorize`, `PubkyRingCancelAuth`, `PubkyRingDownload`.
 

@@ -80,7 +80,7 @@ export async function updateProfile(details: ProfileDetails) {
   await typeText('ProfileEditName', details.name);
   await confirmInputOnKeyboard();
   await typeText('ProfileEditBio', details.notes);
-  await elementByText("YOUR PUBKY").click();
+  await elementByText('YOUR PUBKY').click();
 
   for (const link of details.links) {
     await tap('ProfileEditAddLink');
@@ -120,7 +120,9 @@ export async function verifyProfileDetails(expected: ProfileDetails) {
   const nameEl = await elementById('ProfileViewName');
   await nameEl.waitForDisplayed();
   const nameText = await getAccessibleText(nameEl);
-  await expect(normalizeProfileDisplayName(nameText)).toBe(normalizeProfileDisplayName(expected.name));
+  await expect(normalizeProfileDisplayName(nameText)).toBe(
+    normalizeProfileDisplayName(expected.name)
+  );
 
   const notesTrimmed = expected.notes.trim();
   if (notesTrimmed.length > 0) {

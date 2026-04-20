@@ -593,7 +593,11 @@ describe('@send - Send', () => {
     }
     await expectTextWithin('ActivitySpending', '10 000');
 
-    async function payMsatInvoice(valueMsat: string, valueSats: string, acceptCameraPermission: boolean) {
+    async function payMsatInvoice(
+      valueMsat: string,
+      valueSats: string,
+      acceptCameraPermission: boolean
+    ) {
       const { paymentRequest } = await lnd.addInvoice({ valueMsat });
       console.info({ valueMsat, paymentRequest });
       await sleep(1000);

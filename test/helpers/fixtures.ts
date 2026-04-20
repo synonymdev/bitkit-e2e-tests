@@ -42,9 +42,7 @@ export function pushFixtureMedia(options: PushFixtureMediaOptions = {}) {
     env.SKIP_IOS = '1';
   }
 
-  const args = (options.files ?? []).map((f) =>
-    path.isAbsolute(f) ? f : path.join(REPO_ROOT, f)
-  );
+  const args = (options.files ?? []).map((f) => (path.isAbsolute(f) ? f : path.join(REPO_ROOT, f)));
 
   try {
     execFileSync(SCRIPT_PATH, args, { stdio: 'inherit', env });
