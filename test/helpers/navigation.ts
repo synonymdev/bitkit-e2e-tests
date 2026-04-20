@@ -9,6 +9,7 @@ export type SettingsTab = 'general' | 'security' | 'advanced';
 export async function openSettings(tab: SettingsTab = 'general') {
   await tap('HeaderMenu');
   await tap('DrawerSettings');
+  await sleep(500);
   if (tab !== 'general') {
     await tap(`Tab-${tab}`);
     await sleep(300);
@@ -21,6 +22,25 @@ export async function openSettings(tab: SettingsTab = 'general') {
 export async function openSupport() {
   await tap('HeaderMenu');
   await tap('DrawerSupport');
+  await sleep(500);
+}
+
+/**
+ * Opens the Contacts entry from the drawer menu.
+ */
+export async function openContacts() {
+  await tap('HeaderMenu');
+  await tap('DrawerContacts');
+  await sleep(500);
+}
+
+/**
+ * Opens the Profile entry from the drawer menu.
+ */
+export async function openProfile() {
+  await tap('HeaderMenu');
+  await tap('DrawerProfile');
+  await sleep(500);
 }
 
 /**
