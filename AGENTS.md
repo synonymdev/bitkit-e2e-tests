@@ -44,6 +44,16 @@ Notes:
 - `BACKEND=local` uses local Electrum (default).
 - `BACKEND=regtest` sets network Electrum against regtest.
 
+### Test fixtures (images for profile avatar, etc.)
+
+Images in `test/fixtures/` can be pushed to a running Android emulator (`/sdcard/Pictures/`) and iOS Simulator (Photos) via:
+
+```bash
+./scripts/push-fixture-media-to-devices.sh
+```
+
+See `docs/pubky-profile-manual-e2e.md` (preconditions).
+
 ## Running Tests
 
 **Important:** The `BACKEND` env var controls which infrastructure the tests use for deposits/mining:
