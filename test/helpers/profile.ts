@@ -1,4 +1,28 @@
-import { elementById, elementByText, getUriFromQRCode, sleep, tap, typeText } from './actions';
+import {
+  elementById,
+  elementByText,
+  getClipboardPlaintext,
+  getUriFromQRCode,
+  sleep,
+  tap,
+  typeText,
+} from './actions';
+
+export async function verifyPubkyString(pubky: string) {
+  await expect(pubky.length).toBeGreaterThan(0);
+  await expect(pubky.startsWith('pubky')).toBe(true);
+}
+
+/**
+ * Taps Profile Copy and asserts the system clipboard matches the given pubky
+ * (same string as {@link getUriFromQRCode} on the profile QR).
+ */
+export async function verifyProfileCopyMatchesPubky(expectedPubky: string) {
+  await tap('ProfileCopy');
+  await sleep(400);
+  const fromClipboard = (await getClipboardPlaintext()).trim();
+  await expect(fromClipboard).toBe(expectedPubky.trim());
+}
 
 /**
  * Navigate from the Wallet home to the PubkyChoice screen, covering the

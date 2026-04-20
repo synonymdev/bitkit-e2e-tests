@@ -1,3 +1,5 @@
+import { Buffer } from 'node:buffer';
+
 import type { ChainablePromiseElement } from 'webdriverio';
 import { reinstallApp } from './setup';
 import { deposit, mineBlocks } from './regtest';
@@ -391,6 +393,17 @@ export async function multiTap(testId: string, count: number) {
     await tap(testId);
     await sleep(300);
   }
+}
+
+/**
+ * Reads the device clipboard as UTF-8 text (Appium returns base64-encoded content).
+ */
+export async function getClipboardPlaintext(): Promise<string> {
+  const b64 = await driver.getClipboard('plaintext');
+  if (!b64 || b64.length === 0) {
+    return '';
+  }
+  return Buffer.from(b64, 'base64').toString('utf8');
 }
 
 export async function pasteIOSText(testId: string, text: string) {

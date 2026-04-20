@@ -1,6 +1,6 @@
 import { completeOnboarding, doNavigationClose, elementById, tap } from '../helpers/actions';
 import { openContacts, openProfile } from '../helpers/navigation';
-import { createProfile } from '../helpers/profile';
+import { createProfile, verifyProfileCopyMatchesPubky, verifyPubkyString } from '../helpers/profile';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 
@@ -46,8 +46,8 @@ describe('@pubky_profile - Pubky profile', () => {
   describe('Create profile', () => {
     ciIt('@pubky_profile_2 - Create profile from scratch', async () => {
       const { pubky } = await createProfile({ name: 'Alice' });
-      await expect(pubky.length).toBeGreaterThan(0);
-      await expect(pubky.startsWith('pubky')).toBe(true);
+      await verifyPubkyString(pubky);
+      await verifyProfileCopyMatchesPubky(pubky);
     });
   });
 });
