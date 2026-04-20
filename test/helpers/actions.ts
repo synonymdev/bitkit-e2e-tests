@@ -1044,7 +1044,7 @@ export async function getUriFromQRCode(): Promise<string> {
       timeoutMsg: `Timed out after ${waitTimeoutMs}ms waiting for QR code URI`,
     }
   );
-  console.info({ uri });
+  console.info('→ QR code URI:', uri);
   return uri;
 }
 
@@ -1173,8 +1173,12 @@ export type ToastId =
   | 'DevModeEnabledToast'
   | 'DevModeDisabledToast'
   | 'InsufficientSpendingToast'
-  | 'InsufficientSavingsToast';
+  | 'InsufficientSavingsToast'
+  | 'ProfilePubkyCopiedToast'
+  | 'ProfileUpdatedToast';
 
+/** Wait for a toast by test id. Prefer `waitToDisappear` for iOS: success toasts live in a separate
+ * window, so swipe-dismiss (`dismiss: true`) often uses wrong coordinates and blocks later UI. */
 export async function waitForToast(
   toastId: ToastId,
   {
@@ -1185,7 +1189,7 @@ export async function waitForToast(
 ) {
   await elementById(toastId).waitForDisplayed({ timeout });
   if (waitToDisappear) {
-    await elementById(toastId).waitForDisplayed({ reverse: true });
+    await elementById(toastId).waitForDisplayed({ reverse: true, timeout });
     return;
   }
   if (dismiss) {

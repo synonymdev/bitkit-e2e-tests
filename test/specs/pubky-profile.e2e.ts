@@ -1,6 +1,12 @@
 import { completeOnboarding, doNavigationClose, elementById, tap } from '../helpers/actions';
 import { openContacts, openProfile } from '../helpers/navigation';
-import { createProfile, verifyProfileCopyMatchesPubky, verifyPubkyString } from '../helpers/profile';
+import {
+  createProfile,
+  readPubkyFromProfileCopy,
+  updateProfile,
+  verifyProfileDetails,
+  verifyPubkyString,
+} from '../helpers/profile';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 
@@ -41,13 +47,21 @@ describe('@pubky_profile - Pubky profile', () => {
     });
   });
 
-  // Section B.1 / B.2: create a profile from scratch, with inline disabled-state check.
-  // Folded together because a full signup (homegate call + key derivation) is expensive.
-  describe('Create profile', () => {
-    ciIt('@pubky_profile_2 - Create profile from scratch', async () => {
+  // Section B: create profile, copy pubky (toast + clipboard), then edit name/notes/links/tags.
+  describe('Create / Edit profile', () => {
+    ciIt('@pubky_profile_2 - Create profile, copy pubky, then update profile', async () => {
       const { pubky } = await createProfile({ name: 'Alice' });
       await verifyPubkyString(pubky);
-      await verifyProfileCopyMatchesPubky(pubky);
+      const copiedPubky = await readPubkyFromProfileCopy();
+      await expect(copiedPubky).toBe(pubky.trim());
+      const details = {
+        name: 'Bob',
+        notes: 'Notes for E2E',
+        links: [{ label: 'Website', url: 'https://example.org' }],
+        tags: ['cypherpunk'],
+      };
+      await updateProfile(details);
+      await verifyProfileDetails(details);
     });
   });
 });
