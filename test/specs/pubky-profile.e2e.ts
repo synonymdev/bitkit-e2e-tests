@@ -45,7 +45,9 @@ describe('@pubky_profile - Pubky profile', () => {
   // Folded together because a full signup (homegate call + key derivation) is expensive.
   describe('Create profile', () => {
     ciIt('@pubky_profile_2 - Create profile from scratch', async () => {
-      await createProfile({ name: 'Alice' });
+      const { pubky } = await createProfile({ name: 'Alice' });
+      await expect(pubky.length).toBeGreaterThan(0);
+      await expect(pubky.startsWith('pubky')).toBe(true);
     });
   });
 });

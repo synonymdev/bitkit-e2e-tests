@@ -1,4 +1,4 @@
-import { elementById, elementByText, sleep, tap, typeText } from './actions';
+import { elementById, elementByText, getUriFromQRCode, sleep, tap, typeText } from './actions';
 
 /**
  * Navigate from the Wallet home to the PubkyChoice screen, covering the
@@ -26,8 +26,10 @@ export async function openPubkyChoice() {
  * Assumes the Wallet home screen is visible. Requires a healthy
  * `homegate.staging.pubky.app/ip_verification` endpoint; the Save call
  * may take several seconds while the identity is derived and signed up.
+ *
+ * Returns the wallet-derived pubky string (same as encoded in the profile QR).
  */
-export async function createProfile({ name }: { name: string }) {
+export async function createProfile({ name }: { name: string }): Promise<{ pubky: string }> {
   await openPubkyChoice();
   await tap('PubkyChoiceCreate');
 
@@ -42,9 +44,13 @@ export async function createProfile({ name }: { name: string }) {
   await sleep(300);
   await tap('PayContactsContinue');
 
-  // Landed on the user's Profile screen.   
+  // Landed on the user's Profile screen. Both platforms uppercase the name
+  // in CenteredProfileHeader (iOS: Text(name.uppercased()); Android: Display→uppercase()).
   await elementById('ProfileEdit').waitForDisplayed();
   await elementById('ProfileCopy').waitForDisplayed();
   await elementById('ProfileShare').waitForDisplayed();
   await elementByText(name.toUpperCase()).waitForDisplayed();
+
+  const pubky = await getUriFromQRCode();
+  return { pubky };
 }

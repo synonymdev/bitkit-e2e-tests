@@ -1010,6 +1010,7 @@ export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise
   return getAddressFromQRCode(which);
 }
 
+/** Reads the encoded string for the `QRCode` element (receive invoice/address URI, profile pubky, etc.). */
 export async function getUriFromQRCode(): Promise<string> {
   const qrCode = await elementById('QRCode');
   await qrCode.waitForDisplayed();

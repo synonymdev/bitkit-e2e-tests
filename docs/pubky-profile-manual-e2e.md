@@ -187,14 +187,32 @@ Use this table to verify persistence expectations. Fill in observed behavior if 
 
 ## H. Automation strategy
 
-- **One spec file**: `test/specs/pubky-profile.e2e.ts` owns profile + contacts end-to-end. Profile and contacts share state (profile is required for contacts, homegate calls are slow), so splitting would duplicate expensive setup and introduce flakiness.
-- **Nested `describe` blocks** per sub-area: Gating → Create profile → Contacts → Delete profile → Ring import. Tests within a file run sequentially and reuse the profile created earlier; recovery / empty-state scenarios get their own `describe` with its own reset.
+- **One spec file**: `test/specs/pubky-profile.e2e.ts` owns profile + contacts end-to-end. Use **`beforeEach`** with `reinstallApp()` + `completeOnboarding()` so **any single test** can be run in isolation (e.g. `--mochaOpts.grep "@pubky_profile_2"`) without depending on earlier tests. Trade-off: slower suite when running the full file; acceptable while flows are still evolving.
+- **Nested `describe` blocks** per sub-area: Gating → Create profile → Edit / Contacts → Delete profile → Ring import. Order tests so expensive setup (homegate, profile creation) can still be chained **inside one test** when you want coverage without paying reinstall twice (optional pattern; default remains isolated tests).
 - **Tagging**:
   - Suite tag `@pubky_profile` on the top-level `describe`.
   - Sequential test tags `@pubky_profile_1`, `@pubky_profile_2`, … matching the order tests run.
   - Opt-in tag `@pubky_ring_required` on tests that need Pubky Ring installed and interactive auth. Default CI grep (`@pubky_profile`) runs the headless flows; Ring flows run explicitly with `--mochaOpts.grep "@pubky_ring_required"` on a device where Ring is set up.
 - **`ciIt()`** (not `it()`) for retry-skipping in CI.
-- **Helpers**: prefer `test/helpers/*` (e.g. `openContacts`, `openProfile`) for cross-platform navigation so specs stay platform-agnostic.
-- **Accessibility IDs** already in place (Android: `testTag`, iOS: `accessibilityIdentifier`):
-  `ProfileButton`, `ProfileIntro`, `ProfileIntro-button`, `ContactsIntro`, `ContactsIntro-button`, `PubkyChoiceCreate`, `PubkyChoiceImport`, `ContactsMyProfile`, `Contact_<pubkey>`.
-  Add more IDs as new tests need them (e.g. `ProfileEdit`, `ProfileCopy`, `ProfileShare`, `ProfileRetry`, `ProfileEmptySignOut` already exist on iOS and can be mirrored on Android).
+- **Helpers**: `test/helpers/navigation.ts` (`openContacts`, `openProfile`, …) for drawer flows; `test/helpers/profile.ts` for Pubky-specific flows (`createProfile`, `openPubkyChoice`, …). Keep `actions.ts` for low-level primitives.
+
+### H.1 Cross-platform test IDs (`testTag` / `accessibilityIdentifier`)
+
+Use the **same string** on Android and iOS so specs stay platform-agnostic (`elementById` in helpers).
+
+| Area | IDs |
+|------|-----|
+| Header / drawer | `ProfileButton`, `DrawerContacts`, `DrawerProfile`, `DrawerWallet`, … (existing app IDs) |
+| Intros | `ProfileIntro`, `ProfileIntro-button`, `ContactsIntro`, `ContactsIntro-button` |
+| Pubky choice | `PubkyChoiceCreate`, `PubkyChoiceImport` |
+| Create profile | `CreateProfileAvatar`, `CreateProfileUsername`, `CreateProfileSave` |
+| Pay contacts | `PayContactsToggle`, `PayContactsContinue` |
+| Profile (view) | `ProfileEdit`, `ProfileCopy`, `ProfileShare`; empty/error: `ProfileRetry`, `ProfileEmptySignOut` (iOS) |
+| Profile (presentation) | **`ProfileViewName`**, **`ProfileViewNotes`** (own profile only; `CenteredProfileHeader` passes tags on **Profile** screen). **`QRCode`** — same test id as Receive; pubky is read in E2E via **`getUriFromQRCode()`** in `test/helpers/actions.ts` (shared with receive flows). Links: **`ProfileLinkLabel_0`**, **`ProfileLinkValue_0`**, … (index matches link order). Tags section header: **`ProfileViewTagsHeader`**. Each tag chip text: **`Tag-<tagtext>`** (e.g. `Tag-ere`) on the label `Text` / `BodySSB`. |
+| Edit profile | `EditProfileAvatar`, `ProfileEditName`, `ProfileEditBio`, `ProfileEditAddLink`, `ProfileEditLink_0`, `ProfileEditLink_1`, …, `ProfileEditAddTag`, `ProfileEditDelete`, **`ProfileEditCancel`**, **`ProfileEditSave`** |
+| Add link sheet | `AddLinkLabel`, `AddLinkUrl`, `AddLinkSave`, `AddLinkSuggestions` |
+| Add tag sheet | `AddTagInput`, `AddTagSave`, `AddTagSuggestions` |
+
+Ring-only / iOS-only extras (when automating C.x): `PubkyChoiceCancelRing`, `PubkyRingAuthorize`, `PubkyRingCancelAuth`, `PubkyRingDownload`.
+
+Contacts list rows: `ContactsMyProfile`, `Contact_<pubkey>` (existing) — verify in app if still current when adding contact specs.
