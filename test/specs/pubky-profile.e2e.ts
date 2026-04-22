@@ -3,8 +3,13 @@ import { openContacts, openProfile } from '../helpers/navigation';
 import {
   createProfile,
   deleteProfile,
+  openEditProfile,
   readPubkyFromProfileCopy,
+  removeEditProfileLinkAt,
+  removeEditProfileTag,
+  saveEditProfile,
   updateProfile,
+  type ProfileDetails,
   verifyProfileDetails,
   verifyPubkyString,
 } from '../helpers/profile';
@@ -48,7 +53,10 @@ describe('@pubky_profile - Pubky profile', () => {
     });
   });
 
-  // Section B: create profile, copy pubky (toast + clipboard), then edit name/notes/links/tags.
+  // Section B (charter): create profile, copy pubky, edit fields, persistence, delete, recreate.
+  // @pubky_profile_2 — end-to-end: create → copy pubky → edit (name, notes, link, tag) → verify on
+  // profile → terminate/relaunch → data + pubky unchanged → open edit → remove link & tag → save →
+  // verify empty links/tags → delete profile → create new profile → same pubky (seed-derived).
   describe('Create / Edit / Delete profile', () => {
     ciIt(
       '@pubky_profile_2 - Create, edit, relaunch keeps pubky; delete and recreate same pubky',
@@ -70,6 +78,18 @@ describe('@pubky_profile - Pubky profile', () => {
         await verifyProfileDetails(details);
         const pubkyAfterRelaunch = await readPubkyFromProfileCopy();
         await expect(pubkyAfterRelaunch).toBe(pubky.trim());
+
+        await openEditProfile();
+        await removeEditProfileLinkAt(0);
+        await removeEditProfileTag('cypherpunk');
+        await saveEditProfile();
+        const detailsAfterRemovals: ProfileDetails = {
+          name: 'Bob',
+          notes: 'Notes for E2E',
+          links: [],
+          tags: [],
+        };
+        await verifyProfileDetails(detailsAfterRemovals);
 
         await deleteProfile();
         const { pubky: pubkyAfterRecreate } = await createProfile({ name: 'Alice2' });

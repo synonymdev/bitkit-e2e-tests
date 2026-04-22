@@ -50,9 +50,7 @@ export async function readPubkyFromProfileCopy(): Promise<string> {
  * Profile → Edit → scroll to delete → confirm. Ends on {@link PubkyChoice} (create / import).
  */
 export async function deleteProfile() {
-  await openProfile();
-  await tap('ProfileEdit');
-  await elementById('ProfileEditName').waitForDisplayed();
+  await openEditProfile();
   await swipeFullScreen('up', { upStartYPercent: 0.3 });
   await sleep(500);
   await tap('ProfileEditDelete');
@@ -89,16 +87,51 @@ export async function openPubkyChoice() {
   await elementById('PubkyChoiceCreate').waitForDisplayed();
 }
 
-/**
- * Opens Profile → Edit, sets name, notes (bio), adds links and tags in order, then saves.
- *
- * Best used when links/tags are empty (e.g. right after {@link createProfile}); replacing
- * or removing existing links/tags is not handled here.
- */
-export async function updateProfile(details: ProfileDetails) {
+export async function openEditProfile() {
   await openProfile();
   await tap('ProfileEdit');
   await elementById('ProfileEditName').waitForDisplayed();
+}
+
+/** Scroll, Save, wait for success toast; lands back on the read-only profile screen. */
+export async function saveEditProfile() {
+  await swipeFullScreen('up');
+  await tap('ProfileEditSave');
+  // iOS shows toasts in a separate window; drag-dismiss via waitForToast hits wrong coords.
+  // Auto-hide clears the overlay so the next openProfile() can reach the drawer.
+  await waitForToast('ProfileUpdatedToast', { waitToDisappear: driver.isIOS });
+  await elementById('ProfileEdit').waitForDisplayed({ timeout: 60_000 });
+}
+
+/**
+ * Removes a link row by index (0-based) on the edit form. When removing multiple rows,
+ * remove the highest index first so indices stay stable, or call once per edit-save cycle.
+ */
+export async function removeEditProfileLinkAt(index: number) {
+  const id = `ProfileEditLinkRemove_${index}`;
+  await swipeFullScreen('up', { upStartYPercent: 0.3 });
+  await tap(id);
+  await sleep(300);
+}
+
+/**
+ * Removes a tag on the edit form via the chip’s delete control (`Tag-<tag>-delete` on both platforms).
+ */
+export async function removeEditProfileTag(tag: string) {
+  const id = `Tag-${tag}-delete`;
+  await swipeFullScreen('up', { upStartYPercent: 0.3 });
+  await tap(id);
+  await sleep(300);
+}
+
+/**
+ * Opens Profile → Edit, sets name, notes (bio), adds links and tags in order, then saves.
+ *
+ * Best used when links/tags are empty (e.g. right after {@link createProfile}) or when only
+ * adding; use {@link removeEditProfileLinkAt} / {@link removeEditProfileTag} and {@link saveEditProfile} for removals.
+ */
+export async function updateProfile(details: ProfileDetails) {
+  await openEditProfile();
 
   await typeText('ProfileEditName', details.name);
   await confirmInputOnKeyboard();
@@ -122,12 +155,7 @@ export async function updateProfile(details: ProfileDetails) {
     await sleep(400);
   }
 
-  await swipeFullScreen('up');
-  await tap('ProfileEditSave');
-  // iOS shows toasts in a separate window; drag-dismiss via waitForToast hits wrong coords.
-  // Auto-hide clears the overlay so the next openProfile() can reach the drawer.
-  await waitForToast('ProfileUpdatedToast', { waitToDisappear: driver.isIOS });
-  await elementById('ProfileEdit').waitForDisplayed({ timeout: 60_000 });
+  await saveEditProfile();
 }
 
 /**

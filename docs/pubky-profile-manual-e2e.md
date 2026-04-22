@@ -37,7 +37,7 @@ With no profile created yet, every entry point should funnel into the choice scr
 3. Drawer → **Profile** → goes straight to `PubkyChoice` (no intro once either intro has been seen).
 4. Close drawer / back out from any of the above → returns to wallet home without leaving stale state.
 
-> Covered by automated spec: `@pubky_profile_1` in `test/specs/pubky-profile.e2e.ts`.
+> **Spec** (`test/specs/pubky-profile.e2e.ts`): `@pubky_profile_1` covers this.
 
 ---
 
@@ -51,16 +51,22 @@ With no profile created yet, every entry point should funnel into the choice scr
 4. On Pay Contacts screen, toggle "Share payment data and enable payments with contacts" (if visible) → continue / close → land on profile/wallet.
 5. Open Profile → name, avatar placeholder initial, and truncated pubky are shown.
 
+> **`@pubky_profile_2`** drives `createProfile`: (1)–(3) and the transition to **Pay Contacts**; Save stays disabled with an empty name (asserted before typing). (4) default path leaves the Pay Contacts toggle on and taps Continue. (5) checks name and pubky on the profile screen; it does not assert **avatar** placeholder/initials.
+
 ### B.2 Pay Contacts onboarding
 
 1. First time after profile creation → **Pay Contacts** screen is shown (headline: "Let your contacts pay you", toggle + Continue / Skip).
 2. Accepting / skipping both land safely on the wallet or profile screen.
 3. Re-entering Profile after completing onboarding should **not** re-show the onboarding screen.
 
+> **`@pubky_profile_2`**: (1)–(2) are covered by the same `createProfile` hand-off (waits for `PayContactsContinue`, then profile). (3) is **implicit** in the rest of the spec (Profile opened many times, Pay Contacts is not expected again); a dedicated “second session / cold path” check is not in this file.
+
 ### B.3 Edit own profile
 
 1. Profile → Edit → update **name**, **Notes** (label is `NOTES`), and **links** → Save.
 2. Changes persist after leaving the screen and after app restart.
+
+> **`@pubky_profile_2`** overlaps part of this (edit + persist + remove link/tag); avatar and limit edge cases are not in that spec.
 3. Avatar:
    - Pick an image from the Photos library → shown as avatar → persists after restart.
    - Remove avatar → falls back to the initial placeholder.
@@ -96,6 +102,8 @@ With no profile created yet, every entry point should funnel into the choice scr
 2. After delete: gated back to `PubkyChoice` (same as **section A**).
 3. Creating a new profile from the same wallet uses the **same pubky** (seed-derived), with **fresh** remote data.
 4. Error path: if homeserver is unreachable, a clear error toast appears (Android: `profile__delete_error`); app does not lock up.
+
+> **`@pubky_profile_2`** also ends with delete → recreate and asserts the same seed-derived pubky. Homeserver error path in (4) is manual.
 
 ### B.8 Wipe wallet
 
@@ -187,14 +195,12 @@ Use this table to verify persistence expectations. Fill in observed behavior if 
 
 ## H. Automation strategy
 
-- **One spec file**: `test/specs/pubky-profile.e2e.ts` owns profile + contacts end-to-end. Use **`beforeEach`** with `reinstallApp()` + `completeOnboarding()` so **any single test** can be run in isolation (e.g. `--mochaOpts.grep "@pubky_profile_2"`) without depending on earlier tests. Trade-off: slower suite when running the full file; acceptable while flows are still evolving.
-- **Nested `describe` blocks** per sub-area: Gating → Create profile → Edit / Contacts → Delete profile → Ring import. Order tests so expensive setup (homegate, profile creation) can still be chained **inside one test** when you want coverage without paying reinstall twice (optional pattern; default remains isolated tests).
-- **Tagging**:
-  - Suite tag `@pubky_profile` on the top-level `describe`.
-  - Sequential test tags `@pubky_profile_1`, `@pubky_profile_2`, … matching the order tests run.
-  - Opt-in tag `@pubky_ring_required` on tests that need Pubky Ring installed and interactive auth. Default CI grep (`@pubky_profile`) runs the headless flows; Ring flows run explicitly with `--mochaOpts.grep "@pubky_ring_required"` on a device where Ring is set up.
-- **`ciIt()`** (not `it()`) for retry-skipping in CI.
-- **Helpers**: `test/helpers/navigation.ts` (`openContacts`, `openProfile`, …) for drawer flows; `test/helpers/profile.ts` for Pubky-specific flows (`createProfile`, `openPubkyChoice`, …). Keep `actions.ts` for low-level primitives.
+- **Spec**: `test/specs/pubky-profile.e2e.ts` — profile-only for now; contacts and Ring stay manual here until more specs exist. How/whether it runs in automation is a pipeline concern (`AGENTS.md`); this section only describes the spec’s intent.
+- **Isolation**: `beforeEach` uses `reinstallApp()` and `completeOnboarding()` so a single `ciIt` can be run alone via `--mochaOpts.grep "@pubky_profile_N"`.
+- **What the two tests do**: `@pubky_profile_1` — section A gating (no profile). `@pubky_profile_2` — one chained flow: create → edit and verify → app restart and verify → remove link and tag, save, verify → delete profile → new profile, same pubky. No backup/restore, Ring, contacts list, or avatar.
+- **Tags**: suite `@pubky_profile`; tests `@pubky_profile_1`, `@pubky_profile_2`, …; reserve e.g. `@pubky_ring_required` if you add Ring-specific specs later.
+- **Use `ciIt()`** instead of `it()` in this suite so it matches the repo’s `ci_run_*` / lockfile retry pattern when you wire runs up.
+- Shared test IDs: **H.1** below. Implementation lives under `test/helpers/` next to other E2E specs.
 
 ### H.1 Cross-platform test IDs (`testTag` / `accessibilityIdentifier`)
 
@@ -209,7 +215,7 @@ Use the **same string** on Android and iOS so specs stay platform-agnostic (`ele
 | Pay contacts           | `PayContactsToggle`, `PayContactsContinue`                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Profile (view)         | `ProfileEdit`, `ProfileCopy`, `ProfileShare`; empty/error: `ProfileRetry`, `ProfileEmptySignOut` (iOS)                                                                                                                                                                                                                                                                                                                                                                                                                |
 | Profile (presentation) | **`ProfileViewName`**, **`ProfileViewNotes`** (own profile only; `CenteredProfileHeader` passes tags on **Profile** screen). **`QRCode`** — same test id as Receive; pubky is read in E2E via **`getUriFromQRCode()`** in `test/helpers/actions.ts` (shared with receive flows). Links: **`ProfileLinkLabel_0`**, **`ProfileLinkValue_0`**, … (index matches link order). Tags section header: **`ProfileViewTagsHeader`**. Each tag chip text: **`Tag-<tagtext>`** (e.g. `Tag-ere`) on the label `Text` / `BodySSB`. |
-| Edit profile           | `EditProfileAvatar`, `ProfileEditName`, `ProfileEditBio`, `ProfileEditAddLink`, `ProfileEditLink_0`, `ProfileEditLink_1`, …, `ProfileEditAddTag`, `ProfileEditDelete`, **`ProfileEditCancel`**, **`ProfileEditSave`**                                                                                                                                                                                                                                                                                                 |
+| Edit profile           | `EditProfileAvatar`, `ProfileEditName`, `ProfileEditBio`, `ProfileEditAddLink`, `ProfileEditLink_0` (URL field), `ProfileEditLinkRemove_0` (trash on that row), …, `ProfileEditAddTag`, remove chip `Tag-<tag>-delete`, `ProfileEditDelete`, **`ProfileEditCancel`**, **`ProfileEditSave`**                                                                                                                                                                                                                            |
 | Add link sheet         | `AddLinkLabel`, `AddLinkUrl`, `AddLinkSave`, `AddLinkSuggestions`                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Add tag sheet          | `AddTagInput`, `AddTagSave`, `AddTagSuggestions`                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 
