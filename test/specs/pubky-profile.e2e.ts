@@ -2,12 +2,13 @@ import { completeOnboarding, doNavigationClose, elementById, tap } from '../help
 import { openContacts, openProfile } from '../helpers/navigation';
 import {
   createProfile,
+  deleteProfile,
   readPubkyFromProfileCopy,
   updateProfile,
   verifyProfileDetails,
   verifyPubkyString,
 } from '../helpers/profile';
-import { reinstallApp } from '../helpers/setup';
+import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 
 // Covers scenarios from docs/pubky-profile-manual-e2e.md.
@@ -48,20 +49,32 @@ describe('@pubky_profile - Pubky profile', () => {
   });
 
   // Section B: create profile, copy pubky (toast + clipboard), then edit name/notes/links/tags.
-  describe('Create / Edit profile', () => {
-    ciIt('@pubky_profile_2 - Create profile, copy pubky, then update profile', async () => {
-      const { pubky } = await createProfile({ name: 'Alice' });
-      await verifyPubkyString(pubky);
-      const copiedPubky = await readPubkyFromProfileCopy();
-      await expect(copiedPubky).toBe(pubky.trim());
-      const details = {
-        name: 'Bob',
-        notes: 'Notes for E2E',
-        links: [{ label: 'Website', url: 'https://example.org' }],
-        tags: ['cypherpunk'],
-      };
-      await updateProfile(details);
-      await verifyProfileDetails(details);
-    });
+  describe('Create / Edit / Delete profile', () => {
+    ciIt(
+      '@pubky_profile_2 - Create, edit, relaunch keeps pubky; delete and recreate same pubky',
+      async () => {
+        const { pubky } = await createProfile({ name: 'Alice' });
+        await verifyPubkyString(pubky);
+        const copiedPubky = await readPubkyFromProfileCopy();
+        await expect(copiedPubky).toBe(pubky.trim());
+        const details = {
+          name: 'Bob',
+          notes: 'Notes for E2E',
+          links: [{ label: 'Website', url: 'https://example.org' }],
+          tags: ['cypherpunk'],
+        };
+        await updateProfile(details);
+        await verifyProfileDetails(details);
+
+        await launchFreshApp();
+        await verifyProfileDetails(details);
+        const pubkyAfterRelaunch = await readPubkyFromProfileCopy();
+        await expect(pubkyAfterRelaunch).toBe(pubky.trim());
+
+        await deleteProfile();
+        const { pubky: pubkyAfterRecreate } = await createProfile({ name: 'Alice2' });
+        await expect(pubkyAfterRecreate.trim()).toBe(pubky.trim());
+      }
+    );
   });
 });

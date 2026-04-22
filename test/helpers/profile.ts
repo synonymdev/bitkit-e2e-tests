@@ -47,6 +47,22 @@ export async function readPubkyFromProfileCopy(): Promise<string> {
 }
 
 /**
+ * Profile → Edit → scroll to delete → confirm. Ends on {@link PubkyChoice} (create / import).
+ */
+export async function deleteProfile() {
+  await openProfile();
+  await tap('ProfileEdit');
+  await elementById('ProfileEditName').waitForDisplayed();
+  await swipeFullScreen('up', { upStartYPercent: 0.3 });
+  await sleep(500);
+  await tap('ProfileEditDelete');
+  const confirm = await elementByText('Yes, Delete', 'exact');
+  await confirm.waitForDisplayed();
+  await confirm.click();
+  await elementById('PubkyChoiceCreate').waitForDisplayed();
+}
+
+/**
  * Navigate from the Wallet home to the PubkyChoice screen, covering the
  * "first visit" case where ProfileIntro is shown before the choice screen.
  *
@@ -54,6 +70,13 @@ export async function readPubkyFromProfileCopy(): Promise<string> {
  * dismissed on a prior run in the same app session.
  */
 export async function openPubkyChoice() {
+  try {
+    await elementById('PubkyChoiceCreate').waitForDisplayed({ timeout: 2000 });
+    return;
+  } catch {
+    /* not already on choice */
+  }
+
   await tap('ProfileButton');
 
   // On first visit, the ProfileIntro screen is shown as a gate to PubkyChoice.
@@ -156,9 +179,18 @@ export async function verifyProfileDetails(expected: ProfileDetails) {
  * `homegate.staging.pubky.app/ip_verification` endpoint; the Save call
  * may take several seconds while the identity is derived and signed up.
  *
+ * @param payContactsOption - When `true` (default), leaves the Pay Contacts “share payment data”
+ *   toggle as shipped (on by default). When `false`, taps `PayContactsToggle` once to turn it off before Continue.
+ *
  * Returns the wallet-derived pubky string (same as encoded in the profile QR).
  */
-export async function createProfile({ name }: { name: string }): Promise<{ pubky: string }> {
+export async function createProfile({
+  name,
+  payContactsOption = true,
+}: {
+  name: string;
+  payContactsOption?: boolean;
+}): Promise<{ pubky: string }> {
   await openPubkyChoice();
   await tap('PubkyChoiceCreate');
 
@@ -171,6 +203,10 @@ export async function createProfile({ name }: { name: string }): Promise<{ pubky
   // Pay Contacts onboarding is shown once after successful signup.
   await elementById('PayContactsContinue').waitForDisplayed({ timeout: 60_000 });
   await sleep(300);
+  if (!payContactsOption) {
+    await tap('PayContactsToggle');
+    await sleep(300);
+  }
   await tap('PayContactsContinue');
 
   // Landed on the user's Profile screen. Both platforms uppercase the name

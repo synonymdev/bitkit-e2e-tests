@@ -509,6 +509,7 @@ export async function swipeFullScreen(
       ],
     },
   ]);
+  await driver.releaseActions();
   await sleep(500); // Allow time for the swipe to complete
 }
 
