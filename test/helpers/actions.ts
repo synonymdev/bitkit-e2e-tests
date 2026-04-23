@@ -16,7 +16,7 @@ export const sleep = (ms: number) => browser.pause(ms);
 export async function getAccessibleText(element: ChainablePromiseElement): Promise<string> {
   const candidates = driver.isAndroid
     ? ['contentDescription', 'content-desc', 'name', 'text']
-    : ['label', 'value', 'name', 'text'];
+    : ['value', 'label', 'name', 'text'];
 
   for (const attribute of candidates) {
     try {
@@ -1025,8 +1025,8 @@ export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise
 }
 
 /** Reads the encoded string for the `QRCode` element (receive invoice/address URI, profile pubky, etc.). */
-export async function getUriFromQRCode(): Promise<string> {
-  const qrCode = await elementById('QRCode');
+export async function getUriFromQRCode( { testId = 'QRCode' }: { testId?: string } = {} ): Promise<string> {
+  const qrCode = await elementById(testId);
   await qrCode.waitForDisplayed();
   let uri = '';
   const waitTimeoutMs = 15_000;

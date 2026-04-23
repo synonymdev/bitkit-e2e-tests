@@ -15,7 +15,6 @@
 
 import {
   acknowledgeReceivedPayment,
-  elementById,
   getUriFromQRCode,
   sleep,
   swipeFullScreen,

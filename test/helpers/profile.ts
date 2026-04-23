@@ -244,7 +244,7 @@ export async function createProfile({
   await elementById('ProfileShare').waitForDisplayed();
   await elementByText(name.toUpperCase()).waitForDisplayed();
 
-  const pubky = await getUriFromQRCode();
+  const pubky = await getUriFromQRCode({ testId: 'ProfileQRCode' });
   console.info('→ Created profile with name:', name, 'and pubky:', pubky);
   return { pubky };
 }
