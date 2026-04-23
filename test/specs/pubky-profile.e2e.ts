@@ -1,4 +1,4 @@
-import { completeOnboarding, doNavigationClose, elementById, tap } from '../helpers/actions';
+import { completeOnboarding, doNavigationClose, elementById, getSeed, restoreWallet, tap, waitForBackup } from '../helpers/actions';
 import { openContacts, openProfile } from '../helpers/navigation';
 import {
   createProfile,
@@ -53,18 +53,21 @@ describe('@pubky_profile - Pubky profile', () => {
     });
   });
 
-  // Section B (charter): create profile, copy pubky, edit fields, persistence, delete, recreate.
-  // @pubky_profile_2 — end-to-end: create → copy pubky → edit (name, notes, link, tag) → verify on
-  // profile → terminate/relaunch → data + pubky unchanged → open edit → remove link & tag → save →
-  // verify empty links/tags → delete profile → create new profile → same pubky (seed-derived).
+  // Section B (charter): create profile, copy pubky, edit, persistence (relaunch + wallet restore), edit again, delete, recreate.
+  // @pubky_profile_2 — create → copy → update profile → verify → relaunch → verify + pubky →
+  // backup wait → restore same seed → verify + pubky → remove link & tag, save, verify → delete profile →
+  // create profile again → same pubky (seed-derived).
   describe('Create / Edit / Delete profile', () => {
     ciIt(
-      '@pubky_profile_2 - Create, edit, relaunch keeps pubky; delete and recreate same pubky',
+      '@pubky_profile_2 - Create, edit; relaunch and restore keep pubky; remove fields; delete and recreate',
       async () => {
+        // create profile and verify pubky and details
         const { pubky } = await createProfile({ name: 'Alice' });
         await verifyPubkyString(pubky);
         const copiedPubky = await readPubkyFromProfileCopy();
         await expect(copiedPubky).toBe(pubky.trim());
+
+        // update profile and verify details
         const details = {
           name: 'Bob',
           notes: 'Notes for E2E',
@@ -74,11 +77,21 @@ describe('@pubky_profile - Pubky profile', () => {
         await updateProfile(details);
         await verifyProfileDetails(details);
 
+        // restart app and verify profile details and pubky
         await launchFreshApp();
         await verifyProfileDetails(details);
         const pubkyAfterRelaunch = await readPubkyFromProfileCopy();
         await expect(pubkyAfterRelaunch).toBe(pubky.trim());
 
+        // restore wallet and verify profile details and pubky
+        const seed = await getSeed();
+        await waitForBackup();
+        await restoreWallet(seed);
+        await verifyProfileDetails(details);
+        const pubkyAfterRestore = await readPubkyFromProfileCopy();
+        await expect(pubkyAfterRestore).toBe(pubky.trim());
+
+        // remove link and tag and update profile and verify profile details
         await openEditProfile();
         await removeEditProfileLinkAt(0);
         await removeEditProfileTag('cypherpunk');
@@ -91,6 +104,7 @@ describe('@pubky_profile - Pubky profile', () => {
         };
         await verifyProfileDetails(detailsAfterRemovals);
 
+        // delete profile and create new profile and verify pubky
         await deleteProfile();
         const { pubky: pubkyAfterRecreate } = await createProfile({ name: 'Alice2' });
         await expect(pubkyAfterRecreate.trim()).toBe(pubky.trim());

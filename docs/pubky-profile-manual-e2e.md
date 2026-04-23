@@ -66,7 +66,7 @@ With no profile created yet, every entry point should funnel into the choice scr
 1. Profile → Edit → update **name**, **Notes** (label is `NOTES`), and **links** → Save.
 2. Changes persist after leaving the screen and after app restart.
 
-> **`@pubky_profile_2`** overlaps part of this (edit + persist + remove link/tag); avatar and limit edge cases are not in that spec.
+> **`@pubky_profile_2`** covers edit, then persist after **terminate/relaunch** and after **wallet restore** (same seed); same **pubky** after each. Later it removes a link and tag, saves, and verifies. Avatar and limit edge cases are not in that spec.
 3. Avatar:
    - Pick an image from the Photos library → shown as avatar → persists after restart.
    - Remove avatar → falls back to the initial placeholder.
@@ -109,6 +109,8 @@ With no profile created yet, every entry point should funnel into the choice scr
 
 1. Settings → reset/wipe wallet → onboard a **new seed** → no profile, different pubky → repeat **section A**.
 2. Onboard the **same seed** on a fresh install → profile and contacts should be recovered from the homeserver (if not Deleted first).
+
+> **`@pubky_profile_2`** exercises **(2) in part**: it runs the standard E2E **backup → `restoreWallet(seed)`** flow (after profile exists), then checks profile **details and pubkey** and **pubky (copy)** still match. It is not a full “fresh install from IPA” story.
 
 ---
 
@@ -197,7 +199,7 @@ Use this table to verify persistence expectations. Fill in observed behavior if 
 
 - **Spec**: `test/specs/pubky-profile.e2e.ts` — profile-only for now; contacts and Ring stay manual here until more specs exist. How/whether it runs in automation is a pipeline concern (`AGENTS.md`); this section only describes the spec’s intent.
 - **Isolation**: `beforeEach` uses `reinstallApp()` and `completeOnboarding()` so a single `ciIt` can be run alone via `--mochaOpts.grep "@pubky_profile_N"`.
-- **What the two tests do**: `@pubky_profile_1` — section A gating (no profile). `@pubky_profile_2` — one chained flow: create → edit and verify → app restart and verify → remove link and tag, save, verify → delete profile → new profile, same pubky. No backup/restore, Ring, contacts list, or avatar.
+- **What the two tests do**: `@pubky_profile_1` — section A gating (no profile). `@pubky_profile_2` — one chained flow: create → copy/verify pubky → update profile, verify on screen → `launchFreshApp`, verify again → **wait for backup, restore wallet from seed**, verify details + pubky → remove link and tag, save, verify → delete profile → create profile again, same pubky. Does not cover Ring, full contacts tests, or avatar.
 - **Tags**: suite `@pubky_profile`; tests `@pubky_profile_1`, `@pubky_profile_2`, …; reserve e.g. `@pubky_ring_required` if you add Ring-specific specs later.
 - **Use `ciIt()`** instead of `it()` in this suite so it matches the repo’s `ci_run_*` / lockfile retry pattern when you wire runs up.
 - Shared test IDs: **H.1** below. Implementation lives under `test/helpers/` next to other E2E specs.
