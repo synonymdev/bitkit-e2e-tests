@@ -6,6 +6,14 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..');
 export const FIXTURES_DIR = path.join(REPO_ROOT, 'test', 'fixtures');
 const SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'push-fixture-media-to-devices.sh');
 
+/** Staging regtest users (homegate) for contact E2E — remote profiles must exist for tests that add them. */
+export type PubkyContact = { name: string; pubky: string };
+
+export const STAGING_TEST_CONTACTS: readonly PubkyContact[] = [
+  { name: 'Contact #1', pubky: 'pubkywxqciwrn63jc9oabfrdgq9ju9toxb6pbmtstyy9gkkxs41gk3r5o' },
+  { name: 'Contact #2', pubky: 'pubkyqgzi1fg1d1m5yp44euu7g5g7t86c3bipi7ci8ca9czc367q779zy' },
+] as const;
+
 export type PushFixtureMediaOptions = {
   /** Specific files to push (absolute or relative to repo root). Defaults to all images in `test/fixtures/`. */
   files?: string[];

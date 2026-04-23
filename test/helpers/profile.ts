@@ -11,7 +11,7 @@ import {
   typeText,
   waitForToast,
 } from './actions';
-import { openProfile } from './navigation';
+import { dismissContactsIntroIfPresent, openContacts, openProfile } from './navigation';
 
 /** One link row on the profile (label + URL). */
 export type PubkyProfileLink = { label: string; url: string };
@@ -101,6 +101,54 @@ export async function saveEditProfile() {
   // Auto-hide clears the overlay so the next openProfile() can reach the drawer.
   await waitForToast('ProfileUpdatedToast', { waitToDisappear: driver.isIOS });
   await elementById('ProfileEdit').waitForDisplayed({ timeout: 60_000 });
+}
+
+/**
+ * Opens Contacts → add (+) → enters `pubky` in the sheet and dismisses the keyboard.
+ * - `save: true` (default): taps Add, waits for the add screen, Save, and lands back on the list.
+ * - `save: false`: returns with the sheet still open so the test can assert inline validation
+ *   (e.g. error text or Add disabled) and dismiss or navigate as needed.
+ * - `firstContact: true`: empty list — use `ContactsEmptyAddButton`. When `false` (default), use
+ *   `ContactsAddButton` in the header.
+ */
+export async function addContact({
+  pubky,
+  save = true,
+  firstContact = false,
+}: {
+  pubky: string;
+  save?: boolean;
+  firstContact?: boolean;
+}): Promise<void> {
+  await openContacts();
+  await dismissContactsIntroIfPresent();
+  if (firstContact) {
+    await elementById('ContactsEmptyAddButton').waitForDisplayed();
+    await tap('ContactsEmptyAddButton');
+  } else {
+    await elementById('ContactsAddButton').waitForDisplayed();
+    await tap('ContactsAddButton');
+  }
+
+  await elementById('AddContactPubkyField').waitForDisplayed();
+  await typeText('AddContactPubkyField', pubky);
+  await confirmInputOnKeyboard();
+  if (!save) {
+    return;
+  }
+
+  await tap('AddContactAdd');
+  await elementById('AddContactSave').waitForDisplayed();
+  await tap('AddContactSave');
+  await waitForToast('ContactSavedToast', { waitToDisappear: driver.isIOS });
+  await elementById('ContactsAddButton').waitForDisplayed({ timeout: 60_000 });
+}
+
+/** Opens Contacts and waits for a row with test id `Contact_<publicKey>`. */
+export async function verifyContactRowDisplayed(publicKey: string) {
+  await openContacts();
+  await dismissContactsIntroIfPresent();
+  await elementById(`Contact_${publicKey}`).waitForDisplayed();
 }
 
 /**

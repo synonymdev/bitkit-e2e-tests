@@ -1176,7 +1176,8 @@ export type ToastId =
   | 'InsufficientSpendingToast'
   | 'InsufficientSavingsToast'
   | 'ProfilePubkyCopiedToast'
-  | 'ProfileUpdatedToast';
+  | 'ProfileUpdatedToast'
+  | 'ContactSavedToast';
 
 /** Wait for a toast by test id. Prefer `waitToDisappear` for iOS: success toasts live in a separate
  * window, so swipe-dismiss (`dismiss: true`) often uses wrong coordinates and blocks later UI. */

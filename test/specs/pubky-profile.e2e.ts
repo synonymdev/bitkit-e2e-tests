@@ -1,6 +1,8 @@
-import { completeOnboarding, doNavigationClose, elementById, getSeed, restoreWallet, tap, waitForBackup } from '../helpers/actions';
+import { completeOnboarding, doNavigationClose, elementById, getSeed, restoreWallet, sleep, tap, waitForBackup } from '../helpers/actions';
+import { STAGING_TEST_CONTACTS } from '../helpers/fixtures';
 import { openContacts, openProfile } from '../helpers/navigation';
 import {
+  addContact,
   createProfile,
   deleteProfile,
   openEditProfile,
@@ -10,6 +12,7 @@ import {
   saveEditProfile,
   updateProfile,
   type ProfileDetails,
+  verifyContactRowDisplayed,
   verifyProfileDetails,
   verifyPubkyString,
 } from '../helpers/profile';
@@ -44,6 +47,7 @@ describe('@pubky_profile - Pubky profile', () => {
       await tap('ContactsIntro-button');
       await elementById('PubkyChoiceCreate').waitForDisplayed();
 
+      await sleep(500);
       await doNavigationClose();
 
       // Drawer → Profile → straight into PubkyChoice
@@ -53,14 +57,16 @@ describe('@pubky_profile - Pubky profile', () => {
     });
   });
 
-  // Section B (charter): create profile, copy pubky, edit, persistence (relaunch + wallet restore), edit again, delete, recreate.
-  // @pubky_profile_2 — create → copy → update profile → verify → relaunch → verify + pubky →
-  // backup wait → restore same seed → verify + pubky → remove link & tag, save, verify → delete profile →
-  // create profile again → same pubky (seed-derived).
+  // Section B (charter): create profile, copy pubky, edit, add contact, persistence (relaunch + restore),
+  // remove link+tag, delete profile, recreate.
+  // @pubky_profile_2 — create → copy → update → add staging contact → relaunch/restore (profile + contact) →
+  // remove link+tag → delete profile → create → same pubky.
   describe('Create / Edit / Delete profile', () => {
     ciIt(
-      '@pubky_profile_2 - Create, edit; relaunch and restore keep pubky; remove fields; delete and recreate',
+      '@pubky_profile_2 - Profile and contact persist; delete and recreate same pubky',
       async () => {
+        const [stagingContact] = STAGING_TEST_CONTACTS;
+
         // create profile and verify pubky and details
         const { pubky } = await createProfile({ name: 'Alice' });
         await verifyPubkyString(pubky);
@@ -77,19 +83,24 @@ describe('@pubky_profile - Pubky profile', () => {
         await updateProfile(details);
         await verifyProfileDetails(details);
 
-        // restart app and verify profile details and pubky
+        await addContact({ pubky: stagingContact.pubky, firstContact: true });
+        await verifyContactRowDisplayed(stagingContact.pubky);
+
+        // restart app and verify profile, pubky, and contact
         await launchFreshApp();
         await verifyProfileDetails(details);
         const pubkyAfterRelaunch = await readPubkyFromProfileCopy();
         await expect(pubkyAfterRelaunch).toBe(pubky.trim());
+        await verifyContactRowDisplayed(stagingContact.pubky);
 
-        // restore wallet and verify profile details and pubky
+        // restore wallet and verify profile, pubky, and contact
         const seed = await getSeed();
         await waitForBackup();
         await restoreWallet(seed);
         await verifyProfileDetails(details);
         const pubkyAfterRestore = await readPubkyFromProfileCopy();
         await expect(pubkyAfterRestore).toBe(pubky.trim());
+        await verifyContactRowDisplayed(stagingContact.pubky);
 
         // remove link and tag and update profile and verify profile details
         await openEditProfile();
