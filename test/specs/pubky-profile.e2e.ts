@@ -1,9 +1,23 @@
-import { completeOnboarding, doNavigationClose, elementById, getSeed, restoreWallet, sleep, tap, waitForBackup } from '../helpers/actions';
+import {
+  completeOnboarding,
+  doNavigationClose,
+  elementById,
+  elementByText,
+  getSeed,
+  restoreWallet,
+  sleep,
+  swipeFullScreen,
+  tap,
+  waitForBackup,
+} from '../helpers/actions';
 import { STAGING_TEST_CONTACTS } from '../helpers/fixtures';
 import { openContacts, openProfile } from '../helpers/navigation';
 import {
   addContact,
+  ADD_CONTACT_INVALID_KEY_MESSAGE_SNIPPET,
+  ADD_CONTACT_OWN_PUBKY_MESSAGE_SNIPPET,
   createProfile,
+  deleteContact,
   deleteProfile,
   openEditProfile,
   readPubkyFromProfileCopy,
@@ -13,6 +27,7 @@ import {
   updateProfile,
   type ProfileDetails,
   verifyContactRowDisplayed,
+  verifyContactRowNotDisplayed,
   verifyProfileDetails,
   verifyPubkyString,
 } from '../helpers/profile';
@@ -21,7 +36,7 @@ import { ciIt } from '../helpers/suite';
 
 // Covers scenarios from docs/pubky-profile-manual-e2e.md.
 // Each test reinstalls + onboards so any single test can be run in isolation
-// (e.g. `--mochaOpts.grep "@pubky_profile_2"`).
+// (e.g. `--mochaOpts.grep "@pubky_profile_2"` or `"@pubky_profile_3"`).
 describe('@pubky_profile - Pubky profile', () => {
   beforeEach(async () => {
     await reinstallApp();
@@ -121,5 +136,37 @@ describe('@pubky_profile - Pubky profile', () => {
         await expect(pubkyAfterRecreate.trim()).toBe(pubky.trim());
       }
     );
+  });
+
+  // Section B.4: invalid pubky + self-add, then add + delete contacts.
+  describe('Contacts', () => {
+    ciIt('@pubky_profile_3 - Cannot add invalid or self pubky; can add/delete valid contacts', async () => {
+      const { pubky } = await createProfile({ name: 'Contact Validation Professor' });
+
+      // invalid pubky
+      const invalidPubky = 'pubkyinvalid';
+      await addContact({ pubky: invalidPubky, firstContact: true, save: false });
+      await expect(elementById('AddContactAdd')).toBeDisabled();
+      await elementByText(ADD_CONTACT_INVALID_KEY_MESSAGE_SNIPPET, 'contains').waitForDisplayed();
+      await swipeFullScreen('down');
+
+      // self-add
+      await addContact({ pubky: pubky, firstContact: false, save: false });
+      await expect(elementById('AddContactAdd')).toBeDisabled();
+      await elementByText(ADD_CONTACT_OWN_PUBKY_MESSAGE_SNIPPET, 'contains').waitForDisplayed();
+      await swipeFullScreen('down');
+
+      // add valid contacts
+      for (const [i, stagingContact] of STAGING_TEST_CONTACTS.entries()) {
+        await addContact({ pubky: stagingContact.pubky, firstContact: i === 0 });
+        await verifyContactRowDisplayed(stagingContact.pubky);
+      }
+
+      // delete contacts
+      for (const c of STAGING_TEST_CONTACTS) {
+        await deleteContact(c.pubky);
+        await verifyContactRowNotDisplayed(c.pubky);
+      }
+    });
   });
 });

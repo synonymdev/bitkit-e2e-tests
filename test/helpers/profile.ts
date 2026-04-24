@@ -104,6 +104,14 @@ export async function saveEditProfile() {
 }
 
 /**
+ * Substrings of the localized add-contact validation errors (English builds).
+ * Matches `contacts__add_error_invalid_key` / `contacts__add_error_self` on Android and iOS.
+ */
+export const ADD_CONTACT_INVALID_KEY_MESSAGE_SNIPPET = 'Invalid pubky key format';
+/** Avoids apostrophe in iOS predicate `CONTAINS` matchers; matches EN copy around "add your own pubky". */
+export const ADD_CONTACT_OWN_PUBKY_MESSAGE_SNIPPET = 'add your own pubky';
+
+/**
  * Opens Contacts → add (+) → enters `pubky` in the sheet and dismisses the keyboard.
  * - `save: true` (default): taps Add, waits for the add screen, Save, and lands back on the list.
  * - `save: false`: returns with the sheet still open so the test can assert inline validation
@@ -149,6 +157,36 @@ export async function verifyContactRowDisplayed(publicKey: string) {
   await openContacts();
   await dismissContactsIntroIfPresent();
   await elementById(`Contact_${publicKey}`).waitForDisplayed();
+}
+
+/**
+ * Opens the contact (list → detail → edit), scrolls to the delete action, and confirms
+ * the dialog (`Yes, Delete` on both platforms). Lands back on the contacts list.
+ */
+export async function deleteContact(publicKey: string) {
+  const rowId = `Contact_${publicKey}`;
+  await openContacts();
+  await dismissContactsIntroIfPresent();
+  await elementById(rowId).waitForDisplayed();
+  await tap(rowId);
+  await elementById('ContactEdit').waitForDisplayed();
+  await tap('ContactEdit');
+  await elementById('ProfileEditName').waitForDisplayed();
+  await swipeFullScreen('up', { upStartYPercent: 0.3 });
+  await sleep(500);
+  await tap('ProfileEditDelete');
+  const confirm = await elementByText('Yes, Delete', 'exact');
+  await confirm.waitForDisplayed();
+  await confirm.click();
+  await waitForToast('ContactDeletedToast', { waitToDisappear: driver.isIOS });
+  await elementById('ContactsAddButton').waitForDisplayed();
+}
+
+/** Opens Contacts and asserts no row for `Contact_<publicKey>`. */
+export async function verifyContactRowNotDisplayed(publicKey: string) {
+  await openContacts();
+  await dismissContactsIntroIfPresent();
+  await expect(await elementById(`Contact_${publicKey}`).isExisting()).toBe(false);
 }
 
 /**
