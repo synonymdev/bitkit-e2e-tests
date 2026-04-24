@@ -1180,6 +1180,7 @@ export type ToastId =
   | 'ProfilePubkyCopiedToast'
   | 'ProfileUpdatedToast'
   | 'ContactSavedToast'
+  | 'ContactUpdatedToast'
   | 'ContactDeletedToast';
 
 /** Wait for a toast by test id. Prefer `waitToDisappear` for iOS: success toasts live in a separate

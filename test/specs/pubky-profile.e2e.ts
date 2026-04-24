@@ -24,12 +24,14 @@ import {
   removeEditProfileLinkAt,
   removeEditProfileTag,
   saveEditProfile,
-  updateProfile,
+  updateMyProfile,
+  updateContactProfile,
   type ProfileDetails,
   verifyContactRowDisplayed,
   verifyContactRowNotDisplayed,
-  verifyProfileDetails,
+  verifyMyProfileDetails,
   verifyPubkyString,
+  verifyContactDetails,
 } from '../helpers/profile';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
@@ -95,15 +97,15 @@ describe('@pubky_profile - Pubky profile', () => {
           links: [{ label: 'Website', url: 'https://example.org' }],
           tags: ['cypherpunk'],
         };
-        await updateProfile(details);
-        await verifyProfileDetails(details);
+        await updateMyProfile(details);
+        await verifyMyProfileDetails(details);
 
         await addContact({ pubky: stagingContact.pubky, firstContact: true });
         await verifyContactRowDisplayed(stagingContact.pubky);
 
         // restart app and verify profile, pubky, and contact
         await launchFreshApp();
-        await verifyProfileDetails(details);
+        await verifyMyProfileDetails(details);
         const pubkyAfterRelaunch = await readPubkyFromProfileCopy();
         await expect(pubkyAfterRelaunch).toBe(pubky.trim());
         await verifyContactRowDisplayed(stagingContact.pubky);
@@ -112,7 +114,7 @@ describe('@pubky_profile - Pubky profile', () => {
         const seed = await getSeed();
         await waitForBackup();
         await restoreWallet(seed);
-        await verifyProfileDetails(details);
+        await verifyMyProfileDetails(details);
         const pubkyAfterRestore = await readPubkyFromProfileCopy();
         await expect(pubkyAfterRestore).toBe(pubky.trim());
         await verifyContactRowDisplayed(stagingContact.pubky);
@@ -128,7 +130,7 @@ describe('@pubky_profile - Pubky profile', () => {
           links: [],
           tags: [],
         };
-        await verifyProfileDetails(detailsAfterRemovals);
+        await verifyMyProfileDetails(detailsAfterRemovals);
 
         // delete profile and create new profile and verify pubky
         await deleteProfile();
@@ -169,6 +171,46 @@ describe('@pubky_profile - Pubky profile', () => {
           await deleteContact(c.pubky);
           await verifyContactRowNotDisplayed(c.pubky);
         }
+      }
+    );
+
+    ciIt(
+      '@pubky_profile_4 - Editing wallet A contact on wallet B does not change wallet A profile',
+      async () => {
+        const detailsA: ProfileDetails = {
+          name: 'Alice Wallet A',
+          notes: 'Wallet A original notes',
+          links: [{ label: 'A Website', url: 'https://a.example.org' }],
+          tags: ['wallet-a-tag'],
+        };
+
+        // Wallet A: create and customize profile, then capture seed.
+        const { pubky: pubkyA } = await createProfile({ name: 'Alice Wallet A' });
+        await updateMyProfile(detailsA);
+        await verifyMyProfileDetails(detailsA);
+        const seedA = await getSeed();
+
+        // Wallet B: fresh install + onboarding, create profile, then add wallet A as contact.
+        await reinstallApp();
+        await completeOnboarding();
+        await createProfile({ name: 'Bob Wallet B' });
+
+        await addContact({ pubky: pubkyA, firstContact: true });
+        await verifyContactRowDisplayed(pubkyA);
+
+        // Wallet B: edit wallet A contact.
+        const detailsAUpdated: ProfileDetails = {
+          name: 'Alice Edited On B',
+          notes: 'Edited from wallet B',
+          links: [],
+          tags: [],
+        };
+        await updateContactProfile({ pubky: pubkyA, details: detailsAUpdated });
+        await verifyContactDetails({ pubky: pubkyA, details: detailsAUpdated });
+
+        // Restore wallet A and verify wallet A profile is unchanged by wallet B contact edits.
+        await restoreWallet(seedA);
+        await verifyMyProfileDetails(detailsA);
       }
     );
   });

@@ -24,6 +24,8 @@ export type ProfileDetails = {
   tags: string[];
 };
 
+export type ProfileDetailsIdPrefix = 'ProfileView' | 'ContactView';
+
 function normalizeProfileDisplayName(s: string) {
   return s.trim().toUpperCase();
 }
@@ -93,6 +95,15 @@ export async function openEditProfile() {
   await elementById('ProfileEditName').waitForDisplayed();
 }
 
+export async function openEditContact(publicKey: string) {
+  await openContacts();
+  await dismissContactsIntroIfPresent();
+  await elementById(`Contact_${publicKey}`).waitForDisplayed();
+  await tap(`Contact_${publicKey}`);
+  await tap('ContactEdit');
+  await elementById('ProfileEditName').waitForDisplayed();
+}
+
 /** Scroll, Save, wait for success toast; lands back on the read-only profile screen. */
 export async function saveEditProfile() {
   await swipeFullScreen('up');
@@ -101,6 +112,13 @@ export async function saveEditProfile() {
   // Auto-hide clears the overlay so the next openProfile() can reach the drawer.
   await waitForToast('ProfileUpdatedToast', { waitToDisappear: driver.isIOS });
   await elementById('ProfileEdit').waitForDisplayed({ timeout: 60_000 });
+}
+
+export async function saveEditContact() {
+  await swipeFullScreen('up');
+  await tap('ProfileEditSave');
+  await waitForToast('ContactUpdatedToast', { waitToDisappear: driver.isIOS });
+  await elementById('ContactEdit').waitForDisplayed({ timeout: 60_000 });
 }
 
 /**
@@ -210,19 +228,35 @@ export async function removeEditProfileTag(tag: string) {
   await sleep(300);
 }
 
+export async function updateContactProfile({
+  pubky,
+  details,
+}: {
+  pubky: string;
+  details: ProfileDetails;
+}) {
+  await openEditContact(pubky);
+  await updateProfileDetails(details);
+  await saveEditContact();
+}
+
+export async function updateMyProfile(details: ProfileDetails) {
+  await openEditProfile();
+  await updateProfileDetails(details);
+  await saveEditProfile();
+}
+
 /**
- * Opens Profile → Edit, sets name, notes (bio), adds links and tags in order, then saves.
+ * Sets name, notes (bio), adds links and tags in order, then saves.
  *
  * Best used when links/tags are empty (e.g. right after {@link createProfile}) or when only
  * adding; use {@link removeEditProfileLinkAt} / {@link removeEditProfileTag} and {@link saveEditProfile} for removals.
  */
-export async function updateProfile(details: ProfileDetails) {
-  await openEditProfile();
-
+export async function updateProfileDetails(details: ProfileDetails) {
   await typeText('ProfileEditName', details.name);
   await confirmInputOnKeyboard();
   await typeText('ProfileEditBio', details.notes);
-  await elementByText('YOUR PUBKY').click();
+  await elementByText('PUBKY').click();
 
   for (const link of details.links) {
     await tap('ProfileEditAddLink');
@@ -240,8 +274,27 @@ export async function updateProfile(details: ProfileDetails) {
     await tap('AddTagSave');
     await sleep(400);
   }
+}
 
-  await saveEditProfile();
+export async function verifyContactDetails({
+  pubky,
+  details,
+}: {
+  pubky: string;
+  details: ProfileDetails;
+}) {
+  await openContacts();
+  await dismissContactsIntroIfPresent();
+  await elementById(`Contact_${pubky}`).waitForDisplayed();
+  await tap(`Contact_${pubky}`);
+  await elementById('ContactCopy').waitForDisplayed();
+  await verifyProfileDetails(details, { idPrefix: 'ContactView' });
+}
+
+export async function verifyMyProfileDetails(expected: ProfileDetails) {
+  await openProfile();
+  await elementById('ProfileCopy').waitForDisplayed();
+  await verifyProfileDetails(expected, { idPrefix: 'ProfileView' });
 }
 
 /**
@@ -249,12 +302,13 @@ export async function updateProfile(details: ProfileDetails) {
  * and tag chips (`Tag-<tag>`). Link row labels use uppercase on Android (`Text13Up`); both sides
  * are compared uppercase so expectations can use plain casing (e.g. `Website`).
  */
-export async function verifyProfileDetails(expected: ProfileDetails) {
-  await openProfile();
-  await elementById('ProfileCopy').waitForDisplayed();
+export async function verifyProfileDetails(
+  expected: ProfileDetails,
+  { idPrefix = 'ProfileView' }: { idPrefix?: ProfileDetailsIdPrefix } = {}
+) {
   await swipeFullScreen('up');
 
-  const nameEl = await elementById('ProfileViewName');
+  const nameEl = await elementById(`${idPrefix}Name`);
   await nameEl.waitForDisplayed();
   const nameText = await getAccessibleText(nameEl);
   await expect(normalizeProfileDisplayName(nameText)).toBe(
@@ -263,7 +317,7 @@ export async function verifyProfileDetails(expected: ProfileDetails) {
 
   const notesTrimmed = expected.notes.trim();
   if (notesTrimmed.length > 0) {
-    const notesEl = await elementById('ProfileViewNotes');
+    const notesEl = await elementById(`${idPrefix}Notes`);
     await notesEl.waitForDisplayed();
     await expect((await getAccessibleText(notesEl)).trim()).toBe(notesTrimmed);
   }
