@@ -140,33 +140,36 @@ describe('@pubky_profile - Pubky profile', () => {
 
   // Section B.4: invalid pubky + self-add, then add + delete contacts.
   describe('Contacts', () => {
-    ciIt('@pubky_profile_3 - Cannot add invalid or self pubky; can add/delete valid contacts', async () => {
-      const { pubky } = await createProfile({ name: 'Contact Validation Professor' });
+    ciIt(
+      '@pubky_profile_3 - Cannot add invalid or self pubky; can add/delete valid contacts',
+      async () => {
+        const { pubky } = await createProfile({ name: 'Contact Validation Professor' });
 
-      // invalid pubky
-      const invalidPubky = 'pubkyinvalid';
-      await addContact({ pubky: invalidPubky, firstContact: true, save: false });
-      await expect(elementById('AddContactAdd')).toBeDisabled();
-      await elementByText(ADD_CONTACT_INVALID_KEY_MESSAGE_SNIPPET, 'contains').waitForDisplayed();
-      await swipeFullScreen('down');
+        // invalid pubky
+        const invalidPubky = 'pubkyinvalid';
+        await addContact({ pubky: invalidPubky, firstContact: true, save: false });
+        await expect(elementById('AddContactAdd')).toBeDisabled();
+        await elementByText(ADD_CONTACT_INVALID_KEY_MESSAGE_SNIPPET, 'contains').waitForDisplayed();
+        await swipeFullScreen('down');
 
-      // self-add
-      await addContact({ pubky: pubky, firstContact: false, save: false });
-      await expect(elementById('AddContactAdd')).toBeDisabled();
-      await elementByText(ADD_CONTACT_OWN_PUBKY_MESSAGE_SNIPPET, 'contains').waitForDisplayed();
-      await swipeFullScreen('down');
+        // self-add
+        await addContact({ pubky: pubky, firstContact: false, save: false });
+        await expect(elementById('AddContactAdd')).toBeDisabled();
+        await elementByText(ADD_CONTACT_OWN_PUBKY_MESSAGE_SNIPPET, 'contains').waitForDisplayed();
+        await swipeFullScreen('down');
 
-      // add valid contacts
-      for (const [i, stagingContact] of STAGING_TEST_CONTACTS.entries()) {
-        await addContact({ pubky: stagingContact.pubky, firstContact: i === 0 });
-        await verifyContactRowDisplayed(stagingContact.pubky);
+        // add valid contacts
+        for (const [i, stagingContact] of STAGING_TEST_CONTACTS.entries()) {
+          await addContact({ pubky: stagingContact.pubky, firstContact: i === 0 });
+          await verifyContactRowDisplayed(stagingContact.pubky);
+        }
+
+        // delete contacts
+        for (const c of STAGING_TEST_CONTACTS) {
+          await deleteContact(c.pubky);
+          await verifyContactRowNotDisplayed(c.pubky);
+        }
       }
-
-      // delete contacts
-      for (const c of STAGING_TEST_CONTACTS) {
-        await deleteContact(c.pubky);
-        await verifyContactRowNotDisplayed(c.pubky);
-      }
-    });
+    );
   });
 });

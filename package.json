@@ -5,7 +5,7 @@
     "e2e:android": "PLATFORM=android wdio run ./wdio.conf.ts",
     "e2e:ios": "PLATFORM=ios wdio run ./wdio.conf.ts",
     "lint": "eslint './**/*.{ts,js}'",
-    "format": "prettier --write './**/*.{ts,js,json,md}'"
+    "format": "prettier --write './**/*.{ts,js,json}' '!./docker/**'"
   },
   "keywords": [],
   "author": "",
