@@ -76,7 +76,7 @@ describe('@pubky_profile - Pubky profile', () => {
   // remove link+tag, delete profile, recreate.
   // @pubky_profile_2 — create → copy → update → add staging contact → relaunch/restore (profile + contact) →
   // remove link+tag → delete profile → create → same pubky.
-  describe('Create / Edit / Delete profile', () => {
+  describe('Profile - create, edit, delete', () => {
     ciIt(
       '@pubky_profile_2 - Profile and contact persist; delete and recreate same pubky',
       async () => {
@@ -139,7 +139,7 @@ describe('@pubky_profile - Pubky profile', () => {
   });
 
   // Section B.4: invalid pubky + self-add, then add + delete contacts.
-  describe('Contacts', () => {
+  describe('Contacts - add, delete, edit', () => {
     ciIt(
       '@pubky_profile_3 - Cannot add invalid or self pubky; can add/delete valid contacts',
       async () => {
