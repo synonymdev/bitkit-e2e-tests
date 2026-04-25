@@ -11,7 +11,7 @@ import {
   typeText,
   waitForToast,
 } from './actions';
-import { dismissContactsIntroIfPresent, openContacts, openProfile } from './navigation';
+import { openContacts, openProfile } from './navigation';
 
 /** One link row on the profile (label + URL). */
 export type PubkyProfileLink = { label: string; url: string };
@@ -97,7 +97,6 @@ export async function openEditProfile() {
 
 export async function openEditContact(publicKey: string) {
   await openContacts();
-  await dismissContactsIntroIfPresent();
   await elementById(`Contact_${publicKey}`).waitForDisplayed();
   await tap(`Contact_${publicKey}`);
   await tap('ContactEdit');
@@ -134,8 +133,9 @@ export const ADD_CONTACT_OWN_PUBKY_MESSAGE_SNIPPET = 'add your own pubky';
  * - `save: true` (default): taps Add, waits for the add screen, Save, and lands back on the list.
  * - `save: false`: returns with the sheet still open so the test can assert inline validation
  *   (e.g. error text or Add disabled) and dismiss or navigate as needed.
- * - `firstContact: true`: empty list — use `ContactsEmptyAddButton`. When `false` (default), use
- *   `ContactsAddButton` in the header.
+ * - On the first Contacts visit, `ContactsIntro-button` opens the add sheet directly.
+ * - If there are no contacts after the intro is gone, use `ContactsEmptyAddButton`.
+ * - Otherwise use `ContactsAddButton` in the header.
  */
 export async function addContact({
   pubky,
@@ -147,8 +147,14 @@ export async function addContact({
   firstContact?: boolean;
 }): Promise<void> {
   await openContacts();
-  await dismissContactsIntroIfPresent();
-  if (firstContact) {
+  await sleep(500);
+  const introButton = await elementById('ContactsIntro-button');
+  if (await introButton.isDisplayed().catch(() => false)) {
+    await tap('ContactsIntro-button');
+  } else if (
+    firstContact ||
+    (await elementById('ContactsEmptyAddButton').isDisplayed().catch(() => false))
+  ) {
     await elementById('ContactsEmptyAddButton').waitForDisplayed();
     await tap('ContactsEmptyAddButton');
   } else {
@@ -167,13 +173,12 @@ export async function addContact({
   await elementById('AddContactSave').waitForDisplayed();
   await tap('AddContactSave');
   await waitForToast('ContactSavedToast', { waitToDisappear: driver.isIOS });
-  await elementById('ContactsAddButton').waitForDisplayed({ timeout: 60_000 });
+  await elementById('ContactsAddButton').waitForDisplayed();
 }
 
 /** Opens Contacts and waits for a row with test id `Contact_<publicKey>`. */
 export async function verifyContactRowDisplayed(publicKey: string) {
   await openContacts();
-  await dismissContactsIntroIfPresent();
   await elementById(`Contact_${publicKey}`).waitForDisplayed();
 }
 
@@ -184,7 +189,6 @@ export async function verifyContactRowDisplayed(publicKey: string) {
 export async function deleteContact(publicKey: string) {
   const rowId = `Contact_${publicKey}`;
   await openContacts();
-  await dismissContactsIntroIfPresent();
   await elementById(rowId).waitForDisplayed();
   await tap(rowId);
   await elementById('ContactEdit').waitForDisplayed();
@@ -203,7 +207,6 @@ export async function deleteContact(publicKey: string) {
 /** Opens Contacts and asserts no row for `Contact_<publicKey>`. */
 export async function verifyContactRowNotDisplayed(publicKey: string) {
   await openContacts();
-  await dismissContactsIntroIfPresent();
   await expect(await elementById(`Contact_${publicKey}`).isExisting()).toBe(false);
 }
 
@@ -284,7 +287,6 @@ export async function verifyContactDetails({
   details: ProfileDetails;
 }) {
   await openContacts();
-  await dismissContactsIntroIfPresent();
   await elementById(`Contact_${pubky}`).waitForDisplayed();
   await tap(`Contact_${pubky}`);
   await elementById('ContactCopy').waitForDisplayed();

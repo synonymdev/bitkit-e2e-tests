@@ -35,21 +35,6 @@ export async function openContacts() {
 }
 
 /**
- * Dismisses the first-time `ContactsIntro` (Continue) when it is shown, no-op otherwise.
- * Use after {@link openContacts} when the test needs the list or add flow — not when asserting
- * the intro itself (e.g. gating spec).
- */
-export async function dismissContactsIntroIfPresent() {
-  try {
-    await elementById('ContactsIntro').waitForDisplayed({ timeout: 3000 });
-  } catch {
-    return;
-  }
-  await tap('ContactsIntro-button');
-  await sleep(500);
-}
-
-/**
  * Opens the Profile entry from the drawer menu.
  */
 export async function openProfile() {
