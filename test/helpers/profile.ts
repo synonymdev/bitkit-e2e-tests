@@ -153,7 +153,9 @@ export async function addContact({
     await tap('ContactsIntro-button');
   } else if (
     firstContact ||
-    (await elementById('ContactsEmptyAddButton').isDisplayed().catch(() => false))
+    (await elementById('ContactsEmptyAddButton')
+      .isDisplayed()
+      .catch(() => false))
   ) {
     await elementById('ContactsEmptyAddButton').waitForDisplayed();
     await tap('ContactsEmptyAddButton');
