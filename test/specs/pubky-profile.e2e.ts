@@ -32,6 +32,7 @@ import {
   verifyMyProfileDetails,
   verifyPubkyString,
   verifyContactDetails,
+  ADD_CONTACT_DUPLICATE_CONTACT_MESSAGE_SNIPPET,
 } from '../helpers/profile';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
@@ -165,6 +166,12 @@ describe('@pubky_profile - Pubky profile', () => {
           await addContact({ pubky: stagingContact.pubky, firstContact: i === 0 });
           await verifyContactRowDisplayed(stagingContact.pubky);
         }
+
+        // try add duplicate contact
+        // await addContact({ pubky: STAGING_TEST_CONTACTS[0].pubky, firstContact: false });
+        // await expect(elementById('AddContactAdd')).toBeDisabled();
+        // await elementByText(ADD_CONTACT_DUPLICATE_CONTACT_MESSAGE_SNIPPET, 'contains').waitForDisplayed();
+        // await swipeFullScreen('down');
 
         // delete contacts
         for (const c of STAGING_TEST_CONTACTS) {

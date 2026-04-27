@@ -127,6 +127,7 @@ export async function saveEditContact() {
 export const ADD_CONTACT_INVALID_KEY_MESSAGE_SNIPPET = 'Invalid pubky key format';
 /** Avoids apostrophe in iOS predicate `CONTAINS` matchers; matches EN copy around "add your own pubky". */
 export const ADD_CONTACT_OWN_PUBKY_MESSAGE_SNIPPET = 'add your own pubky';
+export const ADD_CONTACT_DUPLICATE_CONTACT_MESSAGE_SNIPPET = 'already in your contacts';
 
 /**
  * Opens Contacts → add (+) → enters `pubky` in the sheet and dismisses the keyboard.

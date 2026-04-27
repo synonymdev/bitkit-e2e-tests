@@ -1,6 +1,6 @@
 # Pubky profile & contacts — manual E2E charter
 
-Charter for QA around profile creation, Pubky Ring import, and contacts. Use while the feature is landing; automate later via WebdriverIO + `ciIt()` when flows and infra are stable.
+Charter for QA around profile creation, Pubky Ring import, and contacts. Use alongside the WebdriverIO `@pubky_profile` specs: keep high-value stable flows automated and use the remaining checklist for manual / exploratory coverage while the feature is landing.
 
 PR context: `bitkit-android#824`, `bitkit-ios#476`.
 
@@ -73,7 +73,7 @@ With no profile created yet, every entry point should funnel into the choice scr
 4. Character limits (if enforced by the UI) prevent oversize inputs without crashing.
 5. **Delete Profile** lives at the bottom of this Edit screen (the only entry point in the normal UI). Covered by B.8.
 
-### B.4 Add contact (manual)
+### B.4 Add contact
 
 1. Contacts → **Add contact** → paste a valid pubky → Continue → contact is added; opening detail shows the remote profile snapshot (name, image, links).
 2. Scan-QR path (if exposed): scan a pubky QR → same flow.
@@ -82,12 +82,16 @@ With no profile created yet, every entry point should funnel into the choice scr
 5. **Self-add guard**: pasting your own pubky shows an explicit error (Android string: `contacts__add_error_self`); contact is **not** created.
 6. **Duplicate add** (same pubky already in contacts) → de-duplicated or clear message.
 
+> **`@pubky_profile_2`** adds one staging contact after editing the profile, then verifies the row persists after app relaunch and wallet restore. **`@pubky_profile_3`** covers malformed pubky and self-add inline validation, then adds both staging contacts. Scan-QR, paste-from-clipboard, duplicate-add handling, and full remote snapshot assertions (avatar/links) remain manual.
+
 ### B.5 Edit contact (local snapshot)
 
 1. Contacts → open a contact → Edit.
 2. Edits to **Notes** and any local fields **persist locally** and **do not** update the remote Pubky profile of that contact — this is a local snapshot.
 3. Name field behavior: verify whether the app allows renaming or is display-only; whichever is shipped should match across Android and iOS.
 4. Manual refresh / pull-to-refresh (if present) re-fetches the remote snapshot; local Notes are preserved.
+
+> **`@pubky_profile_4`** creates Wallet A, creates Wallet B, adds Wallet A as a contact on Wallet B, edits Wallet A's contact name/notes on Wallet B, verifies the edited contact detail locally, then restores Wallet A and verifies Wallet A's own profile is unchanged. Manual refresh / pull-to-refresh behavior and local note preservation after refresh are not automated.
 
 ### B.6 Contacts list
 
@@ -96,7 +100,18 @@ With no profile created yet, every entry point should funnel into the choice scr
 3. Tapping a contact opens detail; tapping "My profile" opens own profile.
 4. Empty state (profile exists, no contacts) shows the empty copy and an Add-contact CTA.
 
-### B.7 Delete profile (homeserver wipe)
+> **`@pubky_profile_2`** / **`@pubky_profile_3`** verify contact rows can be found by `Contact_<pubkey>`. **`@pubky_profile_3`** also verifies rows are gone after delete. Header copy, `ContactsMyProfile`, tapping My Profile, and empty-state copy remain manual.
+
+### B.7 Delete contact
+
+1. Contacts → open a contact → Edit → Delete Contact → confirmation → **Yes, Delete**.
+2. Success toast appears ("Contact deleted") and the contact row is removed.
+3. Deleting the last contact returns to the empty contacts state without a stale header/list state.
+4. Error path: if delete fails, show a clear error and keep the contact available.
+
+> **`@pubky_profile_3`** deletes both staging contacts, waits for `ContactDeletedToast`, and verifies each contact row is absent. Delete failure/error handling remains manual.
+
+### B.8 Delete profile (homeserver wipe)
 
 1. Profile → Edit → scroll to the bottom → **Delete Profile** → confirmation ("Delete Profile?" / "This will delete your current Pubky profile data. You can create a new profile for this pubky later.") → confirm.
 2. After delete: gated back to `PubkyChoice` (same as **section A**).
@@ -105,12 +120,12 @@ With no profile created yet, every entry point should funnel into the choice scr
 
 > **`@pubky_profile_2`** also ends with delete → recreate and asserts the same seed-derived pubky. Homeserver error path in (4) is manual.
 
-### B.8 Wipe wallet
+### B.9 Wipe wallet
 
 1. Settings → reset/wipe wallet → onboard a **new seed** → no profile, different pubky → repeat **section A**.
 2. Onboard the **same seed** on a fresh install → profile and contacts should be recovered from the homeserver (if not Deleted first).
 
-> **`@pubky_profile_2`** exercises **(2) in part**: it runs the standard E2E **backup → `restoreWallet(seed)`** flow (after profile exists), then checks profile **details and pubkey** and **pubky (copy)** still match. It is not a full “fresh install from IPA” story.
+> **`@pubky_profile_2`** exercises **(2) in part**: it runs the standard E2E **backup → `restoreWallet(seed)`** flow (after profile and one contact exist), then checks profile **details**, **pubky copy**, and the added contact row still match. It is not a full “fresh install from IPA” story.
 
 ---
 
@@ -166,9 +181,9 @@ Use this table to verify persistence expectations. Fill in observed behavior if 
 | --------------------------------------- | ---- | ----- | -------------- | -------------- | ----------------------- |
 | Disconnect from empty state + reconnect | same | same  | preserved      | re-synced      | preserved               |
 | Delete profile + recreate (same wallet) | same | same  | wiped then new | tbd — verify   | tbd — verify            |
-| Wipe wallet, restore same seed          | same | same  | preserved      | re-synced      | tbd — verify            |
+| Wipe wallet, restore same seed          | same | same  | preserved      | re-synced (`@pubky_profile_2`) | tbd — verify            |
 | Wipe wallet, new seed                   | new  | new   | none           | none           | none                    |
-| App reinstall, same seed                | same | same  | preserved      | re-synced      | tbd — verify            |
+| App reinstall, same seed                | same | same  | preserved      | re-synced (`@pubky_profile_2`) | tbd — verify            |
 
 ---
 
@@ -197,9 +212,14 @@ Use this table to verify persistence expectations. Fill in observed behavior if 
 
 ## H. Automation strategy
 
-- **Spec**: `test/specs/pubky-profile.e2e.ts` — profile-only for now; contacts and Ring stay manual here until more specs exist. How/whether it runs in automation is a pipeline concern (`AGENTS.md`); this section only describes the spec’s intent.
+- **Spec**: `test/specs/pubky-profile.e2e.ts` — covers profile creation/edit/delete, contact add/delete/edit basics, and persistence. Ring import remains manual until reliable automation exists. How/whether it runs in automation is a pipeline concern (`AGENTS.md`); this section only describes the spec’s intent.
 - **Isolation**: `beforeEach` uses `reinstallApp()` and `completeOnboarding()` so a single `ciIt` can be run alone via `--mochaOpts.grep "@pubky_profile_N"`.
-- **What the two tests do**: `@pubky_profile_1` — section A gating (no profile). `@pubky_profile_2` — one chained flow: create → copy/verify pubky → update profile, verify on screen → `launchFreshApp`, verify again → **wait for backup, restore wallet from seed**, verify details + pubky → remove link and tag, save, verify → delete profile → create profile again, same pubky. Does not cover Ring, full contacts tests, or avatar.
+- **What the tests do**:
+  - `@pubky_profile_1` — section A gating (no profile).
+  - `@pubky_profile_2` — create → copy/verify pubky → update profile → add one staging contact → `launchFreshApp`, verify profile + contact → **wait for backup, restore wallet from seed**, verify profile + pubky + contact → remove link and tag → delete profile → create profile again, same pubky.
+  - `@pubky_profile_3` — invalid pubky and self-add validation → add both staging contacts → delete both contacts and verify rows are absent.
+  - `@pubky_profile_4` — Wallet A profile edited as a contact on Wallet B remains a local contact edit; restoring Wallet A verifies its own profile was not changed.
+- **Known gaps in automation**: Ring import, avatar add/remove, scan-QR contact add, paste-from-clipboard contact add, duplicate-add behavior, contacts list header/My Profile row/empty copy, contact refresh behavior, profile/contact field-boundary behavior, and network/error paths.
 - **Tags**: suite `@pubky_profile`; tests `@pubky_profile_1`, `@pubky_profile_2`, …; reserve e.g. `@pubky_ring_required` if you add Ring-specific specs later.
 - **Use `ciIt()`** instead of `it()` in this suite so it matches the repo’s `ci_run_*` / lockfile retry pattern when you wire runs up.
 - Shared test IDs: **H.1** below. Implementation lives under `test/helpers/` next to other E2E specs.
@@ -216,11 +236,15 @@ Use the **same string** on Android and iOS so specs stay platform-agnostic (`ele
 | Create profile         | `CreateProfileAvatar`, `CreateProfileUsername`, `CreateProfileSave`                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Pay contacts           | `PayContactsToggle`, `PayContactsContinue`                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Profile (view)         | `ProfileEdit`, `ProfileCopy`, `ProfileShare`; empty/error: `ProfileRetry`, `ProfileEmptySignOut` (iOS)                                                                                                                                                                                                                                                                                                                                                                                                                |
-| Profile (presentation) | **`ProfileViewName`**, **`ProfileViewNotes`** (own profile only; `CenteredProfileHeader` passes tags on **Profile** screen). **`QRCode`** — same test id as Receive; pubky is read in E2E via **`getUriFromQRCode()`** in `test/helpers/actions.ts` (shared with receive flows). Links: **`ProfileLinkLabel_0`**, **`ProfileLinkValue_0`**, … (index matches link order). Tags section header: **`ProfileViewTagsHeader`**. Each tag chip text: **`Tag-<tagtext>`** (e.g. `Tag-ere`) on the label `Text` / `BodySSB`. |
+| Profile (presentation) | **`ProfileViewName`**, **`ProfileViewNotes`** (own profile only; `CenteredProfileHeader` passes tags on **Profile** screen). **`ProfileQRCode`** is read in E2E via **`getUriFromQRCode()`** in `test/helpers/actions.ts` (shared with receive flows). Links: **`ProfileLinkLabel_0`**, **`ProfileLinkValue_0`**, … (index matches link order). Tags section header: **`ProfileViewTagsHeader`**. Each tag chip text: **`Tag-<tagtext>`** (e.g. `Tag-ere`) on the label `Text` / `BodySSB`. |
 | Edit profile           | `EditProfileAvatar`, `ProfileEditName`, `ProfileEditBio`, `ProfileEditAddLink`, `ProfileEditLink_0` (URL field), `ProfileEditLinkRemove_0` (trash on that row), …, `ProfileEditAddTag`, remove chip `Tag-<tag>-delete`, `ProfileEditDelete`, **`ProfileEditCancel`**, **`ProfileEditSave`**                                                                                                                                                                                                                            |
 | Add link sheet         | `AddLinkLabel`, `AddLinkUrl`, `AddLinkSave`, `AddLinkSuggestions`                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Add tag sheet          | `AddTagInput`, `AddTagSave`, `AddTagSuggestions`                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Contacts list          | `ContactsAddButton`, `ContactsEmptyAddButton`, `ContactsMyProfile`, `Contact_<pubkey>`                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Add contact            | `AddContactPubkyField`, `AddContactPaste`, `AddContactScanQR`, `AddContactAdd`, `AddContactRetry`, `AddContactDiscard`, `AddContactSave`                                                                                                                                                                                                                                                                                                                                                                             |
+| Contact detail         | `ContactViewName`, `ContactViewNotes`, `ContactCopy`, `ContactShare`, `ContactEdit`, `ContactDelete`                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Toasts                 | `ProfilePubkyCopiedToast`, `ProfileUpdatedToast`, `ContactSavedToast`, `ContactUpdatedToast`, `ContactDeletedToast`                                                                                                                                                                                                                                                                                                                                                                                                    |
 
 Ring-only / iOS-only extras (when automating C.x): `PubkyChoiceCancelRing`, `PubkyRingAuthorize`, `PubkyRingCancelAuth`, `PubkyRingDownload`.
 
-Contacts list rows: `ContactsMyProfile`, `Contact_<pubkey>` (existing) — verify in app if still current when adding contact specs.
+Contacts intro note: after a profile exists, first opening **Contacts** shows `ContactsIntro`; its `ContactsIntro-button` now behaves as an add-contact entry point. `ContactsEmptyAddButton` appears only after the intro is gone and the user has zero contacts.
