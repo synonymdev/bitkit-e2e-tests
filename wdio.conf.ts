@@ -4,6 +4,9 @@ import fs from 'node:fs';
 import { grantIOSCameraPermission } from './test/helpers/setup';
 
 const isAndroid = process.env.PLATFORM === 'android';
+const androidUdid = process.env.ANDROID_UDID;
+const androidDeviceName = process.env.ANDROID_DEVICE_NAME || 'Pixel_6';
+const androidPlatformVersion = process.env.ANDROID_PLATFORM_VERSION || '13.0';
 const iosDeviceName = process.env.SIMULATOR_NAME || 'iPhone 17';
 const iosPlatformVersion = process.env.SIMULATOR_OS_VERSION || '26.0.1';
 
@@ -71,8 +74,9 @@ export const config: WebdriverIO.Config = {
       ? {
           platformName: 'Android',
           'appium:automationName': 'UiAutomator2',
-          'appium:deviceName': 'Pixel_6',
-          'appium:platformVersion': '13.0',
+          ...(androidUdid ? { 'appium:udid': androidUdid } : {}),
+          'appium:deviceName': androidDeviceName,
+          'appium:platformVersion': androidPlatformVersion,
           'appium:app': androidApp,
           'appium:autoGrantPermissions': true,
           // 'appium:waitForIdleTimeout': 1000,
