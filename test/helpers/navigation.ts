@@ -27,6 +27,7 @@ export async function openSupport() {
  * Closes the drawer and navigates back to the Wallet home screen.
  */
 export async function doNavigationClose() {
+  await sleep(500);
   await tap('HeaderMenu');
   await tap('DrawerWallet');
   await sleep(500);
