@@ -163,9 +163,13 @@ describe('@widgets - Widgets', () => {
         reverse: true,
         timeout: 5000,
       });
+      await elementByText('Bitcoin Blocks').waitForDisplayed({
+        reverse: true,
+        timeout: 5000,
+      });
     } else {
       await elementByText('Bitcoin Price').waitForDisplayed();
+      await elementByText('Bitcoin Blocks').waitForDisplayed();
     }
-    await elementByText('Bitcoin Blocks').waitForDisplayed();
   });
 });
