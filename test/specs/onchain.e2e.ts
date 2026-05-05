@@ -57,8 +57,8 @@ describe('@onchain - Onchain', () => {
 
   ciIt('@onchain_1 - Receive and send some out', async () => {
     // receive some first
-    const satsToReceive = 100_000_000;
-    await receiveOnchainFunds({ sats: satsToReceive, expectHighBalanceWarning: true });
+    const satsToReceive = 100_000;
+    await receiveOnchainFunds({ sats: satsToReceive, expectHighBalanceWarning: false });
 
     // then send out 10 000
     const coreAddress = await getExternalAddress();
