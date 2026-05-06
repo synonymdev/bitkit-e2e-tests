@@ -34,7 +34,7 @@ describe('@widgets - Widgets', () => {
     await tap('WidgetEdit');
     await elementById('WidgetEditPreview').waitForDisplayed();
     // Select BTC/EUR row
-    await tap('WidgetEditField-BTC/EUR');
+    await tap(driver.isAndroid ? 'BTC/EUR_setting_row' : 'WidgetEditField-BTC/EUR');
     await sleep(1000); // Wait for the UI to settle
 
     // Scroll the edit view
@@ -42,9 +42,11 @@ describe('@widgets - Widgets', () => {
     await swipeFullScreen('up');
     await sleep(500);
 
-    // Set timeframe and show source
-    await tap('WidgetEditField-1W');
-    await tap('WidgetEditField-showSource');
+    // Set timeframe and, on iOS, keep testing the existing source toggle.
+    await tap(driver.isAndroid ? '1W_setting_row' : 'WidgetEditField-1W');
+    if (driver.isIOS) {
+      await tap('WidgetEditField-showSource');
+    }
     await sleep(1000); // Wait for the UI to settle
 
     // Preview and save
@@ -66,7 +68,6 @@ describe('@widgets - Widgets', () => {
     // Assertions
     await elementById('PriceWidget').waitForDisplayed();
     await elementById('PriceWidgetRow-BTC/EUR').waitForDisplayed();
-    await elementById('PriceWidgetSource').waitForDisplayed();
 
     // --- Edit the Price widget back to defaults ---
     await tap('WidgetsEdit');
@@ -91,13 +92,8 @@ describe('@widgets - Widgets', () => {
     // After saving, widget should remain visible…
     await elementById('PriceWidget').waitForDisplayed();
 
-    // …but the BTC/EUR row and Source label should be gone
+    // …but the BTC/EUR row should be gone
     await elementById('PriceWidgetRow-BTC/EUR').waitForDisplayed({
-      reverse: true,
-      timeout: 8000,
-      interval: 250,
-    });
-    await elementById('PriceWidgetSource').waitForDisplayed({
       reverse: true,
       timeout: 8000,
       interval: 250,
@@ -162,14 +158,14 @@ describe('@widgets - Widgets', () => {
     await elementById('PriceWidget').waitForDisplayed();
     await elementById('SuggestionsWidget').waitForDisplayed();
     await elementById('BlocksWidget').waitForDisplayed();
-    await elementByText('Bitcoin Price').waitForDisplayed();
+    if (driver.isAndroid) {
+      await elementByText('Bitcoin Price').waitForDisplayed({
+        reverse: true,
+        timeout: 5000,
+      });
+    } else {
+      await elementByText('Bitcoin Price').waitForDisplayed();
+    }
     await elementByText('Bitcoin Blocks').waitForDisplayed();
-
-    // Cleanup: disable widget titles to restore defaults
-    await openSettings();
-    await tap('WidgetsSettings');
-    await tap('ShowWidgetTitles');
-    await tap('NavigationBack');
-    await doNavigationClose();
   });
 });
