@@ -55,7 +55,7 @@ async function openContactActivity(publicKey: string) {
   await tap('ContactActivity');
 }
 
-describe('@paykit - Public payments', () => {
+describe('@pubky @paykit - Public payments', () => {
   beforeEach(async () => {
     await reinstallApp();
     await completeOnboarding();
