@@ -3,6 +3,8 @@ import {
   doNavigationClose,
   elementById,
   elementByText,
+  enterAddress,
+  enterAddressViaScanPrompt,
   getSeed,
   restoreWallet,
   sleep,
@@ -43,6 +45,24 @@ async function cleanupProfile(label: string) {
   } catch (error) {
     console.warn(`Could not cleanup Pubky profile for ${label}:`, error);
   }
+}
+
+async function verifyAddContactRoute(publicKey: string) {
+  await browser.waitUntil(
+    async () =>
+      (await elementById('AddContactRetrievingTitle').isDisplayed().catch(() => false)) ||
+      (await elementById('AddContactSave').isDisplayed().catch(() => false)) ||
+      (await elementById('AddContactPay').isDisplayed().catch(() => false)),
+    {
+      timeout: 60_000,
+      timeoutMsg: `expected add contact route for ${publicKey}`,
+    }
+  );
+}
+
+async function discardAddContactRoute() {
+  await elementById('AddContactDiscard').waitForDisplayed();
+  await tap('AddContactDiscard');
 }
 
 // Covers scenarios from docs/pubky-profile-manual-e2e.md.
@@ -169,6 +189,7 @@ describe('@pubky_profile - Pubky profile', () => {
         try {
           const { pubky } = await createProfile({ name: 'Contact Validation Professor' });
           hasProfile = true;
+          const [firstStagingContact] = STAGING_TEST_CONTACTS;
 
           // invalid pubky
           const invalidPubky = 'pubkyinvalid';
@@ -185,6 +206,18 @@ describe('@pubky_profile - Pubky profile', () => {
           await expect(elementById('AddContactAdd')).toBeDisabled();
           await elementByText(ADD_CONTACT_OWN_PUBKY_MESSAGE_SNIPPET, 'contains').waitForDisplayed();
           await swipeFullScreen('down');
+
+          await doNavigationClose();
+
+          // route unsaved pubky from Send → Enter manually
+          await enterAddress(firstStagingContact.pubky, { acceptCameraPermission: true });
+          await verifyAddContactRoute(firstStagingContact.pubky);
+          await discardAddContactRoute();
+
+          // route unsaved pubky from QR scanner prompt
+          await enterAddressViaScanPrompt(firstStagingContact.pubky, { acceptCameraPermission: false });
+          await verifyAddContactRoute(firstStagingContact.pubky);
+          await discardAddContactRoute();
 
           // add valid contacts
           for (const [i, stagingContact] of STAGING_TEST_CONTACTS.entries()) {
