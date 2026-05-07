@@ -7,11 +7,33 @@ export const FIXTURES_DIR = path.join(REPO_ROOT, 'test', 'fixtures');
 const SCRIPT_PATH = path.join(REPO_ROOT, 'scripts', 'push-fixture-media-to-devices.sh');
 
 /** Staging regtest users (homegate) for contact E2E — remote profiles must exist for tests that add them. */
-export type PubkyContact = { name: string; pubky: string };
+export type PubkyContact = { name: string; pubky: string; ableToPay: boolean };
 
 export const STAGING_TEST_CONTACTS: readonly PubkyContact[] = [
-  { name: 'Contact #1', pubky: 'pubkywxqciwrn63jc9oabfrdgq9ju9toxb6pbmtstyy9gkkxs41gk3r5o' },
-  { name: 'Contact #2', pubky: 'pubkyqgzi1fg1d1m5yp44euu7g5g7t86c3bipi7ci8ca9czc367q779zy' },
+  {
+    name: 'Contact #1',
+    pubky: 'pubkywxqciwrn63jc9oabfrdgq9ju9toxb6pbmtstyy9gkkxs41gk3r5o',
+    ableToPay: false,
+  },
+  {
+    name: 'Contact #2',
+    pubky: 'pubkyqgzi1fg1d1m5yp44euu7g5g7t86c3bipi7ci8ca9czc367q779zy',
+    ableToPay: false,
+  },
+] as const;
+
+/** Staging regtest contacts with public Paykit endpoints published. */
+export const STAGING_PAYKIT_CONTACTS: readonly PubkyContact[] = [
+  {
+    name: 'Contact Paykit #1',
+    pubky: 'pubkyftnjb3c8a4oqcdtfi48faninkt6bwqjwiwcf9zd64dgxriaetxho',
+    ableToPay: true,
+  },
+  {
+    name: 'Contact Paykit #2',
+    pubky: 'pubky36ztgwiu8e1qdz5fhfh671qqq8srw7q8au4kkhew8bg3w8pe1wty',
+    ableToPay: true,
+  },
 ] as const;
 
 export type PushFixtureMediaOptions = {

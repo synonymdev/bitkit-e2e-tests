@@ -19,8 +19,10 @@ import {
   ADD_CONTACT_INVALID_KEY_MESSAGE_SNIPPET,
   ADD_CONTACT_OWN_PUBKY_MESSAGE_SNIPPET,
   createProfile,
+  cleanupProfile,
   deleteContact,
   deleteProfile,
+  discardAddContactRoute,
   openEditProfile,
   readPubkyFromProfileCopy,
   removeEditProfileLinkAt,
@@ -34,36 +36,10 @@ import {
   verifyMyProfileDetails,
   verifyPubkyString,
   verifyContactDetails,
+  verifyAddContactRoute,
 } from '../helpers/profile';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
-
-async function cleanupProfile(label: string) {
-  try {
-    await deleteProfile();
-    console.info(`Cleaned up Pubky profile for ${label}`);
-  } catch (error) {
-    console.warn(`Could not cleanup Pubky profile for ${label}:`, error);
-  }
-}
-
-async function verifyAddContactRoute(publicKey: string) {
-  await browser.waitUntil(
-    async () =>
-      (await elementById('AddContactRetrievingTitle').isDisplayed().catch(() => false)) ||
-      (await elementById('AddContactSave').isDisplayed().catch(() => false)) ||
-      (await elementById('AddContactPay').isDisplayed().catch(() => false)),
-    {
-      timeout: 60_000,
-      timeoutMsg: `expected add contact route for ${publicKey}`,
-    }
-  );
-}
-
-async function discardAddContactRoute() {
-  await elementById('AddContactDiscard').waitForDisplayed();
-  await tap('AddContactDiscard');
-}
 
 // Covers scenarios from docs/pubky-profile-manual-e2e.md.
 // Each test reinstalls + onboards so any single test can be run in isolation
@@ -211,12 +187,16 @@ describe('@pubky_profile - Pubky profile', () => {
 
           // route unsaved pubky from Send → Enter manually
           await enterAddress(firstStagingContact.pubky, { acceptCameraPermission: true });
-          await verifyAddContactRoute(firstStagingContact.pubky);
+          await verifyAddContactRoute(firstStagingContact.pubky, {
+            ableToPay: firstStagingContact.ableToPay,
+          });
           await discardAddContactRoute();
 
           // route unsaved pubky from QR scanner prompt
           await enterAddressViaScanPrompt(firstStagingContact.pubky, { acceptCameraPermission: false });
-          await verifyAddContactRoute(firstStagingContact.pubky);
+          await verifyAddContactRoute(firstStagingContact.pubky, {
+            ableToPay: firstStagingContact.ableToPay,
+          });
           await discardAddContactRoute();
 
           // add valid contacts

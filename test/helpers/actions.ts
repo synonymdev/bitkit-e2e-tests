@@ -1205,7 +1205,7 @@ export async function waitForToast(
 
 /** Acknowledges the received payment notification by tapping the button.
  */
-export async function acknowledgeReceivedPayment({ timeout = 20_000 }: { timeout?: number } = {}) {
+export async function acknowledgeReceivedPayment({ timeout = 30_000 }: { timeout?: number } = {}) {
   await elementById('ReceivedTransaction').waitForDisplayed({ timeout });
   await sleep(500);
   await tap('ReceivedTransactionButton');

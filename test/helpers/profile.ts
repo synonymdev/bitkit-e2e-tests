@@ -62,6 +62,15 @@ export async function deleteProfile() {
   await elementById('PubkyChoiceCreate').waitForDisplayed();
 }
 
+export async function cleanupProfile(label: string) {
+  try {
+    await deleteProfile();
+    console.info(`Cleaned up Pubky profile for ${label}`);
+  } catch (error) {
+    console.warn(`Could not cleanup Pubky profile for ${label}:`, error);
+  }
+}
+
 /**
  * Navigate from the Wallet home to the PubkyChoice screen, covering the
  * "first visit" case where ProfileIntro is shown before the choice screen.
@@ -177,6 +186,35 @@ export async function addContact({
   await tap('AddContactSave');
   await waitForToast('ContactSavedToast', { waitToDisappear: driver.isIOS });
   await elementById('ContactsAddButton').waitForDisplayed();
+}
+
+export async function verifyAddContactRoute(
+  publicKey: string,
+  { ableToPay }: { ableToPay?: boolean } = {}
+) {
+  await browser.waitUntil(
+    async () =>
+      (await elementById('AddContactRetrievingTitle').isDisplayed().catch(() => false)) ||
+      (await elementById('AddContactSave').isDisplayed().catch(() => false)) ||
+      (await elementById('AddContactPay').isDisplayed().catch(() => false)),
+    {
+      timeoutMsg: `expected add contact route for ${publicKey}`,
+    }
+  );
+
+  if (ableToPay === undefined) {
+    return;
+  }
+
+  await elementById('AddContactSave').waitForDisplayed();
+  await expect(await elementById('AddContactPay').isDisplayed().catch(() => false)).toBe(
+    ableToPay
+  );
+}
+
+export async function discardAddContactRoute() {
+  await elementById('AddContactDiscard').waitForDisplayed();
+  await tap('AddContactDiscard');
 }
 
 /** Opens Contacts and waits for a row with test id `Contact_<publicKey>`. */
