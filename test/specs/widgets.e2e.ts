@@ -5,12 +5,23 @@ import {
   tap,
   swipeFullScreen,
   completeOnboarding,
-  deleteAllDefaultWidgets,
   doNavigationClose,
 } from '../helpers/actions';
 import { openSettings } from '../helpers/navigation';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
+import {
+  addWidget,
+  deleteAllDefaultWidgets,
+  deleteWidget,
+  expectWidgetPresent,
+  expectWidgetSavedInEditList,
+  openSavedWidgetPreview,
+  openWidgetPreview,
+  openWidgetSettings,
+  scrollHomeToWidgets,
+  type WidgetId,
+} from '../helpers/widgets';
 
 describe('@widgets - Widgets', () => {
   beforeEach(async () => {
@@ -18,134 +29,107 @@ describe('@widgets - Widgets', () => {
     await completeOnboarding();
   });
 
-  ciIt('@widgets_1 - Can add/edit/remove a widget', async () => {
-    // delete all default widgets
+  ciIt('@widgets_1 - Can add/edit/remove the price widget', async () => {
     await deleteAllDefaultWidgets();
 
-    // Add a widget
-    await tap('WidgetsAdd');
-    // First-time widgets onboarding
-    await tap('WidgetsOnboarding-button');
-    // Pick the Price widget
-    await tap('WidgetListItem-price');
-    // Expect the “Default” preset is selected
+    await openWidgetPreview('price');
     await elementByText('Default').waitForDisplayed();
-    // Open edit options
-    await tap('WidgetEdit');
-    await elementById('WidgetEditPreview').waitForDisplayed();
-    // Select BTC/EUR row
-    await tap(driver.isAndroid ? 'BTC/EUR_setting_row' : 'WidgetEditField-BTC/EUR');
-    await sleep(1000); // Wait for the UI to settle
+    await openWidgetSettings('price');
 
-    // Scroll the edit view
+    await tap(driver.isAndroid ? 'BTC/EUR_setting_row' : 'WidgetEditField-BTC/EUR');
+    await sleep(1000);
+
     await swipeFullScreen('up');
     await swipeFullScreen('up');
     await sleep(500);
 
-    // Set timeframe and, on iOS, keep testing the existing source toggle.
     await tap(driver.isAndroid ? '1W_setting_row' : 'WidgetEditField-1W');
     if (driver.isIOS) {
       await tap('WidgetEditField-showSource');
     }
-    await sleep(1000); // Wait for the UI to settle
+    await sleep(1000);
 
-    // Preview and save
     await tap('WidgetEditPreview');
     await sleep(500);
     await tap('WidgetSave');
-    // sometimes flaky on GH actions, try again
     try {
-      await elementById('PriceWidget').waitForDisplayed();
+      await expectWidgetPresent('price');
     } catch {
       await tap('WidgetSave');
     }
-    await elementById('PriceWidget').waitForDisplayed();
+    await expectWidgetPresent('price');
 
-    // Back on Home: scroll a bit to ensure widget is in view
-    await elementById('PriceWidget').waitForDisplayed();
-    await swipeFullScreen('up');
-
-    // Assertions
-    await elementById('PriceWidget').waitForDisplayed();
+    await scrollHomeToWidgets();
     await elementById('PriceWidgetRow-BTC/EUR').waitForDisplayed();
 
-    // --- Edit the Price widget back to defaults ---
-    await tap('WidgetsEdit');
-
-    // Open edit within the Price widget specifically
-    await tap('Bitcoin Price_WidgetActionEdit');
-
-    // "Custom" should be visible when editing a customized widget
+    await openSavedWidgetPreview('price');
     await elementByText('Custom').waitForDisplayed();
-
-    // reset options to defaults and save
-    await tap('WidgetEdit');
+    await openWidgetSettings('price');
     await tap('WidgetEditReset');
-    await elementById('WidgetEditPreview').waitForDisplayed();
-    await sleep(1000); // Wait for the UI to settle
+    await sleep(1000);
     await tap('WidgetEditPreview');
     await elementById('WidgetSave').waitForDisplayed();
-    await sleep(1000); // Wait for the UI to settle
+    await sleep(1000);
     await tap('WidgetSave');
-    await sleep(1000); // Wait for the UI to settle
+    await sleep(1000);
 
-    // After saving, widget should remain visible…
-    await elementById('PriceWidget').waitForDisplayed();
-
-    // …but the BTC/EUR row should be gone
+    await expectWidgetPresent('price');
     await elementById('PriceWidgetRow-BTC/EUR').waitForDisplayed({
       reverse: true,
       timeout: 8000,
       interval: 250,
     });
 
-    // Delete Price Widget
-    await tap('WidgetsEdit');
-    await tap('Bitcoin Price_WidgetActionDelete');
-    await elementByText('Yes, Delete').waitForDisplayed();
-    await elementByText('Yes, Delete').click();
-    await elementById('WidgetsAdd').waitForDisplayed();
+    await deleteWidget('price');
   });
 
-  ciIt('@widgets_2 - Widget settings: reset, show/hide, titles', async () => {
+  ciIt('@widgets_2 - Can add/remove redesigned content widgets', async () => {
+    const contentWidgets: WidgetId[] = ['blocks', 'news', 'facts', 'weather'];
+
     await deleteAllDefaultWidgets();
 
-    // Reset widgets via Widget Settings
+    for (const widget of contentWidgets) {
+      await addWidget(widget);
+      await expectWidgetSavedInEditList(widget);
+
+      if (widget === 'facts') {
+        await openSavedWidgetPreview(widget);
+        await elementById('WidgetEdit').waitForDisplayed({
+          reverse: driver.isAndroid,
+          timeout: 5000,
+        });
+        await tap('NavigationBack');
+      }
+
+      await deleteWidget(widget);
+    }
+  });
+
+  ciIt('@widgets_3 - Widget settings: reset, show/hide, titles', async () => {
+    await deleteAllDefaultWidgets();
+
     await openSettings();
     await tap('WidgetsSettings');
     await tap('ResetWidgets');
     await tap('DialogConfirm');
     await sleep(1000);
 
-    // Verify widgets are restored
-    await swipeFullScreen('up');
-    await elementById('PriceWidget').waitForDisplayed();
-    await elementById('SuggestionsWidget').waitForDisplayed();
-    await elementById('BlocksWidget').waitForDisplayed();
+    await scrollHomeToWidgets();
+    await expectWidgetPresent('price');
+    await expectWidgetPresent('suggestions');
+    await expectWidgetPresent('blocks');
 
-    // Toggle off "Show Widgets"
     await openSettings();
     await tap('WidgetsSettings');
     await tap('ShowWidgets');
     await tap('NavigationBack');
     await doNavigationClose();
 
-    // Verify widgets are hidden on home
-    await swipeFullScreen('up');
-    await elementById('PriceWidget').waitForDisplayed({
-      reverse: true,
-      timeout: 5000,
-    });
-    await elementById('SuggestionsWidget').waitForDisplayed({
-      reverse: true,
-      timeout: 5000,
-    });
-    await elementById('BlocksWidget').waitForDisplayed({
-      reverse: true,
-      timeout: 5000,
-    });
+    await scrollHomeToWidgets();
+    await expectWidgetPresent('price', false, { timeout: 5000 });
+    await expectWidgetPresent('suggestions', false, { timeout: 5000 });
+    await expectWidgetPresent('blocks', false, { timeout: 5000 });
 
-    // Toggle on "Show Widgets" + enable "Show Widget Titles"
     await openSettings();
     await tap('WidgetsSettings');
     await tap('ShowWidgets');
@@ -153,11 +137,10 @@ describe('@widgets - Widgets', () => {
     await tap('NavigationBack');
     await doNavigationClose();
 
-    // Verify widgets visible with titles
-    await swipeFullScreen('up');
-    await elementById('PriceWidget').waitForDisplayed();
-    await elementById('SuggestionsWidget').waitForDisplayed();
-    await elementById('BlocksWidget').waitForDisplayed();
+    await scrollHomeToWidgets();
+    await expectWidgetPresent('price');
+    await expectWidgetPresent('suggestions');
+    await expectWidgetPresent('blocks');
     if (driver.isAndroid) {
       await elementByText('Bitcoin Price').waitForDisplayed({
         reverse: true,
