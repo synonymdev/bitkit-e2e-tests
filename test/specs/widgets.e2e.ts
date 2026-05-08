@@ -36,17 +36,14 @@ describe('@widgets - Widgets', () => {
     await elementByText('Default').waitForDisplayed();
     await openWidgetSettings('price');
 
-    await tap(driver.isAndroid ? 'BTC/EUR_setting_row' : 'WidgetEditField-BTC/EUR');
+    await tap('BTC/EUR_setting_row');
     await sleep(1000);
 
     await swipeFullScreen('up');
     await swipeFullScreen('up');
     await sleep(500);
 
-    await tap(driver.isAndroid ? '1W_setting_row' : 'WidgetEditField-1W');
-    if (driver.isIOS) {
-      await tap('WidgetEditField-showSource');
-    }
+    await tap('1W_setting_row');
     await sleep(1000);
 
     await tap('WidgetEditPreview');
