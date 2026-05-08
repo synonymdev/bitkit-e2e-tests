@@ -3,7 +3,6 @@ import { reinstallApp } from '../helpers/setup';
 import {
   completeOnboarding,
   confirmInputOnKeyboard,
-  deleteAllDefaultWidgets,
   doNavigationClose,
   elementById,
   elementByIdWithin,
@@ -20,6 +19,7 @@ import {
 import { ciIt } from '../helpers/suite';
 import { ensureLocalFunds } from '../helpers/regtest';
 import { openSettings } from '../helpers/navigation';
+import { deleteAllDefaultWidgets } from '../helpers/widgets';
 
 describe('@backup - Backup', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
