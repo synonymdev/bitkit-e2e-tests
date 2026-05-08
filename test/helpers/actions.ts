@@ -2,7 +2,7 @@ import { Buffer } from 'node:buffer';
 
 import type { ChainablePromiseElement } from 'webdriverio';
 import { reinstallApp } from './setup';
-import { deposit, mineBlocks } from './regtest';
+import { deposit, getBackend, mineBlocks } from './regtest';
 import { doNavigationClose, doTriggerTimedSheet, openSettings } from './navigation';
 
 export { doNavigationClose, doTriggerTimedSheet } from './navigation';
@@ -875,25 +875,13 @@ export async function switchAndFundEachAddressType({
     await swipeFullScreen('down');
 
     await deposit(address, satsPerAddressType);
-    let didAcknowledgeReceivedPayment = false;
-    try {
-      await acknowledgeReceivedPayment();
-      didAcknowledgeReceivedPayment = true;
-    } catch {
-      // may already be auto-confirmed on some app versions
-    }
+    const didAcknowledgeReceivedPayment = await acknowledgeReceivedPaymentIfPresent();
     await mineBlocks(1);
     if (waitForSync) {
       await waitForSync();
     }
     if (!didAcknowledgeReceivedPayment) {
-      try {
-        await acknowledgeReceivedPayment();
-      } catch {
-        console.info(
-          '→ Could not acknowledge received payment, probably already confirmed see: synonymdev/bitkit-ios#455, synonymdev/bitkit-android#797...'
-        );
-      }
+      await acknowledgeReceivedPaymentIfPresent();
     }
     await expectTotalBalance(satsPerAddressType * (i + 1));
 
@@ -1139,9 +1127,12 @@ export async function receiveOnchainFunds({
   await swipeFullScreen('down');
   await deposit(address, sats);
 
-  await acknowledgeReceivedPayment();
+  const didAcknowledgeReceivedPayment = await acknowledgeReceivedPaymentIfPresent();
 
   await mineBlocks(blocksToMine);
+  if (!didAcknowledgeReceivedPayment) {
+    await acknowledgeReceivedPaymentIfPresent();
+  }
 
   await expectTotalBalance(sats);
   await expectSavingsBalance(sats);
@@ -1210,6 +1201,24 @@ export async function acknowledgeReceivedPayment({ timeout = 30_000 }: { timeout
   await sleep(500);
   await tap('ReceivedTransactionButton');
   await sleep(300);
+}
+
+export async function acknowledgeReceivedPaymentIfPresent(): Promise<boolean> {
+  if (getBackend() === 'local') {
+    await acknowledgeReceivedPayment();
+    return true;
+  }
+
+  try {
+    await acknowledgeReceivedPayment();
+    return true;
+  } catch (error) {
+    console.info(
+      '→ Could not acknowledge received payment, probably already confirmed or not shown yet.',
+      error
+    );
+    return false;
+  }
 }
 
 /** Acknowledges the external success notification by tapping the button.
