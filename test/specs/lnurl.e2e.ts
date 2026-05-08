@@ -59,7 +59,11 @@ function spendingBalanceLabelSats(satsInteger: number): string {
 }
 
 /** Balance in msats after pay (subtract) or withdraw (add) from a prior msat total. */
-function applyLnurlMsatDelta(balanceMsats: bigint, deltaMsats: number, direction: 'pay' | 'withdraw'): bigint {
+function applyLnurlMsatDelta(
+  balanceMsats: bigint,
+  deltaMsats: number,
+  direction: 'pay' | 'withdraw'
+): bigint {
   const d = BigInt(deltaMsats);
   return direction === 'pay' ? balanceMsats - d : balanceMsats + d;
 }
@@ -358,7 +362,7 @@ describe('@lnurl - LNURL', () => {
         balanceMsats = afterPay;
         await expectTextWithin(
           'ActivitySpending',
-          spendingBalanceLabelSats(Number(balanceMsats / 1000n)),
+          spendingBalanceLabelSats(Number(balanceMsats / 1000n))
         );
         await elementById('ActivityShort-0').waitForDisplayed();
         await expectTextWithin('ActivityShort-0', '-');
@@ -385,7 +389,7 @@ describe('@lnurl - LNURL', () => {
         balanceMsats = afterWithdraw;
         await expectTextWithin(
           'ActivitySpending',
-          spendingBalanceLabelSats(Number(balanceMsats / 1000n)),
+          spendingBalanceLabelSats(Number(balanceMsats / 1000n))
         );
         await elementById('ActivityShort-0').waitForDisplayed();
         await expectTextWithin('ActivityShort-0', '+');

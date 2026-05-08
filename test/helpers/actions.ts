@@ -1,6 +1,8 @@
+import { Buffer } from 'node:buffer';
+
 import type { ChainablePromiseElement } from 'webdriverio';
 import { reinstallApp } from './setup';
-import { deposit, mineBlocks } from './regtest';
+import { deposit, getBackend, mineBlocks } from './regtest';
 import { doNavigationClose, doTriggerTimedSheet, openSettings } from './navigation';
 
 export { doNavigationClose, doTriggerTimedSheet } from './navigation';
@@ -14,7 +16,7 @@ export const sleep = (ms: number) => browser.pause(ms);
 export async function getAccessibleText(element: ChainablePromiseElement): Promise<string> {
   const candidates = driver.isAndroid
     ? ['contentDescription', 'content-desc', 'name', 'text']
-    : ['label', 'value', 'name', 'text'];
+    : ['value', 'label', 'name', 'text'];
 
   for (const attribute of candidates) {
     try {
@@ -393,6 +395,17 @@ export async function multiTap(testId: string, count: number) {
   }
 }
 
+/**
+ * Reads the device clipboard as UTF-8 text (Appium returns base64-encoded content).
+ */
+export async function getClipboardPlaintext(): Promise<string> {
+  const b64 = await driver.getClipboard('plaintext');
+  if (!b64 || b64.length === 0) {
+    return '';
+  }
+  return Buffer.from(b64, 'base64').toString('utf8');
+}
+
 export async function pasteIOSText(testId: string, text: string) {
   if (!driver.isIOS) {
     throw new Error('pasteIOSText can only be used on iOS devices');
@@ -496,6 +509,7 @@ export async function swipeFullScreen(
       ],
     },
   ]);
+  await driver.releaseActions();
   await sleep(500); // Allow time for the swipe to complete
 }
 
@@ -861,25 +875,13 @@ export async function switchAndFundEachAddressType({
     await swipeFullScreen('down');
 
     await deposit(address, satsPerAddressType);
-    let didAcknowledgeReceivedPayment = false;
-    try {
-      await acknowledgeReceivedPayment();
-      didAcknowledgeReceivedPayment = true;
-    } catch {
-      // may already be auto-confirmed on some app versions
-    }
+    const didAcknowledgeReceivedPayment = await acknowledgeReceivedPaymentIfPresent();
     await mineBlocks(1);
     if (waitForSync) {
       await waitForSync();
     }
     if (!didAcknowledgeReceivedPayment) {
-      try {
-        await acknowledgeReceivedPayment();
-      } catch {
-        console.info(
-          '→ Could not acknowledge received payment, probably already confirmed see: synonymdev/bitkit-ios#455, synonymdev/bitkit-android#797...'
-        );
-      }
+      await acknowledgeReceivedPaymentIfPresent();
     }
     await expectTotalBalance(satsPerAddressType * (i + 1));
 
@@ -1010,8 +1012,11 @@ export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise
   return getAddressFromQRCode(which);
 }
 
-export async function getUriFromQRCode(): Promise<string> {
-  const qrCode = await elementById('QRCode');
+/** Reads the encoded string for the `QRCode` element (receive invoice/address URI, profile pubky, etc.). */
+export async function getUriFromQRCode({
+  testId = 'QRCode',
+}: { testId?: string } = {}): Promise<string> {
+  const qrCode = await elementById(testId);
   await qrCode.waitForDisplayed();
   let uri = '';
   const waitTimeoutMs = 15_000;
@@ -1030,7 +1035,7 @@ export async function getUriFromQRCode(): Promise<string> {
       timeoutMsg: `Timed out after ${waitTimeoutMs}ms waiting for QR code URI`,
     }
   );
-  console.info({ uri });
+  console.info('→ QR code URI:', uri);
   return uri;
 }
 
@@ -1122,9 +1127,12 @@ export async function receiveOnchainFunds({
   await swipeFullScreen('down');
   await deposit(address, sats);
 
-  await acknowledgeReceivedPayment();
+  const didAcknowledgeReceivedPayment = await acknowledgeReceivedPaymentIfPresent();
 
   await mineBlocks(blocksToMine);
+  if (!didAcknowledgeReceivedPayment) {
+    await acknowledgeReceivedPaymentIfPresent();
+  }
 
   await expectTotalBalance(sats);
   await expectSavingsBalance(sats);
@@ -1159,8 +1167,15 @@ export type ToastId =
   | 'DevModeEnabledToast'
   | 'DevModeDisabledToast'
   | 'InsufficientSpendingToast'
-  | 'InsufficientSavingsToast';
+  | 'InsufficientSavingsToast'
+  | 'ProfilePubkyCopiedToast'
+  | 'ProfileUpdatedToast'
+  | 'ContactSavedToast'
+  | 'ContactUpdatedToast'
+  | 'ContactDeletedToast';
 
+/** Wait for a toast by test id. Prefer `waitToDisappear` for iOS: success toasts live in a separate
+ * window, so swipe-dismiss (`dismiss: true`) often uses wrong coordinates and blocks later UI. */
 export async function waitForToast(
   toastId: ToastId,
   {
@@ -1171,7 +1186,7 @@ export async function waitForToast(
 ) {
   await elementById(toastId).waitForDisplayed({ timeout });
   if (waitToDisappear) {
-    await elementById(toastId).waitForDisplayed({ reverse: true });
+    await elementById(toastId).waitForDisplayed({ reverse: true, timeout });
     return;
   }
   if (dismiss) {
@@ -1181,11 +1196,29 @@ export async function waitForToast(
 
 /** Acknowledges the received payment notification by tapping the button.
  */
-export async function acknowledgeReceivedPayment({ timeout = 20_000 }: { timeout?: number } = {}) {
+export async function acknowledgeReceivedPayment({ timeout = 30_000 }: { timeout?: number } = {}) {
   await elementById('ReceivedTransaction').waitForDisplayed({ timeout });
   await sleep(500);
   await tap('ReceivedTransactionButton');
   await sleep(300);
+}
+
+export async function acknowledgeReceivedPaymentIfPresent(): Promise<boolean> {
+  if (getBackend() === 'local') {
+    await acknowledgeReceivedPayment();
+    return true;
+  }
+
+  try {
+    await acknowledgeReceivedPayment();
+    return true;
+  } catch (error) {
+    console.info(
+      '→ Could not acknowledge received payment, probably already confirmed or not shown yet.',
+      error
+    );
+    return false;
+  }
 }
 
 /** Acknowledges the external success notification by tapping the button.
