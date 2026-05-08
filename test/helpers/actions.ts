@@ -1423,23 +1423,6 @@ export async function verifyAmountToSend(amount: number) {
   await expectTextWithin('SendNumberField', formatSats(amount));
 }
 
-export async function deleteAllDefaultWidgets() {
-  await swipeFullScreen('up');
-  await swipeFullScreen('up');
-  await tap('WidgetsEdit');
-  for (const w of ['Bitcoin Price', 'Bitcoin Blocks', 'Bitkit Suggestions']) {
-    tap(w + '_WidgetActionDelete');
-    await elementByText('Yes, Delete').waitForDisplayed();
-    await elementByText('Yes, Delete').click();
-    await elementById(w).waitForDisplayed({ reverse: true, timeout: 5000 });
-    await sleep(1000);
-  }
-  await tap('WidgetsEdit');
-  await elementById('PriceWidget').waitForDisplayed({ reverse: true });
-  await elementById('SuggestionsWidget').waitForDisplayed({ reverse: true });
-  await elementById('BlocksWidget').waitForDisplayed({ reverse: true });
-}
-
 export async function attemptRefreshOnHomeScreen() {
   await swipeFullScreen('down');
   await sleep(2000); // wait for the app to settle
