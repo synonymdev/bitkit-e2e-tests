@@ -84,7 +84,7 @@ describe('@widgets - Widgets', () => {
   });
 
   ciIt('@widgets_2 - Can add/remove redesigned content widgets', async () => {
-    const contentWidgets: WidgetId[] = ['blocks', 'news', 'facts'];
+    const contentWidgets: WidgetId[] = ['blocks', 'news', 'facts', 'weather'];
 
     await deleteAllDefaultWidgets();
 

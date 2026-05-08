@@ -1,6 +1,13 @@
 import { elementById, elementByText, sleep, swipeFullScreen, tap } from './actions';
 
-export type WidgetId = 'price' | 'blocks' | 'news' | 'facts' | 'suggestions' | 'calculator';
+export type WidgetId =
+  | 'price'
+  | 'blocks'
+  | 'news'
+  | 'facts'
+  | 'weather'
+  | 'suggestions'
+  | 'calculator';
 
 type WidgetMetadata = {
   listItemId: string;
@@ -33,6 +40,12 @@ const WIDGETS: Record<WidgetId, WidgetMetadata> = {
     actionName: 'Bitcoin Facts',
     homeId: () => (driver.isIOS ? 'FactsWidget' : undefined),
     hasSettings: () => driver.isIOS,
+  },
+  weather: {
+    listItemId: 'WidgetListItem-weather',
+    actionName: 'Bitcoin Weather',
+    homeId: () => (driver.isIOS ? 'WeatherWidget' : undefined),
+    hasSettings: () => true,
   },
   suggestions: {
     listItemId: 'WidgetListItem-suggestions',
