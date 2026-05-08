@@ -193,7 +193,9 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
           await discardAddContactRoute();
 
           // route unsaved pubky from QR scanner prompt
-          await enterAddressViaScanPrompt(firstStagingContact.pubky, { acceptCameraPermission: false });
+          await enterAddressViaScanPrompt(firstStagingContact.pubky, {
+            acceptCameraPermission: false,
+          });
           await verifyAddContactRoute(firstStagingContact.pubky, {
             ableToPay: firstStagingContact.ableToPay,
           });

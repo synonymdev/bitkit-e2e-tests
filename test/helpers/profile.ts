@@ -194,9 +194,15 @@ export async function verifyAddContactRoute(
 ) {
   await browser.waitUntil(
     async () =>
-      (await elementById('AddContactRetrievingTitle').isDisplayed().catch(() => false)) ||
-      (await elementById('AddContactSave').isDisplayed().catch(() => false)) ||
-      (await elementById('AddContactPay').isDisplayed().catch(() => false)),
+      (await elementById('AddContactRetrievingTitle')
+        .isDisplayed()
+        .catch(() => false)) ||
+      (await elementById('AddContactSave')
+        .isDisplayed()
+        .catch(() => false)) ||
+      (await elementById('AddContactPay')
+        .isDisplayed()
+        .catch(() => false)),
     {
       timeoutMsg: `expected add contact route for ${publicKey}`,
     }
@@ -207,9 +213,11 @@ export async function verifyAddContactRoute(
   }
 
   await elementById('AddContactSave').waitForDisplayed();
-  await expect(await elementById('AddContactPay').isDisplayed().catch(() => false)).toBe(
-    ableToPay
-  );
+  await expect(
+    await elementById('AddContactPay')
+      .isDisplayed()
+      .catch(() => false)
+  ).toBe(ableToPay);
 }
 
 export async function discardAddContactRoute() {
