@@ -12,6 +12,7 @@ import {
   parseProbeCommandSuccess,
   resolveProbeTargets,
   runProbeCommand,
+  summarizeProbeCommandFailure,
   writeProbeArtifacts,
   type ProbeResult,
   type ProbeTarget,
@@ -20,6 +21,7 @@ import { ciIt } from '../../helpers/suite';
 
 const WALLET_SYNC_TIMEOUT_MS = 90_000;
 const APP_STATUS_ROW_TIMEOUT_MS = 90_000;
+const DEFAULT_PROBE_DELAY_MS = 10_000;
 
 function resolveEnvValue(name: string): string {
   const value = process.env[name];
@@ -38,6 +40,17 @@ function resolveLnStabilizeDelayMs(): number {
     }
   }
   return process.env.CI ? 45_000 : 10_000;
+}
+
+function resolveProbeDelayMs(): number {
+  const fromEnv = process.env.PROBE_DELAY_MS;
+  if (fromEnv) {
+    const parsed = Number.parseInt(fromEnv, 10);
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      return parsed;
+    }
+  }
+  return DEFAULT_PROBE_DELAY_MS;
 }
 
 async function waitForWalletReady(): Promise<void> {
@@ -92,7 +105,7 @@ async function runProbe(target: ProbeTarget, amountMsat: number): Promise<ProbeR
       durationMs: Date.now() - startedAt,
       bolt11,
       rawProviderResult,
-      error: success ? undefined : 'Probe command returned a failed result',
+      error: success ? undefined : summarizeProbeCommandFailure(rawProviderResult),
     };
   } catch (error) {
     return {
@@ -126,15 +139,23 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
       });
       await waitForWalletReady();
 
-      for (const target of targets) {
-        for (const amountMsat of expandProbeTargetAmounts(target)) {
-          const result = await runProbe(target, amountMsat);
-          results.push(result);
-          console.info(
-            `→ [Probe] ${result.targetName} ${result.amountSats} sats: ${
-              result.success ? 'success' : `failed (${result.error ?? 'unknown'})`
-            }`
-          );
+      const probes = targets.flatMap((target) =>
+        expandProbeTargetAmounts(target).map((amountMsat) => ({ target, amountMsat }))
+      );
+      const probeDelayMs = resolveProbeDelayMs();
+
+      for (const [index, { target, amountMsat }] of probes.entries()) {
+        const result = await runProbe(target, amountMsat);
+        results.push(result);
+        console.info(
+          `→ [Probe] ${result.targetName} ${result.amountSats} sats: ${
+            result.success ? 'success' : `failed (${result.error ?? 'unknown'})`
+          }`
+        );
+
+        if (index < probes.length - 1 && probeDelayMs > 0) {
+          console.info(`→ [Probe] Waiting ${probeDelayMs / 1000}s before next probe...`);
+          await sleep(probeDelayMs);
         }
       }
     } finally {

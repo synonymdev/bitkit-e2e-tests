@@ -117,22 +117,21 @@ export function runProbeCommand(target: ProbeTarget, amountMsat: number, bolt11:
     amountSats,
     timeoutSeconds,
   };
+  const command = [
+    'content',
+    'call',
+    '--uri',
+    shellQuote(`content://${getAppId()}.devtools`),
+    '--method',
+    shellQuote(method),
+    '--arg',
+    shellQuote(JSON.stringify(payload)),
+  ].join(' ');
 
-  return execFileSync(
-    'adb',
-    [
-      'shell',
-      'content',
-      'call',
-      '--uri',
-      `content://${getAppId()}.devtools`,
-      '--method',
-      method,
-      '--arg',
-      JSON.stringify(payload),
-    ],
-    { encoding: 'utf8', timeout: (timeoutSeconds + 10) * 1000 }
-  );
+  return execFileSync('adb', ['shell', command], {
+    encoding: 'utf8',
+    timeout: (timeoutSeconds + 10) * 1000,
+  });
 }
 
 export function parseProbeCommandSuccess(raw: string): boolean {
@@ -143,9 +142,29 @@ export function parseProbeCommandSuccess(raw: string): boolean {
   if (typeof parsed !== 'object' || parsed === null) return false;
 
   if ('success' in parsed) return parsed.success === true;
-  if ('type' in parsed) return parsed.type === 'Success' || parsed.type === 'ProbeSuccess';
+  if ('type' in parsed && typeof parsed.type === 'string') {
+    return parsed.type === 'Success' || parsed.type.endsWith('.ProbeSuccess');
+  }
 
   return false;
+}
+
+export function summarizeProbeCommandFailure(raw: string): string {
+  const result = extractContentCallResult(raw);
+  if (result) {
+    try {
+      const parsed: unknown = JSON.parse(result);
+      if (typeof parsed === 'object' && parsed !== null && 'message' in parsed) {
+        const message = parsed.message;
+        if (typeof message === 'string' && message.length > 0) return message;
+      }
+    } catch {
+      return 'Probe command returned an unparseable result';
+    }
+  }
+
+  const adbError = raw.match(/\[ERROR\]\s*(.+)/);
+  return adbError?.[1]?.trim() || 'Probe command returned a failed result';
 }
 
 export function writeProbeArtifacts(results: ProbeResult[]): void {
@@ -251,8 +270,7 @@ async function fetchJson<T>(url: string): Promise<T> {
 }
 
 function extractContentCallResult(raw: string): string | null {
-  const match = raw.match(/result=({.*})\}?]?\s*$/s);
-  return match?.[1] ?? null;
+  return raw.match(/result=(\{[\s\S]*\})\}\]\s*$/)?.[1] ?? null;
 }
 
 function parsePositiveIntEnv(name: string): number | null {
@@ -273,4 +291,8 @@ function resolveArtifactsDir(): string {
 
 function sanitizeMarkdownCell(value: string): string {
   return value.replace(/\|/g, '\\|').replace(/\s+/g, ' ').trim();
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, "'\\''")}'`;
 }
