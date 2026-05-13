@@ -149,7 +149,7 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
         results.push(result);
         console.info(
           `→ [Probe] ${result.targetName} ${result.amountSats} sats: ${
-            result.success ? 'success' : `failed (${result.error ?? 'unknown'})`
+            result.success ? '✅ success' : `❌ failed (${result.error ?? 'unknown'})`
           }`
         );
 
