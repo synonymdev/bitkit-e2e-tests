@@ -79,6 +79,7 @@ export const config: WebdriverIO.Config = {
           'appium:platformVersion': androidPlatformVersion,
           'appium:app': androidApp,
           'appium:autoGrantPermissions': true,
+          'appium:newCommandTimeout': 300,
           // 'appium:waitForIdleTimeout': 1000,
         }
       : {
