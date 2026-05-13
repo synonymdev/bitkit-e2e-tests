@@ -179,7 +179,7 @@ export function writeProbeArtifacts(results: ProbeResult[]): void {
   fs.writeFileSync(reportPath, report);
 
   if (process.env.GITHUB_STEP_SUMMARY) {
-    fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `\n${report}\n`);
+    fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `\n## Attempt ${resolveAttempt()}\n\n${report}\n`);
   }
 }
 
@@ -201,7 +201,7 @@ export function renderProbeReport(results: ProbeResult[]): string {
         result.amountSats.toString(),
         result.required ? 'yes' : 'no',
         result.invoiceFetched ? 'ok' : 'failed',
-        result.success ? 'ok' : 'failed',
+        result.success ? '✅' : '❌',
         result.durationMs.toString(),
         sanitizeMarkdownCell(result.error ?? ''),
       ].join(' | ')} |`
@@ -287,6 +287,10 @@ function parsePositiveIntEnv(name: string): number | null {
 function resolveArtifactsDir(): string {
   const attempt = process.env.ATTEMPT;
   return attempt ? path.join('artifacts', `attempt-${attempt}`) : 'artifacts';
+}
+
+function resolveAttempt(): string {
+  return process.env.ATTEMPT ?? '1';
 }
 
 function sanitizeMarkdownCell(value: string): string {
