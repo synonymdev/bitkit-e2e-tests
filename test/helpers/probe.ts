@@ -23,6 +23,7 @@ export type ProbeResult = {
   amountSats: number;
   required: boolean;
   attempt: number;
+  retries: number;
   invoiceFetched: boolean;
   success: boolean;
   durationMs: number;
@@ -190,8 +191,8 @@ export function renderProbeReport(results: ProbeResult[]): string {
     '',
     `Required failures: ${failedRequired.length}`,
     '',
-    '| Target | Amount sats | Required | Invoice | Probe | Duration ms | Error |',
-    '| --- | ---: | --- | --- | --- | ---: | --- |',
+    '| Target | Amount sats | Required | Invoice | Probe | Retries | Duration ms | Error |',
+    '| --- | ---: | --- | --- | --- | ---: | ---: | --- |',
   ];
 
   for (const result of results) {
@@ -202,6 +203,7 @@ export function renderProbeReport(results: ProbeResult[]): string {
         result.required ? 'yes' : 'no',
         result.invoiceFetched ? 'ok' : 'failed',
         result.success ? '✅' : '❌',
+        result.retries.toString(),
         result.durationMs.toString(),
         sanitizeMarkdownCell(result.error ?? ''),
       ].join(' | ')} |`
