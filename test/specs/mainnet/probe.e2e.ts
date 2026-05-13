@@ -1,11 +1,5 @@
-import {
-  doNavigationClose,
-  elementById,
-  expectTextWithin,
-  restoreWallet,
-  sleep,
-  tap,
-} from '../../helpers/actions';
+import { restoreWallet, sleep } from '../../helpers/actions';
+import { waitForMainnetWalletReady } from '../../helpers/mainnet';
 import {
   expandProbeTargetAmounts,
   fetchBolt11ForProbe,
@@ -19,8 +13,6 @@ import {
 } from '../../helpers/probe';
 import { ciIt } from '../../helpers/suite';
 
-const WALLET_SYNC_TIMEOUT_MS = 90_000;
-const APP_STATUS_ROW_TIMEOUT_MS = 90_000;
 const DEFAULT_PROBE_DELAY_MS = 10_000;
 
 function resolveEnvValue(name: string): string {
@@ -29,17 +21,6 @@ function resolveEnvValue(name: string): string {
     throw new Error(`Missing ${name} env var`);
   }
   return value;
-}
-
-function resolveLnStabilizeDelayMs(): number {
-  const fromEnv = process.env.LN_STABILIZE_DELAY_MS;
-  if (fromEnv) {
-    const parsed = Number.parseInt(fromEnv, 10);
-    if (Number.isFinite(parsed) && parsed >= 0) {
-      return parsed;
-    }
-  }
-  return process.env.CI ? 45_000 : 10_000;
 }
 
 function resolveProbeDelayMs(): number {
@@ -51,31 +32,6 @@ function resolveProbeDelayMs(): number {
     }
   }
   return DEFAULT_PROBE_DELAY_MS;
-}
-
-async function waitForWalletReady(): Promise<void> {
-  console.info('→ [Probe] Waiting for wallet home screen...');
-  await elementById('TotalBalance-primary').waitForDisplayed({ timeout: WALLET_SYNC_TIMEOUT_MS });
-  const stabilizeMs = resolveLnStabilizeDelayMs();
-  console.info(
-    `→ [Probe] Home screen ready, letting LN node stabilize (${stabilizeMs / 1000}s)...`
-  );
-  await sleep(stabilizeMs);
-  console.info('→ [Probe] Verify app status is ready');
-  await tap('HeaderMenu');
-  await tap('DrawerAppStatus');
-
-  await expectTextWithin('Status-internet', 'Connected', { timeout: APP_STATUS_ROW_TIMEOUT_MS });
-  await expectTextWithin('Status-electrum', 'Connected', { timeout: APP_STATUS_ROW_TIMEOUT_MS });
-  await expectTextWithin('Status-lightning_node', 'Running', {
-    timeout: APP_STATUS_ROW_TIMEOUT_MS,
-  });
-  await expectTextWithin('Status-lightning_connection', 'Open', {
-    timeout: APP_STATUS_ROW_TIMEOUT_MS,
-  });
-
-  await doNavigationClose();
-  console.info('→ [Probe] App status verified');
 }
 
 async function runProbe(target: ProbeTarget, amountMsat: number): Promise<ProbeResult> {
@@ -137,7 +93,7 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
         reinstall: false,
         expectAndroidAlert: false,
       });
-      await waitForWalletReady();
+      await waitForMainnetWalletReady({ logPrefix: 'Probe' });
 
       const probes = targets.flatMap((target) =>
         expandProbeTargetAmounts(target).map((amountMsat) => ({ target, amountMsat }))
