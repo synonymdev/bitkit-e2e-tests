@@ -55,7 +55,7 @@ const WIDGETS: Record<WidgetId, WidgetMetadata> = {
   },
   calculator: {
     listItemId: 'WidgetListItem-calculator',
-    actionName: 'Calculator',
+    actionName: 'Bitcoin Calculator',
     homeId: () => 'CalculatorWidget',
     hasSettings: () => false,
   },
