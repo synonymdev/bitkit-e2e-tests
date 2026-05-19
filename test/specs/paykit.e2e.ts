@@ -35,6 +35,7 @@ async function switchToOnchainIfNeeded() {
 }
 
 async function payCurrentContactOnchain(amountSats: number) {
+  await sleep(1000);
   await elementById('ContactPay').waitForDisplayed();
   await tap('ContactPay');
   await switchToOnchainIfNeeded();
@@ -88,7 +89,11 @@ describe('@pubky @paykit - Public payments', () => {
       });
       await discardAddContactRoute();
 
-      await addContact({ pubky: savedPaykitContact.pubky, firstContact: true });
+      await addContact({
+        pubky: savedPaykitContact.pubky,
+        firstContact: true,
+        waitToastToDisappear: true,
+      });
       await verifyContactRowDisplayed(savedPaykitContact.pubky);
       await tap(`Contact_${savedPaykitContact.pubky}`);
 
