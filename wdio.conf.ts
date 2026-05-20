@@ -362,7 +362,7 @@ export const config: WebdriverIO.Config = {
   },
 
   afterTest: async function (test, _context, { error }) {
-    if (!error) return; // Skip artifacts if test passed
+    const saveDiagnostics = Boolean(error) || process.env.SAVE_DIAGNOSTICS === 'true';
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const testNameRaw = `${test.parent || 'unknown'}_${test.title}`;
@@ -373,21 +373,24 @@ export const config: WebdriverIO.Config = {
     } else {
       testDir = path.join(__dirname, 'artifacts', testName);
     }
-    // Ensure per-test directory exists
-    fs.mkdirSync(testDir, { recursive: true });
 
-    // Save screenshot
-    const screenshotPath = path.join(testDir, `${testName}-${timestamp}.png`);
-    const screenshot = await driver.takeScreenshot();
-    fs.writeFileSync(screenshotPath, screenshot, 'base64');
-    console.log(`📸 Saved screenshot: ${screenshotPath}`);
+    if (saveDiagnostics) {
+      fs.mkdirSync(testDir, { recursive: true });
 
-    // Save video if recording was enabled
+      const screenshotPath = path.join(testDir, `${testName}-${timestamp}.png`);
+      const screenshot = await driver.takeScreenshot();
+      fs.writeFileSync(screenshotPath, screenshot, 'base64');
+      console.log(`📸 Saved screenshot: ${screenshotPath}`);
+    }
+
     if (process.env.RECORD_VIDEO === 'true') {
       const videoBase64 = await driver.stopRecordingScreen();
-      const videoPath = path.join(testDir, `${testName}-${timestamp}.mp4`);
-      fs.writeFileSync(videoPath, videoBase64, 'base64');
-      console.log(`🎥 Saved test video: ${videoPath}`);
+      if (saveDiagnostics) {
+        fs.mkdirSync(testDir, { recursive: true });
+        const videoPath = path.join(testDir, `${testName}-${timestamp}.mp4`);
+        fs.writeFileSync(videoPath, videoBase64, 'base64');
+        console.log(`🎥 Saved test video: ${videoPath}`);
+      }
     }
   },
 };
