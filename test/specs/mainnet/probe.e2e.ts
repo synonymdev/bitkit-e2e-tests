@@ -26,14 +26,7 @@ function resolveEnvValue(name: string): string {
 }
 
 function resolveProbeDelayMs(): number {
-  const fromEnv = process.env.PROBE_DELAY_MS;
-  if (fromEnv) {
-    const parsed = Number.parseInt(fromEnv, 10);
-    if (Number.isFinite(parsed) && parsed >= 0) {
-      return parsed;
-    }
-  }
-  return DEFAULT_PROBE_DELAY_MS;
+  return resolveNonNegativeIntEnv('PROBE_DELAY_MS') ?? DEFAULT_PROBE_DELAY_MS;
 }
 
 function resolveProbeRetries(): number {
