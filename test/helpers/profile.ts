@@ -151,10 +151,12 @@ export async function addContact({
   pubky,
   save = true,
   firstContact = false,
+  waitToastToDisappear: waitToDisappear = driver.isIOS,
 }: {
   pubky: string;
   save?: boolean;
   firstContact?: boolean;
+  waitToastToDisappear?: boolean;
 }): Promise<void> {
   await openContacts();
   await sleep(500);
@@ -184,7 +186,7 @@ export async function addContact({
   await tap('AddContactAdd');
   await elementById('AddContactSave').waitForDisplayed();
   await tap('AddContactSave');
-  await waitForToast('ContactSavedToast', { waitToDisappear: driver.isIOS });
+  await waitForToast('ContactSavedToast', { waitToDisappear });
   await elementById('ContactsAddButton').waitForDisplayed();
 }
 
@@ -213,11 +215,10 @@ export async function verifyAddContactRoute(
   }
 
   await elementById('AddContactSave').waitForDisplayed();
-  await expect(
-    await elementById('AddContactPay')
-      .isDisplayed()
-      .catch(() => false)
-  ).toBe(ableToPay);
+  await elementById('AddContactPay').waitForDisplayed({
+    reverse: !ableToPay,
+    timeoutMsg: `add contact ${publicKey}: expected AddContactPay ${ableToPay ? 'visible' : 'hidden'} (fixture ableToPay=${ableToPay})`,
+  });
 }
 
 export async function discardAddContactRoute() {
