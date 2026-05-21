@@ -124,7 +124,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
           const seed = await getSeed();
           await waitForBackup();
           await restoreWallet(seed);
-          if (driver.isIOS) await enablePaykitUi();
+          await enablePaykitUi();
           await verifyMyProfileDetails(details);
           const pubkyAfterRestore = await readPubkyFromProfileCopy();
           await expect(pubkyAfterRestore).toBe(pubky.trim());
@@ -276,7 +276,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
 
           // Restore wallet A and verify wallet A profile is unchanged by wallet B contact edits.
           await restoreWallet(seedA);
-          if (driver.isIOS) await enablePaykitUi();
+          await enablePaykitUi();
           currentWallet = 'A';
           await verifyMyProfileDetails(detailsA);
         } finally {
@@ -287,7 +287,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
           if (seedA !== undefined && currentWallet !== 'A') {
             try {
               await restoreWallet(seedA);
-              if (driver.isIOS) await enablePaykitUi();
+              await enablePaykitUi();
               await cleanupProfile('@pubky_profile_4 wallet A');
             } catch (error) {
               console.warn('Could not restore and cleanup wallet A profile:', error);
