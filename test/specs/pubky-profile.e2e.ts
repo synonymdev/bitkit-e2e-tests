@@ -14,6 +14,7 @@ import {
 } from '../helpers/actions';
 import { STAGING_TEST_CONTACTS } from '../helpers/fixtures';
 import { openContacts, openProfile } from '../helpers/navigation';
+import { enablePaykitUi } from '../helpers/paykit';
 import {
   addContact,
   ADD_CONTACT_INVALID_KEY_MESSAGE_SNIPPET,
@@ -48,6 +49,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
   beforeEach(async () => {
     await reinstallApp();
     await completeOnboarding();
+    await enablePaykitUi();
   });
 
   // Section A: with no profile, every entry point must funnel into the choice screen.
@@ -251,6 +253,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
           await reinstallApp();
           currentWallet = null;
           await completeOnboarding();
+          await enablePaykitUi();
           await createProfile({ name: 'Bob Wallet B' });
           currentWallet = 'B';
 
