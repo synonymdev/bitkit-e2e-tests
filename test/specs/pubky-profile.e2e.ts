@@ -14,6 +14,7 @@ import {
 } from '../helpers/actions';
 import { STAGING_TEST_CONTACTS } from '../helpers/fixtures';
 import { openContacts, openProfile } from '../helpers/navigation';
+import { enablePaykitUi } from '../helpers/paykit';
 import {
   addContact,
   ADD_CONTACT_INVALID_KEY_MESSAGE_SNIPPET,
@@ -48,6 +49,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
   beforeEach(async () => {
     await reinstallApp();
     await completeOnboarding();
+    await enablePaykitUi();
   });
 
   // Section A: with no profile, every entry point must funnel into the choice screen.
@@ -122,6 +124,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
           const seed = await getSeed();
           await waitForBackup();
           await restoreWallet(seed);
+          await enablePaykitUi();
           await verifyMyProfileDetails(details);
           const pubkyAfterRestore = await readPubkyFromProfileCopy();
           await expect(pubkyAfterRestore).toBe(pubky.trim());
@@ -251,6 +254,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
           await reinstallApp();
           currentWallet = null;
           await completeOnboarding();
+          await enablePaykitUi();
           await createProfile({ name: 'Bob Wallet B' });
           currentWallet = 'B';
 
@@ -272,6 +276,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
 
           // Restore wallet A and verify wallet A profile is unchanged by wallet B contact edits.
           await restoreWallet(seedA);
+          await enablePaykitUi();
           currentWallet = 'A';
           await verifyMyProfileDetails(detailsA);
         } finally {
@@ -282,6 +287,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
           if (seedA !== undefined && currentWallet !== 'A') {
             try {
               await restoreWallet(seedA);
+              await enablePaykitUi();
               await cleanupProfile('@pubky_profile_4 wallet A');
             } catch (error) {
               console.warn('Could not restore and cleanup wallet A profile:', error);
