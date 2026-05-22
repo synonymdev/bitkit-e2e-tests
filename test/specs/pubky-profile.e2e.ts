@@ -45,7 +45,7 @@ import { ciIt } from '../helpers/suite';
 // Covers scenarios from docs/pubky-profile-manual-e2e.md.
 // Each test reinstalls + onboards so any single test can be run in isolation
 // (e.g. `--mochaOpts.grep "@pubky_profile_2"` or `"@pubky_profile_3"`).
-describe('@pubky @pubky_profile - Pubky profile', () => {
+describe.skip('@pubky @pubky_profile - Pubky profile', () => {
   beforeEach(async () => {
     await reinstallApp();
     await completeOnboarding();

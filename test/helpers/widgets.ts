@@ -39,7 +39,7 @@ const WIDGETS: Record<WidgetId, WidgetMetadata> = {
     listItemId: 'WidgetListItem-facts',
     actionName: 'Bitcoin Facts',
     homeId: () => (driver.isIOS ? 'FactsWidget' : undefined),
-    hasSettings: () => driver.isIOS,
+    hasSettings: () => false,
   },
   weather: {
     listItemId: 'WidgetListItem-weather',
@@ -55,7 +55,7 @@ const WIDGETS: Record<WidgetId, WidgetMetadata> = {
   },
   calculator: {
     listItemId: 'WidgetListItem-calculator',
-    actionName: 'Calculator',
+    actionName: 'Bitcoin Calculator',
     homeId: () => 'CalculatorWidget',
     hasSettings: () => false,
   },
