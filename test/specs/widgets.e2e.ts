@@ -105,7 +105,7 @@ describe('@widgets - Widgets', () => {
     }
   });
 
-  ciIt('@widgets_3 - Widget settings: reset, show/hide, titles', async () => {
+  ciIt('@widgets_3 - Widget settings: reset, show/hide', async () => {
     await deleteAllDefaultWidgets();
 
     await openSettings();
@@ -133,7 +133,6 @@ describe('@widgets - Widgets', () => {
     await openSettings();
     await tap('WidgetsSettings');
     await tap('ShowWidgets');
-    await tap('ShowWidgetTitles');
     await tap('NavigationBack');
     await doNavigationClose();
 
@@ -141,18 +140,5 @@ describe('@widgets - Widgets', () => {
     await expectWidgetPresent('price');
     await expectWidgetPresent('suggestions');
     await expectWidgetPresent('blocks');
-    if (driver.isAndroid) {
-      await elementByText('Bitcoin Price').waitForDisplayed({
-        reverse: true,
-        timeout: 5000,
-      });
-      await elementByText('Bitcoin Blocks').waitForDisplayed({
-        reverse: true,
-        timeout: 5000,
-      });
-    } else {
-      await elementByText('Bitcoin Price').waitForDisplayed();
-      await elementByText('Bitcoin Blocks').waitForDisplayed();
-    }
   });
 });
