@@ -1166,6 +1166,8 @@ export type ToastId =
   | 'ExpiredLightningToast'
   | 'DevModeEnabledToast'
   | 'DevModeDisabledToast'
+  | 'PaykitUiEnabledToast'
+  | 'PaykitUiDisabledToast'
   | 'InsufficientSpendingToast'
   | 'InsufficientSavingsToast'
   | 'ProfilePubkyCopiedToast'

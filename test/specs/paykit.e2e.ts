@@ -12,6 +12,7 @@ import {
 } from '../helpers/actions';
 import { STAGING_PAYKIT_CONTACTS } from '../helpers/fixtures';
 import { doNavigationClose, openContacts } from '../helpers/navigation';
+import { enablePaykitUi } from '../helpers/paykit';
 import {
   addContact,
   cleanupProfile,
@@ -56,10 +57,11 @@ async function openContactActivity(publicKey: string) {
   await tap('ContactActivity');
 }
 
-describe.skip('@pubky @paykit - Public payments', () => {
+describe('@pubky @paykit - Public payments', () => {
   beforeEach(async () => {
     await reinstallApp();
     await completeOnboarding();
+    await enablePaykitUi();
   });
 
   ciIt('@paykit_1 - Can pay saved contact via public on-chain endpoint', async () => {
