@@ -40,6 +40,7 @@ docker/                 # docker compose regtest based backend for Bitkit wallet
 test/
   ├── specs/            # Test suites (e.g., onboarding.e2e.ts)
   ├── helpers/          # Test helpers: selectors, setup, actions
+tools/                  # QA utilities and small manual test tools
 ```
 
 > ℹ️ Screenshots and (optionally) videos of **failed tests** will be saved to `artifacts/`. To enable video recording, set the `RECORD_VIDEO=true` environment variable.
