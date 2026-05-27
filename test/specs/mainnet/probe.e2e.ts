@@ -3,6 +3,7 @@ import { waitForMainnetWalletReady } from '../../helpers/mainnet';
 import {
   expandProbeTargetAmounts,
   fetchBolt11ForProbe,
+  parseNonNegativeIntEnv,
   parseProbeCommandSuccess,
   resolveProbeTargets,
   runProbeCommand,
@@ -26,15 +27,15 @@ function resolveEnvValue(name: string): string {
 }
 
 function resolveProbeDelayMs(): number {
-  return resolveNonNegativeIntEnv('PROBE_DELAY_MS') ?? DEFAULT_PROBE_DELAY_MS;
+  return parseNonNegativeIntEnv('PROBE_DELAY_MS') ?? DEFAULT_PROBE_DELAY_MS;
 }
 
 function resolveProbeRetries(): number {
-  return resolveNonNegativeIntEnv('PROBE_RETRIES') ?? DEFAULT_PROBE_RETRIES;
+  return parseNonNegativeIntEnv('PROBE_RETRIES') ?? DEFAULT_PROBE_RETRIES;
 }
 
 function resolveProbeRetryDelayMs(): number {
-  return resolveNonNegativeIntEnv('PROBE_RETRY_DELAY_MS') ?? DEFAULT_PROBE_RETRY_DELAY_MS;
+  return parseNonNegativeIntEnv('PROBE_RETRY_DELAY_MS') ?? DEFAULT_PROBE_RETRY_DELAY_MS;
 }
 
 async function runProbe(target: ProbeTarget, amountMsat: number): Promise<ProbeResult> {
@@ -171,14 +172,3 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
     }
   });
 });
-
-function resolveNonNegativeIntEnv(name: string): number | null {
-  const raw = process.env[name];
-  if (!raw) return null;
-
-  const parsed = Number.parseInt(raw, 10);
-  if (Number.isInteger(parsed) && parsed >= 0) {
-    return parsed;
-  }
-  throw new Error(`Invalid ${name} value: ${raw}`);
-}

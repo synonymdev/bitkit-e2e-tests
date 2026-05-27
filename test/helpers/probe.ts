@@ -317,7 +317,7 @@ function parsePositiveIntEnv(name: string): number | null {
   return value;
 }
 
-function parseNonNegativeIntEnv(name: string): number | null {
+export function parseNonNegativeIntEnv(name: string): number | null {
   const raw = process.env[name];
   if (!raw) return null;
 
