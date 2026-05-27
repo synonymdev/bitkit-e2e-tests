@@ -47,6 +47,8 @@ type LnurlInvoiceResponse = {
 };
 
 const DEFAULT_PROBE_TIMEOUT_SECONDS = 90;
+const DEFAULT_PROBE_FETCH_RETRIES = 2;
+const DEFAULT_PROBE_FETCH_RETRY_DELAY_MS = 1_000;
 
 export function resolveProbeTargets(): ProbeTarget[] {
   const raw = process.env.PROBE_TARGETS_JSON;
@@ -263,12 +265,36 @@ async function fetchLightningAddressCallback(target: ProbeTarget): Promise<strin
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} for ${url}`);
+  const maxRetries = parseNonNegativeIntEnv('PROBE_FETCH_RETRIES') ?? DEFAULT_PROBE_FETCH_RETRIES;
+  const retryDelayMs =
+    parseNonNegativeIntEnv('PROBE_FETCH_RETRY_DELAY_MS') ?? DEFAULT_PROBE_FETCH_RETRY_DELAY_MS;
+  let lastError: Error | null = null;
+
+  for (let retry = 0; retry <= maxRetries; retry++) {
+    try {
+      return await fetchJsonOnce<T>(url);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+    }
+
+    if (retry < maxRetries && retryDelayMs > 0) {
+      await delay(retryDelayMs);
+    }
   }
 
-  return (await response.json()) as T;
+  throw new Error(
+    `${lastError?.message ?? `Failed to fetch ${url}`} after ${maxRetries + 1} attempts`
+  );
+}
+
+async function fetchJsonOnce<T>(url: string): Promise<T> {
+  const response = await fetch(url);
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} for ${url}${formatResponseBody(text)}`);
+  }
+
+  return JSON.parse(text) as T;
 }
 
 function extractContentCallResult(raw: string): string | null {
@@ -284,6 +310,27 @@ function parsePositiveIntEnv(name: string): number | null {
     throw new Error(`Invalid ${name} value: ${raw}`);
   }
   return value;
+}
+
+function parseNonNegativeIntEnv(name: string): number | null {
+  const raw = process.env[name];
+  if (!raw) return null;
+
+  const value = Number.parseInt(raw, 10);
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(`Invalid ${name} value: ${raw}`);
+  }
+  return value;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function formatResponseBody(body: string): string {
+  const normalized = body.replace(/\s+/g, ' ').trim();
+  if (!normalized) return '';
+  return `: ${normalized.slice(0, 300)}`;
 }
 
 function resolveArtifactsDir(): string {
