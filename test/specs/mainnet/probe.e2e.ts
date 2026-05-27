@@ -77,6 +77,7 @@ async function runProbe(target: ProbeTarget, amountMsat: number): Promise<ProbeR
         }...`
       );
       const rawProviderResult = runProbeCommand(target, amountMsat, bolt11);
+      lastRawProviderResult = rawProviderResult;
       const success = parseProbeCommandSuccess(rawProviderResult);
 
       if (success) {
@@ -91,7 +92,6 @@ async function runProbe(target: ProbeTarget, amountMsat: number): Promise<ProbeR
         };
       }
 
-      lastRawProviderResult = rawProviderResult;
       lastError = summarizeProbeCommandFailure(rawProviderResult);
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);

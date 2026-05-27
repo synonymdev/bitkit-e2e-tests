@@ -141,7 +141,12 @@ export function parseProbeCommandSuccess(raw: string): boolean {
   const result = extractContentCallResult(raw);
   if (!result) return false;
 
-  const parsed: unknown = JSON.parse(result);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(result);
+  } catch {
+    return false;
+  }
   if (typeof parsed !== 'object' || parsed === null) return false;
 
   if ('success' in parsed) return parsed.success === true;
