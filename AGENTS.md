@@ -142,3 +142,4 @@ Implication for feature work:
 - The tests expect built artifacts in `./aut`.
 - Use `ciIt()` in specs (not `it()`) to enable CI retry-skipping behavior.
 - Keep Android/iOS platform differences behind helpers in `test/helpers/`.
+- Prefer extracting shared flows into `test/helpers/` over copying logic between specs. Keep helpers small and reuse existing ones before adding new test code.
