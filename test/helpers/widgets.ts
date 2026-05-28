@@ -106,6 +106,7 @@ export async function openWidgetsFeed() {
 
 export async function openWidgetPreview(widget: WidgetId) {
   await openWidgetsFeed();
+  await sleep(500);
   await tapWidgetListItem(widget);
 }
 
