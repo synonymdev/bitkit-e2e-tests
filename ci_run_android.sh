@@ -15,15 +15,34 @@ fi
 
 mkdir -p "${ARTIFACTS_DIR}"
 
+APP_ID="${APP_ID_ANDROID:-to.bitkit.dev}"
+APP_LOGS_DIR="$ARTIFACTS_DIR/app-logs"
+
 adb logcat -c
 LOGFILE="$ARTIFACTS_DIR/logcat.txt"
 
 adb logcat -v threadtime -T 1 -b all > "$LOGFILE" &
 LOGCAT_PID=$!
 
+collect_app_logs() {
+  mkdir -p "$APP_LOGS_DIR"
+  set +e
+  adb exec-out run-as "$APP_ID" tar -cf - -C "/data/data/$APP_ID/files" logs \
+    | tar -xf - -C "$APP_LOGS_DIR" 2>/dev/null
+  local status=$?
+  set -e
+
+  if [[ "$status" -eq 0 ]]; then
+    echo "Saved app logs to $APP_LOGS_DIR"
+  else
+    echo "Could not collect app logs for $APP_ID" >&2
+  fi
+}
+
 cleanup() {
   kill "$LOGCAT_PID" 2>/dev/null || true
   wait "$LOGCAT_PID" 2>/dev/null || true
+  collect_app_logs
 }
 trap cleanup EXIT INT TERM
 
