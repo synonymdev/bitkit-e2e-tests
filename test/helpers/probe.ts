@@ -50,6 +50,27 @@ const DEFAULT_PROBE_TIMEOUT_SECONDS = 90;
 const DEFAULT_PROBE_FETCH_RETRIES = 2;
 const DEFAULT_PROBE_FETCH_RETRY_DELAY_MS = 1_000;
 
+const DEFAULT_READINESS_TIMEOUT_MS = 180_000;
+const DEFAULT_READINESS_POLL_MS = 5_000;
+const DEFAULT_MIN_GRAPH_CHANNELS = 10_000;
+
+export type ProbeReadiness = {
+  ready: boolean;
+  nodeRunning: boolean;
+  lifecycle: string;
+  peers: number;
+  connectedPeers: number;
+  channels: number;
+  readyChannels: number;
+  usableChannels: number;
+  outboundCapacitySats: number;
+  syncHealthy: boolean;
+  nodeId?: string;
+  graphNodeCount?: number;
+  graphChannelCount?: number;
+  latestRgsSyncTimestamp?: number;
+};
+
 export function resolveProbeTargets(): ProbeTarget[] {
   const raw = process.env.PROBE_TARGETS_JSON;
   if (!raw) {
@@ -175,28 +196,158 @@ export function summarizeProbeCommandFailure(raw: string): string {
   return adbError?.[1]?.trim() || 'Probe command returned a failed result';
 }
 
-export function writeProbeArtifacts(results: ProbeResult[]): void {
+export function runReadinessCommand(): string {
+  const method = process.env.PROBE_READINESS_METHOD ?? 'probeReadiness';
+  const command = [
+    'content',
+    'call',
+    '--uri',
+    shellQuote(`content://${getAppId()}.devtools`),
+    '--method',
+    shellQuote(method),
+  ].join(' ');
+
+  return execFileSync('adb', ['shell', command], {
+    encoding: 'utf8',
+    timeout: 30_000,
+  });
+}
+
+export function parseProbeReadiness(raw: string): ProbeReadiness | null {
+  const result = extractContentCallResult(raw);
+  if (!result) return null;
+
+  try {
+    const parsed: unknown = JSON.parse(result);
+    if (isProbeReadinessShape(parsed)) {
+      return parsed;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function isProbeReadinessShape(value: unknown): value is ProbeReadiness {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as ProbeReadiness).ready === 'boolean' &&
+    typeof (value as ProbeReadiness).nodeRunning === 'boolean'
+  );
+}
+
+function summarizeReadinessError(raw: string): string {
+  return summarizeProbeCommandFailure(raw);
+}
+
+export function isProbeReadinessSufficient(
+  readiness: ProbeReadiness,
+  minGraphChannels: number
+): boolean {
+  return (
+    readiness.ready &&
+    readiness.nodeRunning &&
+    readiness.connectedPeers > 0 &&
+    readiness.usableChannels > 0 &&
+    readiness.syncHealthy &&
+    (readiness.graphChannelCount ?? 0) >= minGraphChannels
+  );
+}
+
+export function summarizeProbeReadiness(readiness: ProbeReadiness): string {
+  return [
+    `running=${readiness.nodeRunning}`,
+    `peers=${readiness.connectedPeers}/${readiness.peers}`,
+    `usableChannels=${readiness.usableChannels}`,
+    `outboundSats=${readiness.outboundCapacitySats}`,
+    `graphChannels=${readiness.graphChannelCount ?? 'n/a'}`,
+    `graphNodes=${readiness.graphNodeCount ?? 'n/a'}`,
+    `syncHealthy=${readiness.syncHealthy}`,
+    `ready=${readiness.ready}`,
+  ].join(' ');
+}
+
+type WaitForProbeReadinessOptions = {
+  logPrefix: string;
+};
+
+export async function waitForProbeReadiness({
+  logPrefix,
+}: WaitForProbeReadinessOptions): Promise<ProbeReadiness> {
+  const timeoutMs = parsePositiveIntEnv('PROBE_READINESS_TIMEOUT_MS') ?? DEFAULT_READINESS_TIMEOUT_MS;
+  const pollMs = parsePositiveIntEnv('PROBE_READINESS_POLL_MS') ?? DEFAULT_READINESS_POLL_MS;
+  const minGraphChannels =
+    parseNonNegativeIntEnv('PROBE_MIN_GRAPH_CHANNELS') ?? DEFAULT_MIN_GRAPH_CHANNELS;
+
+  console.info(
+    `→ [${logPrefix}] Waiting for probe readiness (timeout ${timeoutMs / 1000}s, minGraphChannels ${minGraphChannels})...`
+  );
+
+  const deadline = Date.now() + timeoutMs;
+  let lastSummary = 'no readiness response';
+
+  while (Date.now() < deadline) {
+    let raw = '';
+    try {
+      raw = runReadinessCommand();
+    } catch (error) {
+      lastSummary = error instanceof Error ? error.message : String(error);
+    }
+
+    const readiness = raw ? parseProbeReadiness(raw) : null;
+    if (readiness) {
+      lastSummary = summarizeProbeReadiness(readiness);
+      if (isProbeReadinessSufficient(readiness, minGraphChannels)) {
+        console.info(`→ [${logPrefix}] Probe readiness satisfied: ${lastSummary}`);
+        return readiness;
+      }
+    } else if (raw) {
+      lastSummary = summarizeReadinessError(raw);
+    }
+
+    console.info(`→ [${logPrefix}] Not ready yet (${lastSummary}), polling again in ${pollMs / 1000}s...`);
+    await delay(pollMs);
+  }
+
+  throw new Error(`Probe readiness not reached within ${timeoutMs / 1000}s: ${lastSummary}`);
+}
+
+export function writeProbeArtifacts(
+  results: ProbeResult[],
+  readiness?: ProbeReadiness | null
+): void {
   const artifactsDir = resolveArtifactsDir();
   fs.mkdirSync(artifactsDir, { recursive: true });
 
   const jsonPath = path.join(artifactsDir, 'probe-results.json');
   const reportPath = path.join(artifactsDir, 'probe-report.md');
-  const report = renderProbeReport(results);
+  const report = renderProbeReport(results, readiness);
 
   fs.writeFileSync(jsonPath, `${JSON.stringify(results, null, 2)}\n`);
   fs.writeFileSync(reportPath, report);
+
+  if (readiness) {
+    const readinessPath = path.join(artifactsDir, 'probe-readiness.json');
+    fs.writeFileSync(readinessPath, `${JSON.stringify(readiness, null, 2)}\n`);
+  }
 
   if (process.env.GITHUB_STEP_SUMMARY) {
     fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `\n## Attempt ${resolveAttempt()}\n\n${report}\n`);
   }
 }
 
-export function renderProbeReport(results: ProbeResult[]): string {
+export function renderProbeReport(
+  results: ProbeResult[],
+  readiness?: ProbeReadiness | null
+): string {
   const failedRequired = results.filter((it) => it.required && !it.success);
   const lines = [
     '# Lightning Probe Report',
     '',
     `Required failures: ${failedRequired.length}`,
+    `Readiness at probe start: ${readiness ? summarizeProbeReadiness(readiness) : 'not captured'}`,
     '',
     '| Target | Amount sats | Required | Invoice | Probe | Retries | Duration ms | Error |',
     '| --- | ---: | --- | --- | --- | ---: | ---: | --- |',
