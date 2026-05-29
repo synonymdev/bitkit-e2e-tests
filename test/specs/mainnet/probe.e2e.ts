@@ -8,7 +8,9 @@ import {
   resolveProbeTargets,
   runProbeCommand,
   summarizeProbeCommandFailure,
+  waitForProbeReadiness,
   writeProbeArtifacts,
+  type ProbeReadiness,
   type ProbeResult,
   type ProbeTarget,
 } from '../../helpers/probe';
@@ -127,6 +129,7 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
 
   ciIt('@probe_mainnet_1 - Can probe configured mainnet LNURL targets', async () => {
     const results: ProbeResult[] = [];
+    let readiness: ProbeReadiness | null = null;
 
     try {
       console.info('→ [Probe] Restoring probe wallet...');
@@ -136,6 +139,7 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
         expectAndroidAlert: false,
       });
       await waitForMainnetWalletReady({ logPrefix: 'Probe' });
+      readiness = await waitForProbeReadiness({ logPrefix: 'Probe' });
 
       const probes = targets.flatMap((target) =>
         expandProbeTargetAmounts(target).map((amountMsat) => ({ target, amountMsat }))
@@ -159,7 +163,7 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
         }
       }
     } finally {
-      writeProbeArtifacts(results);
+      writeProbeArtifacts(results, readiness);
     }
 
     const failedRequired = results.filter((it) => it.required && !it.success);
