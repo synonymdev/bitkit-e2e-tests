@@ -276,7 +276,7 @@ type WaitForProbeReadinessOptions = {
 export async function waitForProbeReadiness({
   logPrefix,
 }: WaitForProbeReadinessOptions): Promise<ProbeReadiness> {
-  const timeoutMs = parseNonNegativeIntEnv('PROBE_READINESS_TIMEOUT_MS') ?? DEFAULT_READINESS_TIMEOUT_MS;
+  const timeoutMs = parsePositiveIntEnv('PROBE_READINESS_TIMEOUT_MS') ?? DEFAULT_READINESS_TIMEOUT_MS;
   const pollMs = parsePositiveIntEnv('PROBE_READINESS_POLL_MS') ?? DEFAULT_READINESS_POLL_MS;
   const minGraphChannels =
     parseNonNegativeIntEnv('PROBE_MIN_GRAPH_CHANNELS') ?? DEFAULT_MIN_GRAPH_CHANNELS;
