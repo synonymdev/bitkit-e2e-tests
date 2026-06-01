@@ -78,7 +78,7 @@ describe('@backup - Backup', () => {
     await sleep(1000); // wait for the app to settle
     await deleteAllDefaultWidgets();
     await tap('WidgetsAdd');
-    await tap('WidgetsOnboarding-button');
+    await tap('WidgetsOnboardingAddWidget');
     await tap('WidgetListItem-price');
     await elementById('WidgetSave').waitForDisplayed();
     await sleep(1000); // wait for the app to settle

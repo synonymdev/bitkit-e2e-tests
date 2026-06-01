@@ -101,7 +101,7 @@ export async function scrollHomeToWidgets() {
 export async function openWidgetsFeed() {
   await scrollHomeToWidgets();
   await tap('WidgetsAdd');
-  await tapIfDisplayed('WidgetsOnboarding-button');
+  await tapIfDisplayed('WidgetsOnboardingAddWidget');
 }
 
 export async function openWidgetPreview(widget: WidgetId) {
