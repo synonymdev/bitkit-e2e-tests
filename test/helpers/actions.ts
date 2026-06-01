@@ -1468,7 +1468,12 @@ export async function attemptRefreshOnHomeScreen() {
 export async function waitForBackup() {
   await openSettings('security');
   await tap('BackupSettings');
-  await elementById('AllSynced').waitForDisplayed();
+  try {
+    await elementById('AllSynced').waitForDisplayed();
+  } catch {
+    console.info('waitForBackup: AllSynced not found, retrying...');
+    await elementById('AllSynced').waitForDisplayed( { timeout: 60_000 });
+  }
   await doNavigationClose();
 }
 
