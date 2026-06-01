@@ -9,6 +9,8 @@ export type WidgetId =
   | 'suggestions'
   | 'calculator';
 
+const DEFAULT_WIDGETS: WidgetId[] = ['price', 'blocks', 'news', 'facts', 'weather', 'suggestions', 'calculator'];
+
 type WidgetMetadata = {
   listItemId: string;
   actionName: string;
@@ -60,8 +62,6 @@ const WIDGETS: Record<WidgetId, WidgetMetadata> = {
     hasSettings: () => false,
   },
 };
-
-const DEFAULT_WIDGETS: WidgetId[] = ['price', 'blocks', 'suggestions'];
 
 function widgetMetadata(widget: WidgetId): WidgetMetadata {
   return WIDGETS[widget];
