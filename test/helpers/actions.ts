@@ -396,6 +396,53 @@ export async function multiTap(testId: string, count: number) {
 }
 
 /**
+ * Android emulators under memory pressure can trigger a system "<app> isn't responding"
+ * (ANR) dialog — often for the launcher — that steals window focus and hides the app
+ * under test from UiAutomator. Dismiss it via "Wait" (falling back to "Close app").
+ * No-op on iOS and when no dialog is present.
+ */
+export async function dismissAndroidAnrDialog(): Promise<boolean> {
+  if (!driver.isAndroid) {
+    return false;
+  }
+
+  for (const resourceId of ['android:id/aerr_wait', 'android:id/aerr_close']) {
+    try {
+      const button = $(`android=new UiSelector().resourceId("${resourceId}")`);
+      if (await button.isExisting()) {
+        console.info(`→ Dismissing Android ANR dialog via ${resourceId}...`);
+        await button.click();
+        await sleep(1000);
+        return true;
+      }
+    } catch {
+      // Dialog not present or not queryable; try the next button.
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Waits for an element by id, recovering once from a system ANR dialog that may be
+ * stealing focus (common on loaded CI emulators during onboarding).
+ */
+export async function waitForDisplayedWithAnrRecovery(
+  testId: string,
+  { timeout = 60_000 }: { timeout?: number } = {}
+): Promise<void> {
+  try {
+    await elementById(testId).waitForDisplayed({ timeout });
+  } catch (error) {
+    const dismissed = await dismissAndroidAnrDialog();
+    if (!dismissed) {
+      throw error;
+    }
+    await elementById(testId).waitForDisplayed({ timeout });
+  }
+}
+
+/**
  * Reads the device clipboard as UTF-8 text (Appium returns base64-encoded content).
  */
 export async function getClipboardPlaintext(): Promise<string> {
@@ -690,7 +737,8 @@ export async function restoreWallet(
   }
 
   // Terms of service
-  await elementById('Continue').waitForDisplayed({ timeout: 60_000 });
+  await dismissAndroidAnrDialog();
+  await waitForDisplayedWithAnrRecovery('Continue', { timeout: 60_000 });
   await sleep(1000); // Wait for the app to settle
   await tap('Continue');
   await sleep(500);
