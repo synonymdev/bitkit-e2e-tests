@@ -285,9 +285,8 @@ describe('@multi_address - Multi address', () => {
       }
       await checkChannelStatus({ size: formatSats(channelSize) });
 
-      // savings has all legacy funds
-      const savingsBalance = await getSavingsBalance();
-      await expect(savingsBalance).toEqual(satsPerAddressType);
+      // savings includes legacy; max channel funding may leave small taproot change
+      await expectSavingsBalance(satsPerAddressType, { condition: 'gte' });
 
       await openSettings('advanced');
       await sleep(1000);
