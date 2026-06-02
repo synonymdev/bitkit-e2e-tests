@@ -178,7 +178,8 @@ describe('@multi_address - Multi address', () => {
     async () => {
       const addressTypes: addressTypePreference[] = ['p2pkh', 'p2sh-p2wpkh', 'p2wpkh', 'p2tr'];
       const satsPerAddressType = 10_000;
-      const sendAmountSats = 36_000;
+      // Keep enough change for RBF; 36k from 40k leaves ~1.7k change and boost coin-select fails
+      const sendAmountSats = 30_000;
       await switchAndFundEachAddressType({
         addressTypes,
         satsPerAddressType,
