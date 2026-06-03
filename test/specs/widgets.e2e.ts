@@ -60,8 +60,6 @@ describe('@widgets - Widgets', () => {
     await elementById('PriceWidgetRow-BTC/EUR').waitForDisplayed();
 
     await openSavedWidgetPreview('price');
-    await elementByText('Custom').waitForDisplayed();
-    await openWidgetSettings('price');
     await tap('WidgetEditReset');
     await sleep(1000);
     await tap('WidgetEditPreview');

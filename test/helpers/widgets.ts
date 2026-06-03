@@ -128,7 +128,6 @@ export async function openSavedWidgetPreview(widget: WidgetId) {
   await scrollHomeToWidgets();
   await tap('WidgetsEdit');
   await tap(widgetActionId(widget, 'Edit'));
-  await elementById('WidgetSave').waitForDisplayed();
 }
 
 export async function expectWidgetPresent(
