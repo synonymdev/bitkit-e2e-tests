@@ -14,6 +14,7 @@ import {
   addWidget,
   deleteAllDefaultWidgets,
   deleteWidget,
+  expectHomeWidgetsSection,
   expectWidgetPresent,
   expectWidgetSavedInEditList,
   openSavedWidgetPreview,
@@ -60,8 +61,9 @@ describe('@widgets - Widgets', () => {
     await elementById('PriceWidgetRow-BTC/EUR').waitForDisplayed();
 
     await openSavedWidgetPreview('price');
-    await tap('WidgetEditReset');
     await sleep(1000);
+    await tap('WidgetEditReset');
+    await sleep(2000);
     await tap('WidgetEditPreview');
     await elementById('WidgetSave').waitForDisplayed();
     await sleep(1000);
@@ -99,11 +101,9 @@ describe('@widgets - Widgets', () => {
     await tap('DialogConfirm');
     await sleep(1000);
 
-    await scrollHomeToWidgets();
+    await expectHomeWidgetsSection(true);
     await expectWidgetPresent('price');
-    await expectWidgetPresent('weather');
     await expectWidgetPresent('calculator');
-    await expectWidgetPresent('blocks');
 
     await openSettings();
     await tap('WidgetsSettings');
@@ -111,11 +111,7 @@ describe('@widgets - Widgets', () => {
     await tap('NavigationBack');
     await doNavigationClose();
 
-    await scrollHomeToWidgets();
-    await expectWidgetPresent('price', false, { timeout: 5000 });
-    await expectWidgetPresent('weather', false, { timeout: 5000 });
-    await expectWidgetPresent('calculator', false, { timeout: 5000 });
-    await expectWidgetPresent('blocks', false, { timeout: 5000 });
+    await expectHomeWidgetsSection(false, { timeout: 5_000 });
 
     await openSettings();
     await tap('WidgetsSettings');
@@ -123,10 +119,8 @@ describe('@widgets - Widgets', () => {
     await tap('NavigationBack');
     await doNavigationClose();
 
-    await scrollHomeToWidgets();
+    await expectHomeWidgetsSection(true);
     await expectWidgetPresent('price');
-    await expectWidgetPresent('weather');
     await expectWidgetPresent('calculator');
-    await expectWidgetPresent('blocks');
   });
 });

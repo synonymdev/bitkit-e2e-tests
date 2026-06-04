@@ -40,13 +40,13 @@ const WIDGETS: Record<WidgetId, WidgetMetadata> = {
   facts: {
     listItemId: 'WidgetListItem-facts',
     actionName: 'Bitcoin Facts',
-    homeId: () => (driver.isIOS ? 'FactsWidget' : undefined),
+    homeId: () => 'FactsWidget',
     hasSettings: () => false,
   },
   weather: {
     listItemId: 'WidgetListItem-weather',
     actionName: 'Bitcoin Weather',
-    homeId: () => (driver.isIOS ? 'WeatherWidget' : undefined),
+    homeId: () => 'WeatherWidget',
     hasSettings: () => true,
   },
   suggestions: {
@@ -96,6 +96,24 @@ export async function scrollHomeToWidgets() {
   await swipeFullScreen('up');
   await swipeFullScreen('up');
   await sleep(500);
+}
+
+/** Home widgets pager is available (scroll + edit control). When hidden, do not scroll. */
+export async function expectHomeWidgetsSection(
+  visible: boolean,
+  { timeout = 8_000 }: { timeout?: number } = {},
+) {
+  if (visible) {
+    await scrollHomeToWidgets();
+    await elementById('WidgetsEdit').waitForDisplayed({ timeout, interval: 250 });
+    return;
+  }
+
+  await elementById('WidgetsEdit').waitForDisplayed({
+    reverse: true,
+    timeout,
+    interval: 250,
+  });
 }
 
 export async function openWidgetsFeed() {
