@@ -9,7 +9,7 @@ export type WidgetId =
   | 'suggestions'
   | 'calculator';
 
-const DEFAULT_WIDGETS: WidgetId[] = ['price', 'blocks', 'news', 'facts', 'weather', 'suggestions', 'calculator'];
+const DEFAULT_WIDGETS: WidgetId[] = ['news', 'facts', 'price', 'blocks', 'weather', 'suggestions', 'calculator'];
 
 type WidgetMetadata = {
   listItemId: string;
