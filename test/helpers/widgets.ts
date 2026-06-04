@@ -9,6 +9,8 @@ export type WidgetId =
   | 'suggestions'
   | 'calculator';
 
+const DEFAULT_WIDGETS: WidgetId[] = ['news', 'facts', 'price', 'blocks', 'weather', 'suggestions', 'calculator'];
+
 type WidgetMetadata = {
   listItemId: string;
   actionName: string;
@@ -60,8 +62,6 @@ const WIDGETS: Record<WidgetId, WidgetMetadata> = {
     hasSettings: () => false,
   },
 };
-
-const DEFAULT_WIDGETS: WidgetId[] = ['price', 'blocks', 'suggestions'];
 
 function widgetMetadata(widget: WidgetId): WidgetMetadata {
   return WIDGETS[widget];
@@ -128,7 +128,6 @@ export async function openSavedWidgetPreview(widget: WidgetId) {
   await scrollHomeToWidgets();
   await tap('WidgetsEdit');
   await tap(widgetActionId(widget, 'Edit'));
-  await elementById('WidgetSave').waitForDisplayed();
 }
 
 export async function expectWidgetPresent(

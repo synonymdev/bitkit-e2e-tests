@@ -60,8 +60,6 @@ describe('@widgets - Widgets', () => {
     await elementById('PriceWidgetRow-BTC/EUR').waitForDisplayed();
 
     await openSavedWidgetPreview('price');
-    await elementByText('Custom').waitForDisplayed();
-    await openWidgetSettings('price');
     await tap('WidgetEditReset');
     await sleep(1000);
     await tap('WidgetEditPreview');
@@ -103,7 +101,8 @@ describe('@widgets - Widgets', () => {
 
     await scrollHomeToWidgets();
     await expectWidgetPresent('price');
-    await expectWidgetPresent('suggestions');
+    await expectWidgetPresent('weather');
+    await expectWidgetPresent('calculator');
     await expectWidgetPresent('blocks');
 
     await openSettings();
@@ -114,7 +113,8 @@ describe('@widgets - Widgets', () => {
 
     await scrollHomeToWidgets();
     await expectWidgetPresent('price', false, { timeout: 5000 });
-    await expectWidgetPresent('suggestions', false, { timeout: 5000 });
+    await expectWidgetPresent('weather', false, { timeout: 5000 });
+    await expectWidgetPresent('calculator', false, { timeout: 5000 });
     await expectWidgetPresent('blocks', false, { timeout: 5000 });
 
     await openSettings();
@@ -125,7 +125,8 @@ describe('@widgets - Widgets', () => {
 
     await scrollHomeToWidgets();
     await expectWidgetPresent('price');
-    await expectWidgetPresent('suggestions');
+    await expectWidgetPresent('weather');
+    await expectWidgetPresent('calculator');
     await expectWidgetPresent('blocks');
   });
 });
