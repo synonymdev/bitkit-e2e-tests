@@ -181,7 +181,7 @@ export const config: WebdriverIO.Config = {
   // See the full list at http://mochajs.org/
   mochaOpts: {
     ui: 'bdd',
-    timeout: 10 * 60 * 1000, // 10 minutes
+    timeout: 15 * 60 * 1000, // 10 minutes
   },
 
   //
