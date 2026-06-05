@@ -179,21 +179,19 @@ export function parseProbeCommandSuccess(raw: string): boolean {
 }
 
 export function summarizeProbeCommandFailure(raw: string): string {
-  const result = extractContentCallResult(raw);
-  if (result) {
+  const json = extractContentCallResult(raw);
+  if (json) {
     try {
-      const parsed: unknown = JSON.parse(result);
-      if (typeof parsed === 'object' && parsed !== null && 'message' in parsed) {
-        const message = parsed.message;
-        if (typeof message === 'string' && message.length > 0) return message;
-      }
+      return JSON.stringify(JSON.parse(json), null, 2);
     } catch {
-      return 'Probe command returned an unparseable result';
+      return json;
     }
   }
 
-  const adbError = raw.match(/\[ERROR\]\s*(.+)/);
-  return adbError?.[1]?.trim() || 'Probe command returned a failed result';
+  return (
+    (raw.match(/\[ERROR\]\s*(.+)/)?.[1]?.trim() ?? raw.trim()) ||
+    'Probe command returned a failed result'
+  );
 }
 
 export function runReadinessCommand(): string {
@@ -239,7 +237,16 @@ function isProbeReadinessShape(value: unknown): value is ProbeReadiness {
 }
 
 function summarizeReadinessError(raw: string): string {
-  return summarizeProbeCommandFailure(raw);
+  const json = extractContentCallResult(raw);
+  if (json) {
+    try {
+      const record = JSON.parse(json) as Record<string, unknown>;
+      if (typeof record.message === 'string' && record.message) return record.message;
+    } catch {
+      // fall through
+    }
+  }
+  return raw.trim().slice(0, 200) || 'unparseable readiness response';
 }
 
 export function isProbeReadinessSufficient(
@@ -349,7 +356,7 @@ export function renderProbeReport(
     `Required failures: ${failedRequired.length}`,
     `Readiness at probe start: ${readiness ? summarizeProbeReadiness(readiness) : 'not captured'}`,
     '',
-    '| Target | Amount sats | Required | Invoice | Probe | Retries | Duration ms | Error |',
+    '| Target | Amount sats | Required | Invoice | Probe | Retries | Duration ms | Failure |',
     '| --- | ---: | --- | --- | --- | ---: | ---: | --- |',
   ];
 
@@ -363,7 +370,7 @@ export function renderProbeReport(
         result.success ? '✅' : '❌',
         result.retries.toString(),
         result.durationMs.toString(),
-        sanitizeMarkdownCell(result.error ?? ''),
+        result.success ? '' : formatFailureCell(result.error ?? ''),
       ].join(' | ')} |`
     );
   }
@@ -500,6 +507,15 @@ function resolveAttempt(): string {
 
 function sanitizeMarkdownCell(value: string): string {
   return value.replace(/\|/g, '\\|').replace(/\s+/g, ' ').trim();
+}
+
+function formatFailureCell(error: string): string {
+  const sanitized = sanitizeMarkdownCell(error);
+  if (!sanitized) return '';
+  if (sanitized.includes('`')) {
+    return `\`${sanitized.replace(/`/g, "'")}\``;
+  }
+  return `\`${sanitized}\``;
 }
 
 function shellQuote(value: string): string {

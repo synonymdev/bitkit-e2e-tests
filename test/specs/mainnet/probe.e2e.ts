@@ -170,8 +170,8 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
     if (failedRequired.length > 0) {
       throw new Error(
         `Required probe targets failed: ${failedRequired
-          .map((it) => `${it.targetName}:${it.amountSats}`)
-          .join(', ')}`
+          .map((it) => `${it.targetName}:${it.amountSats} (${it.error ?? 'unknown'})`)
+          .join('; ')}`
       );
     }
   });
