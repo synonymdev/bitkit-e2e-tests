@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { getAppId } from './constants';
 
-export type ProbeTargetType = 'lightningAddress' | 'lnurlCallback';
+export type ProbeTargetType = 'lightningAddress' | 'lnurlCallback' | 'nodeId';
 
 export type ProbeTarget = {
   name: string;
@@ -14,11 +14,13 @@ export type ProbeTarget = {
   amountsMsat?: number[];
   address?: string;
   url?: string;
+  nodeId?: string;
 };
 
 export type ProbeResult = {
   targetName: string;
   targetType: ProbeTargetType;
+  probeMode: 'invoice' | 'keysend';
   amountMsat: number;
   amountSats: number;
   required: boolean;
@@ -28,6 +30,7 @@ export type ProbeResult = {
   success: boolean;
   durationMs: number;
   bolt11?: string;
+  nodeId?: string;
   rawProviderResult?: string;
   error?: string;
 };
@@ -129,9 +132,17 @@ export async function fetchBolt11ForProbe(
   return response.pr;
 }
 
-export function runProbeCommand(target: ProbeTarget, amountMsat: number, bolt11: string): string {
+export function probeModeForTargetType(type: ProbeTargetType): 'invoice' | 'keysend' {
+  return type === 'nodeId' ? 'keysend' : 'invoice';
+}
+
+export function runProbeInvoiceCommand(
+  target: ProbeTarget,
+  amountMsat: number,
+  bolt11: string
+): string {
   const amountSats = amountMsat / 1000;
-  const method = process.env.PROBE_CONTENT_METHOD ?? 'probeInvoice';
+  const method = process.env.PROBE_INVOICE_METHOD ?? 'probeInvoice';
   const timeoutSeconds =
     parsePositiveIntEnv('PROBE_TIMEOUT_SECONDS') ?? DEFAULT_PROBE_TIMEOUT_SECONDS;
   const payload = {
@@ -141,21 +152,29 @@ export function runProbeCommand(target: ProbeTarget, amountMsat: number, bolt11:
     amountSats,
     timeoutSeconds,
   };
-  const command = [
-    'content',
-    'call',
-    '--uri',
-    shellQuote(`content://${getAppId()}.devtools`),
-    '--method',
-    shellQuote(method),
-    '--arg',
-    shellQuote(JSON.stringify(payload)),
-  ].join(' ');
 
-  return execFileSync('adb', ['shell', command], {
-    encoding: 'utf8',
-    timeout: (timeoutSeconds + 10) * 1000,
-  });
+  return runDevToolsCommand(method, payload, timeoutSeconds);
+}
+
+export function runProbeNodeCommand(target: ProbeTarget, amountMsat: number): string {
+  const nodeId = target.nodeId;
+  if (!nodeId) {
+    throw new Error(`Probe target '${target.name}' is missing nodeId`);
+  }
+
+  const amountSats = amountMsat / 1000;
+  const method = process.env.PROBE_NODE_METHOD ?? 'probeNode';
+  const timeoutSeconds =
+    parsePositiveIntEnv('PROBE_TIMEOUT_SECONDS') ?? DEFAULT_PROBE_TIMEOUT_SECONDS;
+  const payload = {
+    targetName: target.name,
+    nodeId,
+    amountMsat,
+    amountSats,
+    timeoutSeconds,
+  };
+
+  return runDevToolsCommand(method, payload, timeoutSeconds);
 }
 
 export function parseProbeCommandSuccess(raw: string): boolean {
@@ -356,17 +375,18 @@ export function renderProbeReport(
     `Required failures: ${failedRequired.length}`,
     `Readiness at probe start: ${readiness ? summarizeProbeReadiness(readiness) : 'not captured'}`,
     '',
-    '| Target | Amount sats | Required | Invoice | Probe | Retries | Duration ms | Failure |',
-    '| --- | ---: | --- | --- | --- | ---: | ---: | --- |',
+    '| Target | Type | Amount sats | Required | Fetch | Probe | Retries | Duration ms | Failure |',
+    '| --- | --- | ---: | --- | --- | --- | ---: | ---: | --- |',
   ];
 
   for (const result of results) {
     lines.push(
       `| ${[
         result.targetName,
+        result.probeMode,
         result.amountSats.toString(),
         result.required ? 'yes' : 'no',
-        result.invoiceFetched ? 'ok' : 'failed',
+        formatFetchCell(result),
         result.success ? '✅' : '❌',
         result.retries.toString(),
         result.durationMs.toString(),
@@ -387,14 +407,21 @@ function parseProbeTarget(value: unknown): ProbeTarget {
   if (!target.name || typeof target.name !== 'string') {
     throw new Error('Each probe target must define a string name');
   }
-  if (target.type !== 'lightningAddress' && target.type !== 'lnurlCallback') {
-    throw new Error(`Probe target '${target.name}' has unsupported type '${target.type}'`);
+  if (
+    target.type !== 'lightningAddress' &&
+    target.type !== 'lnurlCallback' &&
+    target.type !== 'nodeId'
+  ) {
+    throw new Error(`Probe target '${target.name}' has unsupported type '${String(target.type)}'`);
   }
   if (target.type === 'lightningAddress' && !target.address) {
     throw new Error(`Probe target '${target.name}' must define address`);
   }
   if (target.type === 'lnurlCallback' && !target.url) {
     throw new Error(`Probe target '${target.name}' must define url`);
+  }
+  if (target.type === 'nodeId' && !target.nodeId) {
+    throw new Error(`Probe target '${target.name}' must define nodeId`);
   }
 
   return {
@@ -405,6 +432,7 @@ function parseProbeTarget(value: unknown): ProbeTarget {
     amountsMsat: target.amountsMsat,
     address: target.address,
     url: target.url,
+    nodeId: target.nodeId,
   };
 }
 
@@ -516,6 +544,33 @@ function formatFailureCell(error: string): string {
     return `\`${sanitized.replace(/`/g, "'")}\``;
   }
   return `\`${sanitized}\``;
+}
+
+function formatFetchCell(result: ProbeResult): string {
+  if (result.probeMode === 'keysend') return 'n/a';
+  return result.invoiceFetched ? 'ok' : 'failed';
+}
+
+function runDevToolsCommand(
+  method: string,
+  payload: Record<string, unknown>,
+  timeoutSeconds: number
+): string {
+  const command = [
+    'content',
+    'call',
+    '--uri',
+    shellQuote(`content://${getAppId()}.devtools`),
+    '--method',
+    shellQuote(method),
+    '--arg',
+    shellQuote(JSON.stringify(payload)),
+  ].join(' ');
+
+  return execFileSync('adb', ['shell', command], {
+    encoding: 'utf8',
+    timeout: (timeoutSeconds + 10) * 1000,
+  });
 }
 
 function shellQuote(value: string): string {

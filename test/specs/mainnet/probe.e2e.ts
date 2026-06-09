@@ -5,8 +5,10 @@ import {
   fetchBolt11ForProbe,
   parseNonNegativeIntEnv,
   parseProbeCommandSuccess,
+  probeModeForTargetType,
   resolveProbeTargets,
-  runProbeCommand,
+  runProbeInvoiceCommand,
+  runProbeNodeCommand,
   summarizeProbeCommandFailure,
   waitForProbeReadiness,
   writeProbeArtifacts,
@@ -40,12 +42,13 @@ function resolveProbeRetryDelayMs(): number {
   return parseNonNegativeIntEnv('PROBE_RETRY_DELAY_MS') ?? DEFAULT_PROBE_RETRY_DELAY_MS;
 }
 
-async function runProbe(target: ProbeTarget, amountMsat: number): Promise<ProbeResult> {
+async function runInvoiceProbe(target: ProbeTarget, amountMsat: number): Promise<ProbeResult> {
   const startedAt = Date.now();
   const amountSats = amountMsat / 1000;
   const baseResult = {
     targetName: target.name,
     targetType: target.type,
+    probeMode: probeModeForTargetType(target.type),
     amountMsat,
     amountSats,
     required: target.required ?? true,
@@ -79,7 +82,7 @@ async function runProbe(target: ProbeTarget, amountMsat: number): Promise<ProbeR
           maxRetries + 1
         }...`
       );
-      const rawProviderResult = runProbeCommand(target, amountMsat, bolt11);
+      const rawProviderResult = runProbeInvoiceCommand(target, amountMsat, bolt11);
       lastRawProviderResult = rawProviderResult;
       const success = parseProbeCommandSuccess(rawProviderResult);
 
@@ -118,6 +121,80 @@ async function runProbe(target: ProbeTarget, amountMsat: number): Promise<ProbeR
   };
 }
 
+async function runNodeProbe(target: ProbeTarget, amountMsat: number): Promise<ProbeResult> {
+  const startedAt = Date.now();
+  const amountSats = amountMsat / 1000;
+  const nodeId = target.nodeId;
+  if (!nodeId) {
+    throw new Error(`Probe target '${target.name}' is missing nodeId`);
+  }
+
+  const baseResult = {
+    targetName: target.name,
+    targetType: target.type,
+    probeMode: probeModeForTargetType(target.type),
+    amountMsat,
+    amountSats,
+    required: target.required ?? true,
+    attempt: Number.parseInt(process.env.ATTEMPT ?? '1', 10),
+    nodeId,
+    invoiceFetched: false,
+  };
+
+  const maxRetries = resolveProbeRetries();
+  const retryDelayMs = resolveProbeRetryDelayMs();
+  let lastRawProviderResult = '';
+  let lastError = 'Probe command returned a failed result';
+
+  for (let retry = 0; retry <= maxRetries; retry++) {
+    try {
+      console.info(
+        `→ [Probe] Keysend probing '${target.name}' (${amountSats} sats), attempt ${retry + 1}/${
+          maxRetries + 1
+        }...`
+      );
+      const rawProviderResult = runProbeNodeCommand(target, amountMsat);
+      lastRawProviderResult = rawProviderResult;
+      const success = parseProbeCommandSuccess(rawProviderResult);
+
+      if (success) {
+        return {
+          ...baseResult,
+          retries: retry,
+          success: true,
+          durationMs: Date.now() - startedAt,
+          rawProviderResult,
+        };
+      }
+
+      lastError = summarizeProbeCommandFailure(rawProviderResult);
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+    }
+
+    if (retry < maxRetries && retryDelayMs > 0) {
+      console.info(`→ [Probe] Retrying '${target.name}' in ${retryDelayMs / 1000}s...`);
+      await sleep(retryDelayMs);
+    }
+  }
+
+  return {
+    ...baseResult,
+    retries: maxRetries,
+    success: false,
+    durationMs: Date.now() - startedAt,
+    rawProviderResult: lastRawProviderResult,
+    error: lastError,
+  };
+}
+
+async function runProbe(target: ProbeTarget, amountMsat: number): Promise<ProbeResult> {
+  if (target.type === 'nodeId') {
+    return runNodeProbe(target, amountMsat);
+  }
+  return runInvoiceProbe(target, amountMsat);
+}
+
 describe('@probe_mainnet - Lightning probe smoke', () => {
   let probeSeed: string;
   let targets: ProbeTarget[];
@@ -152,7 +229,7 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
         const result = await runProbe(target, amountMsat);
         results.push(result);
         console.info(
-          `→ [Probe] ${result.targetName} ${result.amountSats} sats: ${
+          `→ [Probe] ${result.targetName} ${result.amountSats} sats (${result.probeMode}): ${
             result.success ? '✅ success' : `❌ failed (${result.error ?? 'unknown'})`
           }`
         );
