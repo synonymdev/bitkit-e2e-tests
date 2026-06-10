@@ -35,6 +35,10 @@ To execute native E2E tests from an external orchestrator:
 - provide all secrets required by the selected tag(s)
 - pass grep/tag filters via CLI args, not by editing spec files
 
+## Suite-specific docs
+
+- `docs/mainnet-probe.md` — Lightning probe suite (`@probe_mainnet`): `PROBE_*` env var reference, artifacts, and local-run instructions.
+
 ## Adding or changing nightly coverage
 
 1. Add/update spec(s) and tags in `bitkit-e2e-tests`.
