@@ -180,8 +180,11 @@ describe('@lnurl - LNURL', () => {
       await tap('N2');
       await tap('N0');
       await tap('N1');
-      await expectTextWithin('SendNumberField', '201');
-      await elementById('ContinueAmount').waitForEnabled({ reverse: true });
+      if (driver.isAndroid) {
+        await waitForToast('SendAmountExceededToast');
+      } else {
+        await elementById('ContinueAmount').waitForEnabled({ reverse: true });
+      }
       await multiTap('NRemove', 3); // remove "201"
       await tap('N1');
       await tap('N4');
