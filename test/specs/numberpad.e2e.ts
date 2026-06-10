@@ -89,11 +89,11 @@ async function modernDenominationChecks(mode: NumberpadMode) {
 
   await tap('N000');
   await expectText('123 000');
-  await checkContinueButton(mode, { aboveBalance: true });
+  await checkContinueButton(mode);
 
   // Switch to USD
   await tap(`${mode}NumberPadUnit`);
-  await checkContinueButton(mode, { aboveBalance: true });
+  await checkContinueButton(mode);
 
   // reset to 0
   await multiTap('NRemove', 8);
@@ -112,7 +112,7 @@ async function modernDenominationChecks(mode: NumberpadMode) {
   await tap('NDecimal');
   await tap('N1');
   await expectText('1.01');
-  await checkContinueButton(mode, { aboveBalance: false });
+  await checkContinueButton(mode);
 
   // Switch back to BTC
   await tap(`${mode}NumberPadUnit`);
@@ -157,15 +157,11 @@ async function classicDenominationChecks(mode: NumberpadMode) {
 }
 
 async function checkContinueButton(
-  mode: NumberpadMode,
-  { aboveBalance = true }: { aboveBalance?: boolean } = {}
+  mode: NumberpadMode
 ) {
   if (mode === 'Send') {
-    // make sure Continue button is disabled as amount is above balance
-    if (driver.isAndroid) return; // https://github.com/synonymdev/bitkit-android/issues/611
-    await elementById('ContinueAmount').waitForEnabled({ reverse: aboveBalance });
+    await elementById('ContinueAmount').waitForEnabled();
   } else {
-    // In receive mode Continue is always enabled
     await elementById('ReceiveNumberPadSubmit').waitForEnabled();
   }
 }
