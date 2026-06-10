@@ -146,7 +146,11 @@ describe('@send - Send', () => {
     // type amount over balance and verify you cannot continue
     await tap('AddressContinue');
     await enterAmount(amount + 1);
-    await elementById('ContinueAmount').waitForEnabled({ reverse: true });
+    if (driver.isAndroid) {
+      await waitForToast('SendAmountExceededToast');
+    } else {
+      await elementById('ContinueAmount').waitForEnabled({ reverse: true });
+    }
     await tap('NavigationBack');
 
     // check validation for unified invoice when balance is enough (10_000 sats)
