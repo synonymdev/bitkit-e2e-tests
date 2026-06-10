@@ -25,7 +25,7 @@ describe('@numberpad - NumberPad', () => {
     electrum = await initElectrum();
     await reinstallApp();
     await completeOnboarding();
-    await receiveOnchainFunds({ sats: 10_000 });
+    await receiveOnchainFunds({ sats: 500_000_000, expectHighBalanceWarning: true });
   });
 
   after(async () => {
