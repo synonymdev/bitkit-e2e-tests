@@ -408,7 +408,7 @@ export function renderProbeReport(
     '# Lightning Probe Report',
     '',
     `Required failures: ${failedRequired.length}`,
-    `Probe order: ${resolveProbeOrder()}`,
+    `Probe order: ${probeOrderForReport()}`,
     `Readiness at probe start: ${readiness ? summarizeProbeReadiness(readiness) : 'not captured'}`,
     '',
     '| Target | Type | Amount sats | Required | Fetch | Probe | Retries | Duration ms | Failure |',
@@ -432,6 +432,16 @@ export function renderProbeReport(
   }
 
   return `${lines.join('\n')}\n`;
+}
+
+// Report rendering runs from the spec's finally block, so it must never throw
+// and mask the original test failure (e.g. an invalid PROBE_ORDER value).
+function probeOrderForReport(): string {
+  try {
+    return resolveProbeOrder();
+  } catch {
+    return `invalid (${process.env.PROBE_ORDER})`;
+  }
 }
 
 function parseProbeTarget(value: unknown): ProbeTarget {
