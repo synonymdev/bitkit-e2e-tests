@@ -88,6 +88,41 @@ export function resolveProbeTargets(): ProbeTarget[] {
   return parsed.map(parseProbeTarget);
 }
 
+export type ProbeOrder = 'desc' | 'random' | 'config';
+
+export type ProbeQueueEntry = { target: ProbeTarget; amountMsat: number };
+
+export function resolveProbeOrder(): ProbeOrder {
+  const raw = process.env.PROBE_ORDER?.toLowerCase();
+  if (!raw) return 'config';
+  if (raw === 'desc' || raw === 'random' || raw === 'config') return raw;
+  throw new Error(`Invalid PROBE_ORDER value: ${raw} (expected desc, random or config)`);
+}
+
+export function buildProbeQueue(targets: ProbeTarget[], order: ProbeOrder): ProbeQueueEntry[] {
+  const queue = targets.flatMap((target) => {
+    const amounts = expandProbeTargetAmounts(target);
+    if (order === 'desc') {
+      amounts.sort((a, b) => b - a);
+    }
+    return amounts.map((amountMsat) => ({ target, amountMsat }));
+  });
+
+  if (order === 'random') {
+    shuffleInPlace(queue);
+  }
+
+  return queue;
+}
+
+function shuffleInPlace<T>(items: T[]): T[] {
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  return items;
+}
+
 export function expandProbeTargetAmounts(target: ProbeTarget): number[] {
   const amounts = target.amountsMsat ?? (target.amountMsat ? [target.amountMsat] : []);
   if (amounts.length === 0) {
@@ -373,6 +408,7 @@ export function renderProbeReport(
     '# Lightning Probe Report',
     '',
     `Required failures: ${failedRequired.length}`,
+    `Probe order: ${resolveProbeOrder()}`,
     `Readiness at probe start: ${readiness ? summarizeProbeReadiness(readiness) : 'not captured'}`,
     '',
     '| Target | Type | Amount sats | Required | Fetch | Probe | Retries | Duration ms | Failure |',
