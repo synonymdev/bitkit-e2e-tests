@@ -99,6 +99,7 @@ describe('@transfer - Transfer', () => {
       const eurBalance = Number.parseInt(label, 10);
       await expect(eurBalance).toBeGreaterThan(440);
       await expect(eurBalance).toBeLessThan(460);
+      await sleep(1000);
       await tap('SpendingAdvancedNumberField'); // change back to sats
       await tap('SpendingAdvancedContinue');
       await sleep(500);
@@ -163,6 +164,7 @@ describe('@transfer - Transfer', () => {
       // Get another channel with custom receiving capacity
       await tap('ActivitySavings');
       await tap('TransferToSpending');
+      await elementById('SpendingAmountContinue').waitForEnabled();
       await tap('N1');
       await multiTap('N0', 5);
       await tap('SpendingAmountContinue');
