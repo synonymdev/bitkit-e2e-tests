@@ -56,6 +56,8 @@ const DEFAULT_PROBE_FETCH_RETRY_DELAY_MS = 1_000;
 const DEFAULT_READINESS_TIMEOUT_MS = 180_000;
 const DEFAULT_READINESS_POLL_MS = 5_000;
 const DEFAULT_MIN_GRAPH_CHANNELS = 10_000;
+const DEFAULT_RESET_SCORES_TIMEOUT_SECONDS = 180;
+const DEFAULT_SCORES_SYNC_MAX_AGE_S = 900;
 
 export type ProbeReadiness = {
   ready: boolean;
@@ -72,6 +74,7 @@ export type ProbeReadiness = {
   graphNodeCount?: number;
   graphChannelCount?: number;
   latestRgsSyncTimestamp?: number;
+  latestPathfindingScoresSyncTimestamp?: number;
 };
 
 export function resolveProbeTargets(): ProbeTarget[] {
@@ -248,6 +251,32 @@ export function summarizeProbeCommandFailure(raw: string): string {
   );
 }
 
+export function resolveProbeResetScores(): boolean {
+  return parseBooleanEnv('PROBE_RESET_SCORES') ?? false;
+}
+
+/**
+ * Resets the persisted pathfinding scores via devtools and returns the epoch
+ * seconds at which the reset started, to be used as a floor for the scores
+ * sync timestamp in readiness checks (the sync timestamp persisted in node
+ * metrics survives the restart, so only a sync newer than the reset proves
+ * the external scores were re-downloaded).
+ */
+export async function resetPathfindingScores({ logPrefix }: { logPrefix: string }): Promise<number> {
+  const method = process.env.PROBE_RESET_SCORES_METHOD ?? 'resetScores';
+  const timeoutSeconds =
+    parsePositiveIntEnv('PROBE_RESET_SCORES_TIMEOUT_SECONDS') ?? DEFAULT_RESET_SCORES_TIMEOUT_SECONDS;
+
+  console.info(`→ [${logPrefix}] Resetting pathfinding scores (timeout ${timeoutSeconds}s)...`);
+  const resetStartedAtS = Math.floor(Date.now() / 1000);
+  const raw = runDevToolsCommand(method, {}, timeoutSeconds);
+  if (!parseProbeCommandSuccess(raw)) {
+    throw new Error(`Pathfinding scores reset failed: ${summarizeProbeCommandFailure(raw)}`);
+  }
+  console.info(`→ [${logPrefix}] Pathfinding scores reset done`);
+  return resetStartedAtS;
+}
+
 export function runReadinessCommand(): string {
   const method = process.env.PROBE_READINESS_METHOD ?? 'probeReadiness';
   const command = [
@@ -305,7 +334,9 @@ function summarizeReadinessError(raw: string): string {
 
 export function isProbeReadinessSufficient(
   readiness: ProbeReadiness,
-  minGraphChannels: number
+  minGraphChannels: number,
+  maxScoresSyncAgeS: number | null = null,
+  minScoresSyncTimestamp: number | null = null
 ): boolean {
   return (
     readiness.ready &&
@@ -313,8 +344,26 @@ export function isProbeReadinessSufficient(
     readiness.connectedPeers > 0 &&
     readiness.usableChannels > 0 &&
     readiness.syncHealthy &&
-    (readiness.graphChannelCount ?? 0) >= minGraphChannels
+    (readiness.graphChannelCount ?? 0) >= minGraphChannels &&
+    isScoresSyncFresh(readiness, maxScoresSyncAgeS, minScoresSyncTimestamp)
   );
+}
+
+// Tolerance for host vs device clock skew when comparing the device-reported
+// sync timestamp against the host-captured reset start time.
+const SCORES_SYNC_CLOCK_SKEW_S = 60;
+
+function isScoresSyncFresh(
+  readiness: ProbeReadiness,
+  maxAgeS: number | null,
+  minTimestamp: number | null
+): boolean {
+  if (maxAgeS === null) return true;
+  const timestamp = readiness.latestPathfindingScoresSyncTimestamp;
+  if (!timestamp) return false;
+  if (Date.now() / 1000 - timestamp > maxAgeS) return false;
+  if (minTimestamp !== null && timestamp < minTimestamp - SCORES_SYNC_CLOCK_SKEW_S) return false;
+  return true;
 }
 
 export function summarizeProbeReadiness(readiness: ProbeReadiness): string {
@@ -325,6 +374,7 @@ export function summarizeProbeReadiness(readiness: ProbeReadiness): string {
     `outboundSats=${readiness.outboundCapacitySats}`,
     `graphChannels=${readiness.graphChannelCount ?? 'n/a'}`,
     `graphNodes=${readiness.graphNodeCount ?? 'n/a'}`,
+    `scoresSync=${readiness.latestPathfindingScoresSyncTimestamp ?? 'n/a'}`,
     `syncHealthy=${readiness.syncHealthy}`,
     `ready=${readiness.ready}`,
   ].join(' ');
@@ -332,18 +382,27 @@ export function summarizeProbeReadiness(readiness: ProbeReadiness): string {
 
 type WaitForProbeReadinessOptions = {
   logPrefix: string;
+  requireScoresSync?: boolean;
+  /** Epoch seconds; scores sync must be newer than this (e.g. the reset start time). */
+  minScoresSyncTimestamp?: number | null;
 };
 
 export async function waitForProbeReadiness({
   logPrefix,
+  requireScoresSync = false,
+  minScoresSyncTimestamp = null,
 }: WaitForProbeReadinessOptions): Promise<ProbeReadiness> {
   const timeoutMs = parsePositiveIntEnv('PROBE_READINESS_TIMEOUT_MS') ?? DEFAULT_READINESS_TIMEOUT_MS;
   const pollMs = parsePositiveIntEnv('PROBE_READINESS_POLL_MS') ?? DEFAULT_READINESS_POLL_MS;
   const minGraphChannels =
     parseNonNegativeIntEnv('PROBE_MIN_GRAPH_CHANNELS') ?? DEFAULT_MIN_GRAPH_CHANNELS;
+  const maxScoresSyncAgeS = requireScoresSync
+    ? (parsePositiveIntEnv('PROBE_SCORES_SYNC_MAX_AGE_S') ?? DEFAULT_SCORES_SYNC_MAX_AGE_S)
+    : null;
+  const minSyncTimestamp = requireScoresSync ? minScoresSyncTimestamp : null;
 
   console.info(
-    `→ [${logPrefix}] Waiting for probe readiness (timeout ${timeoutMs / 1000}s, minGraphChannels ${minGraphChannels})...`
+    `→ [${logPrefix}] Waiting for probe readiness (timeout ${timeoutMs / 1000}s, minGraphChannels ${minGraphChannels}, requireScoresSync ${requireScoresSync})...`
   );
 
   const deadline = Date.now() + timeoutMs;
@@ -360,7 +419,7 @@ export async function waitForProbeReadiness({
     const readiness = raw ? parseProbeReadiness(raw) : null;
     if (readiness) {
       lastSummary = summarizeProbeReadiness(readiness);
-      if (isProbeReadinessSufficient(readiness, minGraphChannels)) {
+      if (isProbeReadinessSufficient(readiness, minGraphChannels, maxScoresSyncAgeS, minSyncTimestamp)) {
         console.info(`→ [${logPrefix}] Probe readiness satisfied: ${lastSummary}`);
         return readiness;
       }
@@ -409,6 +468,7 @@ export function renderProbeReport(
     '',
     `Required failures: ${failedRequired.length}`,
     `Probe order: ${probeOrderForReport()}`,
+    `Scores reset: ${scoresResetForReport()}`,
     `Readiness at probe start: ${readiness ? summarizeProbeReadiness(readiness) : 'not captured'}`,
     '',
     '| Target | Type | Amount sats | Required | Fetch | Probe | Retries | Duration ms | Failure |',
@@ -441,6 +501,14 @@ function probeOrderForReport(): string {
     return resolveProbeOrder();
   } catch {
     return `invalid (${process.env.PROBE_ORDER})`;
+  }
+}
+
+function scoresResetForReport(): string {
+  try {
+    return String(resolveProbeResetScores());
+  } catch {
+    return `invalid (${process.env.PROBE_RESET_SCORES})`;
   }
 }
 
@@ -558,6 +626,14 @@ export function parseNonNegativeIntEnv(name: string): number | null {
     throw new Error(`Invalid ${name} value: ${raw}`);
   }
   return value;
+}
+
+function parseBooleanEnv(name: string): boolean | null {
+  const raw = process.env[name]?.trim().toLowerCase();
+  if (!raw) return null;
+  if (raw === 'true' || raw === '1' || raw === 'yes') return true;
+  if (raw === 'false' || raw === '0' || raw === 'no') return false;
+  throw new Error(`Invalid ${name} value: ${raw} (expected true or false)`);
 }
 
 function delay(ms: number): Promise<void> {

@@ -18,6 +18,9 @@ It is orchestrated nightly by the private `bitkit-nightly` repo (`mainnet-probe.
 | Variable | Default | Description |
 | --- | --- | --- |
 | `PROBE_ORDER` | `config` | Order of probes per target: `config` = amounts as listed in target config, `desc` = highest amount first (avoids small probes "warming up" scorer knowledge of the route), `random` = global shuffle of all target+amount pairs. |
+| `PROBE_RESET_SCORES` | `false` | When `true`, deletes the persisted pathfinding scores (`scorer` and `external_pathfinding_scores_cache` VSS keys) and restarts the node before probing, so every run starts from a fresh scorer (external scores are re-downloaded on startup). Recommended for scorer A/B experiments; the nightly job enables it by default. Accepts `true/false/1/0/yes/no`. |
+| `PROBE_RESET_SCORES_TIMEOUT_SECONDS` | `180` | Timeout for the scores reset devtools command (covers node stop + VSS deletes + node start). |
+| `PROBE_SCORES_SYNC_MAX_AGE_S` | `900` | Only with `PROBE_RESET_SCORES=true`: readiness additionally requires the node's last external scores sync to be at most this many seconds old **and** newer than the reset start time (the sync timestamp persisted in node metrics survives the restart, so only a post-reset sync proves the scores were re-downloaded). Guards against a failed scorer fetch silently producing a "no scores" run. |
 | `PROBE_RETRIES` | `2` | In-test retries per target+amount after a failed probe (total attempts = retries + 1). `0` = single attempt; useful to measure first-attempt success rate. |
 | `PROBE_RETRY_DELAY_MS` | `5000` | Delay between probe retries. |
 | `PROBE_DELAY_MS` | `10000` | Delay between consecutive probes (different target/amount). |
@@ -47,6 +50,7 @@ Probing starts only after the node reports a healthy state (running, peers conne
 | `PROBE_INVOICE_METHOD` | `probeInvoice` | Devtools content-provider method for invoice probes. |
 | `PROBE_NODE_METHOD` | `probeNode` | Devtools method for keysend probes. |
 | `PROBE_READINESS_METHOD` | `probeReadiness` | Devtools method for the readiness check. |
+| `PROBE_RESET_SCORES_METHOD` | `resetScores` | Devtools method for the pathfinding scores reset. |
 
 ### Related (set by orchestration)
 
@@ -95,4 +99,5 @@ Notes:
 
 - The wallet derived from `PROBE_SEED` must already have an open, usable channel with outbound liquidity covering the largest configured probe amount.
 - Probes do not move funds; the wallet balance is unchanged by a run.
-- For scorer experiments, prefer `PROBE_ORDER=desc PROBE_RETRIES=0` to measure cold first-attempt success rate per amount.
+- For scorer experiments, prefer `PROBE_RESET_SCORES=true PROBE_ORDER=desc PROBE_RETRIES=0` to measure cold first-attempt success rate per amount. Without the reset, locally learned scores accumulate in VSS under the probe seed across runs (probe results train the scorer), so consecutive runs are not comparable.
+- `PROBE_RESET_SCORES` requires an app build that includes the `resetScores` devtools method (bitkit-android).

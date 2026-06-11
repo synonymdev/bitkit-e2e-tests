@@ -6,7 +6,9 @@ import {
   parseNonNegativeIntEnv,
   parseProbeCommandSuccess,
   probeModeForTargetType,
+  resetPathfindingScores,
   resolveProbeOrder,
+  resolveProbeResetScores,
   resolveProbeTargets,
   runProbeInvoiceCommand,
   runProbeNodeCommand,
@@ -217,7 +219,17 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
         expectAndroidAlert: false,
       });
       await waitForMainnetWalletReady({ logPrefix: 'Probe' });
-      readiness = await waitForProbeReadiness({ logPrefix: 'Probe' });
+
+      const resetScores = resolveProbeResetScores();
+      let scoresResetStartedAtS: number | null = null;
+      if (resetScores) {
+        scoresResetStartedAtS = await resetPathfindingScores({ logPrefix: 'Probe' });
+      }
+      readiness = await waitForProbeReadiness({
+        logPrefix: 'Probe',
+        requireScoresSync: resetScores,
+        minScoresSyncTimestamp: scoresResetStartedAtS,
+      });
 
       const probeOrder = resolveProbeOrder();
       const probes = buildProbeQueue(targets, probeOrder);
