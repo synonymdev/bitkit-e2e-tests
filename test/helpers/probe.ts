@@ -350,7 +350,8 @@ export function isProbeReadinessSufficient(
   readiness: ProbeReadiness,
   minGraphChannels: number,
   maxScoresSyncAgeS: number | null = null,
-  minScoresSyncTimestamp: number | null = null
+  minScoresSyncTimestamp: number | null = null,
+  nowS: number = Date.now() / 1000
 ): boolean {
   return (
     readiness.ready &&
@@ -359,19 +360,20 @@ export function isProbeReadinessSufficient(
     readiness.usableChannels > 0 &&
     readiness.syncHealthy &&
     (readiness.graphChannelCount ?? 0) >= minGraphChannels &&
-    isScoresSyncFresh(readiness, maxScoresSyncAgeS, minScoresSyncTimestamp)
+    isScoresSyncFresh(readiness, maxScoresSyncAgeS, minScoresSyncTimestamp, nowS)
   );
 }
 
 function isScoresSyncFresh(
   readiness: ProbeReadiness,
   maxAgeS: number | null,
-  minTimestamp: number | null
+  minTimestamp: number | null,
+  nowS: number = Date.now() / 1000
 ): boolean {
   if (maxAgeS === null) return true;
   const timestamp = readiness.latestPathfindingScoresSyncTimestamp;
   if (!timestamp) return false;
-  if (Date.now() / 1000 - timestamp > maxAgeS) return false;
+  if (nowS - timestamp > maxAgeS) return false;
   // Both timestamps come from the device clock; a post-reset sync happens
   // seconds after the reset start, so strictly newer is the correct bound
   // (a pre-reset sync can at most share the reset start second).
@@ -432,7 +434,10 @@ export async function waitForProbeReadiness({
     const readiness = raw ? parseProbeReadiness(raw) : null;
     if (readiness) {
       lastSummary = summarizeProbeReadiness(readiness);
-      if (isProbeReadinessSufficient(readiness, minGraphChannels, maxScoresSyncAgeS, minSyncTimestamp)) {
+      // Use the device clock for the scores sync age check so it is measured
+      // against the same clock that produced the sync timestamp.
+      const nowS = maxScoresSyncAgeS !== null ? getDeviceEpochSeconds() : Date.now() / 1000;
+      if (isProbeReadinessSufficient(readiness, minGraphChannels, maxScoresSyncAgeS, minSyncTimestamp, nowS)) {
         console.info(`→ [${logPrefix}] Probe readiness satisfied: ${lastSummary}`);
         return readiness;
       }
