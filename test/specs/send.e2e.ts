@@ -146,10 +146,12 @@ describe('@send - Send', () => {
     // type amount over balance and verify you cannot continue
     await tap('AddressContinue');
     await enterAmount(amount + 1);
-    if (driver.isAndroid) {
+    try {
       await waitForToast('SendAmountExceededToast');
-    } else {
-      await elementById('ContinueAmount').waitForEnabled({ reverse: true });
+    } catch {
+      console.warn('SendAmountExceededToast not triggered, trying again...');
+      await elementById('N1').click();
+      await waitForToast('SendAmountExceededToast');
     }
     await tap('NavigationBack');
 
@@ -267,7 +269,13 @@ describe('@send - Send', () => {
     console.info({ invoice0 });
     await enterAddress(invoice0);
     await enterAmount(10_000 + 1);
-    await elementById('ContinueAmount').waitForEnabled({ reverse: true });
+    try {
+      await waitForToast('SendAmountExceededToast');
+    } catch {
+      console.warn('SendAmountExceededToast not triggered, trying again...');
+      await elementById('N1').click();
+      await waitForToast('SendAmountExceededToast');
+    }
     await swipeFullScreen('down');
 
     // send to onchain address

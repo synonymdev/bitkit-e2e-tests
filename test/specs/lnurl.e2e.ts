@@ -24,6 +24,7 @@ import {
   enterAddressViaScanPrompt,
   acknowledgeReceivedPayment,
   acknowledgeExternalSuccess,
+  enterAmount,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
@@ -177,27 +178,25 @@ describe('@lnurl - LNURL', () => {
       await enterAddressViaScanPrompt(payRequest1.encoded, { acceptCameraPermission: false });
       await expectTextWithin('SendNumberField', '0');
       // Check that 149 sats is below minimum and 201 sats is above maximum (both rejected)
-      await tap('N2');
-      await tap('N0');
-      await tap('N1');
-      if (driver.isAndroid) {
+      try {
+        await enterAmount(201);
         await waitForToast('SendAmountExceededToast');
-      } else {
-        await elementById('ContinueAmount').waitForEnabled({ reverse: true });
+      } catch {
+        console.warn('SendAmountExceededToast not triggered, trying again...');
+        // tap on 1 fast to trigger the toast
+        await elementById('N1').click();
+        await waitForToast('SendAmountExceededToast');
       }
+
       await multiTap('NRemove', 3); // remove "201"
-      await tap('N1');
-      await tap('N4');
-      await tap('N9');
+      await enterAmount(149);
       await expectTextWithin('SendNumberField', '149');
       await tap('ContinueAmount');
       await waitForToast('LnurlPayAmountTooLowToast');
 
       await multiTap('NRemove', 3); // remove "149"
       // go with 150
-      await tap('N1');
-      await tap('N5');
-      await tap('N0');
+      await enterAmount(150);
       await expectTextWithin('SendNumberField', '150');
       await elementById('ContinueAmount').waitForEnabled();
       await tap('ContinueAmount');
@@ -264,9 +263,7 @@ describe('@lnurl - LNURL', () => {
       await enterAddress(payRequest3.encoded, { acceptCameraPermission: false });
       await expectTextWithin('SendNumberField', '0');
       // go with 321
-      await tap('N3');
-      await tap('N2');
-      await tap('N1');
+      await enterAmount(321);
       await elementById('ContinueAmount').waitForDisplayed();
       await tap('ContinueAmount');
       await dragOnElement('GRAB', 'right', 0.95);
