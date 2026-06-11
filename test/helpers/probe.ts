@@ -257,11 +257,14 @@ export function resolveProbeResetScores(): boolean {
 
 /**
  * Resets the persisted pathfinding scores via devtools and returns the
- * device-clock epoch seconds at which the reset started, to be used as a
- * floor for the scores sync timestamp in readiness checks (the sync timestamp
- * persisted in node metrics survives the restart, so only a sync strictly
- * newer than the reset proves the external scores were re-downloaded). The
- * floor is read from the device clock because the sync timestamp is also
+ * device-clock epoch seconds to be used as a floor for the scores sync
+ * timestamp in readiness checks (the sync timestamp persisted in node metrics
+ * survives the restart, so only a sync strictly newer than the reset proves
+ * the external scores were re-downloaded). The app reports the floor as the
+ * moment after the node stop + VSS deletes and before the restart, so any
+ * newer sync can only come from the rebuilt node; if the app is too old to
+ * report it, falls back to the device time captured before the reset call.
+ * The floor uses the device clock because the sync timestamp is also
  * device-generated, making the comparison immune to host/device clock skew.
  */
 export async function resetPathfindingScores({ logPrefix }: { logPrefix: string }): Promise<number> {
@@ -270,13 +273,39 @@ export async function resetPathfindingScores({ logPrefix }: { logPrefix: string 
     parsePositiveIntEnv('PROBE_RESET_SCORES_TIMEOUT_SECONDS') ?? DEFAULT_RESET_SCORES_TIMEOUT_SECONDS;
 
   console.info(`→ [${logPrefix}] Resetting pathfinding scores (timeout ${timeoutSeconds}s)...`);
-  const resetStartedAtS = getDeviceEpochSeconds();
+  const fallbackFloorS = getDeviceEpochSeconds();
   const raw = runDevToolsCommand(method, {}, timeoutSeconds);
   if (!parseProbeCommandSuccess(raw)) {
     throw new Error(`Pathfinding scores reset failed: ${summarizeProbeCommandFailure(raw)}`);
   }
-  console.info(`→ [${logPrefix}] Pathfinding scores reset done (started at ${resetStartedAtS})`);
-  return resetStartedAtS;
+  const deviceResetAtS = parseResetTimestamp(raw);
+  if (deviceResetAtS === null) {
+    console.warn(
+      `→ [${logPrefix}] Reset result has no timestamp (old app build?); using pre-reset device time as scores sync floor`
+    );
+  }
+  const resetFloorS = deviceResetAtS ?? fallbackFloorS;
+  console.info(`→ [${logPrefix}] Pathfinding scores reset done (floor ${resetFloorS})`);
+  return resetFloorS;
+}
+
+function parseResetTimestamp(raw: string): number | null {
+  const result = extractContentCallResult(raw);
+  if (!result) return null;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(result);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== 'object' || parsed === null) return null;
+  if (!('timestamp' in parsed)) return null;
+
+  const timestamp = parsed.timestamp;
+  return typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp > 0
+    ? timestamp
+    : null;
 }
 
 function getDeviceEpochSeconds(): number {
@@ -374,9 +403,9 @@ function isScoresSyncFresh(
   const timestamp = readiness.latestPathfindingScoresSyncTimestamp;
   if (!timestamp) return false;
   if (nowS - timestamp > maxAgeS) return false;
-  // Both timestamps come from the device clock; a post-reset sync happens
-  // seconds after the reset start, so strictly newer is the correct bound
-  // (a pre-reset sync can at most share the reset start second).
+  // Both timestamps come from the device clock; the floor is captured by the
+  // app after the node stop + VSS deletes, so any strictly newer sync can
+  // only come from the rebuilt node (post-reset).
   if (minTimestamp !== null && timestamp <= minTimestamp) return false;
   return true;
 }
@@ -398,7 +427,7 @@ export function summarizeProbeReadiness(readiness: ProbeReadiness): string {
 type WaitForProbeReadinessOptions = {
   logPrefix: string;
   requireScoresSync?: boolean;
-  /** Device-clock epoch seconds; scores sync must be strictly newer than this (the reset start time). */
+  /** Device-clock epoch seconds; scores sync must be strictly newer than this (the reset floor reported by the app). */
   minScoresSyncTimestamp?: number | null;
 };
 

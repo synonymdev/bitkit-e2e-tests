@@ -221,14 +221,14 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
       await waitForMainnetWalletReady({ logPrefix: 'Probe' });
 
       const resetScores = resolveProbeResetScores();
-      let scoresResetStartedAtS: number | null = null;
+      let scoresResetFloorS: number | null = null;
       if (resetScores) {
-        scoresResetStartedAtS = await resetPathfindingScores({ logPrefix: 'Probe' });
+        scoresResetFloorS = await resetPathfindingScores({ logPrefix: 'Probe' });
       }
       readiness = await waitForProbeReadiness({
         logPrefix: 'Probe',
         requireScoresSync: resetScores,
-        minScoresSyncTimestamp: scoresResetStartedAtS,
+        minScoresSyncTimestamp: scoresResetFloorS,
       });
 
       const probeOrder = resolveProbeOrder();
