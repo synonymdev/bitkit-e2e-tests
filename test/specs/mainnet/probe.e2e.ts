@@ -1,11 +1,12 @@
 import { restoreWallet, sleep } from '../../helpers/actions';
 import { waitForMainnetWalletReady } from '../../helpers/mainnet';
 import {
-  expandProbeTargetAmounts,
+  buildProbeQueue,
   fetchBolt11ForProbe,
   parseNonNegativeIntEnv,
   parseProbeCommandSuccess,
   probeModeForTargetType,
+  resolveProbeOrder,
   resolveProbeTargets,
   runProbeInvoiceCommand,
   runProbeNodeCommand,
@@ -218,12 +219,16 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
       await waitForMainnetWalletReady({ logPrefix: 'Probe' });
       readiness = await waitForProbeReadiness({ logPrefix: 'Probe' });
 
-      const probes = targets.flatMap((target) =>
-        expandProbeTargetAmounts(target).map((amountMsat) => ({ target, amountMsat }))
-      );
+      const probeOrder = resolveProbeOrder();
+      const probes = buildProbeQueue(targets, probeOrder);
       const probeDelayMs = resolveProbeDelayMs();
       const probeRetries = resolveProbeRetries();
       console.info(`→ [Probe] Probe retries configured: ${probeRetries}`);
+      console.info(
+        `→ [Probe] Probe order '${probeOrder}': ${probes
+          .map((it) => `${it.target.name}:${it.amountMsat / 1000}`)
+          .join(', ')}`
+      );
 
       for (const [index, { target, amountMsat }] of probes.entries()) {
         const result = await runProbe(target, amountMsat);
