@@ -180,12 +180,12 @@ describe('@lnurl - LNURL', () => {
       // Check that 149 sats is below minimum and 201 sats is above maximum (both rejected)
       try {
         await enterAmount(201);
-        await waitForToast('SendAmountExceededToast');
+        await waitForToast('SendAmountExceededToast', { dismiss: driver.isAndroid });
       } catch {
         console.warn('SendAmountExceededToast not triggered, trying again...');
         // tap on 1 fast to trigger the toast
         await elementById('N1').click();
-        await waitForToast('SendAmountExceededToast');
+        await waitForToast('SendAmountExceededToast', { dismiss: driver.isAndroid });
       }
 
       await multiTap('NRemove', 3); // remove "201"
