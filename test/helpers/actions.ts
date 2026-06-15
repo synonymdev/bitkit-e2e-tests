@@ -1009,18 +1009,13 @@ export async function transferSavingsToSpending({
     console.info('→ SpendingBalanceReadyToast not found, continuing...');
   }
 
-  // verify transfer activity on savings
-  // see : https://github.com/synonymdev/bitkit-ios/issues/464
-  if (driver.isAndroid) {
-    await dismissQuickPayIntro({ triggerTimedSheet: false });
-    await tap('ActivitySavings');
-    await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
-    await expectTextWithin('Activity-1', '-');
-    await tap('NavigationBack');
-  } else {
-    await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: false });
-    await dismissQuickPayIntro({ triggerTimedSheet: true });
-  }
+  await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: false });
+  await dismissQuickPayIntro({ triggerTimedSheet: true });
+
+  await tap('ActivitySavings');
+  await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
+  await expectTextWithin('Activity-1', '-');
+  await tap('NavigationBack');
   await sleep(2000);
 }
 
