@@ -252,12 +252,9 @@ describe('@send - Send', () => {
     const response = await lnd.sendPaymentSync({ paymentRequest: receive, amt: '10000' });
     console.info({ response });
     await acknowledgeReceivedPayment();
-    if (driver.isIOS) {
-      await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: driver.isIOS });
-      await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
-    } else {
-      await dismissQuickPayIntro({ triggerTimedSheet: true });
-    }
+
+    await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });
+    await dismissQuickPayIntro({ triggerTimedSheet: true });
 
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     await expect(totalBalance).toHaveText('110 000'); // 100k onchain + 10k lightning
@@ -597,12 +594,10 @@ describe('@send - Send', () => {
     await swipeFullScreen('down');
     await lnd.sendPaymentSync({ paymentRequest: receive, amt: '10000' });
     await acknowledgeReceivedPayment();
-    if (driver.isIOS) {
-      await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: driver.isIOS });
-      await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
-    } else {
-      await dismissQuickPayIntro({ triggerTimedSheet: true });
-    }
+
+    await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });
+    await dismissQuickPayIntro({ triggerTimedSheet: true });
+
     await expectTextWithin('ActivitySpending', '10 000');
 
     async function payMsatInvoice(

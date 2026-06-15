@@ -158,12 +158,10 @@ describe('@lnurl - LNURL', () => {
       // Success toast/flow
       await waitForToast('SpendingBalanceReadyToast');
       await acknowledgeExternalSuccess();
-      if (driver.isIOS) {
-        await dismissBackgroundPaymentsTimedSheet();
-        await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
-      } else {
-        await dismissQuickPayIntro({ triggerTimedSheet: driver.isAndroid });
-      }
+      
+      await dismissBackgroundPaymentsTimedSheet();
+      await dismissQuickPayIntro({ triggerTimedSheet: true });
+
       await expectTextWithin('ActivitySpending', '20 001');
 
       // lnurl-pay (min != max) with comment

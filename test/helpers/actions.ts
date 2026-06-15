@@ -690,7 +690,7 @@ export async function waitForSetupWalletScreenFinish(timeout: number = 150_000) 
   await settingUpWallet.waitForDisplayed({ reverse: true, timeout, interval: 100 });
 }
 
-export async function completeOnboarding({ isFirstTime = true } = {}) {
+export async function completeOnboarding() {
   // TOS and PP
   await elementById('Continue').waitForDisplayed();
   await sleep(1000); // Wait for the app to settle
@@ -699,10 +699,6 @@ export async function completeOnboarding({ isFirstTime = true } = {}) {
   await sleep(500); // Wait for the app to settle
   await tap('NewWallet');
   await waitForSetupWalletScreenFinish();
-
-  if (isFirstTime) {
-    await handleAndroidAlert();
-  }
 
   // Wait for wallet to be created
   await elementById('TotalBalance-primary').waitForDisplayed({ timeout: 60_000 });
@@ -716,14 +712,12 @@ export async function restoreWallet(
     expectBackupSheet = false,
     expectBackGroundPaymentsSheet = false,
     reinstall = true,
-    expectAndroidAlert = true,
   }: {
     passphrase?: string;
     expectQuickPayTimedSheet?: boolean;
     expectBackupSheet?: boolean;
     expectBackGroundPaymentsSheet?: boolean;
     reinstall?: boolean;
-    expectAndroidAlert?: boolean;
   } = {}
 ) {
   console.info('→ Restoring wallet with seed:', seed);
@@ -784,9 +778,6 @@ export async function restoreWallet(
   await getStarted.waitForDisplayed({ timeout: 180000 });
   await tap('GetStartedButton');
   await sleep(1000);
-  if (expectAndroidAlert) {
-    await handleAndroidAlert();
-  }
 
   if (expectBackupSheet) {
     await dismissBackupTimedSheet();
@@ -1018,18 +1009,13 @@ export async function transferSavingsToSpending({
     console.info('→ SpendingBalanceReadyToast not found, continuing...');
   }
 
-  // verify transfer activity on savings
-  // see : https://github.com/synonymdev/bitkit-ios/issues/464
-  if (driver.isAndroid) {
-    await dismissQuickPayIntro({ triggerTimedSheet: false });
-    await tap('ActivitySavings');
-    await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
-    await expectTextWithin('Activity-1', '-');
-    await tap('NavigationBack');
-  } else {
-    await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: false });
-    await dismissQuickPayIntro({ triggerTimedSheet: true });
-  }
+  await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: false });
+  await dismissQuickPayIntro({ triggerTimedSheet: true });
+
+  await tap('ActivitySavings');
+  await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
+  await expectTextWithin('Activity-1', '-');
+  await tap('NavigationBack');
   await sleep(2000);
 }
 
@@ -1287,9 +1273,16 @@ export async function dismissBackgroundPaymentsTimedSheet({
   if (triggerTimedSheet) {
     await doTriggerTimedSheet();
   }
-  await elementById('BackgroundPaymentsDescription').waitForDisplayed();
-  await sleep(500); // wait for the app to settle
-  await tap('BackgroundPaymentsCancel');
+
+  if (driver.isAndroid) {
+    await elementById('BackgroundPaymentsIntro-later').waitForDisplayed();
+    await sleep(500); // wait for the app to settle
+    await tap('BackgroundPaymentsIntro-later');
+  } else {
+    await elementById('BackgroundPaymentsDescription').waitForDisplayed();
+    await sleep(500); // wait for the app to settle
+    await tap('BackgroundPaymentsCancel');
+  }
   await sleep(500);
 }
 

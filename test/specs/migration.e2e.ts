@@ -13,7 +13,6 @@ import {
   getAccessibleText,
   getReceiveAddress,
   getUriFromQRCode,
-  handleAndroidAlert,
   pasteIOSText,
   restoreWallet,
   sleep,
@@ -483,7 +482,6 @@ async function sendRnToSelf(amountSats: number): Promise<void> {
 async function handleMigrationFlow({ withSweep = false }): Promise<void> {
   console.info('→ Handling migration flow...');
   await expectText('MIGRATING', { strategy: 'contains' });
-  await handleAndroidAlert();
   if (withSweep) {
     await handleSweepFlow();
   }
@@ -832,7 +830,6 @@ async function transferToSpendingRN(sats: number, existingBalance = 0): Promise<
   await sleep(1000);
   await dragOnElement('GRAB', 'right', 0.95);
   await sleep(5000);
-  await handleAndroidAlert();
 
   // Mine blocks periodically to progress the channel opening
   console.info('→ Mining blocks to confirm channel...');
