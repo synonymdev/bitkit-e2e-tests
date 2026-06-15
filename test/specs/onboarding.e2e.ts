@@ -1,5 +1,4 @@
 import {
-  handleAndroidAlert,
   confirmInputOnKeyboard,
   elementById,
   elementByText,
@@ -44,8 +43,6 @@ describe('@onboarding - Onboarding', () => {
     await tap('NewWallet');
     await waitForSetupWalletScreenFinish();
 
-    await handleAndroidAlert();
-
     await elementByText('TO GET').waitForDisplayed();
   });
 
@@ -70,8 +67,6 @@ describe('@onboarding - Onboarding', () => {
     await confirmInputOnKeyboard();
     await tap('CreateNewWallet');
     await waitForSetupWalletScreenFinish();
-
-    await handleAndroidAlert();
 
     // Wait for wallet to be created
     await elementById('TotalBalance').waitForDisplayed();

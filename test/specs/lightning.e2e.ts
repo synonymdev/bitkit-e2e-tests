@@ -107,12 +107,10 @@ describe('@lightning - Lightning', () => {
     console.info({ response });
     await acknowledgeReceivedPayment();
     await sleep(500);
-    if (driver.isIOS) {
-      await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: driver.isIOS });
-      await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
-    } else {
-      await dismissQuickPayIntro({ triggerTimedSheet: true });
-    }
+
+    await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });
+    await dismissQuickPayIntro({ triggerTimedSheet: true });
+
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     await expect(totalBalance).toHaveText('11 000'); // 1k onchain + 10k lightning
     await expectTextWithin('ActivitySpending', '10 000');

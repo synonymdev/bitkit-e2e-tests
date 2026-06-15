@@ -328,14 +328,10 @@ describe('@transfer - Transfer', () => {
     await electrum?.waitForSync();
     await waitForToast('SpendingBalanceReadyToast');
     await sleep(1000);
-    if (driver.isIOS) {
-      await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: driver.isIOS });
-      await dismissQuickPayIntro({ triggerTimedSheet: driver.isIOS });
-    } else if (!quickPayDismissed) {
-      // only try to dismiss if it wasn't already dismissed earlier
-      await sleep(2000);
-      await dismissQuickPayIntro({ triggerTimedSheet: true });
-    }
+
+    await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });
+    await dismissQuickPayIntro({ triggerTimedSheet: true });
+
     await expectNoTextWithin('ActivitySpending', '0');
     await waitForActiveChannel(lnd, ldkNodeId);
 

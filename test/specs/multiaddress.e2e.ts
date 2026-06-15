@@ -278,12 +278,10 @@ describe('@multi_address - Multi address', () => {
       await mineBlocks(6);
       await electrum?.waitForSync();
       await waitForToast('SpendingBalanceReadyToast');
-      if (driver.isIOS) {
-        await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });
-        await dismissQuickPayIntro({ triggerTimedSheet: true });
-      } else {
-        await dismissQuickPayIntro({ triggerTimedSheet: true });
-      }
+        
+      await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });
+      await dismissQuickPayIntro({ triggerTimedSheet: true });
+
       await checkChannelStatus({ size: formatSats(channelSize) });
 
       // savings includes legacy; max channel funding may leave small taproot change
