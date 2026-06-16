@@ -15,13 +15,13 @@ import {
   elementByIdWithin,
   enterAddress,
   dismissQuickPayIntro,
-  tryDismissQuickPayIntroIfVisible,
   doNavigationClose,
   waitForToast,
   getTextUnder,
   acknowledgeExternalSuccess,
   dismissBackgroundPaymentsTimedSheet,
   expectNoTextWithin,
+  enterAmount,
 } from '../helpers/actions';
 import {
   checkChannelStatus,
@@ -131,11 +131,10 @@ describe('@transfer - Transfer', () => {
       await tap('NavigationBack');
       await sleep(1000);
       await tap('SpendingIntro-button');
-      await sleep(500);
+      await sleep(2000);
 
       // can change client balance
-      await tap('N2');
-      await multiTap('N0', 5);
+      await enterAmount(200000);
       await tap('SpendingAmountContinue');
       await expectText('200 000', { strategy: 'contains' });
       await tap('SpendingConfirmMore');
@@ -165,8 +164,8 @@ describe('@transfer - Transfer', () => {
       await tap('ActivitySavings');
       await tap('TransferToSpending');
       await elementById('SpendingAmountContinue').waitForEnabled();
-      await tap('N1');
-      await multiTap('N0', 5);
+      await sleep(2000);
+      await enterAmount(100000);
       await tap('SpendingAmountContinue');
       await expectText('100 000', { strategy: 'contains' });
       await sleep(500);
@@ -206,12 +205,10 @@ describe('@transfer - Transfer', () => {
       await tap('SpendingConfirmDefault');
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
-      await sleep(500);
+      await sleep(2000);
 
       // can set custom amount
-      await tap('N1');
-      await tap('N5');
-      await multiTap('N0', 4);
+      await enterAmount(150000);
       await tap('SpendingAdvancedContinue');
       await expectTextWithin('SpendingConfirmChannel', '100 000');
       await expectTextWithin('SpendingConfirmChannel', '150 000');
@@ -295,8 +292,7 @@ describe('@transfer - Transfer', () => {
     await waitForPeerConnection(lnd, ldkNodeId);
 
     // Set amount
-    await tap('N2');
-    await multiTap('N0', 4);
+    await enterAmount(20000);
     await tap('ExternalAmountContinue');
     await sleep(500);
 
@@ -313,8 +309,6 @@ describe('@transfer - Transfer', () => {
     const totalAmtAfterChannelOpen = await totalBalance.getText();
     await expect(totalBalance).not.toHaveText('100 000');
     await sleep(2500);
-    // on Android in CI the sheet sometimes shows up here, so we need to dismiss it
-    const quickPayDismissed = driver.isAndroid ? await tryDismissQuickPayIntroIfVisible() : false;
 
     // check activity
     await elementById('ActivityShort-0').waitForDisplayed();
