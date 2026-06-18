@@ -56,6 +56,8 @@ if [[ "${BACKEND:-local}" != "mainnet" ]]; then
   adb reverse tcp:30001 tcp:30001
   # homegate port
   adb reverse tcp:6288 tcp:6288
+  # trezor bridge port
+  adb reverse tcp:21325 tcp:21325
 fi
 # show touches 
 adb shell settings put system show_touches 1

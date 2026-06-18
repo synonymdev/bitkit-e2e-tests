@@ -1,0 +1,279 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+COMPOSE_FILE="$ROOT_DIR/docker/docker-compose.yml"
+CONTROLLER_SCRIPT="$ROOT_DIR/scripts/trezor-controller.py"
+TREZOR_DATA_DIR="$ROOT_DIR/docker/.trezor-user-env"
+
+DASHBOARD_URL="${TREZOR_DASHBOARD_URL:-http://localhost:9002}"
+BRIDGE_URL="${TREZOR_BRIDGE_URL:-http://localhost:21325}"
+BRIDGE_PORT="${TREZOR_BRIDGE_PORT:-21325}"
+
+usage() {
+  cat <<'EOF'
+Usage: ./scripts/trezor-emulator <command>
+
+Commands:
+  start       Start Trezor User Env, Bridge, and a deterministic T2T1 emulator
+  status      Show User Env bridge/emulator status and Bridge enumerate output
+  adb         Reverse the Bridge port for a physical Android device
+  stop        Stop the emulator and Bridge; stop repo-managed User Env when owned here
+  logs        Tail the User Env container logs
+  send-json   Send one raw JSON command to the User Env controller
+  help        Show this help
+
+Useful environment overrides:
+  TREZOR_MODEL=T2T1
+  TREZOR_FIRMWARE=2-main
+  TREZOR_BRIDGE_VERSION=node-bridge
+  TREZOR_LABEL="Bitkit Test Trezor"
+  TREZOR_WIPE=false
+EOF
+}
+
+detect_service() {
+  case "$(uname -s)" in
+    Darwin)
+      TREZOR_PROFILE="${TREZOR_PROFILE:-trezor}"
+      TREZOR_SERVICE="${TREZOR_SERVICE:-trezor-user-env-mac}"
+      ;;
+    Linux)
+      TREZOR_PROFILE="${TREZOR_PROFILE:-trezor-linux}"
+      TREZOR_SERVICE="${TREZOR_SERVICE:-trezor-user-env-linux}"
+      ;;
+    *)
+      echo "Unsupported OS for the bundled Trezor User Env helper: $(uname -s)" >&2
+      exit 1
+      ;;
+  esac
+}
+
+compose() {
+  docker compose -f "$COMPOSE_FILE" "$@"
+}
+
+compose_with_profile() {
+  if [[ -n "${TREZOR_PROFILE:-}" ]]; then
+    compose --profile "$TREZOR_PROFILE" "$@"
+  else
+    compose "$@"
+  fi
+}
+
+resolve_container() {
+  local compose_id
+
+  if [[ -n "${TREZOR_CONTAINER:-}" ]] && docker inspect "$TREZOR_CONTAINER" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  compose_id="$(compose_with_profile ps -q "$TREZOR_SERVICE" 2>/dev/null | head -n 1 || true)"
+  if [[ -n "$compose_id" ]]; then
+    TREZOR_CONTAINER="$compose_id"
+    return 0
+  fi
+
+  return 1
+}
+
+container_exists() {
+  resolve_container
+}
+
+container_running() {
+  resolve_container || return 1
+  [[ "$(docker inspect -f '{{.State.Running}}' "$TREZOR_CONTAINER" 2>/dev/null)" == "true" ]]
+}
+
+container_image() {
+  resolve_container || return 0
+  docker inspect -f '{{.Config.Image}}' "$TREZOR_CONTAINER" 2>/dev/null || true
+}
+
+container_project() {
+  resolve_container || return 0
+  docker inspect -f '{{ index .Config.Labels "com.docker.compose.project" }}' "$TREZOR_CONTAINER" 2>/dev/null || true
+}
+
+container_logs() {
+  if container_exists; then
+    docker logs "$@" "$TREZOR_CONTAINER"
+  else
+    compose_with_profile logs "$@" "$TREZOR_SERVICE"
+  fi
+}
+
+prepare_dirs() {
+  mkdir -p \
+    "$TREZOR_DATA_DIR/trezor-suite" \
+    "$TREZOR_DATA_DIR/logs/screens" \
+    "$TREZOR_DATA_DIR/logs/mcp-screenshots" \
+    "$TREZOR_DATA_DIR/firmware/user_downloaded"
+}
+
+controller() {
+  local python_bin="${TREZOR_CONTAINER_PYTHON:-/trezor-user-env/.venv/bin/python3}"
+
+  resolve_container || {
+    echo "Trezor User Env container is not running yet." >&2
+    return 1
+  }
+
+  docker exec -i \
+    -e TREZOR_CONTROLLER_WS="${TREZOR_CONTROLLER_WS:-ws://127.0.0.1:9001}" \
+    -e TREZOR_MODEL="${TREZOR_MODEL:-T2T1}" \
+    -e TREZOR_FIRMWARE="${TREZOR_FIRMWARE:-2-main}" \
+    -e TREZOR_BRIDGE_VERSION="${TREZOR_BRIDGE_VERSION:-node-bridge}" \
+    -e TREZOR_MNEMONIC="${TREZOR_MNEMONIC:-all all all all all all all all all all all all}" \
+    -e TREZOR_PIN="${TREZOR_PIN:-}" \
+    -e TREZOR_PASSPHRASE_PROTECTION="${TREZOR_PASSPHRASE_PROTECTION:-false}" \
+    -e TREZOR_LABEL="${TREZOR_LABEL:-Bitkit Test Trezor}" \
+    -e TREZOR_NEEDS_BACKUP="${TREZOR_NEEDS_BACKUP:-false}" \
+    -e TREZOR_WIPE="${TREZOR_WIPE:-true}" \
+    "$TREZOR_CONTAINER" "$python_bin" - "$@" < "$CONTROLLER_SCRIPT"
+}
+
+wait_for_controller() {
+  local attempt
+
+  if ! container_running; then
+    echo "Trezor User Env container is not running. Use ./scripts/trezor-emulator start." >&2
+    return 1
+  fi
+
+  for attempt in $(seq 1 60); do
+    if controller ping >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 2
+  done
+
+  echo "Trezor User Env controller did not become ready." >&2
+  container_logs --tail=80 >&2 || true
+  exit 1
+}
+
+install_apple_silicon_sdl_packages() {
+  if [[ "$(uname -s)" != "Darwin" || "$(uname -m)" != "arm64" ]]; then
+    return 0
+  fi
+
+  docker exec "$TREZOR_CONTAINER" sh -lc '
+    if dpkg -s libsdl3-0 libsdl3-image0 >/dev/null 2>&1; then
+      exit 0
+    fi
+
+    echo "Installing SDL3 runtime packages required by the Trezor emulator..."
+    apt-get update
+    apt-get install -y libsdl3-0 libsdl3-image0
+  '
+}
+
+start_env() {
+  prepare_dirs
+
+  compose_with_profile up -d "$TREZOR_SERVICE"
+  TREZOR_CONTAINER="$(compose_with_profile ps -q "$TREZOR_SERVICE" | head -n 1)"
+
+  wait_for_controller
+  install_apple_silicon_sdl_packages
+}
+
+bridge_enumerate() {
+  curl --fail --silent --show-error -X POST "$BRIDGE_URL/enumerate"
+}
+
+print_ready_notes() {
+  cat <<EOF
+
+Trezor emulator is ready.
+
+Dashboard: $DASHBOARD_URL
+Bridge:    $BRIDGE_URL
+
+Bitkit app quick checks:
+  Android physical phone:
+    ./scripts/trezor-emulator adb
+    TREZOR_BRIDGE=true TREZOR_BRIDGE_URL=http://127.0.0.1:$BRIDGE_PORT ./scripts/build-android-apk.sh
+
+  Android emulator:
+    TREZOR_BRIDGE=true TREZOR_BRIDGE_URL=http://10.0.2.2:$BRIDGE_PORT ./scripts/build-android-apk.sh
+
+  iOS simulator:
+    TREZOR_BRIDGE=true TREZOR_BRIDGE_URL=http://127.0.0.1:$BRIDGE_PORT ./scripts/build-ios-sim.sh
+EOF
+}
+
+start() {
+  start_env
+  controller setup
+  echo
+  echo "Bridge enumerate:"
+  bridge_enumerate
+  echo
+  print_ready_notes
+}
+
+status() {
+  wait_for_controller
+  controller status
+  echo
+  echo "Bridge enumerate:"
+  bridge_enumerate
+  echo
+}
+
+adb_reverse() {
+  if ! command -v adb >/dev/null 2>&1; then
+    echo "adb is not available on PATH." >&2
+    exit 1
+  fi
+
+  adb reverse "tcp:$BRIDGE_PORT" "tcp:$BRIDGE_PORT"
+}
+
+stop() {
+  if resolve_container && container_running; then
+    controller stop || true
+  fi
+
+  compose_with_profile stop "$TREZOR_SERVICE"
+}
+
+logs() {
+  container_logs -f
+}
+
+send_json() {
+  if [[ $# -ne 1 ]]; then
+    echo "send-json expects one JSON payload argument." >&2
+    exit 1
+  fi
+
+  wait_for_controller
+  controller send-json "$1"
+}
+
+main() {
+  detect_service
+
+  local command="${1:-help}"
+  shift || true
+
+  case "$command" in
+    start) start ;;
+    status) status ;;
+    adb) adb_reverse ;;
+    stop) stop ;;
+    logs) logs ;;
+    send-json) send_json "$@" ;;
+    help|--help|-h) usage ;;
+    *)
+      usage >&2
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"

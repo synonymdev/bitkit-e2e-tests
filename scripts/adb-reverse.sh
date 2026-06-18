@@ -7,6 +7,8 @@ for d in $(adb devices | awk 'NR>1 && $2=="device" {print $1}'); do
   adb -s "$d" reverse tcp:9735 tcp:9735
   adb -s "$d" reverse tcp:30001 tcp:30001
   adb -s "$d" reverse tcp:6288 tcp:6288
+  adb -s "$d" reverse tcp:21325 tcp:21325
+
 done
 
 echo "Done."
