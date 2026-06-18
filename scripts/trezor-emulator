@@ -27,6 +27,8 @@ Useful environment overrides:
   TREZOR_MODEL=T2T1
   TREZOR_FIRMWARE=2-main
   TREZOR_BRIDGE_VERSION=node-bridge
+  TREZOR_RANDOM_MNEMONIC=true
+  TREZOR_MNEMONIC="all all all all all all all all all all all all"
   TREZOR_LABEL="Bitkit Test Trezor"
   TREZOR_WIPE=false
 EOF
@@ -112,20 +114,48 @@ prepare_dirs() {
     "$TREZOR_DATA_DIR/firmware/user_downloaded"
 }
 
+random_mnemonic() {
+  docker exec -i "$TREZOR_CONTAINER" /trezor-user-env/.venv/bin/python3 - <<'PY'
+from mnemonic import Mnemonic
+
+print(Mnemonic("english").generate(strength=128))
+PY
+}
+
+resolve_mnemonic() {
+  if [[ -n "${TREZOR_MNEMONIC:-}" ]]; then
+    echo "$TREZOR_MNEMONIC"
+    return
+  fi
+
+  if [[ "${TREZOR_RANDOM_MNEMONIC:-true}" == "true" ]]; then
+    random_mnemonic
+    return
+  fi
+
+  echo "all all all all all all all all all all all all"
+}
+
 controller() {
   local python_bin="${TREZOR_CONTAINER_PYTHON:-/trezor-user-env/.venv/bin/python3}"
+  local mnemonic="all all all all all all all all all all all all"
 
   resolve_container || {
     echo "Trezor User Env container is not running yet." >&2
     return 1
   }
 
+  if [[ "${1:-}" == "setup" ]]; then
+    mnemonic="$(resolve_mnemonic)"
+    echo "Using Trezor mnemonic: $mnemonic" >&2
+  fi
+
   docker exec -i \
     -e TREZOR_CONTROLLER_WS="${TREZOR_CONTROLLER_WS:-ws://127.0.0.1:9001}" \
     -e TREZOR_MODEL="${TREZOR_MODEL:-T2T1}" \
     -e TREZOR_FIRMWARE="${TREZOR_FIRMWARE:-2-main}" \
     -e TREZOR_BRIDGE_VERSION="${TREZOR_BRIDGE_VERSION:-node-bridge}" \
-    -e TREZOR_MNEMONIC="${TREZOR_MNEMONIC:-all all all all all all all all all all all all}" \
+    -e TREZOR_MNEMONIC="$mnemonic" \
     -e TREZOR_PIN="${TREZOR_PIN:-}" \
     -e TREZOR_PASSPHRASE_PROTECTION="${TREZOR_PASSPHRASE_PROTECTION:-false}" \
     -e TREZOR_LABEL="${TREZOR_LABEL:-Bitkit Test Trezor}" \

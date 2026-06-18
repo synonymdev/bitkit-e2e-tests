@@ -113,7 +113,7 @@ Default emulator state:
 - Model: `T2T1`
 - Firmware: `2-main`
 - Bridge: `node-bridge`
-- Mnemonic: `all all all all all all all all all all all all`
+- Mnemonic: random 12-word BIP39 phrase generated on each `start`
 - PIN: empty
 - Passphrase protection: off
 - Label: `Bitkit Test Trezor`
@@ -123,6 +123,18 @@ Start or reset the emulator:
 ```bash
 ./scripts/trezor-emulator start
 ./scripts/trezor-emulator status
+```
+
+Use the deterministic seed when you want to reuse known history/funds:
+
+```bash
+TREZOR_RANDOM_MNEMONIC=false ./scripts/trezor-emulator start
+```
+
+Or provide an explicit seed:
+
+```bash
+TREZOR_MNEMONIC="all all all all all all all all all all all all" ./scripts/trezor-emulator start
 ```
 
 Useful URLs:
