@@ -3,14 +3,20 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
+  acknowledgeReceivedPaymentIfPresent,
   doNavigationClose,
   elementById,
+  expectBalanceWithWait,
+  expectTextWithin,
   expectText,
+  formatSats,
+  getAmountUnder,
   sleep,
   tap,
   typeText,
 } from './actions';
 import { openHomeWidgets, openSettings } from './navigation';
+import { deposit, mineBlocks } from './regtest';
 
 const E2E_ROOT = path.resolve(__dirname, '..', '..');
 const ARTIFACTS_DIR = path.join(E2E_ROOT, 'artifacts');
@@ -113,6 +119,36 @@ export async function expectHardwareWalletOnHome(label: string, { visible }: { v
   }
 }
 
+export async function expectHardwareWalletBalance(expected: number): Promise<number> {
+  return expectBalanceWithWait(
+    () => getAmountUnder('ActivityHardware'),
+    'hardware wallet',
+    expected,
+  );
+}
+
+export async function fundHardwareWalletAndAcknowledge(
+  fixture: TrezorEmulatorFixture,
+  { sats = 15_000, blocksToMine = 1 }: { sats?: number; blocksToMine?: number } = {}
+) {
+  await deposit(fixture.address.value, sats);
+  if (blocksToMine > 0) {
+    await mineBlocks(blocksToMine);
+  }
+  await acknowledgeReceivedPaymentIfPresent();
+}
+
+export async function expectHardwareWalletReceivedActivity(sats: number) {
+  await doNavigationClose();
+  await elementById('ActivityHardware').waitForDisplayed();
+  await expectTextWithin('ActivityHardware', formatSats(sats));
+  await tap('ActivityHardware');
+  await elementById('HardwareWalletScreen').waitForDisplayed();
+  await elementById('Activity-1').waitForDisplayed();
+  await expectTextWithin('Activity-1', 'Received');
+  await expectTextWithin('Activity-1', formatSats(sats));
+}
+
 export async function removeHardwareWalletFromSettings(label: string) {
   await openHardwareWalletSettings();
   await expectHardwareWalletInSettings(label, { visible: true });
@@ -127,3 +163,4 @@ async function tapFirstHardwareWalletDelete() {
   await deleteButton.waitForDisplayed({ timeout: 30_000 });
   await deleteButton.click();
 }
+
