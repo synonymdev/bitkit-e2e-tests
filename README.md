@@ -137,6 +137,7 @@ For CI or scripts, use JSON output:
 
 ```bash
 ./scripts/trezor-emulator start --json > artifacts/trezor-emulator.json
+./scripts/trezor-emulator status --json
 ```
 
 Use the deterministic seed when you want to reuse known history/funds:
