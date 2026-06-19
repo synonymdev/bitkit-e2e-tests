@@ -54,6 +54,18 @@ export async function openProfile() {
 }
 
 /**
+ * Opens the Home widgets page from the drawer.
+ * On first use, the app shows the widgets intro screen; choose the
+ * View & Organize action to land on the widgets page.
+ */
+export async function openHomeWidgets() {
+  await tap('HeaderMenu');
+  await tap('DrawerWidgets');
+  await tapWidgetsIntroViewOrganizeIfShown();
+  await elementById('SuggestionsWidget').waitForDisplayed({ timeout: 30_000 });
+}
+
+/**
  * Closes the drawer and navigates back to the Wallet home screen.
  */
 export async function doNavigationClose() {
@@ -74,4 +86,15 @@ export async function doTriggerTimedSheet() {
   await tap('DrawerSettings');
   await sleep(500);
   await doNavigationClose();
+}
+
+async function tapWidgetsIntroViewOrganizeIfShown() {
+  const viewOrganize = elementById('WidgetsOnboardingViewOrganize');
+  try {
+    await viewOrganize.waitForDisplayed({ timeout: 3_000 });
+    await viewOrganize.click();
+    await sleep(500);
+  } catch {
+    // Widgets intro is shown only once.
+  }
 }
