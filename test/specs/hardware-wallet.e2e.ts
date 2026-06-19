@@ -1,4 +1,5 @@
 import { completeOnboarding, doNavigationClose, expectSavingsBalance, expectSpendingBalance, expectTotalBalance, receiveOnchainFunds } from '../helpers/actions';
+import initElectrum from '../helpers/electrum';
 import {
   completeHardwareWalletFlow,
   connectHardwareWalletFromSettings,
@@ -14,23 +15,32 @@ import {
   startHardwareWalletFlowFromSuggestion,
   type TrezorEmulatorFixture,
 } from '../helpers/hardware-wallet';
+import { ensureLocalFunds } from '../helpers/regtest';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 
 describe('@hardware_wallet - Hardware Wallet', () => {
   const walletLabel = 'E2E Trezor';
   let trezorFixture: TrezorEmulatorFixture;
+  let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
 
-  before(function () {
+  before(async function () {
     if (!driver.isAndroid) {
       this.skip();
     }
-    trezorFixture = ensureTrezorEmulator();
+    await ensureLocalFunds();
+    electrum = await initElectrum();
   });
 
   beforeEach(async () => {
+    trezorFixture = ensureTrezorEmulator();
     await reinstallApp();
     await completeOnboarding();
+    await electrum?.waitForSync();
+  });
+
+  after(async () => {
+    await electrum?.stop();
   });
 
   ciIt('@hardware_wallet_1 - Can connect, show, and remove a Trezor emulator wallet', async () => {
