@@ -33,7 +33,7 @@ describe('@hardware_wallet - Hardware Wallet', () => {
   });
 
   beforeEach(async () => {
-    trezorFixture = ensureTrezorEmulator();
+    trezorFixture = ensureTrezorEmulator({ fresh: true });
     await reinstallApp();
     await completeOnboarding();
     await electrum?.waitForSync();

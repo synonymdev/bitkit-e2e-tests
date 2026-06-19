@@ -42,13 +42,25 @@ function runTrezorEmulatorJson(args: string[]): TrezorEmulatorFixture {
   return JSON.parse(output) as TrezorEmulatorFixture;
 }
 
+function runTrezorEmulator(args: string[]) {
+  execFileSync('./scripts/trezor-emulator', args, {
+    cwd: E2E_ROOT,
+    stdio: 'inherit',
+  });
+}
+
 function writeFixture(fixture: TrezorEmulatorFixture): TrezorEmulatorFixture {
   fs.mkdirSync(ARTIFACTS_DIR, { recursive: true });
   fs.writeFileSync(TREZOR_FIXTURE_PATH, `${JSON.stringify(fixture, null, 2)}\n`);
   return fixture;
 }
 
-export function ensureTrezorEmulator(): TrezorEmulatorFixture {
+export function ensureTrezorEmulator({ fresh = false }: { fresh?: boolean } = {}): TrezorEmulatorFixture {
+  if (fresh) {
+    runTrezorEmulator(['stop']);
+    return writeFixture(runTrezorEmulatorJson(['start', '--json']));
+  }
+
   try {
     return writeFixture(runTrezorEmulatorJson(['status', '--json']));
   } catch {
