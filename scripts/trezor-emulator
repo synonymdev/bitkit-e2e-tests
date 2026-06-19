@@ -5,7 +5,6 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="$ROOT_DIR/docker/docker-compose.yml"
 CONTROLLER_SCRIPT="$ROOT_DIR/scripts/trezor-controller.py"
 TREZOR_DATA_DIR="$ROOT_DIR/docker/.trezor-user-env"
-TREZOR_METADATA_FILE="$TREZOR_DATA_DIR/trezor-emulator.json"
 
 DASHBOARD_URL="${TREZOR_DASHBOARD_URL:-http://localhost:9002}"
 BRIDGE_URL="${TREZOR_BRIDGE_URL:-http://localhost:21325}"
@@ -19,11 +18,9 @@ Commands:
   start       Start Trezor User Env, Bridge, and a T2T1 emulator
   start --json
               Start and print a machine-readable summary to stdout
-  start --reset
-              Wipe and restart the emulator even if one is already running
   status      Show User Env bridge/emulator status and Bridge enumerate output
   status --json
-              Print the last start metadata, including the receive address
+              Print the current receive address metadata
   adb         Reverse the Bridge port for a physical Android device
   stop        Stop the emulator and Bridge; stop repo-managed User Env when owned here
   logs        Tail the User Env container logs
@@ -310,47 +307,35 @@ print(json.dumps({
 PY
 }
 
-write_json_summary() {
-  local mnemonic="$1"
-  local address="$2"
-
-  mkdir -p "$TREZOR_DATA_DIR"
-  print_json_summary "$mnemonic" "$address" > "$TREZOR_METADATA_FILE"
-}
-
 start() {
   local output_json="${1:-false}"
-  local reset="${2:-false}"
   local mnemonic
   local address
 
   if [[ "$output_json" == "true" ]]; then
     start_env >&2
-    if [[ "$reset" != "true" && "$(emulator_running)" == "true" ]]; then
-      echo "Trezor emulator is already running. Use './scripts/trezor-emulator status', './scripts/trezor-emulator stop', or './scripts/trezor-emulator start --reset'." >&2
+    if [[ "$(emulator_running)" == "true" ]]; then
+      echo "Trezor emulator is already running. Use './scripts/trezor-emulator status' or './scripts/trezor-emulator stop' before starting a new one." >&2
       exit 1
     fi
     mnemonic="$(resolve_mnemonic)"
     TREZOR_MNEMONIC="$mnemonic" controller setup >&2
     address="$(get_address)"
-    write_json_summary "$mnemonic" "$address"
     print_json_summary "$mnemonic" "$address"
     return
   fi
 
   start_env
-  if [[ "$reset" != "true" && "$(emulator_running)" == "true" ]]; then
+  if [[ "$(emulator_running)" == "true" ]]; then
     echo "Trezor emulator is already running."
     echo
     echo "Use './scripts/trezor-emulator status' to inspect it."
     echo "Use './scripts/trezor-emulator stop' before starting a new one."
-    echo "Use './scripts/trezor-emulator start --reset' to wipe and reseed it."
     exit 1
   fi
   mnemonic="$(resolve_mnemonic)"
   TREZOR_MNEMONIC="$mnemonic" controller setup
   address="$(get_address)"
-  write_json_summary "$mnemonic" "$address"
   local address_path="${TREZOR_ADDRESS_PATH:-m/84h/1h/0h/0/0}"
   local display_path="${address_path//h/\'}"
 
@@ -375,13 +360,6 @@ status_json() {
   local address
 
   wait_for_controller
-
-  if [[ -f "$TREZOR_METADATA_FILE" ]]; then
-    python3 -m json.tool "$TREZOR_METADATA_FILE" >/dev/null
-    cat "$TREZOR_METADATA_FILE"
-    echo
-    return
-  fi
 
   address="$(get_address)"
   print_json_summary "" "$address"
@@ -427,15 +405,11 @@ main() {
   case "$command" in
     start)
       local output_json="false"
-      local reset="false"
 
       while [[ $# -gt 0 ]]; do
         case "$1" in
           --json)
             output_json="true"
-            ;;
-          --reset)
-            reset="true"
             ;;
           *)
             usage >&2
@@ -445,7 +419,7 @@ main() {
         shift
       done
 
-      start "$output_json" "$reset"
+      start "$output_json"
       ;;
     status)
       case "${1:-}" in

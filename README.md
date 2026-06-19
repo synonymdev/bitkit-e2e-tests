@@ -118,20 +118,15 @@ Default emulator state:
 - Passphrase protection: off
 - Label: `Bitkit Test Trezor`
 
-Start or reset the emulator:
+Start the emulator:
 
 ```bash
 ./scripts/trezor-emulator start
 ./scripts/trezor-emulator status
 ```
 
-`start` refuses to wipe/reseed an already-running emulator. Use `--reset` when you explicitly want a fresh device:
-
-```bash
-./scripts/trezor-emulator start --reset
-```
-
 `start` prints the generated mnemonic and the first native regtest receive address (`m/84h/1h/0h/0/0`) so it can be funded during manual checks.
+`start` refuses to wipe/reseed an already-running emulator. Use `stop` before starting a new one.
 
 For CI or scripts, use JSON output:
 
@@ -139,6 +134,8 @@ For CI or scripts, use JSON output:
 ./scripts/trezor-emulator start --json > artifacts/trezor-emulator.json
 ./scripts/trezor-emulator status --json
 ```
+
+`status --json` returns the current receive address metadata, but not the mnemonic.
 
 Use the deterministic seed when you want to reuse known history/funds:
 
