@@ -18,6 +18,8 @@ Commands:
   start       Start Trezor User Env, Bridge, and a T2T1 emulator
   start --json
               Start and print a machine-readable summary to stdout
+  start --reset
+              Wipe and restart the emulator even if one is already running
   status      Show User Env bridge/emulator status and Bridge enumerate output
   adb         Reverse the Bridge port for a physical Android device
   stop        Stop the emulator and Bridge; stop repo-managed User Env when owned here
@@ -270,6 +272,25 @@ bridge_enumerate() {
   curl --fail --silent --show-error -X POST "$BRIDGE_URL/enumerate"
 }
 
+emulator_running() {
+  local status
+
+  status="$(controller status 2>/dev/null || true)"
+  STATUS="$status" python3 - <<'PY'
+import json
+import os
+import sys
+
+try:
+    status = json.loads(os.environ.get("STATUS", ""))
+except json.JSONDecodeError:
+    print("false")
+    raise SystemExit(0)
+
+print("true" if status.get("emulator_status", {}).get("is_running") else "false")
+PY
+}
+
 print_ready_notes() {
   cat <<EOF
 
@@ -321,11 +342,16 @@ PY
 
 start() {
   local output_json="${1:-false}"
+  local reset="${2:-false}"
   local mnemonic
   local address
 
   if [[ "$output_json" == "true" ]]; then
     start_env >&2
+    if [[ "$reset" != "true" && "$(emulator_running)" == "true" ]]; then
+      echo "Trezor emulator is already running. Use './scripts/trezor-emulator status', './scripts/trezor-emulator stop', or './scripts/trezor-emulator start --reset'." >&2
+      exit 1
+    fi
     mnemonic="$(resolve_mnemonic)"
     TREZOR_MNEMONIC="$mnemonic" controller setup >&2
     address="$(get_address)"
@@ -334,6 +360,14 @@ start() {
   fi
 
   start_env
+  if [[ "$reset" != "true" && "$(emulator_running)" == "true" ]]; then
+    echo "Trezor emulator is already running."
+    echo
+    echo "Use './scripts/trezor-emulator status' to inspect it."
+    echo "Use './scripts/trezor-emulator stop' before starting a new one."
+    echo "Use './scripts/trezor-emulator start --reset' to wipe and reseed it."
+    exit 1
+  fi
   mnemonic="$(resolve_mnemonic)"
   TREZOR_MNEMONIC="$mnemonic" controller setup
   address="$(get_address)"
@@ -396,19 +430,26 @@ main() {
 
   case "$command" in
     start)
-      case "${1:-}" in
-        --json)
-          shift
-          start true "$@"
-          ;;
-        "")
-          start false
-          ;;
-        *)
-          usage >&2
-          exit 1
-          ;;
-      esac
+      local output_json="false"
+      local reset="false"
+
+      while [[ $# -gt 0 ]]; do
+        case "$1" in
+          --json)
+            output_json="true"
+            ;;
+          --reset)
+            reset="true"
+            ;;
+          *)
+            usage >&2
+            exit 1
+            ;;
+        esac
+        shift
+      done
+
+      start "$output_json" "$reset"
       ;;
     status) status ;;
     adb) adb_reverse ;;

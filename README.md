@@ -125,6 +125,12 @@ Start or reset the emulator:
 ./scripts/trezor-emulator status
 ```
 
+`start` refuses to wipe/reseed an already-running emulator. Use `--reset` when you explicitly want a fresh device:
+
+```bash
+./scripts/trezor-emulator start --reset
+```
+
 `start` prints the generated mnemonic and the first native regtest receive address (`m/84h/1h/0h/0/0`) so it can be funded during manual checks.
 
 For CI or scripts, use JSON output:
