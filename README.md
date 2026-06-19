@@ -125,6 +125,14 @@ Start or reset the emulator:
 ./scripts/trezor-emulator status
 ```
 
+`start` prints the generated mnemonic and the first native regtest receive address (`m/84h/1h/0h/0/0`) so it can be funded during manual checks.
+
+For CI or scripts, use JSON output:
+
+```bash
+./scripts/trezor-emulator start --json > artifacts/trezor-emulator.json
+```
+
 Use the deterministic seed when you want to reuse known history/funds:
 
 ```bash
@@ -135,6 +143,12 @@ Or provide an explicit seed:
 
 ```bash
 TREZOR_MNEMONIC="all all all all all all all all all all all all" ./scripts/trezor-emulator start
+```
+
+Override the printed address coin/path when needed:
+
+```bash
+TREZOR_ADDRESS_COIN=Testnet TREZOR_ADDRESS_PATH="m/84h/1h/0h/0/0" ./scripts/trezor-emulator start
 ```
 
 Useful URLs:

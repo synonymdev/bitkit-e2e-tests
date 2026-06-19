@@ -15,7 +15,9 @@ usage() {
 Usage: ./scripts/trezor-emulator <command>
 
 Commands:
-  start       Start Trezor User Env, Bridge, and a deterministic T2T1 emulator
+  start       Start Trezor User Env, Bridge, and a T2T1 emulator
+  start --json
+              Start and print a machine-readable summary to stdout
   status      Show User Env bridge/emulator status and Bridge enumerate output
   adb         Reverse the Bridge port for a physical Android device
   stop        Stop the emulator and Bridge; stop repo-managed User Env when owned here
@@ -29,6 +31,8 @@ Useful environment overrides:
   TREZOR_BRIDGE_VERSION=node-bridge
   TREZOR_RANDOM_MNEMONIC=true
   TREZOR_MNEMONIC="all all all all all all all all all all all all"
+  TREZOR_ADDRESS_COIN=Regtest
+  TREZOR_ADDRESS_PATH="m/84'/1'/0'/0/0"
   TREZOR_LABEL="Bitkit Test Trezor"
   TREZOR_WIPE=false
 EOF
@@ -146,7 +150,7 @@ controller() {
   }
 
   if [[ "${1:-}" == "setup" ]]; then
-    mnemonic="$(resolve_mnemonic)"
+    mnemonic="${TREZOR_MNEMONIC:-$(resolve_mnemonic)}"
     echo "Using Trezor mnemonic: $mnemonic" >&2
   fi
 
@@ -162,6 +166,58 @@ controller() {
     -e TREZOR_NEEDS_BACKUP="${TREZOR_NEEDS_BACKUP:-false}" \
     -e TREZOR_WIPE="${TREZOR_WIPE:-true}" \
     "$TREZOR_CONTAINER" "$python_bin" - "$@" < "$CONTROLLER_SCRIPT"
+}
+
+get_address() {
+  local address_path="${TREZOR_ADDRESS_PATH:-m/84h/1h/0h/0/0}"
+
+  docker exec -i \
+    -e TREZOR_ADDRESS_COIN="${TREZOR_ADDRESS_COIN:-Regtest}" \
+    -e TREZOR_ADDRESS_PATH="$address_path" \
+    "$TREZOR_CONTAINER" /trezor-user-env/.venv/bin/python3 - <<'PY'
+import os
+import time
+
+from trezorlib import btc, messages
+from trezorlib.client import get_default_client
+from trezorlib.tools import parse_path
+from trezorlib.transport.bridge import BridgeTransport
+
+transport = None
+for _ in range(30):
+    transport = next(iter(BridgeTransport.enumerate()), None)
+    if transport is not None:
+        break
+    time.sleep(1)
+
+if transport is None:
+    raise SystemExit("No Trezor Bridge device found.")
+
+coin = os.environ["TREZOR_ADDRESS_COIN"]
+path = os.environ["TREZOR_ADDRESS_PATH"].replace("h", "'")
+
+client = get_default_client("bitkit-e2e", transport)
+with client:
+    session = client.get_session()
+    address = btc.get_address(
+        session,
+        coin,
+        parse_path(path),
+        show_display=False,
+        script_type=messages.InputScriptType.SPENDWITNESS,
+    )
+
+print(address)
+PY
+}
+
+print_address() {
+  local address_path="${TREZOR_ADDRESS_PATH:-m/84h/1h/0h/0/0}"
+  local display_path="${address_path//h/\'}"
+  local address
+
+  address="$(get_address)"
+  echo "Trezor address (${TREZOR_ADDRESS_COIN:-Regtest}, $display_path): $address"
 }
 
 wait_for_controller() {
@@ -235,9 +291,56 @@ Bitkit app quick checks:
 EOF
 }
 
+print_json_summary() {
+  local mnemonic="$1"
+  local address="$2"
+  local address_path="${TREZOR_ADDRESS_PATH:-m/84h/1h/0h/0/0}"
+
+  MNEMONIC="$mnemonic" \
+    ADDRESS="$address" \
+    ADDRESS_COIN="${TREZOR_ADDRESS_COIN:-Regtest}" \
+    ADDRESS_PATH="$address_path" \
+    DASHBOARD_URL="$DASHBOARD_URL" \
+    BRIDGE_URL="$BRIDGE_URL" \
+    python3 - <<'PY'
+import json
+import os
+
+print(json.dumps({
+    "dashboardUrl": os.environ["DASHBOARD_URL"],
+    "bridgeUrl": os.environ["BRIDGE_URL"],
+    "mnemonic": os.environ["MNEMONIC"],
+    "address": {
+        "coin": os.environ["ADDRESS_COIN"],
+        "path": os.environ["ADDRESS_PATH"],
+        "value": os.environ["ADDRESS"],
+    },
+}, sort_keys=True))
+PY
+}
+
 start() {
+  local output_json="${1:-false}"
+  local mnemonic
+  local address
+
+  if [[ "$output_json" == "true" ]]; then
+    start_env >&2
+    mnemonic="$(resolve_mnemonic)"
+    TREZOR_MNEMONIC="$mnemonic" controller setup >&2
+    address="$(get_address)"
+    print_json_summary "$mnemonic" "$address"
+    return
+  fi
+
   start_env
-  controller setup
+  mnemonic="$(resolve_mnemonic)"
+  TREZOR_MNEMONIC="$mnemonic" controller setup
+  address="$(get_address)"
+  local address_path="${TREZOR_ADDRESS_PATH:-m/84h/1h/0h/0/0}"
+  local display_path="${address_path//h/\'}"
+
+  echo "Trezor address (${TREZOR_ADDRESS_COIN:-Regtest}, $display_path): $address"
   echo
   echo "Bridge enumerate:"
   bridge_enumerate
@@ -292,7 +395,21 @@ main() {
   shift || true
 
   case "$command" in
-    start) start ;;
+    start)
+      case "${1:-}" in
+        --json)
+          shift
+          start true "$@"
+          ;;
+        "")
+          start false
+          ;;
+        *)
+          usage >&2
+          exit 1
+          ;;
+      esac
+      ;;
     status) status ;;
     adb) adb_reverse ;;
     stop) stop ;;
