@@ -177,43 +177,10 @@ get_address() {
   local address_path="${TREZOR_ADDRESS_PATH:-m/84h/1h/0h/0/0}"
 
   docker exec -i \
+    -e TREZOR_CONTROLLER_WS="${TREZOR_CONTROLLER_WS:-ws://127.0.0.1:9001}" \
     -e TREZOR_ADDRESS_COIN="${TREZOR_ADDRESS_COIN:-Regtest}" \
     -e TREZOR_ADDRESS_PATH="$address_path" \
-    "$TREZOR_CONTAINER" /trezor-user-env/.venv/bin/python3 - <<'PY'
-import os
-import time
-
-from trezorlib import btc, messages
-from trezorlib.client import get_default_client
-from trezorlib.tools import parse_path
-from trezorlib.transport.bridge import BridgeTransport
-
-transport = None
-for _ in range(30):
-    transport = next(iter(BridgeTransport.enumerate()), None)
-    if transport is not None:
-        break
-    time.sleep(1)
-
-if transport is None:
-    raise SystemExit("No Trezor Bridge device found.")
-
-coin = os.environ["TREZOR_ADDRESS_COIN"]
-path = os.environ["TREZOR_ADDRESS_PATH"].replace("h", "'")
-
-client = get_default_client("bitkit-e2e", transport)
-with client:
-    session = client.get_session()
-    address = btc.get_address(
-        session,
-        coin,
-        parse_path(path),
-        show_display=False,
-        script_type=messages.InputScriptType.SPENDWITNESS,
-    )
-
-print(address)
-PY
+    "$TREZOR_CONTAINER" "${TREZOR_CONTAINER_PYTHON:-/trezor-user-env/.venv/bin/python3}" - get-address < "$CONTROLLER_SCRIPT"
 }
 
 print_address() {

@@ -11,6 +11,7 @@ import asyncio
 import json
 import os
 import sys
+import time
 from typing import Any
 
 import websockets
@@ -94,6 +95,39 @@ async def raw(payload: str) -> None:
     await send(parsed)
 
 
+def get_address() -> None:
+    from trezorlib import btc, messages
+    from trezorlib.client import get_default_client
+    from trezorlib.tools import parse_path
+    from trezorlib.transport.bridge import BridgeTransport
+
+    transport = None
+    for _ in range(30):
+        transport = next(iter(BridgeTransport.enumerate()), None)
+        if transport is not None:
+            break
+        time.sleep(1)
+
+    if transport is None:
+        raise SystemExit("No Trezor Bridge device found.")
+
+    coin = os.environ.get("TREZOR_ADDRESS_COIN", "Regtest")
+    path = os.environ.get("TREZOR_ADDRESS_PATH", "m/84h/1h/0h/0/0").replace("h", "'")
+
+    client = get_default_client("bitkit-e2e", transport)
+    with client:
+        session = client.get_session()
+        address = btc.get_address(
+            session,
+            coin,
+            parse_path(path),
+            show_display=False,
+            script_type=messages.InputScriptType.SPENDWITNESS,
+        )
+
+    print(address)
+
+
 async def main() -> None:
     command = sys.argv[1] if len(sys.argv) > 1 else "setup"
 
@@ -109,6 +143,8 @@ async def main() -> None:
         if len(sys.argv) != 3:
             raise SystemExit("send-json expects one JSON payload argument")
         await raw(sys.argv[2])
+    elif command == "get-address":
+        get_address()
     else:
         raise SystemExit(f"Unknown controller command: {command}")
 
