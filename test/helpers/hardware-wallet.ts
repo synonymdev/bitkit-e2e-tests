@@ -14,6 +14,7 @@ import {
   sleep,
   tap,
   typeText,
+  handleAndroidAlert,
 } from './actions';
 import { openHomeWidgets, openSettings } from './navigation';
 import { deposit, mineBlocks } from './regtest';
@@ -91,13 +92,12 @@ export async function completeHardwareWalletFlow(label: string) {
   await elementById('HardwareWalletIntroScreen').waitForDisplayed();
   await sleep(1000);
   await tap('HardwareWalletIntroContinue');
+  await handleAndroidAlert();
 
-  await elementById('HardwareWalletFoundScreen').waitForDisplayed({ timeout: 60_000 });
-  await elementById('HardwareWalletFoundDeviceName').waitForDisplayed();
+  await elementById('HardwareWalletFoundScreen').waitForDisplayed();
   await sleep(1000);
   await tap('HardwareWalletFoundConnect');
-
-  await elementById('HardwareWalletPairedScreen').waitForDisplayed({ timeout: 60_000 });
+  await elementById('HardwareWalletPairedScreen').waitForDisplayed();
   await typeText('HardwareWalletLabelInput', label);
   await tap('HardwareWalletPairedFinish');
   await sleep(1000);

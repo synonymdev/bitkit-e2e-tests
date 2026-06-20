@@ -92,6 +92,7 @@ async function tapWidgetsIntroViewOrganizeIfShown() {
   const viewOrganize = elementById('WidgetsOnboardingViewOrganize');
   try {
     await viewOrganize.waitForDisplayed({ timeout: 3_000 });
+    await sleep(500);
     await viewOrganize.click();
     await sleep(500);
   } catch {
