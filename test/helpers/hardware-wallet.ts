@@ -85,7 +85,6 @@ export async function connectHardwareWalletFromSettings(label: string) {
   await openHardwareWalletSettings();
   await tap('AddHardwareWallet');
   await completeHardwareWalletFlow(label);
-  await elementById('HardwareWalletsScreen').waitForDisplayed();
 }
 
 export async function completeHardwareWalletFlow(label: string) {
@@ -101,6 +100,9 @@ export async function completeHardwareWalletFlow(label: string) {
   await typeText('HardwareWalletLabelInput', label);
   await tap('HardwareWalletPairedFinish');
   await sleep(1000);
+  // We finish on Main screen with the hardware wallet listed
+  await elementById('ActivityHardware').waitForDisplayed();
+  await expectText(label, { strategy: 'contains' });
 }
 
 export async function expectHardwareWalletInSettings(
