@@ -1,10 +1,4 @@
-import {
-  doNavigationClose,
-  elementById,
-  expectTextWithin,
-  sleep,
-  tap,
-} from './actions';
+import { doNavigationClose, elementById, expectTextWithin, sleep, tap } from './actions';
 
 const WALLET_SYNC_TIMEOUT_MS = 90_000;
 const APP_STATUS_ROW_TIMEOUT_MS = 90_000;

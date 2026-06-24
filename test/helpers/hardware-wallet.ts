@@ -197,15 +197,15 @@ export async function transferHardwareWalletToSpending({
   await tap('ActivityHardware');
   await elementById('HardwareWalletScreen').waitForDisplayed();
   await tap('HardwareTransferToSpending');
-  
+
   const hasSpendingIntro = await elementById('SpendingIntro-button')
-  .isDisplayed()
-  .catch(() => false);
+    .isDisplayed()
+    .catch(() => false);
   if (hasSpendingIntro) {
     await tap('SpendingIntro-button');
     await sleep(800);
   }
-  
+
   await elementById('HardwareTransferAmount').waitForDisplayed({ timeout: 60_000 });
   await elementById('HardwareTransferAmountContinue').waitForEnabled({ timeout: 60_000 });
   await sleep(1000);
@@ -217,7 +217,7 @@ export async function transferHardwareWalletToSpending({
   await approveTrezorPromptsUntilTransferProgress();
   await waitForHardwareTransferProgress();
   if (getBackend() === 'local') {
-    // Local backend does not have Blocktank, 
+    // Local backend does not have Blocktank,
     // so we don't wait for the transfer success screen.
     await tap('TransferSuccess-button');
   } else {

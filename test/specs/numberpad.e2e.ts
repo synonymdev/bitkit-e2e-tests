@@ -156,9 +156,7 @@ async function classicDenominationChecks(mode: NumberpadMode) {
   await checkContinueButton(mode);
 }
 
-async function checkContinueButton(
-  mode: NumberpadMode
-) {
+async function checkContinueButton(mode: NumberpadMode) {
   if (mode === 'Send') {
     await elementById('ContinueAmount').waitForEnabled();
   } else {

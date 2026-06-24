@@ -278,7 +278,7 @@ describe('@multi_address - Multi address', () => {
       await mineBlocks(6);
       await electrum?.waitForSync();
       await waitForToast('SpendingBalanceReadyToast');
-        
+
       await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });
       await dismissQuickPayIntro({ triggerTimedSheet: true });
 

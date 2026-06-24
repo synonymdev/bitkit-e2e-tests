@@ -9,7 +9,15 @@ export type WidgetId =
   | 'suggestions'
   | 'calculator';
 
-const DEFAULT_WIDGETS: WidgetId[] = ['news', 'facts', 'price', 'blocks', 'weather', 'suggestions', 'calculator'];
+const DEFAULT_WIDGETS: WidgetId[] = [
+  'news',
+  'facts',
+  'price',
+  'blocks',
+  'weather',
+  'suggestions',
+  'calculator',
+];
 
 type WidgetMetadata = {
   listItemId: string;
@@ -101,7 +109,7 @@ export async function scrollHomeToWidgets() {
 /** Home widgets pager is available (scroll + edit control). When hidden, do not scroll. */
 export async function expectHomeWidgetsSection(
   visible: boolean,
-  { timeout = 8_000 }: { timeout?: number } = {},
+  { timeout = 8_000 }: { timeout?: number } = {}
 ) {
   if (visible) {
     await scrollHomeToWidgets();
