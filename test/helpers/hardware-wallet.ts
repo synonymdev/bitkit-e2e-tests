@@ -197,16 +197,16 @@ export async function transferHardwareWalletToSpending({
   await tap('ActivityHardware');
   await elementById('HardwareWalletScreen').waitForDisplayed();
   await tap('HardwareTransferToSpending');
-  await elementById('HardwareTransferAmount').waitForDisplayed({ timeout: 60_000 });
-
+  
   const hasSpendingIntro = await elementById('SpendingIntro-button')
-    .isDisplayed()
-    .catch(() => false);
+  .isDisplayed()
+  .catch(() => false);
   if (hasSpendingIntro) {
     await tap('SpendingIntro-button');
     await sleep(800);
   }
-
+  
+  await elementById('HardwareTransferAmount').waitForDisplayed({ timeout: 60_000 });
   await elementById('HardwareTransferAmountContinue').waitForEnabled({ timeout: 60_000 });
   await sleep(1000);
   await enterAmount(amountSats);
