@@ -5,6 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="$ROOT_DIR/docker/docker-compose.yml"
 CONTROLLER_SCRIPT="$ROOT_DIR/scripts/trezor-controller.py"
 TREZOR_DATA_DIR="$ROOT_DIR/docker/.trezor-user-env"
+TREZOR_PROFILE="${TREZOR_PROFILE:-trezor}"
+TREZOR_SERVICE="${TREZOR_SERVICE:-trezor-user-env}"
 
 DASHBOARD_URL="${TREZOR_DASHBOARD_URL:-http://localhost:9002}"
 BRIDGE_URL="${TREZOR_BRIDGE_URL:-http://localhost:21325}"
@@ -38,23 +40,6 @@ Useful environment overrides:
   TREZOR_LABEL="Bitkit Test Trezor"
   TREZOR_WIPE=false
 EOF
-}
-
-detect_service() {
-  case "$(uname -s)" in
-    Darwin)
-      TREZOR_PROFILE="${TREZOR_PROFILE:-trezor}"
-      TREZOR_SERVICE="${TREZOR_SERVICE:-trezor-user-env-mac}"
-      ;;
-    Linux)
-      TREZOR_PROFILE="${TREZOR_PROFILE:-trezor-linux}"
-      TREZOR_SERVICE="${TREZOR_SERVICE:-trezor-user-env-linux}"
-      ;;
-    *)
-      echo "Unsupported OS for the bundled Trezor User Env helper: $(uname -s)" >&2
-      exit 1
-      ;;
-  esac
 }
 
 compose() {
@@ -397,8 +382,6 @@ send_json() {
 }
 
 main() {
-  detect_service
-
   local command="${1:-help}"
   shift || true
 

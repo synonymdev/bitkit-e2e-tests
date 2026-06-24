@@ -201,7 +201,7 @@ services:
     ports:
       - '6288:8080'
 
-  trezor-user-env-mac:
+  trezor-user-env:
     image: *trezor_user_env_image
     profiles:
       - trezor
@@ -216,20 +216,6 @@ services:
     environment:
       - MACOS=1
       - REGTEST_RPC_URL=http://host.docker.internal:43782
-    volumes:
-      - './.trezor-user-env/trezor-suite:/trezor-user-env/trezor-suite'
-      - './.trezor-user-env/logs/screens:/trezor-user-env/logs/screens'
-      - './.trezor-user-env/logs/mcp-screenshots:/trezor-user-env/logs/mcp-screenshots'
-      - './.trezor-user-env/firmware/user_downloaded:/trezor-user-env/src/binaries/firmware/bin/user_downloaded'
-
-  trezor-user-env-linux:
-    container_name: trezor-user-env.unix
-    image: *trezor_user_env_image
-    profiles:
-      - trezor-linux
-    network_mode: 'host'
-    environment:
-      - PHYSICAL_TREZOR=${PHYSICAL_TREZOR:-}
     volumes:
       - './.trezor-user-env/trezor-suite:/trezor-user-env/trezor-suite'
       - './.trezor-user-env/logs/screens:/trezor-user-env/logs/screens'
