@@ -34,9 +34,6 @@ describe('@hardware_wallet - Hardware Wallet', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
 
   before(async function () {
-    if (!driver.isAndroid) {
-      this.skip();
-    }
     await ensureLocalFunds();
     electrum = await initElectrum();
   });
