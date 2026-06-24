@@ -1,4 +1,11 @@
-import { completeOnboarding, doNavigationClose, expectSavingsBalance, expectSpendingBalance, expectTotalBalance, receiveOnchainFunds } from '../helpers/actions';
+import {
+  completeOnboarding,
+  doNavigationClose,
+  expectSavingsBalance,
+  expectSpendingBalance,
+  expectTotalBalance,
+  receiveOnchainFunds,
+} from '../helpers/actions';
 import initElectrum from '../helpers/electrum';
 import {
   completeHardwareWalletFlow,
@@ -13,9 +20,11 @@ import {
   openHardwareWalletSettings,
   removeHardwareWalletFromSettings,
   startHardwareWalletFlowFromSuggestion,
+  stopTrezorEmulator,
+  transferHardwareWalletToSpending,
   type TrezorEmulatorFixture,
 } from '../helpers/hardware-wallet';
-import { ensureLocalFunds } from '../helpers/regtest';
+import { ensureLocalFunds, getBackend } from '../helpers/regtest';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 
@@ -41,6 +50,7 @@ describe('@hardware_wallet - Hardware Wallet', () => {
 
   after(async () => {
     await electrum?.stop();
+    stopTrezorEmulator();
   });
 
   ciIt('@hardware_wallet_1 - Can connect, show, and remove a Trezor emulator wallet', async () => {
@@ -73,5 +83,26 @@ describe('@hardware_wallet - Hardware Wallet', () => {
     await expectHardwareWalletBalance(sats);
     await expectSavingsBalance(sats);
     await expectSpendingBalance(0);
+  });
+
+  ciIt('@hardware_wallet_3 - Can transfer hardware wallet funds to spending', async () => {
+    const fundingSats = 100_000;
+    const transferSats = 20_000;
+
+    await connectHardwareWalletFromSettings(walletLabel);
+    await fundHardwareWalletAndAcknowledge(trezorFixture, { sats: fundingSats });
+    await expectHardwareWalletBalance(fundingSats);
+    await transferHardwareWalletToSpending({
+      amountSats: transferSats,
+      waitForSync: async () => {
+        await electrum?.waitForSync();
+      },
+    });
+    await doNavigationClose();
+    await expectHardwareWalletBalance(fundingSats, { condition: 'lt' });
+    if (getBackend() === 'regtest') {
+      // We only check balance on staging regtest backend, local does not have Blocktank.
+      await expectSpendingBalance(0, { condition: 'gt', timeout: 60_000 });
+    }
   });
 });

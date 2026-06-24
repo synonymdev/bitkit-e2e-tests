@@ -1518,7 +1518,7 @@ export async function waitForBackup() {
     await elementById('AllSynced').waitForDisplayed();
   } catch {
     console.info('waitForBackup: AllSynced not found, retrying...');
-    await elementById('AllSynced').waitForDisplayed( { timeout: 60_000 });
+    await elementById('AllSynced').waitForDisplayed({ timeout: 60_000 });
   }
   await doNavigationClose();
 }

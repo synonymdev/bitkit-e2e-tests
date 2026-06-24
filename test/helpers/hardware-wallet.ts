@@ -6,6 +6,7 @@ import {
   acknowledgeReceivedPaymentIfPresent,
   doNavigationClose,
   elementById,
+  enterAmount,
   expectBalanceWithWait,
   expectTextWithin,
   expectText,
@@ -15,9 +16,14 @@ import {
   tap,
   typeText,
   handleAndroidAlert,
+  waitForToast,
+  type BalanceCondition,
+  dismissBackupTimedSheet,
+  dismissBackgroundPaymentsTimedSheet,
+  dismissQuickPayIntro,
 } from './actions';
 import { openHomeWidgets, openSettings } from './navigation';
-import { deposit, mineBlocks } from './regtest';
+import { deposit, getBackend, mineBlocks } from './regtest';
 
 const E2E_ROOT = path.resolve(__dirname, '..', '..');
 const ARTIFACTS_DIR = path.join(E2E_ROOT, 'artifacts');
@@ -50,13 +56,26 @@ function runTrezorEmulator(args: string[]) {
   });
 }
 
+function runTrezorEmulatorQuiet(args: string[]) {
+  execFileSync('./scripts/trezor-emulator', args, {
+    cwd: E2E_ROOT,
+    stdio: 'ignore',
+  });
+}
+
 function writeFixture(fixture: TrezorEmulatorFixture): TrezorEmulatorFixture {
   fs.mkdirSync(ARTIFACTS_DIR, { recursive: true });
   fs.writeFileSync(TREZOR_FIXTURE_PATH, `${JSON.stringify(fixture, null, 2)}\n`);
   return fixture;
 }
 
-export function ensureTrezorEmulator({ fresh = false }: { fresh?: boolean } = {}): TrezorEmulatorFixture {
+export function stopTrezorEmulator() {
+  runTrezorEmulator(['stop']);
+}
+
+export function ensureTrezorEmulator({
+  fresh = false,
+}: { fresh?: boolean } = {}): TrezorEmulatorFixture {
   if (fresh) {
     runTrezorEmulator(['stop']);
     return writeFixture(runTrezorEmulatorJson(['start', '--json']));
@@ -133,11 +152,15 @@ export async function expectHardwareWalletOnHome(label: string, { visible }: { v
   }
 }
 
-export async function expectHardwareWalletBalance(expected: number): Promise<number> {
+export async function expectHardwareWalletBalance(
+  expected: number,
+  options: { condition?: BalanceCondition; timeout?: number; interval?: number } = {}
+): Promise<number> {
   return expectBalanceWithWait(
     () => getAmountUnder('ActivityHardware'),
     'hardware wallet',
     expected,
+    options
   );
 }
 
@@ -163,6 +186,66 @@ export async function expectHardwareWalletReceivedActivity(sats: number) {
   await expectTextWithin('Activity-1', formatSats(sats));
 }
 
+export async function transferHardwareWalletToSpending({
+  amountSats,
+  waitForSync,
+}: {
+  amountSats: number;
+  waitForSync?: () => Promise<void>;
+}) {
+  await doNavigationClose();
+  await tap('ActivityHardware');
+  await elementById('HardwareWalletScreen').waitForDisplayed();
+  await tap('HardwareTransferToSpending');
+  await elementById('HardwareTransferAmount').waitForDisplayed({ timeout: 60_000 });
+
+  const hasSpendingIntro = await elementById('SpendingIntro-button')
+    .isDisplayed()
+    .catch(() => false);
+  if (hasSpendingIntro) {
+    await tap('SpendingIntro-button');
+    await sleep(800);
+  }
+
+  await elementById('HardwareTransferAmountContinue').waitForEnabled({ timeout: 60_000 });
+  await sleep(1000);
+  await enterAmount(amountSats);
+  await elementById('HardwareTransferAmountContinue').waitForEnabled({ timeout: 60_000 });
+  await tap('HardwareTransferAmountContinue');
+  await elementById('HardwareTransferSign').waitForDisplayed({ timeout: 120_000 });
+  await tap('HardwareTransferOpenTrezorConnect');
+  await approveTrezorPromptsUntilTransferProgress();
+  await waitForHardwareTransferProgress();
+  if (getBackend() === 'local') {
+    // Local backend does not have Blocktank, 
+    // so we don't wait for the transfer success screen.
+    await tap('TransferSuccess-button');
+  } else {
+    await mineBlocks(1);
+    if (waitForSync) {
+      await waitForSync();
+    }
+    for (let i = 0; i < 10; i++) {
+      try {
+        await elementById('TransferSuccess').waitForDisplayed({ timeout: 5_000 });
+        break;
+      } catch {
+        console.info('→ Hardware transfer success not found, mining another block...');
+        await mineBlocks(1);
+        if (waitForSync) {
+          await waitForSync();
+        }
+      }
+    }
+    await elementById('TransferSuccess').waitForDisplayed();
+    await tap('TransferSuccess-button');
+    await dismissSpendingBalanceToastIfShown();
+    await dismissBackupTimedSheet({ triggerTimedSheet: false });
+    await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });
+    await dismissQuickPayIntro({ triggerTimedSheet: true });
+  }
+}
+
 export async function removeHardwareWalletFromSettings(label: string) {
   await openHardwareWalletSettings();
   await expectHardwareWalletInSettings(label, { visible: true });
@@ -172,9 +255,66 @@ export async function removeHardwareWalletFromSettings(label: string) {
   await expectHardwareWalletInSettings(label, { visible: false });
 }
 
+async function approveTrezorPromptsUntilTransferProgress() {
+  const started = Date.now();
+  const timeout = 180_000;
+
+  while (Date.now() - started < timeout) {
+    if (await isAnyDisplayed(['HardwareTransferSigned', 'LightningSettingUp', 'TransferSuccess'])) {
+      return;
+    }
+    pressTrezorYes();
+    await sleep(500);
+  }
+
+  throw new Error('Timed out waiting for hardware transfer signing progress');
+}
+
+async function waitForHardwareTransferProgress() {
+  await browser.waitUntil(async () => isAnyDisplayed(['LightningSettingUp', 'TransferSuccess']), {
+    timeout: 60_000,
+    interval: 500,
+    timeoutMsg: 'Timed out waiting for hardware transfer progress',
+  });
+}
+
+function pressTrezorYes() {
+  try {
+    runTrezorEmulatorQuiet(['send-json', JSON.stringify({ type: 'emulator-press-yes' })]);
+  } catch {
+    // The prompt may not be ready on every polling tick.
+  }
+}
+
+async function isAnyDisplayed(testIds: string[]): Promise<boolean> {
+  for (const testId of testIds) {
+    if (await isDisplayed(testId)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function isDisplayed(testId: string): Promise<boolean> {
+  try {
+    return await elementById(testId).isDisplayed();
+  } catch {
+    return false;
+  }
+}
+
+async function dismissSpendingBalanceToastIfShown() {
+  try {
+    await waitForToast('SpendingBalanceReadyToast', { timeout: 30_000 });
+  } catch {
+    console.info('→ SpendingBalanceReadyToast not shown after hardware transfer.');
+  }
+}
+
 async function tapFirstHardwareWalletDelete() {
-  const deleteButton = await $('android=new UiSelector().resourceIdMatches(".*HardwareWalletRowDelete_.*")');
+  const deleteButton = await $(
+    'android=new UiSelector().resourceIdMatches(".*HardwareWalletRowDelete_.*")'
+  );
   await deleteButton.waitForDisplayed({ timeout: 30_000 });
   await deleteButton.click();
 }
-
