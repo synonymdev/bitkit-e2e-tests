@@ -5,10 +5,12 @@ const APP_STATUS_ROW_TIMEOUT_MS = 90_000;
 
 type WaitForMainnetWalletReadyOptions = {
   logPrefix: string;
+  includeLightningStatus?: boolean;
 };
 
 export async function waitForMainnetWalletReady({
   logPrefix,
+  includeLightningStatus = true,
 }: WaitForMainnetWalletReadyOptions): Promise<void> {
   console.info(`→ [${logPrefix}] Waiting for wallet home screen...`);
   await elementById('TotalBalance-primary').waitForDisplayed({ timeout: WALLET_SYNC_TIMEOUT_MS });
@@ -25,12 +27,15 @@ export async function waitForMainnetWalletReady({
 
   await expectTextWithin('Status-internet', 'Connected', { timeout: APP_STATUS_ROW_TIMEOUT_MS });
   await expectTextWithin('Status-electrum', 'Connected', { timeout: APP_STATUS_ROW_TIMEOUT_MS });
-  await expectTextWithin('Status-lightning_node', 'Running', {
-    timeout: APP_STATUS_ROW_TIMEOUT_MS,
-  });
-  await expectTextWithin('Status-lightning_connection', 'Open', {
-    timeout: APP_STATUS_ROW_TIMEOUT_MS,
-  });
+
+  if (includeLightningStatus) {
+    await expectTextWithin('Status-lightning_node', 'Running', {
+      timeout: APP_STATUS_ROW_TIMEOUT_MS,
+    });
+    await expectTextWithin('Status-lightning_connection', 'Open', {
+      timeout: APP_STATUS_ROW_TIMEOUT_MS,
+    });
+  }
 
   await doNavigationClose();
   console.info(`→ [${logPrefix}] App status verified`);

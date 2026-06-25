@@ -6,6 +6,7 @@ import {
   sleep,
   tap,
 } from '../../helpers/actions';
+import { waitForMainnetWalletReady } from '../../helpers/mainnet';
 import { ciIt } from '../../helpers/suite';
 
 const channelOrderSeed = process.env.CHANNEL_ORDER_SEED ?? process.env.CJIT_SEED;
@@ -107,13 +108,13 @@ describe('@channel_order_mainnet - Channel order smoke', () => {
     await restoreWallet(walletSeed, {
       expectBackupSheet: false,
       reinstall: false,
-      expectAndroidAlert: false,
     });
 
+    await waitForMainnetWalletReady({ logPrefix: 'Channel Order', includeLightningStatus: false });
     await tap('ActivitySavings');
     await tap('TransferToSpending');
     await maybeTap('SpendingIntro-button');
-
+    await elementById('SpendingAmountContinue').waitForEnabled();
     await enterAmount(transferAmountSats);
     await tapSpendingAmountContinueWithRetry();
 
