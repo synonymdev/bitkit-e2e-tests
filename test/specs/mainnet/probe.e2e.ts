@@ -216,7 +216,6 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
       await restoreWallet(probeSeed, {
         expectBackupSheet: false,
         reinstall: false,
-        expectAndroidAlert: false,
       });
       await waitForMainnetWalletReady({ logPrefix: 'Probe' });
 

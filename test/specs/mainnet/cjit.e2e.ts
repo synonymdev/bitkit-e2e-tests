@@ -61,12 +61,11 @@ async function setupWallet(): Promise<void> {
     await restoreWallet(cjitSeed, {
       expectBackupSheet: false,
       reinstall: false,
-      expectAndroidAlert: true,
     });
     return;
   }
 
-  await completeOnboarding({ isFirstTime: true });
+  await completeOnboarding();
 }
 
 describe('@cjit_mainnet - CJIT smoke', () => {

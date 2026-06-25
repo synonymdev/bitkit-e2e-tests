@@ -4,6 +4,7 @@ import type { ChainablePromiseElement } from 'webdriverio';
 import { reinstallApp } from './setup';
 import { deposit, getBackend, mineBlocks } from './regtest';
 import { doNavigationClose, doTriggerTimedSheet, openSettings } from './navigation';
+import { env } from 'node:process';
 
 export { doNavigationClose, doTriggerTimedSheet } from './navigation';
 
@@ -699,6 +700,10 @@ export async function completeOnboarding() {
   await sleep(500); // Wait for the app to settle
   await tap('NewWallet');
   await waitForSetupWalletScreenFinish();
+
+  if (env.BACKEND === 'mainnet') {
+    await handleAndroidAlert();
+  }
 
   // Wait for wallet to be created
   await elementById('TotalBalance-primary').waitForDisplayed({ timeout: 60_000 });
