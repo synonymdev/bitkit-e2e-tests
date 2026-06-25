@@ -105,7 +105,6 @@ async function sendPaymentToLnAddress(receiver: MainnetLnReceiver): Promise<void
   await restoreWallet(receiver.seed, {
     expectBackupSheet: false,
     reinstall: false,
-    expectAndroidAlert: false,
   });
 
   await waitForMainnetWalletReady({ logPrefix: 'LN' });
