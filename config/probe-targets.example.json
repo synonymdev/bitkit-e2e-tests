@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Example Lightning Address",
+    "type": "lightningAddress",
+    "address": "example@domain.test",
+    "required": true
+  },
+  {
+    "name": "Example LNURL Callback",
+    "type": "lnurlCallback",
+    "url": "https://example.com/.well-known/lnurlp/example",
+    "required": true
+  },
+  {
+    "name": "Example Node",
+    "type": "nodeId",
+    "nodeId": "03c913d061dfe0adbfd87c0e98e66033be0dbbb2413de26bd363c63970480a9a80",
+    "required": true
+  }
+]
