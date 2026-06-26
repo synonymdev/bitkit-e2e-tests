@@ -58,6 +58,14 @@ const DEFAULT_READINESS_POLL_MS = 5_000;
 const DEFAULT_MIN_GRAPH_CHANNELS = 10_000;
 const DEFAULT_RESET_SCORES_TIMEOUT_SECONDS = 180;
 const DEFAULT_SCORES_SYNC_MAX_AGE_S = 900;
+const DEFAULT_PROBE_AMOUNT_PROFILE = 'full';
+const PROBE_AMOUNT_PROFILES = {
+  small: [1_000_000],
+  large: [80_000_000],
+  cover: [1_000_000, 25_000_000, 80_000_000],
+  full: [1_000_000, 10_000_000, 25_000_000, 50_000_000, 80_000_000],
+} as const;
+type ProbeAmountProfile = keyof typeof PROBE_AMOUNT_PROFILES;
 
 export type ProbeReadiness = {
   ready: boolean;
@@ -102,6 +110,16 @@ export function resolveProbeOrder(): ProbeOrder {
   throw new Error(`Invalid PROBE_ORDER value: ${raw} (expected desc, random or config)`);
 }
 
+export function resolveProbeAmountProfile(): ProbeAmountProfile {
+  const profile = process.env.PROBE_AMOUNT_PROFILE ?? DEFAULT_PROBE_AMOUNT_PROFILE;
+  if (profile === 'small' || profile === 'large' || profile === 'cover' || profile === 'full') {
+    return profile;
+  }
+  throw new Error(
+    `Invalid PROBE_AMOUNT_PROFILE: ${profile}. Expected 'small', 'large', 'cover', or 'full'.`
+  );
+}
+
 export function buildProbeQueue(targets: ProbeTarget[], order: ProbeOrder): ProbeQueueEntry[] {
   const queue = targets.flatMap((target) => {
     const amounts = expandProbeTargetAmounts(target);
@@ -127,10 +145,11 @@ function shuffleInPlace<T>(items: T[]): T[] {
 }
 
 export function expandProbeTargetAmounts(target: ProbeTarget): number[] {
-  const amounts = target.amountsMsat ?? (target.amountMsat ? [target.amountMsat] : []);
-  if (amounts.length === 0) {
-    throw new Error(`Probe target '${target.name}' must define amountMsat or amountsMsat`);
-  }
+  const amounts =
+    target.amountsMsat ??
+    (target.amountMsat
+      ? [target.amountMsat]
+      : [...PROBE_AMOUNT_PROFILES[resolveProbeAmountProfile()]]);
 
   return amounts.map((amountMsat) => {
     if (!Number.isInteger(amountMsat) || amountMsat <= 0) {

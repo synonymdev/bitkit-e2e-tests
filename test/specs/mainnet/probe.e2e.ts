@@ -6,6 +6,7 @@ import {
   parseNonNegativeIntEnv,
   parseProbeCommandSuccess,
   probeModeForTargetType,
+  resolveProbeAmountProfile,
   resetPathfindingScores,
   resolveProbeOrder,
   resolveProbeResetScores,
@@ -234,6 +235,8 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
       const probes = buildProbeQueue(targets, probeOrder);
       const probeDelayMs = resolveProbeDelayMs();
       const probeRetries = resolveProbeRetries();
+      console.info(`→ [Probe] Probe amount profile configured: ${resolveProbeAmountProfile()}`);
+      console.info(`→ [Probe] Probe order configured: ${resolveProbeOrder()}`);
       console.info(`→ [Probe] Probe retries configured: ${probeRetries}`);
       console.info(
         `→ [Probe] Probe order '${probeOrder}': ${probes
