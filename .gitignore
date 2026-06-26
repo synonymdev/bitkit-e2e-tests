@@ -6,6 +6,12 @@ docker/lnd
 docker/lnurl-server-data
 docker/lnurl-server/data
 artifacts
+results
 WARP.md
 .ai
 tools/seedkit/seedkit
+config/*.local.env
+config/*.env
+!config/*.env.example
+config/probe-targets*.json
+!config/probe-targets.example.json
