@@ -14,7 +14,10 @@ const autDir = path.join(__dirname, 'aut');
 const autFilename = process.env.AUT_FILENAME;
 const androidApp = path.join(autDir, autFilename || 'bitkit_e2e.apk');
 const iosApp = path.join(autDir, autFilename || 'Bitkit.app');
-const appiumNewCommandTimeout = Number.parseInt(process.env.APPIUM_NEW_COMMAND_TIMEOUT ?? '300', 10);
+const appiumNewCommandTimeout = Number.parseInt(
+  process.env.APPIUM_NEW_COMMAND_TIMEOUT ?? '300',
+  10
+);
 
 export const config: WebdriverIO.Config = {
   //

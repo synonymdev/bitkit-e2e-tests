@@ -5,6 +5,7 @@ node_modules
 docker/lnd
 docker/lnurl-server-data
 docker/lnurl-server/data
+docker/.trezor-user-env
 artifacts
 WARP.md
 .ai

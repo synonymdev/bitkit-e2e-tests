@@ -158,7 +158,7 @@ describe('@lnurl - LNURL', () => {
       // Success toast/flow
       await waitForToast('SpendingBalanceReadyToast');
       await acknowledgeExternalSuccess();
-      
+
       await dismissBackgroundPaymentsTimedSheet();
       await dismissQuickPayIntro({ triggerTimedSheet: true });
 

@@ -328,7 +328,7 @@ function checkBalanceCondition(
   }
 }
 
-async function expectBalanceWithWait(
+export async function expectBalanceWithWait(
   getter: () => Promise<number>,
   name: string,
   expected: number,
@@ -1156,10 +1156,12 @@ export async function receiveOnchainFunds({
   sats = 100_000,
   blocksToMine = 1,
   expectHighBalanceWarning = false,
+  verifyBalances = true,
 }: {
   sats?: number;
   blocksToMine?: number;
   expectHighBalanceWarning?: boolean;
+  verifyBalances?: boolean;
 } = {}) {
   // receive some first
   const address = await getReceiveAddress();
@@ -1173,9 +1175,11 @@ export async function receiveOnchainFunds({
     await acknowledgeReceivedPaymentIfPresent();
   }
 
-  await expectTotalBalance(sats);
-  await expectSavingsBalance(sats);
-  await expectSpendingBalance(0);
+  if (verifyBalances) {
+    await expectTotalBalance(sats);
+    await expectSavingsBalance(sats);
+    await expectSpendingBalance(0);
+  }
 
   await dismissBackupTimedSheet({ triggerTimedSheet: true });
   if (expectHighBalanceWarning) {
@@ -1519,7 +1523,7 @@ export async function waitForBackup() {
     await elementById('AllSynced').waitForDisplayed();
   } catch {
     console.info('waitForBackup: AllSynced not found, retrying...');
-    await elementById('AllSynced').waitForDisplayed( { timeout: 60_000 });
+    await elementById('AllSynced').waitForDisplayed({ timeout: 60_000 });
   }
   await doNavigationClose();
 }

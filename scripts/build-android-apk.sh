@@ -16,12 +16,16 @@
 #   ./scripts/build-android-apk.sh
 #   BACKEND=regtest ./scripts/build-android-apk.sh
 #   BACKEND=mainnet ./scripts/build-android-apk.sh
+#   TREZOR_BRIDGE=true ./scripts/build-android-apk.sh
+#   TREZOR_BRIDGE=true TREZOR_BRIDGE_URL=http://127.0.0.1:21325 ./scripts/build-android-apk.sh
 set -euo pipefail
 
 E2E_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ANDROID_ROOT="$(cd "$E2E_ROOT/../bitkit-android" && pwd)"
 
 BACKEND="${BACKEND:-local}"
+TREZOR_BRIDGE="${TREZOR_BRIDGE:-false}"
+TREZOR_BRIDGE_URL="${TREZOR_BRIDGE_URL:-http://10.0.2.2:21325}"
 E2E_BACKEND="local"
 GRADLE_TASK="assembleDevDebug"
 APK_FLAVOR_DIR="dev/debug"
@@ -40,10 +44,14 @@ else
   echo "ERROR: Unsupported BACKEND value: $BACKEND" >&2
   exit 1
 fi
-echo "Building Android APK (BACKEND=$BACKEND, E2E_BACKEND=$E2E_BACKEND, GRADLE_TASK=$GRADLE_TASK)..."
+echo "Building Android APK (BACKEND=$BACKEND, E2E_BACKEND=$E2E_BACKEND, TREZOR_BRIDGE=$TREZOR_BRIDGE, TREZOR_BRIDGE_URL=$TREZOR_BRIDGE_URL, GRADLE_TASK=$GRADLE_TASK)..."
 
 pushd "$ANDROID_ROOT" >/dev/null
-E2E=true E2E_BACKEND="$E2E_BACKEND" ./gradlew "$GRADLE_TASK" --no-daemon --stacktrace
+E2E=true \
+  E2E_BACKEND="$E2E_BACKEND" \
+  TREZOR_BRIDGE="$TREZOR_BRIDGE" \
+  TREZOR_BRIDGE_URL="$TREZOR_BRIDGE_URL" \
+  ./gradlew "$GRADLE_TASK" --no-daemon --stacktrace
 popd >/dev/null
 
 # Find the universal APK

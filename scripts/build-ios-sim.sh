@@ -14,11 +14,16 @@
 # Usage:
 #   ./scripts/build-ios-sim.sh
 #   BACKEND=regtest ./scripts/build-ios-sim.sh
+#   TREZOR_BRIDGE=true ./scripts/build-ios-sim.sh
+#   TREZOR_BRIDGE=true BACKEND=regtest ./scripts/build-ios-sim.sh
 set -euo pipefail
 E2E_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 IOS_ROOT="$(cd "$E2E_ROOT/../bitkit-ios" && pwd)"
 
 BACKEND="${BACKEND:-local}"
+TREZOR_BRIDGE="${TREZOR_BRIDGE:-false}"
+TREZOR_BRIDGE_URL="${TREZOR_BRIDGE_URL:-http://127.0.0.1:21325}"
+TREZOR_ELECTRUM_URL="${TREZOR_ELECTRUM_URL:-}"
 E2E_BACKEND="local"
 E2E_NETWORK="regtest"
 XCODE_EXTRA_ARGS=()
@@ -35,8 +40,16 @@ fi
 XCODE_EXTRA_ARGS+=(
   "E2E_BACKEND=$E2E_BACKEND"
   "E2E_NETWORK=$E2E_NETWORK"
+  "TREZOR_BRIDGE=$TREZOR_BRIDGE"
+  "TREZOR_BRIDGE_URL=$TREZOR_BRIDGE_URL"
   "SWIFT_ACTIVE_COMPILATION_CONDITIONS=\$(inherited) E2E_BUILD"
 )
+
+if [[ -n "$TREZOR_ELECTRUM_URL" ]]; then
+  XCODE_EXTRA_ARGS+=("TREZOR_ELECTRUM_URL=$TREZOR_ELECTRUM_URL")
+fi
+
+echo "Building iOS simulator app (BACKEND=$BACKEND, E2E_BACKEND=$E2E_BACKEND, TREZOR_BRIDGE=$TREZOR_BRIDGE, TREZOR_BRIDGE_URL=$TREZOR_BRIDGE_URL)..."
 
 xcodebuild \
   -project "$IOS_ROOT/Bitkit.xcodeproj" \

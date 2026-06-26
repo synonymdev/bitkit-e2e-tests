@@ -1,3 +1,5 @@
+x-trezor-user-env-image: &trezor_user_env_image ghcr.io/trezor/trezor-user-env@sha256:15871ebb234bf7c0197cfcd31ddc2edbe90173cd6386fc0283fafe05bf888c06
+
 services:
   bitcoind:
     container_name: bitcoin
@@ -198,6 +200,27 @@ services:
       HG_PHOENIXD_API_URL: "${HG_PHOENIXD_API_URL:-http://127.0.0.1:9700}"
     ports:
       - '6288:8080'
+
+  trezor-user-env:
+    image: *trezor_user_env_image
+    profiles:
+      - trezor
+    ports:
+      - '9001:9001' # User Env controller websocket
+      - '9002:9002' # User Env dashboard
+      - '21325:21325' # Trezor Bridge legacy port used by Bitkit
+      - '21328:21328' # Trezor Bridge current port
+      - '15900:5900' # VNC port, offset to avoid local VNC conflicts
+      - '6080:6080' # noVNC web viewer
+      - '9003:9003' # MCP server SSE transport
+    environment:
+      - MACOS=1
+      - REGTEST_RPC_URL=http://host.docker.internal:43782
+    volumes:
+      - './.trezor-user-env/trezor-suite:/trezor-user-env/trezor-suite'
+      - './.trezor-user-env/logs/screens:/trezor-user-env/logs/screens'
+      - './.trezor-user-env/logs/mcp-screenshots:/trezor-user-env/logs/mcp-screenshots'
+      - './.trezor-user-env/firmware/user_downloaded:/trezor-user-env/src/binaries/firmware/bin/user_downloaded'
 
 volumes:
   bitcoin_home:

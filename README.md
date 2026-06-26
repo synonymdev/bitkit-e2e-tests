@@ -83,7 +83,136 @@ BACKEND=local ./scripts/build-ios-sim.sh
 BACKEND=regtest ./scripts/build-ios-sim.sh
 ```
 
+Optional Trezor Bridge support is disabled by default and can be enabled per build:
+
+```bash
+# Android emulator, local backend
+TREZOR_BRIDGE=true ./scripts/build-android-apk.sh
+
+# Android physical device, local backend
+TREZOR_BRIDGE=true TREZOR_BRIDGE_URL=http://127.0.0.1:21325 ./scripts/build-android-apk.sh
+
+# Android emulator, staging regtest backend
+BACKEND=regtest TREZOR_BRIDGE=true ./scripts/build-android-apk.sh
+
+# iOS simulator, local backend
+TREZOR_BRIDGE=true TREZOR_ELECTRUM_URL=tcp://127.0.0.1:60001 ./scripts/build-ios-sim.sh
+
+# iOS simulator, staging regtest backend
+BACKEND=regtest TREZOR_BRIDGE=true ./scripts/build-ios-sim.sh
+```
+
 ---
+
+### 🔐 Manual Trezor Emulator Setup
+
+The local docker setup includes an opt-in Trezor User Env fixture for manual hardware-wallet checks. It starts the official Trezor emulator and Bridge, but it is not part of the default `docker compose up -d` stack.
+
+Default emulator state:
+
+- Model: `T2T1`
+- Firmware: `2-main`
+- Bridge: `node-bridge`
+- Mnemonic: random 12-word BIP39 phrase generated on each `start`
+- PIN: empty
+- Passphrase protection: off
+- Label: `Bitkit Test Trezor`
+
+Start the emulator:
+
+```bash
+./scripts/trezor-emulator start
+./scripts/trezor-emulator status
+```
+
+`start` prints the generated mnemonic and the first native regtest receive address (`m/84h/1h/0h/0/0`) so it can be funded during manual checks.
+`start` refuses to wipe/reseed an already-running emulator. Use `stop` before starting a new one.
+
+For CI or scripts, use JSON output:
+
+```bash
+./scripts/trezor-emulator start --json > artifacts/trezor-emulator.json
+./scripts/trezor-emulator status --json
+```
+
+`status --json` returns the current receive address metadata, but not the mnemonic.
+
+Use the deterministic seed when you want to reuse known history/funds:
+
+```bash
+TREZOR_RANDOM_MNEMONIC=false ./scripts/trezor-emulator start
+```
+
+Or provide an explicit seed:
+
+```bash
+TREZOR_MNEMONIC="all all all all all all all all all all all all" ./scripts/trezor-emulator start
+```
+
+Override the printed address coin/path when needed:
+
+```bash
+TREZOR_ADDRESS_COIN=Testnet TREZOR_ADDRESS_PATH="m/84h/1h/0h/0/0" ./scripts/trezor-emulator start
+```
+
+Useful URLs:
+
+- User Env dashboard: `http://localhost:9002`
+- Trezor Bridge: `http://localhost:21325`
+
+The Trezor User Env image is pinned in `docker/docker-compose.yml` so the emulator Bridge keeps the raw message format expected by current Bitkit builds.
+
+#### Android Emulator
+
+```bash
+# Local backend
+cd docker
+docker compose up -d
+cd ..
+./scripts/trezor-emulator start
+TREZOR_BRIDGE=true ./scripts/build-android-apk.sh
+npm run e2e:android
+
+# Staging regtest backend
+./scripts/trezor-emulator start
+BACKEND=regtest TREZOR_BRIDGE=true ./scripts/build-android-apk.sh
+BACKEND=regtest npm run e2e:android
+```
+
+For manual checks, open Bitkit and use the app's developer Trezor screen to scan and connect to `Bitkit Test Trezor`.
+
+#### Android Physical Device
+
+```bash
+./scripts/trezor-emulator start
+./scripts/trezor-emulator adb
+TREZOR_BRIDGE=true TREZOR_BRIDGE_URL=http://127.0.0.1:21325 ./scripts/build-android-apk.sh
+```
+
+#### iOS Simulator
+
+```bash
+# Local backend
+cd docker
+docker compose up -d
+cd ..
+./scripts/trezor-emulator start
+TREZOR_BRIDGE=true TREZOR_ELECTRUM_URL=tcp://127.0.0.1:60001 ./scripts/build-ios-sim.sh
+npm run e2e:ios
+
+# Staging regtest backend
+./scripts/trezor-emulator start
+BACKEND=regtest TREZOR_BRIDGE=true ./scripts/build-ios-sim.sh
+BACKEND=regtest npm run e2e:ios
+```
+
+Stop the emulator when finished:
+
+```bash
+./scripts/trezor-emulator stop
+```
+
+Backend and Trezor are independent. `BACKEND=local` uses local Bitcoin/Electrum, while `BACKEND=regtest` uses remote staging regtest services. The Trezor emulator always provides only the device and Bridge. Fund or mine against the same backend the app was built for.
 
 ### 🧪 Running tests
 

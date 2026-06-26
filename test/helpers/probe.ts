@@ -267,10 +267,15 @@ export function resolveProbeResetScores(): boolean {
  * The floor uses the device clock because the sync timestamp is also
  * device-generated, making the comparison immune to host/device clock skew.
  */
-export async function resetPathfindingScores({ logPrefix }: { logPrefix: string }): Promise<number> {
+export async function resetPathfindingScores({
+  logPrefix,
+}: {
+  logPrefix: string;
+}): Promise<number> {
   const method = process.env.PROBE_RESET_SCORES_METHOD ?? 'resetScores';
   const timeoutSeconds =
-    parsePositiveIntEnv('PROBE_RESET_SCORES_TIMEOUT_SECONDS') ?? DEFAULT_RESET_SCORES_TIMEOUT_SECONDS;
+    parsePositiveIntEnv('PROBE_RESET_SCORES_TIMEOUT_SECONDS') ??
+    DEFAULT_RESET_SCORES_TIMEOUT_SECONDS;
 
   console.info(`→ [${logPrefix}] Resetting pathfinding scores (timeout ${timeoutSeconds}s)...`);
   const fallbackFloorS = getDeviceEpochSeconds();
@@ -436,7 +441,8 @@ export async function waitForProbeReadiness({
   requireScoresSync = false,
   minScoresSyncTimestamp = null,
 }: WaitForProbeReadinessOptions): Promise<ProbeReadiness> {
-  const timeoutMs = parsePositiveIntEnv('PROBE_READINESS_TIMEOUT_MS') ?? DEFAULT_READINESS_TIMEOUT_MS;
+  const timeoutMs =
+    parsePositiveIntEnv('PROBE_READINESS_TIMEOUT_MS') ?? DEFAULT_READINESS_TIMEOUT_MS;
   const pollMs = parsePositiveIntEnv('PROBE_READINESS_POLL_MS') ?? DEFAULT_READINESS_POLL_MS;
   const minGraphChannels =
     parseNonNegativeIntEnv('PROBE_MIN_GRAPH_CHANNELS') ?? DEFAULT_MIN_GRAPH_CHANNELS;
@@ -466,7 +472,15 @@ export async function waitForProbeReadiness({
       // Use the device clock for the scores sync age check so it is measured
       // against the same clock that produced the sync timestamp.
       const nowS = maxScoresSyncAgeS !== null ? getDeviceEpochSeconds() : Date.now() / 1000;
-      if (isProbeReadinessSufficient(readiness, minGraphChannels, maxScoresSyncAgeS, minSyncTimestamp, nowS)) {
+      if (
+        isProbeReadinessSufficient(
+          readiness,
+          minGraphChannels,
+          maxScoresSyncAgeS,
+          minSyncTimestamp,
+          nowS
+        )
+      ) {
         console.info(`→ [${logPrefix}] Probe readiness satisfied: ${lastSummary}`);
         return readiness;
       }
@@ -474,7 +488,9 @@ export async function waitForProbeReadiness({
       lastSummary = summarizeReadinessError(raw);
     }
 
-    console.info(`→ [${logPrefix}] Not ready yet (${lastSummary}), polling again in ${pollMs / 1000}s...`);
+    console.info(
+      `→ [${logPrefix}] Not ready yet (${lastSummary}), polling again in ${pollMs / 1000}s...`
+    );
     await delay(pollMs);
   }
 
@@ -501,7 +517,10 @@ export function writeProbeArtifacts(
   }
 
   if (process.env.GITHUB_STEP_SUMMARY) {
-    fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `\n## Attempt ${resolveAttempt()}\n\n${report}\n`);
+    fs.appendFileSync(
+      process.env.GITHUB_STEP_SUMMARY,
+      `\n## Attempt ${resolveAttempt()}\n\n${report}\n`
+    );
   }
 }
 

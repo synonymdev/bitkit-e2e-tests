@@ -5,7 +5,11 @@ const PAYKIT_UI_TOGGLE_ID = 'PaykitUiToggle';
 
 async function scrollToPaykitToggle() {
   for (let attempt = 0; attempt < 4; attempt++) {
-    if (await elementById(PAYKIT_UI_TOGGLE_ID).isDisplayed().catch(() => false)) {
+    if (
+      await elementById(PAYKIT_UI_TOGGLE_ID)
+        .isDisplayed()
+        .catch(() => false)
+    ) {
       return;
     }
     await swipeFullScreen('up');
