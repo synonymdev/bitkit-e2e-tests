@@ -736,12 +736,37 @@ function runDevToolsCommand(
     shellQuote(JSON.stringify(payload)),
   ].join(' ');
 
-  return execFileSync('adb', ['shell', command], {
-    encoding: 'utf8',
-    timeout: (timeoutSeconds + 10) * 1000,
-  });
+  try {
+    return execFileSync('adb', ['shell', command], {
+      encoding: 'utf8',
+      timeout: (timeoutSeconds + 10) * 1000,
+    });
+  } catch (error) {
+    throw new Error(formatDevToolsCommandError(method, error));
+  }
 }
 
 function shellQuote(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
+function formatDevToolsCommandError(method: string, error: unknown): string {
+  if (!(error instanceof Error)) {
+    return `DevTools command '${method}' failed: ${String(error)}`;
+  }
+
+  const details = error as Error & {
+    status?: number;
+    signal?: NodeJS.Signals;
+    stdout?: string | Buffer;
+    stderr?: string | Buffer;
+  };
+  const output = [
+    details.stdout ? `stdout: ${details.stdout.toString().trim()}` : '',
+    details.stderr ? `stderr: ${details.stderr.toString().trim()}` : '',
+    details.status !== undefined ? `status: ${details.status}` : '',
+    details.signal ? `signal: ${details.signal}` : '',
+  ].filter(Boolean);
+
+  return [`DevTools command '${method}' failed: ${error.message}`, ...output].join('\n');
 }

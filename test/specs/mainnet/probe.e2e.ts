@@ -244,6 +244,7 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
       for (const [index, { target, amountMsat }] of probes.entries()) {
         const result = await runProbe(target, amountMsat);
         results.push(result);
+        writeProbeArtifacts(results, readiness);
         console.info(
           `→ [Probe] ${result.targetName} ${result.amountSats} sats (${result.probeMode}): ${
             result.success ? '✅ success' : `❌ failed (${result.error ?? 'unknown'})`
