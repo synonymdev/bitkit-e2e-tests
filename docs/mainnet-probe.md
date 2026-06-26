@@ -17,6 +17,7 @@ It is orchestrated nightly by the private `bitkit-nightly` repo (`mainnet-probe.
 
 | Variable | Default | Description |
 | --- | --- | --- |
+| `PROBE_AMOUNT_PROFILE` | `full` | Default amount set for targets that do not define `amountMsat` or `amountsMsat`: `small`, `large`, `cover`, or `full`. |
 | `PROBE_ORDER` | `config` | Order of probes per target: `config` = amounts as listed in target config, `desc` = highest amount first (avoids small probes "warming up" scorer knowledge of the route), `random` = global shuffle of all target+amount pairs. |
 | `PROBE_RESET_SCORES` | `false` | When `true`, deletes the persisted pathfinding scores (`scorer` and `external_pathfinding_scores_cache` VSS keys) and restarts the node before probing, so every run starts from a fresh scorer (external scores are re-downloaded on startup). Recommended for scorer A/B experiments; the nightly job enables it by default. Accepts `true/false/1/0/yes/no`. |
 | `PROBE_RESET_SCORES_TIMEOUT_SECONDS` | `180` | Timeout for the scores reset devtools command (covers node stop + VSS deletes + node start). |
