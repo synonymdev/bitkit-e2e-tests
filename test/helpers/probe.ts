@@ -518,7 +518,8 @@ export async function waitForProbeReadiness({
 
 export function writeProbeArtifacts(
   results: ProbeResult[],
-  readiness?: ProbeReadiness | null
+  readiness?: ProbeReadiness | null,
+  options: { writeStepSummary?: boolean } = {}
 ): void {
   const artifactsDir = resolveArtifactsDir();
   fs.mkdirSync(artifactsDir, { recursive: true });
@@ -535,7 +536,7 @@ export function writeProbeArtifacts(
     fs.writeFileSync(readinessPath, `${JSON.stringify(readiness, null, 2)}\n`);
   }
 
-  if (process.env.GITHUB_STEP_SUMMARY) {
+  if (options.writeStepSummary !== false && process.env.GITHUB_STEP_SUMMARY) {
     fs.appendFileSync(
       process.env.GITHUB_STEP_SUMMARY,
       `\n## Attempt ${resolveAttempt()}\n\n${report}\n`
