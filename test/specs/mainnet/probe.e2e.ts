@@ -4,7 +4,7 @@ import {
   buildProbeQueue,
   fetchBolt11ForProbe,
   parseNonNegativeIntEnv,
-  parseProbeCommandSuccess,
+  parseProbeCommandResult,
   probeModeForTargetType,
   resolveProbeAmountProfile,
   resetPathfindingScores,
@@ -88,15 +88,16 @@ async function runInvoiceProbe(target: ProbeTarget, amountMsat: number): Promise
       );
       const rawProviderResult = runProbeInvoiceCommand(target, amountMsat, bolt11);
       lastRawProviderResult = rawProviderResult;
-      const success = parseProbeCommandSuccess(rawProviderResult);
+      const providerResult = parseProbeCommandResult(rawProviderResult);
 
-      if (success) {
+      if (providerResult?.success) {
         return {
           ...baseResult,
           retries: retry,
           invoiceFetched: true,
           success: true,
-          durationMs: Date.now() - startedAt,
+          durationMs: providerResult.durationMs ?? Date.now() - startedAt,
+          routeFeeMsat: providerResult.routeFeeMsat,
           bolt11,
           rawProviderResult,
         };
@@ -113,12 +114,14 @@ async function runInvoiceProbe(target: ProbeTarget, amountMsat: number): Promise
     }
   }
 
+  const providerResult = parseProbeCommandResult(lastRawProviderResult);
   return {
     ...baseResult,
     retries: maxRetries,
     invoiceFetched: true,
     success: false,
-    durationMs: Date.now() - startedAt,
+    durationMs: providerResult?.durationMs ?? Date.now() - startedAt,
+    routeFeeMsat: providerResult?.routeFeeMsat,
     bolt11,
     rawProviderResult: lastRawProviderResult,
     error: lastError,
@@ -159,14 +162,15 @@ async function runNodeProbe(target: ProbeTarget, amountMsat: number): Promise<Pr
       );
       const rawProviderResult = runProbeNodeCommand(target, amountMsat);
       lastRawProviderResult = rawProviderResult;
-      const success = parseProbeCommandSuccess(rawProviderResult);
+      const providerResult = parseProbeCommandResult(rawProviderResult);
 
-      if (success) {
+      if (providerResult?.success) {
         return {
           ...baseResult,
           retries: retry,
           success: true,
-          durationMs: Date.now() - startedAt,
+          durationMs: providerResult.durationMs ?? Date.now() - startedAt,
+          routeFeeMsat: providerResult.routeFeeMsat,
           rawProviderResult,
         };
       }
@@ -182,11 +186,13 @@ async function runNodeProbe(target: ProbeTarget, amountMsat: number): Promise<Pr
     }
   }
 
+  const providerResult = parseProbeCommandResult(lastRawProviderResult);
   return {
     ...baseResult,
     retries: maxRetries,
     success: false,
-    durationMs: Date.now() - startedAt,
+    durationMs: providerResult?.durationMs ?? Date.now() - startedAt,
+    routeFeeMsat: providerResult?.routeFeeMsat,
     rawProviderResult: lastRawProviderResult,
     error: lastError,
   };
