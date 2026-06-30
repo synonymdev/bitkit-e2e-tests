@@ -241,7 +241,7 @@ export function runProbeNodeCommand(target: ProbeTarget, amountMsat: number): st
   return runDevToolsCommand(method, payload, timeoutSeconds);
 }
 
-export function parseProbeCommandResult(raw: string): ProbeCommandResult | null {
+function parseDevResultPayload(raw: string): Record<string, unknown> | null {
   const result = extractContentCallResult(raw);
   if (!result) return null;
 
@@ -253,24 +253,32 @@ export function parseProbeCommandResult(raw: string): ProbeCommandResult | null 
   }
   if (typeof parsed !== 'object' || parsed === null) return null;
 
-  const payload = parsed as Record<string, unknown>;
-  if ('type' in parsed && typeof parsed.type === 'string') {
-    return {
-      success: parsed.type === 'Success' || parsed.type.endsWith('.ProbeSuccess'),
-      durationMs: parseOptionalNumber(payload.durationMs),
-      routeFeeMsat: parseOptionalNumber(payload.routeFeeMsat),
-    };
-  }
+  return parsed as Record<string, unknown>;
+}
+
+function parseDevResultSuccess(payload: Record<string, unknown>): boolean {
+  if ('success' in payload) return payload.success === true;
+
+  const type = payload.type;
+  return (
+    typeof type === 'string' && (type === 'Success' || type.endsWith('.ProbeSuccess'))
+  );
+}
+
+export function parseProbeCommandResult(raw: string): ProbeCommandResult | null {
+  const payload = parseDevResultPayload(raw);
+  if (!payload) return null;
 
   return {
-    success: payload.success === true,
+    success: parseDevResultSuccess(payload),
     durationMs: parseOptionalNumber(payload.durationMs),
     routeFeeMsat: parseOptionalNumber(payload.routeFeeMsat),
   };
 }
 
 export function parseProbeCommandSuccess(raw: string): boolean {
-  return parseProbeCommandResult(raw)?.success ?? false;
+  const payload = parseDevResultPayload(raw);
+  return payload ? parseDevResultSuccess(payload) : false;
 }
 
 function parseOptionalNumber(value: unknown): number | undefined {
@@ -330,10 +338,11 @@ export async function resetPathfindingScores({
   console.info(`→ [${logPrefix}] Resetting pathfinding scores (timeout ${timeoutSeconds}s)...`);
   const fallbackFloorS = getDeviceEpochSeconds();
   const raw = runDevToolsCommand(method, {}, timeoutSeconds);
-  if (!parseProbeCommandSuccess(raw)) {
+  const payload = parseDevResultPayload(raw);
+  if (!payload || !parseDevResultSuccess(payload)) {
     throw new Error(`Pathfinding scores reset failed: ${summarizeProbeCommandFailure(raw)}`);
   }
-  const deviceResetAtS = parseResetTimestamp(raw);
+  const deviceResetAtS = parseResetTimestamp(payload);
   if (deviceResetAtS === null) {
     console.warn(
       `→ [${logPrefix}] Reset result has no timestamp (old app build?); using pre-reset device time as scores sync floor`
@@ -344,20 +353,8 @@ export async function resetPathfindingScores({
   return resetFloorS;
 }
 
-function parseResetTimestamp(raw: string): number | null {
-  const result = extractContentCallResult(raw);
-  if (!result) return null;
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(result);
-  } catch {
-    return null;
-  }
-  if (typeof parsed !== 'object' || parsed === null) return null;
-  if (!('timestamp' in parsed)) return null;
-
-  const timestamp = parsed.timestamp;
+function parseResetTimestamp(payload: Record<string, unknown>): number | null {
+  const timestamp = payload.timestamp;
   return typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp > 0
     ? timestamp
     : null;
