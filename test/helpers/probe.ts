@@ -29,6 +29,7 @@ export type ProbeResult = {
   invoiceFetched: boolean;
   success: boolean;
   durationMs: number;
+  routeFeeMsat?: number;
   bolt11?: string;
   nodeId?: string;
   rawProviderResult?: string;
@@ -47,6 +48,12 @@ type LnurlInvoiceResponse = {
   pr?: string;
   status?: string;
   reason?: string;
+};
+
+export type ProbeCommandResult = {
+  success: boolean;
+  durationMs?: number;
+  routeFeeMsat?: number;
 };
 
 const DEFAULT_PROBE_TIMEOUT_SECONDS = 90;
@@ -234,24 +241,56 @@ export function runProbeNodeCommand(target: ProbeTarget, amountMsat: number): st
   return runDevToolsCommand(method, payload, timeoutSeconds);
 }
 
-export function parseProbeCommandSuccess(raw: string): boolean {
+function parseDevResultPayload(raw: string): Record<string, unknown> | null {
   const result = extractContentCallResult(raw);
-  if (!result) return false;
+  if (!result) return null;
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(result);
   } catch {
-    return false;
+    return null;
   }
-  if (typeof parsed !== 'object' || parsed === null) return false;
+  if (typeof parsed !== 'object' || parsed === null) return null;
 
-  if ('success' in parsed) return parsed.success === true;
-  if ('type' in parsed && typeof parsed.type === 'string') {
-    return parsed.type === 'Success' || parsed.type.endsWith('.ProbeSuccess');
+  return parsed as Record<string, unknown>;
+}
+
+function parseDevResultSuccess(payload: Record<string, unknown>): boolean {
+  if ('success' in payload) return payload.success === true;
+
+  const type = payload.type;
+  return (
+    typeof type === 'string' && (type === 'Success' || type.endsWith('.ProbeSuccess'))
+  );
+}
+
+export function parseProbeCommandResult(raw: string): ProbeCommandResult | null {
+  const payload = parseDevResultPayload(raw);
+  if (!payload) return null;
+
+  return {
+    success: parseDevResultSuccess(payload),
+    durationMs: parseOptionalNumber(payload.durationMs),
+    routeFeeMsat: parseOptionalNumber(payload.routeFeeMsat),
+  };
+}
+
+export function parseProbeCommandSuccess(raw: string): boolean {
+  const payload = parseDevResultPayload(raw);
+  return payload ? parseDevResultSuccess(payload) : false;
+}
+
+function parseOptionalNumber(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const parsedValue = Number.parseInt(value, 10);
+    return Number.isFinite(parsedValue) ? parsedValue : undefined;
   }
 
-  return false;
+  return undefined;
 }
 
 export function summarizeProbeCommandFailure(raw: string): string {
@@ -299,10 +338,11 @@ export async function resetPathfindingScores({
   console.info(`→ [${logPrefix}] Resetting pathfinding scores (timeout ${timeoutSeconds}s)...`);
   const fallbackFloorS = getDeviceEpochSeconds();
   const raw = runDevToolsCommand(method, {}, timeoutSeconds);
-  if (!parseProbeCommandSuccess(raw)) {
+  const payload = parseDevResultPayload(raw);
+  if (!payload || !parseDevResultSuccess(payload)) {
     throw new Error(`Pathfinding scores reset failed: ${summarizeProbeCommandFailure(raw)}`);
   }
-  const deviceResetAtS = parseResetTimestamp(raw);
+  const deviceResetAtS = parseResetTimestamp(payload);
   if (deviceResetAtS === null) {
     console.warn(
       `→ [${logPrefix}] Reset result has no timestamp (old app build?); using pre-reset device time as scores sync floor`
@@ -313,20 +353,8 @@ export async function resetPathfindingScores({
   return resetFloorS;
 }
 
-function parseResetTimestamp(raw: string): number | null {
-  const result = extractContentCallResult(raw);
-  if (!result) return null;
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(result);
-  } catch {
-    return null;
-  }
-  if (typeof parsed !== 'object' || parsed === null) return null;
-  if (!('timestamp' in parsed)) return null;
-
-  const timestamp = parsed.timestamp;
+function parseResetTimestamp(payload: Record<string, unknown>): number | null {
+  const timestamp = payload.timestamp;
   return typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp > 0
     ? timestamp
     : null;
@@ -557,8 +585,8 @@ export function renderProbeReport(
     `Scores reset: ${scoresResetForReport()}`,
     `Readiness at probe start: ${readiness ? summarizeProbeReadiness(readiness) : 'not captured'}`,
     '',
-    '| Target | Type | Amount sats | Required | Fetch | Probe | Retries | Duration ms | Failure |',
-    '| --- | --- | ---: | --- | --- | --- | ---: | ---: | --- |',
+    '| Target | Type | Amount sats | Required | Fetch | Probe | Retries | Duration ms | Route fee msat | Failure |',
+    '| --- | --- | ---: | --- | --- | --- | ---: | ---: | ---: | --- |',
   ];
 
   for (const result of results) {
@@ -572,6 +600,7 @@ export function renderProbeReport(
         result.success ? '✅' : '❌',
         result.retries.toString(),
         result.durationMs.toString(),
+        formatRouteFeeCell(result),
         result.success ? '' : formatFailureCell(result.error ?? ''),
       ].join(' | ')} |`
     );
@@ -684,6 +713,9 @@ async function fetchJsonOnce<T>(url: string): Promise<T> {
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} for ${url}${formatResponseBody(text)}`);
   }
+  if (text.trim().length === 0) {
+    throw new Error(`HTTP ${response.status} for ${url} returned an empty response body`);
+  }
 
   return JSON.parse(text) as T;
 }
@@ -757,6 +789,10 @@ function formatFailureCell(error: string): string {
 function formatFetchCell(result: ProbeResult): string {
   if (result.probeMode === 'keysend') return 'n/a';
   return result.invoiceFetched ? 'ok' : 'failed';
+}
+
+function formatRouteFeeCell(result: ProbeResult): string {
+  return result.routeFeeMsat === undefined ? '' : result.routeFeeMsat.toString();
 }
 
 function runDevToolsCommand(
