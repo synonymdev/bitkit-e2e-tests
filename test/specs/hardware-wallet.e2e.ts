@@ -19,6 +19,7 @@ import {
   fundHardwareWalletAndAcknowledge,
   openHardwareWalletSettings,
   removeHardwareWalletFromSettings,
+  renameHardwareWalletFromSettings,
   startHardwareWalletFlowFromSuggestion,
   stopTrezorEmulator,
   transferHardwareWalletToSpending,
@@ -30,6 +31,7 @@ import { ciIt } from '../helpers/suite';
 
 describe('@hardware_wallet - Hardware Wallet', () => {
   const walletLabel = 'E2E Trezor';
+  const renamedWalletLabel = 'E2E Renamed Trezor';
   let trezorFixture: TrezorEmulatorFixture;
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
 
@@ -50,7 +52,7 @@ describe('@hardware_wallet - Hardware Wallet', () => {
     stopTrezorEmulator();
   });
 
-  ciIt('@hardware_wallet_1 - Can connect, show, and remove a Trezor emulator wallet', async () => {
+  ciIt('@hardware_wallet_1 - Can connect, rename, show, and remove a Trezor emulator wallet', async () => {
     await expectHardwareSuggestion({ visible: true });
     await startHardwareWalletFlowFromSuggestion();
     await completeHardwareWalletFlow(walletLabel);
@@ -58,9 +60,12 @@ describe('@hardware_wallet - Hardware Wallet', () => {
     await openHardwareWalletSettings();
     await expectHardwareWalletInSettings(walletLabel, { visible: true });
     await expectHardwareWalletOnHome(walletLabel, { visible: true });
-    await removeHardwareWalletFromSettings(walletLabel);
-    await expectHardwareWalletInSettings(walletLabel, { visible: false });
-    await expectHardwareWalletOnHome(walletLabel, { visible: false });
+    await openHardwareWalletSettings();
+    await renameHardwareWalletFromSettings(walletLabel, renamedWalletLabel);
+    await expectHardwareWalletOnHome(renamedWalletLabel, { visible: true });
+    await removeHardwareWalletFromSettings(renamedWalletLabel);
+    await expectHardwareWalletInSettings(renamedWalletLabel, { visible: false });
+    await expectHardwareWalletOnHome(renamedWalletLabel, { visible: false });
   });
 
   ciIt('@hardware_wallet_2 - Can receive onchain funds to hardware wallet', async () => {
