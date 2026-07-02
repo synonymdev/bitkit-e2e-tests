@@ -21,6 +21,7 @@ import {
   dismissBackupTimedSheet,
   dismissBackgroundPaymentsTimedSheet,
   dismissQuickPayIntro,
+  confirmInputOnKeyboard,
 } from './actions';
 import { openHomeWidgets, openSettings } from './navigation';
 import { deposit, getBackend, mineBlocks } from './regtest';
@@ -129,6 +130,22 @@ export async function expectHardwareWalletInSettings(
   { visible }: { visible: boolean }
 ) {
   await expectText(label, { visible, strategy: 'contains' });
+}
+
+export async function renameHardwareWalletFromSettings(currentLabel: string, newLabel: string) {
+  await expectHardwareWalletInSettings(currentLabel, { visible: true });
+  await tapFirstHardwareWalletName();
+  await elementById('RenameHardwareWalletInput').waitForDisplayed({ timeout: 30_000 });
+  await typeText('RenameHardwareWalletInput', newLabel);
+  await tap('RenameHardwareWalletSave');
+  await confirmInputOnKeyboard();
+  await elementById('RenameHardwareWalletInput').waitForDisplayed({
+    reverse: true,
+    timeout: 30_000,
+  });
+  await expectHardwareWalletInSettings(newLabel, { visible: true });
+  await expectHardwareWalletInSettings(currentLabel, { visible: false });
+  
 }
 
 export async function expectHardwareSuggestion({ visible }: { visible: boolean }) {
@@ -317,4 +334,12 @@ async function tapFirstHardwareWalletDelete() {
   );
   await deleteButton.waitForDisplayed({ timeout: 30_000 });
   await deleteButton.click();
+}
+
+async function tapFirstHardwareWalletName() {
+  const nameButton = await $(
+    'android=new UiSelector().resourceIdMatches(".*HardwareWalletRowName.*")'
+  );
+  await nameButton.waitForDisplayed({ timeout: 30_000 });
+  await nameButton.click();
 }
