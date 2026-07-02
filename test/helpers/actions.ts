@@ -491,6 +491,7 @@ export async function addSendTag(tag: string) {
 }
 
 export async function enterAmount(amountSats: number) {
+  await sleep(300);
   for (const digit of `${amountSats}`.split('')) {
     await tap(`N${digit}`);
     await sleep(150);

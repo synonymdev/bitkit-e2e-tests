@@ -10,6 +10,7 @@ import {
   dragOnElement,
   expectText,
   doNavigationClose,
+  enterAmount,
 } from '../helpers/actions';
 import initElectrum from '../helpers/electrum';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
@@ -76,8 +77,7 @@ describe('@security - Security And Privacy', () => {
     // send, using PIN
     const coreAddress = await getExternalAddress();
     await enterAddress(coreAddress);
-    await tap('N1');
-    await tap('N000');
+    await enterAmount(10000);
     await tap('ContinueAmount');
     await dragOnElement('GRAB', 'right', 0.95);
     await expectText('Enter PIN Code');
