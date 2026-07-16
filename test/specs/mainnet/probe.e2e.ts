@@ -251,16 +251,13 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
           .map((it) => `${it.target.name}:${it.amountMsat / 1000}`)
           .join(', ')}`
       );
-      writeProbeArtifacts(
-        { results, readiness, replayProbes: probes },
-        { writeStepSummary: false }
-      );
+      writeProbeArtifacts({ results, readiness, replayQueue: probes }, { writeStepSummary: false });
 
       for (const [index, { target, amountMsat }] of probes.entries()) {
         const result = await runProbe(target, amountMsat);
         results.push(result);
         writeProbeArtifacts(
-          { results, readiness, replayProbes: probes },
+          { results, readiness, replayQueue: probes },
           { writeStepSummary: false }
         );
         console.info(
@@ -275,7 +272,7 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
         }
       }
     } finally {
-      writeProbeArtifacts({ results, readiness, replayProbes: probes });
+      writeProbeArtifacts({ results, readiness, replayQueue: probes });
     }
 
     const failedRequired = results.filter((it) => it.required && !it.success);

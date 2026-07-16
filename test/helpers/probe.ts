@@ -113,7 +113,7 @@ export type ProbeQueueEntry = { target: ProbeTarget; amountMsat: number };
 export type ProbeArtifactState = {
   results: ProbeResult[];
   readiness?: ProbeReadiness | null;
-  replayProbes?: ProbeQueueEntry[];
+  replayQueue?: ProbeQueueEntry[];
 };
 
 export type ProbeArtifactWriteOptions = {
@@ -153,8 +153,8 @@ export function buildProbeQueue(targets: ProbeTarget[], order: ProbeOrder): Prob
   return queue;
 }
 
-export function formatProbeReplayTargetsJson(probes: ProbeQueueEntry[], space?: number): string {
-  const replayTargets = probes.map(({ target, amountMsat }) => {
+export function formatProbeTargetsReplayJson(queue: ProbeQueueEntry[], space?: number): string {
+  const replayTargets = queue.map(({ target, amountMsat }) => {
     const baseTarget: Partial<ProbeTarget> = { ...target };
     delete baseTarget.amountMsat;
     delete baseTarget.amountsMsat;
@@ -573,7 +573,7 @@ export function writeProbeArtifacts(
   artifactState: ProbeArtifactState,
   options: ProbeArtifactWriteOptions = {}
 ): void {
-  const { results, readiness, replayProbes } = artifactState;
+  const { results, readiness, replayQueue } = artifactState;
   const artifactsDir = resolveArtifactsDir();
   fs.mkdirSync(artifactsDir, { recursive: true });
 
@@ -584,10 +584,10 @@ export function writeProbeArtifacts(
   fs.writeFileSync(jsonPath, `${JSON.stringify(results, null, 2)}\n`);
   fs.writeFileSync(reportPath, report);
 
-  if (replayProbes && replayProbes.length > 0) {
+  if (replayQueue && replayQueue.length > 0) {
     fs.writeFileSync(
       path.join(artifactsDir, 'probe-targets-replay.json'),
-      `${formatProbeReplayTargetsJson(replayProbes, 2)}\n`
+      `${formatProbeTargetsReplayJson(replayQueue, 2)}\n`
     );
   }
 
