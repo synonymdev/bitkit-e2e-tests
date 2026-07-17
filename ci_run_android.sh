@@ -24,7 +24,19 @@ LOGFILE="$ARTIFACTS_DIR/logcat.txt"
 adb logcat -v threadtime -T 1 -b all > "$LOGFILE" &
 LOGCAT_PID=$!
 
+clear_app_logs() {
+  set +e
+  adb shell "run-as $APP_ID sh -c 'rm -rf files/logs && mkdir -p files/logs'"
+  local status=$?
+  set -e
+
+  if [[ "$status" -ne 0 ]]; then
+    echo "Could not clear app logs for $APP_ID" >&2
+  fi
+}
+
 collect_app_logs() {
+  rm -rf "$APP_LOGS_DIR"
   mkdir -p "$APP_LOGS_DIR"
   set +e
   adb exec-out run-as "$APP_ID" tar -cf - -C "/data/data/$APP_ID/files" logs \
@@ -45,6 +57,8 @@ cleanup() {
   collect_app_logs
 }
 trap cleanup EXIT INT TERM
+
+clear_app_logs
 
 # local/regtest helper ports
 if [[ "${BACKEND:-local}" != "mainnet" ]]; then
