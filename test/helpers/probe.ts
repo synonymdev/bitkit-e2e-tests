@@ -148,7 +148,7 @@ export function buildProbeQueue(targets: ProbeTarget[], order: ProbeOrder): Prob
   });
 
   if (order === 'random') {
-    shuffleInPlace(queue);
+    shuffleInPlace(queue, randomSourceForProbeOrder());
   }
 
   return queue;
@@ -171,9 +171,30 @@ export function formatProbeTargetsReplayJson(queue: ProbeQueueEntry[], space?: n
   return JSON.stringify(replayTargets, null, space);
 }
 
-function shuffleInPlace<T>(items: T[]): T[] {
+function randomSourceForProbeOrder(): () => number {
+  const seed = process.env.PROBE_RANDOM_SEED;
+  return seed ? seededRandom(seed) : Math.random;
+}
+
+function seededRandom(seed: string): () => number {
+  let state = 0x811c9dc5;
+  for (let i = 0; i < seed.length; i++) {
+    state ^= seed.charCodeAt(i);
+    state = Math.imul(state, 0x01000193);
+  }
+
+  return () => {
+    state += 0x6d2b79f5;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffleInPlace<T>(items: T[], random: () => number): T[] {
   for (let i = items.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     [items[i], items[j]] = [items[j], items[i]];
   }
   return items;
@@ -731,6 +752,7 @@ function probeConfigForReport(): Record<string, string> {
   return removeUndefinedValues({
     amountProfile: process.env.PROBE_AMOUNT_PROFILE ?? DEFAULT_PROBE_AMOUNT_PROFILE,
     order: probeOrderForReport(),
+    randomSeed: process.env.PROBE_RANDOM_SEED,
     retries: process.env.PROBE_RETRIES,
     delayMs: process.env.PROBE_DELAY_MS,
     resetScores: scoresResetForReport(),
