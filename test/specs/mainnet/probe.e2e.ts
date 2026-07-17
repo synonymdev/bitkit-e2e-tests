@@ -16,6 +16,7 @@ import {
   summarizeProbeCommandFailure,
   waitForProbeReadiness,
   writeProbeArtifacts,
+  type ProbeQueueEntry,
   type ProbeReadiness,
   type ProbeResult,
   type ProbeTarget,
@@ -217,6 +218,7 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
   ciIt('@probe_mainnet_1 - Can probe configured mainnet LNURL targets', async () => {
     const results: ProbeResult[] = [];
     let readiness: ProbeReadiness | null = null;
+    let probes: ProbeQueueEntry[] = [];
 
     try {
       console.info('→ [Probe] Restoring probe wallet...');
@@ -238,7 +240,7 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
       });
 
       const probeOrder = resolveProbeOrder();
-      const probes = buildProbeQueue(targets, probeOrder);
+      probes = buildProbeQueue(targets, probeOrder);
       const probeDelayMs = resolveProbeDelayMs();
       const probeRetries = resolveProbeRetries();
       console.info(`→ [Probe] Probe amount profile configured: ${resolveProbeAmountProfile()}`);
@@ -249,11 +251,15 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
           .map((it) => `${it.target.name}:${it.amountMsat / 1000}`)
           .join(', ')}`
       );
+      writeProbeArtifacts({ results, readiness, replayQueue: probes }, { writeStepSummary: false });
 
       for (const [index, { target, amountMsat }] of probes.entries()) {
         const result = await runProbe(target, amountMsat);
         results.push(result);
-        writeProbeArtifacts(results, readiness, { writeStepSummary: false });
+        writeProbeArtifacts(
+          { results, readiness, replayQueue: probes },
+          { writeStepSummary: false }
+        );
         console.info(
           `→ [Probe] ${result.targetName} ${result.amountSats} sats (${result.probeMode}): ${
             result.success ? '✅ success' : `❌ failed (${result.error ?? 'unknown'})`
@@ -266,7 +272,7 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
         }
       }
     } finally {
-      writeProbeArtifacts(results, readiness);
+      writeProbeArtifacts({ results, readiness, replayQueue: probes });
     }
 
     const failedRequired = results.filter((it) => it.required && !it.success);

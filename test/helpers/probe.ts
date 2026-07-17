@@ -110,6 +110,16 @@ export type ProbeOrder = 'desc' | 'random' | 'config';
 
 export type ProbeQueueEntry = { target: ProbeTarget; amountMsat: number };
 
+export type ProbeArtifactState = {
+  results: ProbeResult[];
+  readiness?: ProbeReadiness | null;
+  replayQueue?: ProbeQueueEntry[];
+};
+
+export type ProbeArtifactWriteOptions = {
+  writeStepSummary?: boolean;
+};
+
 export function resolveProbeOrder(): ProbeOrder {
   const raw = process.env.PROBE_ORDER?.toLowerCase();
   if (!raw) return 'config';
@@ -141,6 +151,23 @@ export function buildProbeQueue(targets: ProbeTarget[], order: ProbeOrder): Prob
   }
 
   return queue;
+}
+
+export function formatProbeTargetsReplayJson(queue: ProbeQueueEntry[], space?: number): string {
+  const replayTargets = queue.map(({ target, amountMsat }) => {
+    const baseTarget: Partial<ProbeTarget> = { ...target };
+    delete baseTarget.amountMsat;
+    delete baseTarget.amountsMsat;
+
+    return Object.fromEntries(
+      Object.entries({
+        ...baseTarget,
+        amountMsat,
+      }).filter(([, value]) => value !== undefined)
+    );
+  });
+
+  return JSON.stringify(replayTargets, null, space);
 }
 
 function shuffleInPlace<T>(items: T[]): T[] {
@@ -260,9 +287,7 @@ function parseDevResultSuccess(payload: Record<string, unknown>): boolean {
   if ('success' in payload) return payload.success === true;
 
   const type = payload.type;
-  return (
-    typeof type === 'string' && (type === 'Success' || type.endsWith('.ProbeSuccess'))
-  );
+  return typeof type === 'string' && (type === 'Success' || type.endsWith('.ProbeSuccess'));
 }
 
 export function parseProbeCommandResult(raw: string): ProbeCommandResult | null {
@@ -545,10 +570,10 @@ export async function waitForProbeReadiness({
 }
 
 export function writeProbeArtifacts(
-  results: ProbeResult[],
-  readiness?: ProbeReadiness | null,
-  options: { writeStepSummary?: boolean } = {}
+  artifactState: ProbeArtifactState,
+  options: ProbeArtifactWriteOptions = {}
 ): void {
+  const { results, readiness, replayQueue } = artifactState;
   const artifactsDir = resolveArtifactsDir();
   fs.mkdirSync(artifactsDir, { recursive: true });
 
@@ -558,6 +583,13 @@ export function writeProbeArtifacts(
 
   fs.writeFileSync(jsonPath, `${JSON.stringify(results, null, 2)}\n`);
   fs.writeFileSync(reportPath, report);
+
+  if (replayQueue && replayQueue.length > 0) {
+    fs.writeFileSync(
+      path.join(artifactsDir, 'probe-targets-replay.json'),
+      `${formatProbeTargetsReplayJson(replayQueue, 2)}\n`
+    );
+  }
 
   if (readiness) {
     const readinessPath = path.join(artifactsDir, 'probe-readiness.json');
