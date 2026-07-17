@@ -66,6 +66,7 @@ const DEFAULT_MIN_GRAPH_CHANNELS = 10_000;
 const DEFAULT_RESET_SCORES_TIMEOUT_SECONDS = 180;
 const DEFAULT_SCORES_SYNC_MAX_AGE_S = 900;
 const DEFAULT_PROBE_AMOUNT_PROFILE = 'full';
+const PROBE_RUN_ID = new Date().toISOString().replace(/[:.]/g, '-');
 const PROBE_AMOUNT_PROFILES = {
   small: [1_000_000],
   large: [80_000_000],
@@ -590,6 +591,7 @@ export function writeProbeArtifacts(
       `${formatProbeTargetsReplayJson(replayQueue, 2)}\n`
     );
   }
+  writeProbeHistoryArtifacts(PROBE_RUN_ID, results, report, readiness, replayQueue);
 
   if (readiness) {
     const readinessPath = path.join(artifactsDir, 'probe-readiness.json');
@@ -601,6 +603,48 @@ export function writeProbeArtifacts(
       process.env.GITHUB_STEP_SUMMARY,
       `\n## Attempt ${resolveAttempt()}\n\n${report}\n`
     );
+  }
+}
+
+function writeProbeHistoryArtifacts(
+  runId: string,
+  results: ProbeResult[],
+  report: string,
+  readiness?: ProbeReadiness | null,
+  replayProbes?: ProbeQueueEntry[]
+): void {
+  const historyDir = path.join(resolveArtifactsDir(), 'probe-history', runId);
+  fs.mkdirSync(historyDir, { recursive: true });
+
+  const metadata = {
+    runId,
+    updatedAt: new Date().toISOString(),
+    attempt: resolveAttempt(),
+    wallet: probeWalletForReport(),
+    ci: ciMetadataForReport(),
+    config: probeConfigForReport(),
+    resultCount: results.length,
+  };
+
+  fs.writeFileSync(
+    path.join(historyDir, 'probe-run.json'),
+    `${JSON.stringify(metadata, null, 2)}\n`
+  );
+  fs.writeFileSync(
+    path.join(historyDir, 'probe-results.json'),
+    `${JSON.stringify(results, null, 2)}\n`
+  );
+  fs.writeFileSync(path.join(historyDir, 'probe-report.md'), report);
+  if (replayProbes && replayProbes.length > 0) {
+    fs.writeFileSync(
+      path.join(historyDir, 'probe-targets-replay.json'),
+      `${formatProbeTargetsReplayJson(replayProbes, 2)}\n`
+    );
+  }
+
+  if (readiness) {
+    const readinessPath = path.join(historyDir, 'probe-readiness.json');
+    fs.writeFileSync(readinessPath, `${JSON.stringify(readiness, null, 2)}\n`);
   }
 }
 
@@ -657,6 +701,63 @@ function scoresResetForReport(): string {
   } catch {
     return `invalid (${process.env.PROBE_RESET_SCORES})`;
   }
+}
+
+function probeWalletForReport(): Record<string, string> | undefined {
+  const id = nonEmptyEnv('PROBE_WALLET_ID');
+  const label = nonEmptyEnv('PROBE_WALLET_LABEL');
+  if (!id && !label) return undefined;
+  return removeUndefinedValues({ id, label });
+}
+
+function ciMetadataForReport(): Record<string, string> | undefined {
+  const runId = nonEmptyEnv('GITHUB_RUN_ID');
+  if (!runId) return undefined;
+
+  return removeUndefinedValues({
+    repository: nonEmptyEnv('GITHUB_REPOSITORY'),
+    runId,
+    runNumber: nonEmptyEnv('GITHUB_RUN_NUMBER'),
+    runAttempt: nonEmptyEnv('GITHUB_RUN_ATTEMPT'),
+    runUrl: githubRunUrlForReport(runId),
+    eventName: nonEmptyEnv('GITHUB_EVENT_NAME'),
+    workflow: nonEmptyEnv('GITHUB_WORKFLOW'),
+    ref: nonEmptyEnv('GITHUB_REF_NAME'),
+    sha: nonEmptyEnv('GITHUB_SHA'),
+  });
+}
+
+function probeConfigForReport(): Record<string, string> {
+  return removeUndefinedValues({
+    amountProfile: process.env.PROBE_AMOUNT_PROFILE ?? DEFAULT_PROBE_AMOUNT_PROFILE,
+    order: probeOrderForReport(),
+    retries: process.env.PROBE_RETRIES,
+    delayMs: process.env.PROBE_DELAY_MS,
+    resetScores: scoresResetForReport(),
+    e2eTestsRef: process.env.E2E_TESTS_REF,
+    probeAndroidRef: process.env.PROBE_ANDROID_REF,
+    probeApkUrl: process.env.PROBE_APK_URL,
+  });
+}
+
+function githubRunUrlForReport(runId: string): string | undefined {
+  const serverUrl = nonEmptyEnv('GITHUB_SERVER_URL');
+  const repository = nonEmptyEnv('GITHUB_REPOSITORY');
+  if (!serverUrl || !repository) return undefined;
+  return `${serverUrl}/${repository}/actions/runs/${runId}`;
+}
+
+function nonEmptyEnv(name: string): string | undefined {
+  const value = process.env[name];
+  return value && value.length > 0 ? value : undefined;
+}
+
+function removeUndefinedValues<T extends Record<string, string | undefined>>(
+  value: T
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, string] => entry[1] !== undefined)
+  );
 }
 
 function parseProbeTarget(value: unknown): ProbeTarget {
