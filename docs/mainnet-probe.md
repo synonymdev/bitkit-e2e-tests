@@ -68,6 +68,7 @@ Written to `artifacts/` (or `artifacts/attempt-N/` when `ATTEMPT` is set):
 - `probe-results.json` — per-probe results (target, amount, success, retries, duration, error)
 - `probe-report.md` — markdown summary table (also appended to `GITHUB_STEP_SUMMARY` on CI)
 - `probe-readiness.json` — node readiness snapshot at probe start
+- `probe-targets-replay.json` — configured targets expanded into the exact target+amount order used by this run. Use it with `PROBE_ORDER=config` to replay a random run.
 
 ## Running locally
 
@@ -95,6 +96,15 @@ LN_STABILIZE_DELAY_MS=25000 \
 APPIUM_NEW_COMMAND_TIMEOUT=1200 \
 ./ci_run_android.sh --spec ./test/specs/mainnet/probe.e2e.ts --mochaOpts.grep "@probe_mainnet"
 ```
+
+Replay a previous random probe run from its artifact:
+
+```bash
+export PROBE_TARGETS_JSON="$(jq -c . artifacts/probe-targets-replay.json)"
+export PROBE_ORDER=config
+```
+
+Then run the suite with the same wallet/app build and other probe settings used by the original run.
 
 Notes:
 
