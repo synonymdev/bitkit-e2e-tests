@@ -12,12 +12,12 @@ export type PubkyContact = { name: string; pubky: string; ableToPay: boolean };
 export const STAGING_TEST_CONTACTS: readonly PubkyContact[] = [
   {
     name: 'Contact #1',
-    pubky: 'pubkydrd11pqzgdfkocfo5mmp98r7545rrtpchq4djdzsbeat7kp3y7uy',
+    pubky: 'pubkyidufsk43b5hetzawksc639xpyc8ckkiq7dp7ye38jtpns1tyyjho',
     ableToPay: false,
   },
   {
     name: 'Contact #2',
-    pubky: 'pubkyhq8y44ibogtfa6xyrt1etcyimq5zchmqcjj7ecpchfpgoo7sudqy',
+    pubky: 'pubkybonj981epe4abdkx3kpixbz9abjgadii7dwhgw4r76jrm96obyiy',
     ableToPay: false,
   },
 ] as const;
