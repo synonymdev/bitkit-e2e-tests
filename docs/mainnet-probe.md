@@ -19,6 +19,7 @@ It is orchestrated nightly by the private `bitkit-nightly` repo (`mainnet-probe.
 | --- | --- | --- |
 | `PROBE_AMOUNT_PROFILE` | `full` | Default amount set for targets that do not define `amountMsat` or `amountsMsat`: `small`, `large`, `cover`, or `full`. |
 | `PROBE_ORDER` | `config` | Order of probes per target: `config` = amounts as listed in target config, `desc` = highest amount first (avoids small probes "warming up" scorer knowledge of the route), `random` = global shuffle of all target+amount pairs. |
+| `PROBE_RANDOM_SEED` | unset | Optional seed for `PROBE_ORDER=random`. Use the same seed with the same targets/profile to reproduce the same target+amount order across A/B runs. |
 | `PROBE_RESET_SCORES` | `false` | When `true`, deletes the persisted pathfinding scores (`scorer` and `external_pathfinding_scores_cache` VSS keys) and restarts the node before probing, so every run starts from a fresh scorer (external scores are re-downloaded on startup). Recommended for scorer A/B experiments; the nightly job enables it by default. Accepts `true/false/1/0/yes/no`. |
 | `PROBE_RESET_SCORES_TIMEOUT_SECONDS` | `180` | Timeout for the scores reset devtools command (covers node stop + VSS deletes + node start). |
 | `PROBE_SCORES_SYNC_MAX_AGE_S` | `900` | Only with `PROBE_RESET_SCORES=true`: readiness additionally requires the node's last external scores sync to be at most this many seconds old **and** newer than the reset floor reported by the app (captured after the node stop + VSS deletes, before the restart; the sync timestamp persisted in node metrics survives the restart, so only a sync from the rebuilt node proves the scores were re-downloaded). Guards against a failed scorer fetch silently producing a "no scores" run. |
@@ -68,6 +69,11 @@ Written to `artifacts/` (or `artifacts/attempt-N/` when `ATTEMPT` is set):
 - `probe-results.json` — per-probe results (target, amount, success, retries, duration, error)
 - `probe-report.md` — markdown summary table (also appended to `GITHUB_STEP_SUMMARY` on CI)
 - `probe-readiness.json` — node readiness snapshot at probe start
+- `probe-targets-replay.json` — configured targets expanded into the exact target+amount order used by this run. Use it with `PROBE_ORDER=config` to replay a random run.
+- `app-logs/` — Android application logs collected by the runner when available. These are short-lived CI artifacts and are not copied into `probe-history/`.
+- `probe-history/<run-id>/` — canonical compact per-run history snapshot used for trend reports and CI persistence. It contains `probe-run.json`, `probe-results.json`, `probe-report.md`, `probe-targets-replay.json`, and `probe-readiness.json` when readiness was captured.
+
+`probe-run.json` includes local/CI metadata when available, including attempt, wallet, GitHub run details, amount profile, probe order, retry count, reset-scores setting, and source refs. CI expects this `probe-history/<run-id>/` format; top-level result files are not treated as persistent history.
 
 ## Running locally
 
@@ -95,6 +101,15 @@ LN_STABILIZE_DELAY_MS=25000 \
 APPIUM_NEW_COMMAND_TIMEOUT=1200 \
 ./ci_run_android.sh --spec ./test/specs/mainnet/probe.e2e.ts --mochaOpts.grep "@probe_mainnet"
 ```
+
+Replay a previous random probe run from its artifact:
+
+```bash
+export PROBE_TARGETS_JSON="$(jq -c . artifacts/probe-targets-replay.json)"
+export PROBE_ORDER=config
+```
+
+Then run the suite with the same wallet/app build and other probe settings used by the original run.
 
 Notes:
 

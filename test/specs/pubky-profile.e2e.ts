@@ -5,6 +5,7 @@ import {
   elementByText,
   enterAddress,
   enterAddressViaScanPrompt,
+  expectText,
   getSeed,
   restoreWallet,
   sleep,
@@ -213,6 +214,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
           for (const [i, stagingContact] of STAGING_TEST_CONTACTS.entries()) {
             await addContact({ pubky: stagingContact.pubky, firstContact: i === 0 });
             await verifyContactRowDisplayed(stagingContact.pubky);
+            await expectText(stagingContact.name);
           }
 
           // try add duplicate contact
