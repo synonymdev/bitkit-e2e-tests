@@ -67,7 +67,7 @@ export async function cleanupProfile(label: string) {
     await deleteProfile();
     console.info(`Cleaned up Pubky profile for ${label}`);
   } catch (error) {
-    console.warn(`Could not cleanup Pubky profile for ${label}:`, error);
+    console.error(`Could not cleanup Pubky profile for ${label}:`, error);
   }
 }
 

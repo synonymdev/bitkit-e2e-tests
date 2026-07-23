@@ -279,7 +279,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
           await updateContactProfile({ pubky: pubkyA, details: detailsAUpdated });
           await verifyContactDetails({ pubky: pubkyA, details: detailsAUpdated });
 
-          await cleanupProfile('@pubky_profile_4 wallet B');
+          await deleteProfile();
           currentWallet = null;
 
           // Restore wallet A and verify wallet A profile is unchanged by wallet B contact edits.
@@ -299,7 +299,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
               await enablePaykitUi();
               await cleanupProfile('@pubky_profile_4 wallet A');
             } catch (error) {
-              console.warn('Could not restore and cleanup wallet A profile:', error);
+              console.error('Could not restore and cleanup wallet A profile:', error);
             }
           }
         }
