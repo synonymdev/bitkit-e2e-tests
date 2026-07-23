@@ -6,6 +6,7 @@ import {
   acknowledgeReceivedPaymentIfPresent,
   doNavigationClose,
   elementById,
+  elementByText,
   enterAmount,
   expectBalanceWithWait,
   expectTextWithin,
@@ -14,6 +15,7 @@ import {
   getAmountUnder,
   sleep,
   tap,
+  tapFirstByAccessibilityIdPrefix,
   typeText,
   handleAndroidAlert,
   waitForToast,
@@ -134,7 +136,10 @@ export async function expectHardwareWalletInSettings(
 
 export async function renameHardwareWalletFromSettings(currentLabel: string, newLabel: string) {
   await expectHardwareWalletInSettings(currentLabel, { visible: true });
-  await tapFirstHardwareWalletName();
+  const nameEl = await elementByText(currentLabel, 'contains');
+  await nameEl.waitForDisplayed({ timeout: 30_000 });
+  await sleep(200);
+  await nameEl.click();
   await elementById('RenameHardwareWalletInput').waitForDisplayed({ timeout: 30_000 });
   await typeText('RenameHardwareWalletInput', newLabel);
   await tap('RenameHardwareWalletSave');
@@ -237,6 +242,7 @@ export async function transferHardwareWalletToSpending({
     // Local backend does not have Blocktank,
     // so we don't wait for the transfer success screen.
     await tap('TransferSuccess-button');
+    await dismissBackupTimedSheet({ triggerTimedSheet: false });
   } else {
     await mineBlocks(1);
     if (waitForSync) {
@@ -266,7 +272,7 @@ export async function transferHardwareWalletToSpending({
 export async function removeHardwareWalletFromSettings(label: string) {
   await openHardwareWalletSettings();
   await expectHardwareWalletInSettings(label, { visible: true });
-  await tapFirstHardwareWalletDelete();
+  await tapFirstByAccessibilityIdPrefix('HardwareWalletRowDelete_');
   await tap('DialogConfirm');
   await sleep(500);
   await expectHardwareWalletInSettings(label, { visible: false });
@@ -328,18 +334,3 @@ async function dismissSpendingBalanceToastIfShown() {
   }
 }
 
-async function tapFirstHardwareWalletDelete() {
-  const deleteButton = await $(
-    'android=new UiSelector().resourceIdMatches(".*HardwareWalletRowDelete_.*")'
-  );
-  await deleteButton.waitForDisplayed({ timeout: 30_000 });
-  await deleteButton.click();
-}
-
-async function tapFirstHardwareWalletName() {
-  const nameButton = await $(
-    'android=new UiSelector().resourceIdMatches(".*HardwareWalletRowName.*")'
-  );
-  await nameButton.waitForDisplayed({ timeout: 30_000 });
-  await nameButton.click();
-}
