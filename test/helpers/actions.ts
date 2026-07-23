@@ -49,6 +49,17 @@ export function elementById(selector: string): ChainablePromiseElement {
   }
 }
 
+/**
+ * Like elementById, but matches ids that start with `prefix` (suffix is often dynamic).
+ * Android: resourceId regex. iOS: predicate on `name` (the accessibility identifier).
+ */
+export function elementByIdPrefix(prefix: string): ChainablePromiseElement {
+  if (driver.isAndroid) {
+    return $(`android=new UiSelector().resourceIdMatches(".*${prefix}.*")`);
+  }
+  return $(`-ios predicate string:name BEGINSWITH '${prefix}'`);
+}
+
 // Find a child testID within an ancestor testID (compatible with both Android and iOS.)
 export async function elementByIdWithin(
   ancestorId: string,
@@ -383,6 +394,20 @@ export async function tap(testId: string, { timeout = 30_000 }: { timeout?: numb
   const el = await elementById(testId);
   await el.waitForDisplayed({ timeout });
   await sleep(200); // Allow time for the element to settle
+  await el.click();
+  await sleep(100);
+}
+
+/**
+ * Taps the first element whose accessibility id starts with `prefix`.
+ */
+export async function tapFirstByAccessibilityIdPrefix(
+  prefix: string,
+  { timeout = 30_000 }: { timeout?: number } = {}
+) {
+  const el = elementByIdPrefix(prefix);
+  await el.waitForExist({ timeout });
+  await sleep(200);
   await el.click();
   await sleep(100);
 }
