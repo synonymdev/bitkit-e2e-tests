@@ -250,6 +250,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
 
         try {
           // Wallet A: create and customize profile, then capture seed.
+          console.log('Wallet A: create and customize profile, then capture seed.');
           const { pubky: pubkyA } = await createProfile({ name: 'Alice Wallet A' });
           currentWallet = 'A';
           await updateMyProfile(detailsA);
@@ -257,6 +258,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
           seedA = await getSeed();
 
           // Wallet B: fresh install + onboarding, create profile, then add wallet A as contact.
+          console.log('Wallet B: fresh install + onboarding, create profile, then add wallet A as contact.');
           await reinstallApp();
           currentWallet = null;
           await completeOnboarding();
@@ -281,6 +283,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
           currentWallet = null;
 
           // Restore wallet A and verify wallet A profile is unchanged by wallet B contact edits.
+          console.log('Wallet A: restore wallet A and verify wallet A profile is unchanged by wallet B contact edits.');
           await restoreWallet(seedA);
           await enablePaykitUi();
           currentWallet = 'A';

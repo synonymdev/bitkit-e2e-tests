@@ -125,6 +125,7 @@ export async function saveEditProfile() {
 export async function saveEditContact() {
   await swipeFullScreen('up');
   await tap('ProfileEditSave');
+  await waitForToast('ContactUpdatedToast', { waitToDisappear: driver.isIOS });
   await elementById('ContactEdit').waitForDisplayed({ timeout: 60_000 });
 }
 
