@@ -224,11 +224,6 @@ export async function verifyAddContactRoute(
   });
 }
 
-export async function discardAddContactRoute() {
-  await elementById('AddContactDiscard').waitForDisplayed();
-  await tap('AddContactDiscard');
-}
-
 /** Opens Contacts and waits for a row with test id `Contact_<publicKey>`. */
 export async function verifyContactRowDisplayed(publicKey: string) {
   await openContacts();

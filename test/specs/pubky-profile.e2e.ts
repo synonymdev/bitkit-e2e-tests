@@ -24,7 +24,6 @@ import {
   cleanupProfile,
   deleteContact,
   deleteProfile,
-  discardAddContactRoute,
   openEditProfile,
   readPubkyFromProfileCopy,
   removeEditProfileLinkAt,
@@ -199,7 +198,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
           await verifyAddContactRoute(firstStagingContact.pubky, {
             ableToPay: firstStagingContact.ableToPay,
           });
-          await discardAddContactRoute();
+          await doNavigationClose();
 
           // route unsaved pubky from QR scanner prompt
           await enterAddressViaScanPrompt(firstStagingContact.pubky, {
@@ -208,7 +207,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
           await verifyAddContactRoute(firstStagingContact.pubky, {
             ableToPay: firstStagingContact.ableToPay,
           });
-          await discardAddContactRoute();
+          await doNavigationClose();
 
           // add valid contacts
           for (const [i, stagingContact] of STAGING_TEST_CONTACTS.entries()) {
