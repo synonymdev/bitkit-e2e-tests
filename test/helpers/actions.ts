@@ -1216,8 +1216,6 @@ export type ToastId =
   | 'InsufficientSavingsToast'
   | 'ProfilePubkyCopiedToast'
   | 'ProfileUpdatedToast'
-  | 'ContactSavedToast'
-  | 'ContactUpdatedToast'
   | 'ContactDeletedToast'
   | 'SendAmountExceededToast';
 

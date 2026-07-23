@@ -125,7 +125,6 @@ export async function saveEditProfile() {
 export async function saveEditContact() {
   await swipeFullScreen('up');
   await tap('ProfileEditSave');
-  await waitForToast('ContactUpdatedToast', { waitToDisappear: driver.isIOS });
   await elementById('ContactEdit').waitForDisplayed({ timeout: 60_000 });
 }
 
@@ -151,12 +150,10 @@ export async function addContact({
   pubky,
   save = true,
   firstContact = false,
-  waitToastToDisappear: waitToDisappear = driver.isIOS,
 }: {
   pubky: string;
   save?: boolean;
   firstContact?: boolean;
-  waitToastToDisappear?: boolean;
 }): Promise<void> {
   await openContacts();
   await sleep(500);
@@ -186,7 +183,6 @@ export async function addContact({
   await tap('AddContactAdd');
   await elementById('AddContactSave').waitForDisplayed();
   await tap('AddContactSave');
-  await waitForToast('ContactSavedToast', { waitToDisappear });
   await elementById('ContactsAddButton').waitForDisplayed();
 }
 
