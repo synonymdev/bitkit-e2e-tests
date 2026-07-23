@@ -183,7 +183,14 @@ export async function addContact({
   await tap('AddContactAdd');
   await elementById('AddContactSave').waitForDisplayed();
   await tap('AddContactSave');
-  await elementById('ContactsAddButton').waitForDisplayed();
+  // Landing on contact details screen
+  await elementById('ContactViewName').waitForDisplayed();
+  await elementById('ContactPay').waitForDisplayed();
+  await elementById('ContactActivity').waitForDisplayed();
+  await elementById('ContactCopy').waitForDisplayed();
+  await elementById('ContactShare').waitForDisplayed();
+  await elementById('ContactDelete').waitForDisplayed();
+  await elementById('ContactAddTag').waitForDisplayed();
 }
 
 export async function verifyAddContactRoute(
