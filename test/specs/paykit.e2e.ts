@@ -17,6 +17,7 @@ import {
   addContact,
   cleanupProfile,
   createProfile,
+  deleteProfile,
   discardAddContactRoute,
   verifyAddContactRoute,
   verifyContactRowDisplayed,
@@ -105,6 +106,9 @@ describe('@pubky @paykit - Public payments', () => {
       await expectText('Sent to', { strategy: 'contains' });
       await tap('ContactActivity-1');
       await expectText('10 000');
+
+      await deleteProfile();
+      hasProfile = false;
     } finally {
       if (hasProfile) {
         await cleanupProfile('@paykit_1');
