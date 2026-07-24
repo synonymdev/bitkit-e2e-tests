@@ -502,9 +502,9 @@ export async function pasteIOSText(testId: string, text: string) {
 export async function typeText(testId: string, text: string) {
   const el = await elementById(testId);
   await el.waitForDisplayed();
-  await sleep(500); // Allow time for the element to settle
+  await sleep(1000); // Allow time for the element to settle
   await el.clearValue();
-  await sleep(500); // Allow time for the clear action to propagate
+  await sleep(1000); // Allow time for the clear action to propagate
   await el.setValue(text);
 }
 
@@ -1241,9 +1241,8 @@ export type ToastId =
   | 'InsufficientSavingsToast'
   | 'ProfilePubkyCopiedToast'
   | 'ProfileUpdatedToast'
-  | 'ContactSavedToast'
-  | 'ContactUpdatedToast'
   | 'ContactDeletedToast'
+  | 'ContactUpdatedToast'
   | 'SendAmountExceededToast';
 
 /** Wait for a toast by test id. Prefer `waitToDisappear` for iOS: success toasts live in a separate
