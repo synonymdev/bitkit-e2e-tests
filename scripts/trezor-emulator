@@ -213,7 +213,14 @@ install_apple_silicon_sdl_packages() {
 start_env() {
   prepare_dirs
 
-  compose_with_profile up -d "$TREZOR_SERVICE"
+  # Force recreate so a stopped container with a deleted compose network
+  # (common after `docker compose down -v` without --profile trezor) cannot
+  # fail start with "network ... not found".
+  if ! compose_with_profile up -d --force-recreate --remove-orphans "$TREZOR_SERVICE"; then
+    echo "Trezor User Env start failed; removing stale container and retrying..." >&2
+    compose_with_profile rm -f -s "$TREZOR_SERVICE" || true
+    compose_with_profile up -d --force-recreate --remove-orphans "$TREZOR_SERVICE"
+  fi
   TREZOR_CONTAINER="$(compose_with_profile ps -q "$TREZOR_SERVICE" | head -n 1)"
 
   wait_for_controller
