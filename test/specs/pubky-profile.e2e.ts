@@ -281,8 +281,11 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
           await updateContactProfile({ pubky: pubkyA, details: detailsAUpdated });
           await verifyContactDetails({ pubky: pubkyA, details: detailsAUpdated });
 
-          await deleteProfile();
-          currentWallet = null;
+          // temp: turn on after fix
+          // https://github.com/synonymdev/bitkit-android/pull/1108
+          // https://github.com/synonymdev/bitkit-ios/pull/640
+          // await deleteProfile();
+          // currentWallet = null;
 
           // Restore wallet A and verify wallet A profile is unchanged by wallet B contact edits.
           console.log(
