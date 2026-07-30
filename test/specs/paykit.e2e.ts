@@ -82,7 +82,7 @@ describe('@pubky @paykit - Public payments', () => {
       await verifyAddContactRoute(unsavedPaykitContact.pubky, {
         ableToPay: unsavedPaykitContact.ableToPay,
       });
-      await discardAddContactRoute();
+      await doNavigationClose();
 
       await enterAddressViaScanPrompt(unsavedPaykitContact.pubky, {
         acceptCameraPermission: false,
@@ -90,12 +90,11 @@ describe('@pubky @paykit - Public payments', () => {
       await verifyAddContactRoute(unsavedPaykitContact.pubky, {
         ableToPay: unsavedPaykitContact.ableToPay,
       });
-      await discardAddContactRoute();
+      await doNavigationClose();
 
       await addContact({
         pubky: savedPaykitContact.pubky,
         firstContact: true,
-        waitToastToDisappear: true,
       });
       await verifyContactRowDisplayed(savedPaykitContact.pubky);
       await tap(`Contact_${savedPaykitContact.pubky}`);

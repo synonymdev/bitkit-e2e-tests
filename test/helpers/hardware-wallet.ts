@@ -150,7 +150,6 @@ export async function renameHardwareWalletFromSettings(currentLabel: string, new
   });
   await expectHardwareWalletInSettings(newLabel, { visible: true });
   await expectHardwareWalletInSettings(currentLabel, { visible: false });
-  
 }
 
 export async function expectHardwareSuggestion({ visible }: { visible: boolean }) {
@@ -333,4 +332,3 @@ async function dismissSpendingBalanceToastIfShown() {
     console.info('→ SpendingBalanceReadyToast not shown after hardware transfer.');
   }
 }
-

@@ -67,7 +67,7 @@ export async function cleanupProfile(label: string) {
     await deleteProfile();
     console.info(`Cleaned up Pubky profile for ${label}`);
   } catch (error) {
-    console.warn(`Could not cleanup Pubky profile for ${label}:`, error);
+    console.error(`Could not cleanup Pubky profile for ${label}:`, error);
   }
 }
 
@@ -151,12 +151,10 @@ export async function addContact({
   pubky,
   save = true,
   firstContact = false,
-  waitToastToDisappear: waitToDisappear = driver.isIOS,
 }: {
   pubky: string;
   save?: boolean;
   firstContact?: boolean;
-  waitToastToDisappear?: boolean;
 }): Promise<void> {
   await openContacts();
   await sleep(500);
@@ -186,8 +184,14 @@ export async function addContact({
   await tap('AddContactAdd');
   await elementById('AddContactSave').waitForDisplayed();
   await tap('AddContactSave');
-  await waitForToast('ContactSavedToast', { waitToDisappear });
-  await elementById('ContactsAddButton').waitForDisplayed();
+  // Landing on contact details screen
+  await elementById('ContactViewName').waitForDisplayed();
+  await elementById('ContactPay').waitForDisplayed();
+  await elementById('ContactActivity').waitForDisplayed();
+  await elementById('ContactCopy').waitForDisplayed();
+  await elementById('ContactShare').waitForDisplayed();
+  await elementById('ContactDelete').waitForDisplayed();
+  await elementById('ContactAddTag').waitForDisplayed();
 }
 
 export async function verifyAddContactRoute(
@@ -219,11 +223,6 @@ export async function verifyAddContactRoute(
     reverse: !ableToPay,
     timeoutMsg: `add contact ${publicKey}: expected AddContactPay ${ableToPay ? 'visible' : 'hidden'} (fixture ableToPay=${ableToPay})`,
   });
-}
-
-export async function discardAddContactRoute() {
-  await elementById('AddContactDiscard').waitForDisplayed();
-  await tap('AddContactDiscard');
 }
 
 /** Opens Contacts and waits for a row with test id `Contact_<publicKey>`. */

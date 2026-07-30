@@ -24,7 +24,6 @@ import {
   cleanupProfile,
   deleteContact,
   deleteProfile,
-  discardAddContactRoute,
   openEditProfile,
   readPubkyFromProfileCopy,
   removeEditProfileLinkAt,
@@ -199,7 +198,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
           await verifyAddContactRoute(firstStagingContact.pubky, {
             ableToPay: firstStagingContact.ableToPay,
           });
-          await discardAddContactRoute();
+          await doNavigationClose();
 
           // route unsaved pubky from QR scanner prompt
           await enterAddressViaScanPrompt(firstStagingContact.pubky, {
@@ -208,7 +207,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
           await verifyAddContactRoute(firstStagingContact.pubky, {
             ableToPay: firstStagingContact.ableToPay,
           });
-          await discardAddContactRoute();
+          await doNavigationClose();
 
           // add valid contacts
           for (const [i, stagingContact] of STAGING_TEST_CONTACTS.entries()) {
@@ -251,6 +250,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
 
         try {
           // Wallet A: create and customize profile, then capture seed.
+          console.log('Wallet A: create and customize profile, then capture seed.');
           const { pubky: pubkyA } = await createProfile({ name: 'Alice Wallet A' });
           currentWallet = 'A';
           await updateMyProfile(detailsA);
@@ -258,6 +258,9 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
           seedA = await getSeed();
 
           // Wallet B: fresh install + onboarding, create profile, then add wallet A as contact.
+          console.log(
+            'Wallet B: fresh install + onboarding, create profile, then add wallet A as contact.'
+          );
           await reinstallApp();
           currentWallet = null;
           await completeOnboarding();
@@ -278,10 +281,16 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
           await updateContactProfile({ pubky: pubkyA, details: detailsAUpdated });
           await verifyContactDetails({ pubky: pubkyA, details: detailsAUpdated });
 
-          await cleanupProfile('@pubky_profile_4 wallet B');
-          currentWallet = null;
+          // temp: turn on after fix
+          // https://github.com/synonymdev/bitkit-android/pull/1108
+          // https://github.com/synonymdev/bitkit-ios/pull/640
+          // await deleteProfile();
+          // currentWallet = null;
 
           // Restore wallet A and verify wallet A profile is unchanged by wallet B contact edits.
+          console.log(
+            'Wallet A: restore wallet A and verify wallet A profile is unchanged by wallet B contact edits.'
+          );
           await restoreWallet(seedA);
           await enablePaykitUi();
           currentWallet = 'A';
@@ -297,7 +306,7 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
               await enablePaykitUi();
               await cleanupProfile('@pubky_profile_4 wallet A');
             } catch (error) {
-              console.warn('Could not restore and cleanup wallet A profile:', error);
+              console.error('Could not restore and cleanup wallet A profile:', error);
             }
           }
         }

@@ -52,21 +52,24 @@ describe('@hardware_wallet - Hardware Wallet', () => {
     stopTrezorEmulator();
   });
 
-  ciIt('@hardware_wallet_1 - Can connect, rename, show, and remove a Trezor emulator wallet', async () => {
-    await expectHardwareSuggestion({ visible: true });
-    await startHardwareWalletFlowFromSuggestion();
-    await completeHardwareWalletFlow(walletLabel);
-    await expectHardwareSuggestion({ visible: false });
-    await openHardwareWalletSettings();
-    await expectHardwareWalletInSettings(walletLabel, { visible: true });
-    await expectHardwareWalletOnHome(walletLabel, { visible: true });
-    await openHardwareWalletSettings();
-    await renameHardwareWalletFromSettings(walletLabel, renamedWalletLabel);
-    await expectHardwareWalletOnHome(renamedWalletLabel, { visible: true });
-    await removeHardwareWalletFromSettings(renamedWalletLabel);
-    await expectHardwareWalletInSettings(renamedWalletLabel, { visible: false });
-    await expectHardwareWalletOnHome(renamedWalletLabel, { visible: false });
-  });
+  ciIt(
+    '@hardware_wallet_1 - Can connect, rename, show, and remove a Trezor emulator wallet',
+    async () => {
+      await expectHardwareSuggestion({ visible: true });
+      await startHardwareWalletFlowFromSuggestion();
+      await completeHardwareWalletFlow(walletLabel);
+      await expectHardwareSuggestion({ visible: false });
+      await openHardwareWalletSettings();
+      await expectHardwareWalletInSettings(walletLabel, { visible: true });
+      await expectHardwareWalletOnHome(walletLabel, { visible: true });
+      await openHardwareWalletSettings();
+      await renameHardwareWalletFromSettings(walletLabel, renamedWalletLabel);
+      await expectHardwareWalletOnHome(renamedWalletLabel, { visible: true });
+      await removeHardwareWalletFromSettings(renamedWalletLabel);
+      await expectHardwareWalletInSettings(renamedWalletLabel, { visible: false });
+      await expectHardwareWalletOnHome(renamedWalletLabel, { visible: false });
+    }
+  );
 
   ciIt('@hardware_wallet_2 - Can receive onchain funds to hardware wallet', async () => {
     const sats = 15_000;
