@@ -28,7 +28,7 @@ TREZOR_BRIDGE="${TREZOR_BRIDGE:-false}"
 TREZOR_BRIDGE_URL="${TREZOR_BRIDGE_URL:-http://10.0.2.2:21325}"
 E2E_BACKEND="local"
 GRADLE_TASK="assembleDevDebug"
-APK_FLAVOR_DIR="dev/debug"
+APK_VARIANT_DIR="devDebug"
 OUT_FILENAME="bitkit_e2e.apk"
 
 if [[ "$BACKEND" == "regtest" ]]; then
@@ -38,7 +38,7 @@ elif [[ "$BACKEND" == "local" ]]; then
 elif [[ "$BACKEND" == "mainnet" ]]; then
   E2E_BACKEND="network"
   GRADLE_TASK="assembleMainnetDebug"
-  APK_FLAVOR_DIR="mainnet/debug"
+  APK_VARIANT_DIR="mainnetDebug"
   OUT_FILENAME="bitkit_e2e_mainnet.apk"
 else
   echo "ERROR: Unsupported BACKEND value: $BACKEND" >&2
@@ -55,7 +55,7 @@ E2E=true \
 popd >/dev/null
 
 # Find the universal APK
-APK_DIR="$ANDROID_ROOT/app/build/outputs/apk/$APK_FLAVOR_DIR"
+APK_DIR="$ANDROID_ROOT/app/build/outputs/bitkit/$APK_VARIANT_DIR"
 # shellcheck disable=SC2012
 APK_PATH="$(ls -t "$APK_DIR"/bitkit-*-universal.apk 2>/dev/null | head -n 1 || true)"
 
