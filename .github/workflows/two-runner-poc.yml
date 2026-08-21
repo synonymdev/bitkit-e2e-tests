@@ -1,0 +1,138 @@
+name: Two-runner regtest PoC
+
+# Can the regtest stack live on a second GitHub-hosted runner instead of a VM?
+#
+# If so it needs no cloud account at all, which is the blocker on the VM approach.
+# Three things have to hold, and this workflow tests each of them:
+#
+#   1. Two hosted runners can reach each other. They sit behind NAT with no inbound
+#      connectivity, so this needs Tailscale; plain WireGuard cannot traverse it.
+#   2. The stack job can outlive its own steps. A runner is destroyed when its job
+#      ends, so the stack job has to block until the test job is finished.
+#   3. The iOS Simulator can reach the tailnet, not just the Mac's shell.
+#
+# The two jobs must NOT declare `needs:` on each other. The stack job only finishes
+# once the tester is done, so a dependency either way deadlocks.
+#
+# Needs: secrets.TS_OAUTH_CLIENT_ID / TS_OAUTH_SECRET, and a tailnet ACL allowing
+# tag:ci to reach tag:ci.
+
+on:
+  workflow_dispatch:
+    inputs:
+      simulator:
+        description: Simulator device name
+        required: true
+        default: iPhone 17
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: two-runner-poc
+  cancel-in-progress: false
+
+env:
+  STACK_HOST: regtest-${{ github.run_id }}
+  PING_PORT: '8081'
+
+jobs:
+  stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          hostname: ${{ env.STACK_HOST }}
+
+      - name: Start regtest stack
+        working-directory: docker
+        run: |
+          set -euo pipefail
+          mkdir -p lnd && chmod 777 lnd
+          docker compose pull --quiet
+          docker compose up -d
+          until nc -z 127.0.0.1 60001; do sleep 2; done
+          until [ -f lnd/data/chain/bitcoin/regtest/admin.macaroon ]; do sleep 2; done
+          sudo chmod -R 777 lnd
+
+      - name: Serve a ping target
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/ping && echo ok > /tmp/ping/ping.txt
+          nohup python3 -m http.server "$PING_PORT" --bind 0.0.0.0 --directory /tmp/ping \
+            > /tmp/ping/access.log 2>&1 &
+          until nc -z 127.0.0.1 "$PING_PORT"; do sleep 1; done
+
+      - name: Hold the stack up until the tester finishes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          deadline=$(( SECONDS + 2100 ))
+          while (( SECONDS < deadline )); do
+            status=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs" \
+              --jq '.jobs[] | select(.name=="tester") | .status' 2>/dev/null || echo "")
+            echo "tester: ${status:-not started}"
+            [ "$status" = "completed" ] && break
+            sleep 20
+          done
+
+      - name: Did the Simulator reach us?
+        run: |
+          set -euo pipefail
+          cat /tmp/ping/access.log || true
+          if grep -q "GET /ping.txt" /tmp/ping/access.log; then
+            echo "✓ request from the tester recorded on this runner"
+          else
+            echo "::error::no request reached the stack runner"
+            exit 1
+          fi
+
+  tester:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          hostname: tester-${{ github.run_id }}
+
+      - name: Wait for the stack runner to appear
+        run: |
+          set -euo pipefail
+          # No `needs:`, so the stack job may not have started yet.
+          deadline=$(( SECONDS + 900 ))
+          until nc -z -w 5 "$STACK_HOST" 60001 2>/dev/null; do
+            if (( SECONDS >= deadline )); then
+              echo "::error::$STACK_HOST never became reachable"
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "✓ electrs reachable at $STACK_HOST"
+
+      - name: Reach the stack from the runner shell
+        run: |
+          set -euo pipefail
+          for port in 60001 9735 8080; do
+            if nc -z -w 5 "$STACK_HOST" "$port"; then echo "✓ $port"; else echo "::error::$port unreachable"; exit 1; fi
+          done
+          curl -fsS --max-time 20 "http://${STACK_HOST}:${PING_PORT}/ping.txt"
+
+      - name: Boot the Simulator and have it fetch the ping
+        run: |
+          set -euo pipefail
+          xcrun simctl boot "${{ github.event.inputs.simulator }}" || true
+          xcrun simctl bootstatus "${{ github.event.inputs.simulator }}" -b
+          # The stack job asserts on its own access log; nothing here can fake it.
+          xcrun simctl openurl booted "http://${STACK_HOST}:${PING_PORT}/ping.txt"
+          sleep 20
