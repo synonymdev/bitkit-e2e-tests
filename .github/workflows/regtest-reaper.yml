@@ -1,0 +1,95 @@
+name: Regtest Reaper
+
+# Deletes firewall rules left behind by regtest-vm-up.
+#
+# Instances are NOT handled here. regtest-vm-up creates them with
+# --max-run-duration and --instance-termination-action=DELETE, so GCE removes them
+# on its own even if the job is hard-cancelled or the VM never boots. Firewall
+# rules have no equivalent TTL, so they are the only thing that can accumulate.
+#
+# An orphaned rule targets a network tag no instance carries any more, so it is
+# inert and free — this is tidiness and quota hygiene, not a leak.
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      max_age_minutes:
+        description: Delete rules older than this. Must exceed the longest e2e run.
+        required: true
+        default: '360'
+      dry_run:
+        description: List what would be deleted without deleting it
+        required: true
+        default: 'true'
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: regtest-reaper
+  cancel-in-progress: false
+
+env:
+  MAX_AGE_MINUTES: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.max_age_minutes || '360' }}
+  DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || 'false' }}
+  GCP_PROJECT: ${{ vars.REGTEST_GCP_PROJECT }}
+
+jobs:
+  reap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate params
+        run: |
+          if ! [[ "${MAX_AGE_MINUTES}" =~ ^[0-9]+$ ]]; then
+            echo "MAX_AGE_MINUTES must be a positive integer: ${MAX_AGE_MINUTES}" >&2
+            exit 1
+          fi
+          # Must not delete a rule belonging to a running job.
+          if [[ "${MAX_AGE_MINUTES}" -lt 240 ]]; then
+            echo "MAX_AGE_MINUTES below 240 risks cutting off an in-flight e2e run" >&2
+            exit 1
+          fi
+          if [[ -z "${GCP_PROJECT}" ]]; then
+            echo "vars.REGTEST_GCP_PROJECT is not set" >&2
+            exit 1
+          fi
+
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.REGTEST_WIF_PROVIDER }}
+          service_account: ${{ secrets.REGTEST_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v3
+
+      - name: Delete orphaned firewall rules
+        run: |
+          set -euo pipefail
+          cutoff=$(date -u -d "-${MAX_AGE_MINUTES} minutes" +%Y-%m-%dT%H:%M:%SZ)
+          echo "cutoff: $cutoff (age > ${MAX_AGE_MINUTES}m)"
+
+          # Firewall rules cannot carry labels, so the name prefix regtest-vm-up
+          # assigns is the only boundary available. Nothing else may use it.
+          mapfile -t rules < <(gcloud compute firewall-rules list \
+            --project="${GCP_PROJECT}" \
+            --filter="name~'^rt-.*-fw$' AND creationTimestamp<'${cutoff}'" \
+            --format='value(name)')
+
+          if [[ ${#rules[@]} -eq 0 ]]; then
+            echo "nothing to reap"
+            exit 0
+          fi
+
+          echo "found ${#rules[@]} orphaned rule(s)"
+          for rule in "${rules[@]}"; do
+            if [[ "${DRY_RUN}" == "true" ]]; then
+              echo "DRY RUN: would delete $rule"
+              continue
+            fi
+            echo "deleting $rule"
+            gcloud compute firewall-rules delete "$rule" \
+              --project="${GCP_PROJECT}" --quiet || \
+              echo "::warning::failed to delete $rule"
+          done

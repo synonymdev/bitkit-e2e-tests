@@ -1,0 +1,149 @@
+name: Regtest VM Smoke Test
+
+# Manual verification that the regtest VM lifecycle works end to end: provision,
+# reach the stack over the network, tear down. Deliberately runs on ubuntu-latest —
+# nothing here needs macOS, and this proves auth, firewall, boot and teardown in
+# isolation from anything iOS.
+#
+# The actions are referenced by local path, so this runs on a branch without the
+# actions having to be merged first.
+
+on:
+  workflow_dispatch:
+    inputs:
+      keep_vm:
+        description: Skip teardown, to test the reaper or debug by hand. Remember to delete it.
+        required: true
+        default: 'false'
+      zone:
+        description: GCP zone
+        required: true
+        default: europe-west3-a
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: regtest-vm-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Provision
+        id: regtest
+        uses: ./.github/actions/regtest-vm-up
+        with:
+          gcp-project: ${{ vars.REGTEST_GCP_PROJECT }}
+          gcp-zone: ${{ github.event.inputs.zone }}
+          workload-identity-provider: ${{ secrets.REGTEST_WIF_PROVIDER }}
+          service-account: ${{ secrets.REGTEST_SERVICE_ACCOUNT }}
+          name-suffix: smoke
+          ttl-minutes: '30'
+
+      - name: Check every port the tests and the app need
+        env:
+          HOST: ${{ steps.regtest.outputs.host }}
+        run: |
+          set -euo pipefail
+          echo "host: $HOST"
+          # app: electrs, LND P2P, ldk-backup-server
+          # tests: bitcoind RPC, LND REST, LND gRPC
+          for port in 60001 9735 3003 43782 8080 10009; do
+            if nc -z -w 5 "$HOST" "$port"; then
+              echo "✓ $port"
+            else
+              echo "::error::$HOST:$port unreachable"
+              exit 1
+            fi
+          done
+
+      - name: Check bitcoind is on regtest and mining works
+        env:
+          HOST: ${{ steps.regtest.outputs.host }}
+        run: |
+          set -euo pipefail
+          rpc() {
+            curl -fsS --max-time 15 --user polaruser:polarpass \
+              -H 'content-type: text/plain;' \
+              --data-binary "{\"jsonrpc\":\"1.0\",\"method\":\"$1\",\"params\":${2:-[]}}" \
+              "http://${HOST}:43782/"
+          }
+          chain=$(rpc getblockchaininfo | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"]["chain"])')
+          echo "chain: $chain"
+          [ "$chain" = "regtest" ] || { echo "::error::expected regtest, got $chain"; exit 1; }
+
+          before=$(rpc getblockcount | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"])')
+          addr=$(rpc getnewaddress | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"])')
+          rpc generatetoaddress "[1, \"$addr\"]" >/dev/null
+          after=$(rpc getblockcount | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"])')
+          echo "height $before -> $after"
+          [ "$after" -gt "$before" ] || { echo "::error::mining did not advance the chain"; exit 1; }
+
+      - name: Check LND is up and rejecting unauthenticated calls
+        env:
+          HOST: ${{ steps.regtest.outputs.host }}
+        run: |
+          set -euo pipefail
+          # LND's REST gateway answers every error with HTTP 500, because grpc-gateway
+          # maps gRPC code 2 (UNKNOWN) onto it. The status therefore says nothing —
+          # the message is what distinguishes a ready node from a starting one.
+          body=$(curl -sk --max-time 15 "https://${HOST}:8080/v1/getinfo" || echo '')
+          echo "$body"
+          case "$body" in
+            *"expected 1 macaroon"*)
+              echo "✓ LND ready and rejecting unauthenticated calls" ;;
+            *"process of starting up"*)
+              echo "::error::LND still starting — the readiness gate let this through"; exit 1 ;;
+            '')
+              echo "::error::no response from ${HOST}:8080"; exit 1 ;;
+            *)
+              echo "::warning::unrecognised response" ;;
+          esac
+
+      - name: Fetch credentials and verify LND advertises the VM address
+        env:
+          HOST: ${{ steps.regtest.outputs.host }}
+          CREDS_URL: ${{ steps.regtest.outputs.creds-url }}
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 20 -o tls.cert       "${CREDS_URL}/tls.cert"
+          curl -fsS --max-time 20 -o admin.macaroon "${CREDS_URL}/admin.macaroon"
+          echo "fetched $(wc -c < tls.cert) byte cert, $(wc -c < admin.macaroon) byte macaroon"
+
+          mac=$(xxd -p -c 2000 admin.macaroon)
+          uris=$(curl -fsS --max-time 20 --cacert tls.cert \
+            -H "Grpc-Metadata-macaroon: ${mac}" \
+            "https://${HOST}:8080/v1/getinfo" \
+            | python3 -c 'import json,sys; print(",".join(json.load(sys.stdin).get("uris",[])))')
+          echo "uris: ${uris:-<none>}"
+
+          # The one assertion the port checks cannot make: without LND_EXTERNAL_IP
+          # reaching the container, the app would be told to dial 127.0.0.1.
+          case "$uris" in
+            *"$HOST"*)   echo "✓ LND advertises $HOST" ;;
+            *127.0.0.1*) echo "::error::LND advertises 127.0.0.1 — LND_EXTERNAL_IP did not take"; exit 1 ;;
+            *)           echo "::error::unexpected uris"; exit 1 ;;
+          esac
+
+      - name: Destroy
+        if: always() && github.event.inputs.keep_vm != 'true'
+        uses: ./.github/actions/regtest-vm-down
+        with:
+          gcp-project: ${{ vars.REGTEST_GCP_PROJECT }}
+          gcp-zone: ${{ github.event.inputs.zone }}
+          instance: ${{ steps.regtest.outputs.instance }}
+          firewall: ${{ steps.regtest.outputs.firewall }}
+          workload-identity-provider: ${{ secrets.REGTEST_WIF_PROVIDER }}
+          service-account: ${{ secrets.REGTEST_SERVICE_ACCOUNT }}
+          dump-logs: 'true'
+
+      - name: Warn if VM was kept
+        if: always() && github.event.inputs.keep_vm == 'true'
+        run: |
+          echo "::warning::VM ${{ steps.regtest.outputs.instance }} was kept and will self-destruct in 30m. Firewall rule ${{ steps.regtest.outputs.firewall }} is NOT removed by that — delete it or wait for the reaper."

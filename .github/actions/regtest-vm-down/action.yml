@@ -1,0 +1,69 @@
+name: Destroy regtest VM
+description: "Deletes the ephemeral VM and its firewall rule. Always call with `if: always()`."
+
+# Composite actions cannot declare `post:` steps (actions/runner#1478), so teardown
+# cannot be automatic. This must be an explicit step, and it is best-effort — a hard
+# cancellation can skip it entirely. The scheduled reaper is the actual safety net.
+
+inputs:
+  gcp-project:
+    required: true
+  gcp-zone:
+    default: europe-west3-a
+  instance:
+    description: From regtest-vm-up outputs.
+    required: true
+  firewall:
+    description: From regtest-vm-up outputs.
+    required: true
+  workload-identity-provider:
+    required: true
+  service-account:
+    required: true
+  dump-logs:
+    description: Pull container logs off the VM before deleting it.
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - uses: google-github-actions/auth@v3
+      with:
+        workload_identity_provider: ${{ inputs.workload-identity-provider }}
+        service_account: ${{ inputs.service-account }}
+
+    - uses: google-github-actions/setup-gcloud@v3
+
+    - name: Dump stack logs
+      if: inputs.dump-logs == 'true'
+      shell: bash
+      continue-on-error: true
+      run: |
+        gcloud compute ssh "${{ inputs.instance }}" \
+          --project="${{ inputs.gcp-project }}" \
+          --zone="${{ inputs.gcp-zone }}" \
+          --command="cd /opt/regtest && docker compose logs --no-color --tail=500" \
+          > regtest-stack.log 2>&1 || true
+
+    - uses: actions/upload-artifact@v7
+      if: inputs.dump-logs == 'true'
+      continue-on-error: true
+      with:
+        name: regtest-stack-log-${{ inputs.instance }}
+        path: regtest-stack.log
+
+    - name: Delete instance and firewall rule
+      shell: bash
+      run: |
+        # Never fail the job on teardown. A leaked resource is the reaper's problem;
+        # a red build from a cleanup step hides the real test result.
+        set +e
+        gcloud compute instances delete "${{ inputs.instance }}" \
+          --project="${{ inputs.gcp-project }}" \
+          --zone="${{ inputs.gcp-zone }}" --quiet
+        echo "instance delete exited $?"
+
+        gcloud compute firewall-rules delete "${{ inputs.firewall }}" \
+          --project="${{ inputs.gcp-project }}" --quiet
+        echo "firewall delete exited $?"
+        exit 0

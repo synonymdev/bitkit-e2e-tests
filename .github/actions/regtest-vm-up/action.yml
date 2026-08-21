@@ -1,0 +1,181 @@
+name: Provision regtest VM
+description: Creates an ephemeral GCP VM running the bitkit regtest stack and waits until it is reachable.
+
+inputs:
+  gcp-project:
+    required: true
+  gcp-zone:
+    default: europe-west3-a
+  machine-type:
+    default: e2-standard-4
+  image-family:
+    description: Stock Ubuntu. startup.sh installs Docker and pulls the stack itself.
+    default: ubuntu-2404-lts-amd64
+  image-project:
+    description: Project holding image-family.
+    default: ubuntu-os-cloud
+  stack-dir:
+    description: >
+      Path on the runner to the compose directory, sent to the VM as metadata. It
+      comes from whatever this workflow checked out, so the stack always matches
+      the tests without a second ref to keep in sync.
+    default: docker
+  workload-identity-provider:
+    required: true
+  service-account:
+    required: true
+  name-suffix:
+    description: Disambiguator when several VMs exist per run, e.g. the shard name.
+    default: ''
+  creds-port:
+    description: Port the VM serves LND's tls.cert and admin.macaroon on.
+    default: '8081'
+  ttl-minutes:
+    description: >
+      GCE deletes the VM this long after creation, enforced by the platform rather
+      than by anything running on the guest. Must exceed the longest e2e run or the
+      stack disappears mid-test — the single-shard iOS suite currently takes up to
+      ~130 minutes.
+    default: '240'
+  ready-timeout-seconds:
+    default: '420'
+
+outputs:
+  host:
+    description: Public IP of the VM.
+    value: ${{ steps.create.outputs.host }}
+  instance:
+    description: Instance name — pass to regtest-vm-down.
+    value: ${{ steps.names.outputs.instance }}
+  firewall:
+    description: Firewall rule name — pass to regtest-vm-down.
+    value: ${{ steps.names.outputs.firewall }}
+  creds-url:
+    description: >
+      Base URL to fetch tls.cert and admin.macaroon from. LND generates both on
+      first start, so they exist only on the VM.
+    value: ${{ steps.create.outputs.creds-url }}
+
+runs:
+  using: composite
+  steps:
+    - id: names
+      shell: bash
+      run: |
+        set -euo pipefail
+        # GCP resource names are RFC1035: lowercase, alphanumeric + hyphen, <=63 chars.
+        # Shard names carry underscores, so they cannot be used verbatim.
+        suffix=$(printf '%s' "${{ inputs.name-suffix }}" | tr '[:upper:]_' '[:lower:]-' | tr -cd 'a-z0-9-')
+        base="rt-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}${suffix:+-$suffix}"
+        base=$(printf '%s' "$base" | cut -c1-55)
+        echo "instance=$base" >> "$GITHUB_OUTPUT"
+        echo "firewall=$base-fw" >> "$GITHUB_OUTPUT"
+
+    - id: bundle
+      shell: bash
+      run: |
+        set -euo pipefail
+        # Runtime state is excluded: it is gitignored, regenerated on the VM, and
+        # lnd/ in particular is root-owned once a stack has run locally.
+        bundle=$(mktemp)
+        tar czf - -C "${{ inputs.stack-dir }}" \
+          --exclude=lnd --exclude=lnurl-server-data --exclude=.trezor-user-env \
+          . | base64 -w0 > "$bundle"
+        size=$(wc -c < "$bundle")
+        echo "bundle: ${size} bytes"
+        # GCE allows 256KB per metadata value.
+        if [ "$size" -gt 250000 ]; then
+          echo "::error::stack bundle is ${size} bytes, over the metadata limit"
+          exit 1
+        fi
+        echo "path=$bundle" >> "$GITHUB_OUTPUT"
+
+    - uses: google-github-actions/auth@v3
+      with:
+        workload_identity_provider: ${{ inputs.workload-identity-provider }}
+        service_account: ${{ inputs.service-account }}
+
+    - uses: google-github-actions/setup-gcloud@v3
+
+    - id: create
+      shell: bash
+      env:
+        PROJECT: ${{ inputs.gcp-project }}
+        ZONE: ${{ inputs.gcp-zone }}
+        INSTANCE: ${{ steps.names.outputs.instance }}
+        FIREWALL: ${{ steps.names.outputs.firewall }}
+      run: |
+        set -euo pipefail
+
+        # Scope ingress to this runner only. GitHub-hosted runner egress IPs are not
+        # stable, so the rule is created per run and deleted by regtest-vm-down.
+        runner_ip=$(curl -fsS --max-time 10 https://api.ipify.org)
+        echo "runner egress IP: $runner_ip"
+
+        # Random path segment for the credential server, so reaching the port is
+        # not sufficient. Masked so it never lands in the log.
+        creds_token=$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')
+        echo "::add-mask::$creds_token"
+
+        gcloud compute firewall-rules create "$FIREWALL" \
+          --project="$PROJECT" \
+          --network=default \
+          --direction=INGRESS \
+          --source-ranges="$runner_ip/32" \
+          --allow=tcp:60001,tcp:9735,tcp:3003,tcp:43782,tcp:8080,tcp:10009,tcp:${{ inputs.creds-port }} \
+          --target-tags="$INSTANCE" \
+          --description="ephemeral e2e regtest, run ${GITHUB_RUN_ID}"
+
+        gcloud compute instances create "$INSTANCE" \
+          --project="$PROJECT" \
+          --zone="$ZONE" \
+          --machine-type="${{ inputs.machine-type }}" \
+          --image-family="${{ inputs.image-family }}" \
+          --image-project="${{ inputs.image-project }}" \
+          --tags="$INSTANCE" \
+          --labels="ci=e2e,run-id=${GITHUB_RUN_ID},repo=${GITHUB_REPOSITORY##*/}" \
+          --metadata="creds-token=${creds_token},creds-port=${{ inputs.creds-port }}" \
+          --metadata-from-file="startup-script=${{ github.action_path }}/startup.sh,stack-bundle=${{ steps.bundle.outputs.path }}" \
+          --max-run-duration="${{ inputs.ttl-minutes }}m" \
+          --instance-termination-action=DELETE \
+          --no-restart-on-failure
+
+        host=$(gcloud compute instances describe "$INSTANCE" \
+          --project="$PROJECT" --zone="$ZONE" \
+          --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+        echo "host=$host" >> "$GITHUB_OUTPUT"
+        echo "creds-url=http://${host}:${{ inputs.creds-port }}/${creds_token}" >> "$GITHUB_OUTPUT"
+        echo "VM $INSTANCE at $host"
+
+    - name: Wait for stack
+      shell: bash
+      env:
+        HOST: ${{ steps.create.outputs.host }}
+      run: |
+        set -euo pipefail
+        deadline=$(( SECONDS + ${{ inputs.ready-timeout-seconds }} ))
+        # electrs, LND P2P, LND REST, bitcoind RPC — the four the tests and the app
+        # need — plus the credential server, which is useless if it is not reachable.
+        for port in 60001 9735 8080 43782 ${{ inputs.creds-port }}; do
+          until nc -z -w 5 "$HOST" "$port" 2>/dev/null; do
+            if (( SECONDS >= deadline )); then
+              echo "::error::timed out waiting for $HOST:$port"
+              exit 1
+            fi
+            sleep 5
+          done
+          echo "✓ $port"
+        done
+
+        # LND listens on 8080 well before it can serve, so an open port is not
+        # readiness. It answers "the RPC server is in the process of starting up"
+        # until the wallet is unlocked and the RPC server is live.
+        until curl -sk --max-time 10 "https://${HOST}:8080/v1/getinfo" 2>/dev/null \
+              | grep -qv "process of starting up"; do
+          if (( SECONDS >= deadline )); then
+            echo "::error::LND never finished starting"
+            exit 1
+          fi
+          sleep 5
+        done
+        echo "✓ lnd rpc ready"
