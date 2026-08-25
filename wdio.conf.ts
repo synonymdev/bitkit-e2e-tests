@@ -96,6 +96,13 @@ export const config: WebdriverIO.Config = {
           'appium:app': iosApp,
           'appium:autoGrantPermissions': true,
           'appium:autoAcceptAlerts': false,
+          ...(process.env.E2E_LOCAL_HOST
+            ? {
+                'appium:processArguments': {
+                  env: { E2E_LOCAL_HOST: process.env.E2E_LOCAL_HOST },
+                },
+              }
+            : {}),
           // 'appium:fullReset': true,
           'appium:noReset': false,
 

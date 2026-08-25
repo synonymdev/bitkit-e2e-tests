@@ -55,10 +55,14 @@ export type LndConfig = {
   macaroonPath: string;
 };
 
+export const lndHost = process.env.LND_HOST ?? 'localhost';
+
 export const lndConfig: LndConfig = {
-  server: 'localhost:10009',
-  restHost: 'localhost',
-  restPort: 8080,
-  tls: `${__dirname}/../../docker/lnd/tls.cert`,
-  macaroonPath: `${__dirname}/../../docker/lnd/data/chain/bitcoin/regtest/admin.macaroon`,
+  server: `${lndHost}:${process.env.LND_GRPC_PORT ?? '10009'}`,
+  restHost: lndHost,
+  restPort: Number.parseInt(process.env.LND_REST_PORT ?? '8080', 10),
+  tls: process.env.LND_TLS_PATH ?? `${__dirname}/../../docker/lnd/tls.cert`,
+  macaroonPath:
+    process.env.LND_MACAROON_PATH ??
+    `${__dirname}/../../docker/lnd/data/chain/bitcoin/regtest/admin.macaroon`,
 };

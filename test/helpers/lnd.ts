@@ -9,7 +9,7 @@ import {
   tap,
   typeText,
 } from './actions';
-import { LndConfig } from './constants';
+import { LndConfig, lndHost } from './constants';
 import { openSettings } from './navigation';
 import createLndRpc, { LnRpc, WalletUnlockerRpc } from '@radar/lnrpc';
 
@@ -112,8 +112,8 @@ export async function connectToLND(lndNodeID: string, { navigationClose = true }
   await tap('NavigationAction');
   await tap('FundManual');
   await typeText('NodeIdInput', lndNodeID);
-  await typeText('PortInput', '9735');
-  await typeText('HostInput', '0.0.0.0');
+  await typeText('PortInput', process.env.LND_P2P_PORT ?? '9735');
+  await typeText('HostInput', lndHost === 'localhost' ? '0.0.0.0' : lndHost);
   await confirmInputOnKeyboard();
   await tap('ExternalContinue');
   await sleep(1000);
