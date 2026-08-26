@@ -18,6 +18,11 @@ const appiumNewCommandTimeout = Number.parseInt(
   process.env.APPIUM_NEW_COMMAND_TIMEOUT ?? '300',
   10
 );
+const wdaLaunchTimeout = Number.parseInt(process.env.WDA_LAUNCH_TIMEOUT ?? '300000', 10);
+const connectionRetryTimeout = Number.parseInt(
+  process.env.WDIO_CONNECTION_RETRY_TIMEOUT ?? '360000',
+  10
+);
 
 export const config: WebdriverIO.Config = {
   //
@@ -108,8 +113,8 @@ export const config: WebdriverIO.Config = {
 
           // 🩹 Stability improvements
           'appium:newCommandTimeout': 300,
-          'appium:wdaLaunchTimeout': 300000,
-          'appium:wdaConnectionTimeout': 300000,
+          'appium:wdaLaunchTimeout': wdaLaunchTimeout,
+          'appium:wdaConnectionTimeout': wdaLaunchTimeout,
           'appium:wdaStartupRetries': 3,
           'appium:wdaStartupRetryInterval': 5000,
         },
@@ -122,7 +127,7 @@ export const config: WebdriverIO.Config = {
   // Define all options that are relevant for the WebdriverIO instance here
   //
   // Level of logging verbosity: trace | debug | info | warn | error | silent
-  logLevel: 'warn',
+  logLevel: (process.env.WDIO_LOG_LEVEL as WebdriverIO.Config['logLevel']) ?? 'warn',
   //
   // Set specific log levels per logger
   // loggers:
@@ -153,8 +158,8 @@ export const config: WebdriverIO.Config = {
   //
   // Default timeout in milliseconds for request
   // if browser driver or grid doesn't send response
-  // Must be >= wdaLaunchTimeout (300000) to allow WDA time to start
-  connectionRetryTimeout: 360000,
+  // Must be >= wdaLaunchTimeout to allow WDA time to start
+  connectionRetryTimeout,
   //
   // Default request retries count
   connectionRetryCount: 3,
@@ -163,7 +168,11 @@ export const config: WebdriverIO.Config = {
   // Services take over a specific job you don't want to take care of. They enhance
   // your test setup with almost no effort. Unlike plugins, they don't add new
   // commands. Instead, they hook themselves up into the test process.
-  services: ['appium'],
+  services: [
+    // Appium's own log is the only place that says whether WDA is building,
+    // launching or failing to connect.
+    ['appium', { logPath: process.env.APPIUM_LOG_PATH ?? './artifacts' }],
+  ],
 
   // Framework you want to run your specs with.
   // The following are supported: Mocha, Jasmine, and Cucumber
