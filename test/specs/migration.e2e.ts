@@ -29,6 +29,7 @@ import {
   grantIOSCameraPermission,
   reinstallAppFromPath,
   resetBootedIOSKeychain,
+  activateAppWithEnv,
 } from '../helpers/setup';
 import { getAppId } from '../helpers/constants';
 import initElectrum, { ElectrumClient } from '../helpers/electrum';
@@ -172,7 +173,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     console.info(`→ Installing native app from: ${getNativeAppPath()}`);
     await driver.installApp(getNativeAppPath());
     grantIOSCameraPermission();
-    await driver.activateApp(getAppId());
+    await activateAppWithEnv(getAppId());
 
     // Restore wallet with mnemonic (uses custom flow to handle backup sheet)
     await restoreWallet(mnemonic!, {
@@ -197,7 +198,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
     await driver.installApp(getNativeAppPath());
     grantIOSCameraPermission();
-    await driver.activateApp(getAppId());
+    await activateAppWithEnv(getAppId());
 
     // Handle migration flow
     await handleMigrationFlow({ withSweep: false });
@@ -217,7 +218,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
     await driver.installApp(getNativeAppPath());
     grantIOSCameraPermission();
-    await driver.activateApp(getAppId());
+    await activateAppWithEnv(getAppId());
 
     // Handle migration flow
     await handleMigrationFlow({ withSweep: false });
@@ -239,7 +240,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
     await driver.installApp(getNativeAppPath());
     grantIOSCameraPermission();
-    await driver.activateApp(getAppId());
+    await activateAppWithEnv(getAppId());
 
     // Handle migration flow
     await handleMigrationFlow({ withSweep: false });
