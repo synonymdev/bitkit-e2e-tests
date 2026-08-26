@@ -42,11 +42,25 @@ export function grantIOSCameraPermission(appIdParam?: string) {
   }
 }
 
+export async function activateAppWithEnv(appId: string) {
+  // processArguments in the session capabilities only apply to the first launch,
+  // so a relaunch would lose E2E_LOCAL_HOST and the app would fall back to the
+  // Info.plist value baked in at build time.
+  if (driver.isIOS && process.env.E2E_LOCAL_HOST) {
+    await driver.execute('mobile: launchApp', {
+      bundleId: appId,
+      environment: { E2E_LOCAL_HOST: process.env.E2E_LOCAL_HOST },
+    });
+    return;
+  }
+  await driver.activateApp(appId);
+}
+
 export async function launchFreshApp() {
   const appId = getAppId();
 
   await driver.terminateApp(appId);
-  await driver.activateApp(appId);
+  await activateAppWithEnv(appId);
   await sleep(3000);
 }
 
@@ -62,7 +76,7 @@ export async function reinstallApp() {
   resetBootedIOSKeychain();
   await driver.installApp(appPath);
   grantIOSCameraPermission(appId);
-  await driver.activateApp(appId);
+  await activateAppWithEnv(appId);
 }
 
 export function getRnAppPath(): string {
@@ -92,7 +106,7 @@ export async function reinstallAppFromPath(appPath: string, appId: string = getA
   resetBootedIOSKeychain();
   await driver.installApp(appPath);
   grantIOSCameraPermission(appId);
-  await driver.activateApp(appId);
+  await activateAppWithEnv(appId);
 }
 
 /**
