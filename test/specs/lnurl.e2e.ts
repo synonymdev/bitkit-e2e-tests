@@ -25,6 +25,7 @@ import {
   acknowledgeReceivedPayment,
   acknowledgeExternalSuccess,
   enterAmount,
+  exceedAmountInputCap,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
@@ -175,18 +176,10 @@ describe('@lnurl - LNURL', () => {
 
       await enterAddressViaScanPrompt(payRequest1.encoded, { acceptCameraPermission: false });
       await expectTextWithin('SendNumberField', '0');
-      // Check that 149 sats is below minimum and 201 sats is above maximum (both rejected)
-      try {
-        await enterAmount(201);
-        await waitForToast('SendAmountExceededToast', { dismiss: driver.isAndroid });
-      } catch {
-        console.warn('SendAmountExceededToast not triggered, trying again...');
-        // tap on 1 fast to trigger the toast
-        await elementById('N1').click();
-        await waitForToast('SendAmountExceededToast', { dismiss: driver.isAndroid });
-      }
+      // Check that input above the 200 sat maximum is capped and 149 sats is rejected as below minimum
+      await exceedAmountInputCap(200);
 
-      await multiTap('NRemove', 3); // remove "201"
+      await multiTap('NRemove', 3); // remove "200"
       await enterAmount(149);
       await expectTextWithin('SendNumberField', '149');
       await tap('ContinueAmount');

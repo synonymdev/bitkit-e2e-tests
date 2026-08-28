@@ -883,7 +883,10 @@ export async function waitForTextToDisappear(texts: string[], timeout: number) {
 
 async function assertAddressTypeSwitchFeedback() {
   // await waitForToast('AddressTypeApplyingToast', { dismiss: false });
-  await waitForToast('AddressTypeSettingsUpdatedToast');
+  await waitForToast('AddressTypeSettingsUpdatedToast', {
+    dismiss: driver.isAndroid,
+    timeout: 120_000,
+  });
 }
 
 export async function switchPrimaryAddressType(nextType: addressTypePreference) {
@@ -1263,6 +1266,61 @@ export async function waitForToast(
   if (dismiss) {
     await dragOnElement(toastId, 'up', 0.2);
   }
+}
+
+async function waitForTransientToastAfterAction(
+  toastId: ToastId,
+  action: () => Promise<void>
+) {
+  if (driver.isAndroid) {
+    await action();
+    await waitForToast(toastId);
+    return;
+  }
+
+  // These feedback toasts live for 1.5 seconds. XCUITest's default all-match lookup can
+  // find one, then lose it while rebinding the accessibility snapshot. Scope the faster
+  // single-match lookup to this top-level element so normal nested lookups stay unchanged.
+  await driver.updateSettings({ useFirstMatch: true });
+  try {
+    await browser.waitUntil(
+      async () => {
+        await action();
+        try {
+          const toast = await elementById(toastId);
+          return Boolean(toast.elementId);
+        } catch {
+          return false;
+        }
+      },
+      {
+        timeout: 30_000,
+        interval: 250,
+        timeoutMsg: `Timed out waiting for transient toast: ${toastId}`,
+      }
+    );
+  } finally {
+    await driver.updateSettings({ useFirstMatch: false });
+  }
+}
+
+export async function exceedAmountInputCap(maxAmountSats: number) {
+  await enterAmount(maxAmountSats);
+  await verifyAmountToSend(maxAmountSats);
+  await waitForTransientToastAfterAction('SendAmountExceededToast', async () => {
+    await tap('N1');
+  });
+  await verifyAmountToSend(maxAmountSats);
+}
+
+export async function exceedAvailableAmountInputCap() {
+  await tap('AvailableAmount');
+  const availableAmountSats = await getAmountUnder('AvailableAmount');
+  await verifyAmountToSend(availableAmountSats);
+  await waitForTransientToastAfterAction('SendAmountExceededToast', async () => {
+    await tap('N1');
+  });
+  await verifyAmountToSend(availableAmountSats);
 }
 
 /** Acknowledges the received payment notification by tapping the button.
