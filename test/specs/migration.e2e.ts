@@ -191,7 +191,7 @@ describe('@migration - Migration from legacy RN app to native app', () => {
   // --------------------------------------------------------------------------
   ciIt('@migration_2 - Install native on top of RN (upgrade)', async () => {
     // Setup wallet in RN app
-    const { mnemonic, balance } = await setupLegacyWallet({ returnSeed: true });
+    const { balance } = await setupLegacyWallet();
 
     // Install native app ON TOP of RN (upgrade)
     console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
