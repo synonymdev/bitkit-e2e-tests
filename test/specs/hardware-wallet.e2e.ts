@@ -20,12 +20,13 @@ import {
   openHardwareWalletSettings,
   removeHardwareWalletFromSettings,
   renameHardwareWalletFromSettings,
+  sendOnchainFromHardwareWallet,
   startHardwareWalletFlowFromSuggestion,
   stopTrezorEmulator,
   transferHardwareWalletToSpending,
   type TrezorEmulatorFixture,
 } from '../helpers/hardware-wallet';
-import { ensureLocalFunds, getBackend } from '../helpers/regtest';
+import { ensureLocalFunds, getBackend, getExternalAddress } from '../helpers/regtest';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 
@@ -109,5 +110,22 @@ describe('@hardware_wallet - Hardware Wallet', () => {
       // We only check balance on staging regtest backend, local does not have Blocktank.
       await expectSpendingBalance(0, { condition: 'gt', timeout: 60_000 });
     }
+  });
+
+  ciIt('@hardware_wallet_4 - Can send onchain from hardware wallet', async () => {
+    const fundingSats = 100_000;
+    const sendSats = 20_000;
+    const address = await getExternalAddress();
+
+    await connectHardwareWalletFromSettings(walletLabel);
+    await fundHardwareWalletAndAcknowledge(trezorFixture, { sats: fundingSats });
+    await expectHardwareWalletBalance(fundingSats);
+    await sendOnchainFromHardwareWallet({
+      walletLabel,
+      address,
+      amountSats: sendSats,
+    });
+    await doNavigationClose();
+    await expectHardwareWalletBalance(fundingSats, { condition: 'lt' });
   });
 });
