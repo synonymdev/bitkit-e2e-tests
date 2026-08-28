@@ -311,7 +311,11 @@ export async function transferHardwareWalletToSpending({
   await tap('HardwareTransferAmountContinue');
   await elementById('HardwareTransferSign').waitForDisplayed({ timeout: 120_000 });
   await tap('HardwareTransferOpenTrezorConnect');
-  await approveTrezorPromptsUntil(['HardwareTransferSigned', 'LightningSettingUp', 'TransferSuccess']);
+  await approveTrezorPromptsUntil([
+    'HardwareTransferSigned',
+    'LightningSettingUp',
+    'TransferSuccess',
+  ]);
   await waitForHardwareTransferProgress();
   if (getBackend() === 'local') {
     // Local backend does not have Blocktank,
