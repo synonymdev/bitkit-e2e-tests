@@ -117,9 +117,17 @@ describe('@hardware_wallet - Hardware Wallet', () => {
     const sendSats = 20_000;
     const address = await getExternalAddress();
 
+    // receive some on savings account first
+    await receiveOnchainFunds({ sats: fundingSats, expectHighBalanceWarning: false });
+    await expectSavingsBalance(fundingSats);
+    await expectTotalBalance(fundingSats);
+    await expectSpendingBalance(0);
+
+    // connect hardware wallet and send onchain
     await connectHardwareWalletFromSettings(walletLabel);
     await fundHardwareWalletAndAcknowledge(trezorFixture, { sats: fundingSats });
     await expectHardwareWalletBalance(fundingSats);
+    await expectTotalBalance(fundingSats * 2);
     await sendOnchainFromHardwareWallet({
       walletLabel,
       address,
