@@ -92,7 +92,7 @@ describe('@lnurl - LNURL', () => {
       lightning: {
         backend: 'lnd',
         config: {
-          hostname: '127.0.0.1:8080',
+          hostname: `${lndConfig.restHost}:${lndConfig.restPort}`,
           macaroon: lndConfig.macaroonPath,
           cert: lndConfig.tls,
         },
