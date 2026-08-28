@@ -16,6 +16,7 @@ import {
   expectHardwareWalletInSettings,
   expectHardwareWalletOnHome,
   expectHardwareWalletReceivedActivity,
+  expectHardwareWalletSentActivity,
   fundHardwareWalletAndAcknowledge,
   openHardwareWalletSettings,
   removeHardwareWalletFromSettings,
@@ -115,6 +116,7 @@ describe('@hardware_wallet - Hardware Wallet', () => {
   ciIt('@hardware_wallet_4 - Can send onchain from hardware wallet', async () => {
     const fundingSats = 100_000;
     const sendSats = 20_000;
+    const tag = 'hwsend';
     const address = await getExternalAddress();
 
     // receive some on savings account first
@@ -132,7 +134,9 @@ describe('@hardware_wallet - Hardware Wallet', () => {
       walletLabel,
       address,
       amountSats: sendSats,
+      tag,
     });
+    await expectHardwareWalletSentActivity(tag);
     await doNavigationClose();
     await expectHardwareWalletBalance(fundingSats, { condition: 'lt' });
   });

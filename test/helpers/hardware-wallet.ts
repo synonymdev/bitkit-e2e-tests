@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import {
   acknowledgeReceivedPaymentIfPresent,
+  addSendTag,
   doNavigationClose,
   dragOnElement,
   elementById,
@@ -211,14 +212,26 @@ export async function expectHardwareWalletReceivedActivity(sats: number) {
   await expectTextWithin('Activity-1', formatSats(sats));
 }
 
+export async function expectHardwareWalletSentActivity(tag: string) {
+  await doNavigationClose();
+  await tap('ActivityHardware');
+  await elementById('HardwareWalletScreen').waitForDisplayed();
+  await elementById('Activity-1').waitForDisplayed();
+  await expectTextWithin('Activity-1', '-');
+  await tap('Activity-1');
+  await elementById(`Tag-${tag}-delete`).waitForDisplayed();
+}
+
 export async function sendOnchainFromHardwareWallet({
   walletLabel,
   address,
   amountSats,
+  tag,
 }: {
   walletLabel: string;
   address: string;
   amountSats: number;
+  tag?: string;
 }) {
   await doNavigationClose();
   await enterAddress(address);
@@ -228,6 +241,10 @@ export async function sendOnchainFromHardwareWallet({
   await elementById('ContinueAmount').waitForEnabled({ timeout: 60_000 });
   await tap('ContinueAmount');
   await elementById('GRAB').waitForDisplayed({ timeout: 120_000 });
+  if (tag) {
+    await addSendTag(tag);
+    await sleep(500);
+  }
   await dragOnElement('GRAB', 'right', 0.95);
   await elementById('HardwareSendOpenTrezorConnect').waitForDisplayed({ timeout: 120_000 });
   await tap('HardwareSendOpenTrezorConnect');
