@@ -218,8 +218,12 @@ services:
       - '6080:6080' # noVNC web viewer
       - '9003:9003' # MCP server SSE transport
     environment:
-      - MACOS=1
+      - MACOS=${TREZOR_MACOS:-1}
       - REGTEST_RPC_URL=http://host.docker.internal:43782
+    # host.docker.internal is implicit on Docker Desktop but not on Linux, where
+    # the emulator otherwise cannot reach the published bitcoind port.
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     volumes:
       - './.trezor-user-env/trezor-suite:/trezor-user-env/trezor-suite'
       - './.trezor-user-env/logs/screens:/trezor-user-env/logs/screens'
