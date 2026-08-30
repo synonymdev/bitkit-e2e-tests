@@ -1314,8 +1314,11 @@ export async function exceedAmountInputCap(maxAmountSats: number) {
 }
 
 export async function exceedAvailableAmountInputCap() {
+  // AvailableAmount exposes its value through a nested MoneyText rather than a
+  // plain static text, and tapping it raises a toast over the element.
+  const availableText = await (await elementByIdWithin('AvailableAmount', 'MoneyText')).getText();
+  const availableAmountSats = Number(availableText.replace(/[^\d]/g, ''));
   await tap('AvailableAmount');
-  const availableAmountSats = await getAmountUnder('AvailableAmount');
   await verifyAmountToSend(availableAmountSats);
   await waitForTransientToastAfterAction('SendAmountExceededToast', async () => {
     await tap('N1');
