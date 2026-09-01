@@ -18,7 +18,6 @@ import {
   cleanupProfile,
   createProfile,
   deleteProfile,
-  discardAddContactRoute,
   verifyAddContactRoute,
   verifyContactRowDisplayed,
 } from '../helpers/profile';

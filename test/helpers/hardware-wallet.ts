@@ -4,15 +4,20 @@ import path from 'node:path';
 
 import {
   acknowledgeReceivedPaymentIfPresent,
+  addSendTag,
   doNavigationClose,
+  dragOnElement,
   elementById,
   elementByText,
+  enterAddress,
   enterAmount,
   expectBalanceWithWait,
   expectTextWithin,
   expectText,
   formatSats,
+  getAccessibleText,
   getAmountUnder,
+  getTextUnder,
   sleep,
   tap,
   tapFirstByAccessibilityIdPrefix,
@@ -207,6 +212,77 @@ export async function expectHardwareWalletReceivedActivity(sats: number) {
   await expectTextWithin('Activity-1', formatSats(sats));
 }
 
+export async function expectHardwareWalletSentActivity(tag: string) {
+  await doNavigationClose();
+  await tap('ActivityHardware');
+  await elementById('HardwareWalletScreen').waitForDisplayed();
+  await elementById('Activity-1').waitForDisplayed();
+  await expectTextWithin('Activity-1', '-');
+  await tap('Activity-1');
+  await elementById(`Tag-${tag}-delete`).waitForDisplayed();
+}
+
+export async function sendOnchainFromHardwareWallet({
+  walletLabel,
+  address,
+  amountSats,
+  tag,
+}: {
+  walletLabel: string;
+  address: string;
+  amountSats: number;
+  tag?: string;
+}) {
+  await doNavigationClose();
+  await enterAddress(address);
+  await elementById('ContinueAmount').waitForDisplayed({ timeout: 60_000 });
+  await selectHardwareFundingSource(walletLabel);
+  await enterAmount(amountSats);
+  await elementById('ContinueAmount').waitForEnabled({ timeout: 60_000 });
+  await tap('ContinueAmount');
+  await elementById('GRAB').waitForDisplayed({ timeout: 120_000 });
+  if (tag) {
+    await addSendTag(tag);
+    await sleep(500);
+  }
+  await dragOnElement('GRAB', 'right', 0.95);
+  await elementById('HardwareSendOpenTrezorConnect').waitForDisplayed({ timeout: 120_000 });
+  await tap('HardwareSendOpenTrezorConnect');
+  await approveTrezorPromptsUntil(['SendSuccess']);
+  await elementById('SendSuccess').waitForDisplayed();
+  await tap('Close');
+}
+
+async function selectHardwareFundingSource(walletLabel: string) {
+  const switchButton = elementById('AssetButton-switch');
+  await switchButton.waitForDisplayed({ timeout: 30_000 });
+
+  const wanted = walletLabel.toLowerCase();
+  const started = Date.now();
+  const timeout = 60_000;
+  while (Date.now() - started < timeout) {
+    const label = await fundingSourceLabel();
+    if (label.toLowerCase().includes(wanted)) {
+      return;
+    }
+    await tap('AssetButton-switch');
+    await sleep(500);
+  }
+
+  throw new Error(`Timed out selecting hardware funding source '${walletLabel}'`);
+}
+
+async function fundingSourceLabel(): Promise<string> {
+  if (driver.isAndroid) {
+    try {
+      return (await getTextUnder('AssetButton-switch', 'first')).trim();
+    } catch {
+      return '';
+    }
+  }
+  return getAccessibleText(elementById('AssetButton-switch'));
+}
+
 export async function transferHardwareWalletToSpending({
   amountSats,
   waitForSync,
@@ -235,7 +311,11 @@ export async function transferHardwareWalletToSpending({
   await tap('HardwareTransferAmountContinue');
   await elementById('HardwareTransferSign').waitForDisplayed({ timeout: 120_000 });
   await tap('HardwareTransferOpenTrezorConnect');
-  await approveTrezorPromptsUntilTransferProgress();
+  await approveTrezorPromptsUntil([
+    'HardwareTransferSigned',
+    'LightningSettingUp',
+    'TransferSuccess',
+  ]);
   await waitForHardwareTransferProgress();
   if (getBackend() === 'local') {
     // Local backend does not have Blocktank,
@@ -277,19 +357,19 @@ export async function removeHardwareWalletFromSettings(label: string) {
   await expectHardwareWalletInSettings(label, { visible: false });
 }
 
-async function approveTrezorPromptsUntilTransferProgress() {
+async function approveTrezorPromptsUntil(testIds: string[]) {
   const started = Date.now();
   const timeout = 180_000;
 
   while (Date.now() - started < timeout) {
-    if (await isAnyDisplayed(['HardwareTransferSigned', 'LightningSettingUp', 'TransferSuccess'])) {
+    if (await isAnyDisplayed(testIds)) {
       return;
     }
     pressTrezorYes();
     await sleep(500);
   }
 
-  throw new Error('Timed out waiting for hardware transfer signing progress');
+  throw new Error(`Timed out waiting for Trezor approval (${testIds.join(', ')})`);
 }
 
 async function waitForHardwareTransferProgress() {

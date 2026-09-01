@@ -1,7 +1,6 @@
 import {
   completeOnboarding,
   confirmInputOnKeyboard,
-  dragOnElement,
   elementById,
   expectText,
   expectTextWithin,
