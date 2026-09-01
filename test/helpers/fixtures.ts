@@ -26,12 +26,12 @@ export const STAGING_TEST_CONTACTS: readonly PubkyContact[] = [
 export const STAGING_PAYKIT_CONTACTS: readonly PubkyContact[] = [
   {
     name: 'Contact Paykit #1',
-    pubky: 'pubky1jy146y751hkgqk9p69ds5cqf461aj5x7c8ptbca5rw6m9asotso',
+    pubky: 'pubkybew8jjokby19s3tzqydughsu8saigmuonw8wtnqzidxc6qsw1jiy',
     ableToPay: true,
   },
   {
     name: 'Contact Paykit #2',
-    pubky: 'pubkynekaxdyt5ktoqyufd7cgug6qppa7999hm46wfqdzm6jqnr8tj16o',
+    pubky: 'pubkyarh1sbi785dbt37cnia7bnzaba949yu54fxxugd3hp8hijyihmto',
     ableToPay: true,
   },
 ] as const;
