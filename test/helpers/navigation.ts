@@ -7,7 +7,10 @@ export type SettingsTab = 'general' | 'security' | 'advanced';
  * General is the default tab so no extra tap is needed for it.
  */
 export async function openSettings(tab: SettingsTab = 'general') {
+  await elementById('HeaderMenu').waitForDisplayed();
+  await sleep(500);
   await tap('HeaderMenu');
+  await elementById('DrawerSettings').waitForDisplayed();
   await tap('DrawerSettings');
   await sleep(500);
   if (tab !== 'general') {

@@ -6,7 +6,6 @@ import {
   receiveOnchainFunds,
   expectText,
   dragOnElement,
-  swipeFullScreen,
   expectTextWithin,
   elementByIdWithin,
   getTextUnder,

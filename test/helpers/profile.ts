@@ -50,6 +50,11 @@ export async function readPubkyFromProfileCopy(): Promise<string> {
 
 /**
  * Profile → Edit → scroll to delete → confirm. Ends on {@link PubkyChoice} (create / import).
+ *
+ * This is the product delete-profile path. Do not use it as test teardown — a failed
+ * payment/navigation leaves the app off Edit Profile, so UI cleanup fails the spec
+ * for the wrong reason. Specs reinstall a new wallet each test; leftover staging
+ * profiles are unique to that seed.
  */
 export async function deleteProfile() {
   await openEditProfile();
@@ -60,15 +65,6 @@ export async function deleteProfile() {
   await confirm.waitForDisplayed();
   await confirm.click();
   await elementById('PubkyChoiceCreate').waitForDisplayed();
-}
-
-export async function cleanupProfile(label: string) {
-  try {
-    await deleteProfile();
-    console.info(`Cleaned up Pubky profile for ${label}`);
-  } catch (error) {
-    console.error(`Could not cleanup Pubky profile for ${label}:`, error);
-  }
 }
 
 /**
