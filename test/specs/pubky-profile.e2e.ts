@@ -21,7 +21,6 @@ import {
   ADD_CONTACT_INVALID_KEY_MESSAGE_SNIPPET,
   ADD_CONTACT_OWN_PUBKY_MESSAGE_SNIPPET,
   createProfile,
-  cleanupProfile,
   deleteContact,
   deleteProfile,
   openEditProfile,
@@ -90,75 +89,65 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
       '@pubky_profile_2 - Profile and contact persist; delete and recreate same pubky',
       async () => {
         const [stagingContact] = STAGING_TEST_CONTACTS;
-        let hasProfile = false;
 
+        // create profile and verify pubky and details
+        const { pubky } = await createProfile({ name: 'Alice' });
+        await verifyPubkyString(pubky);
+        const copiedPubky = await readPubkyFromProfileCopy();
+        await expect(copiedPubky).toBe(pubky.trim());
+
+        // update profile and verify details
+        const details = {
+          name: 'Bob',
+          notes: 'Notes for E2E',
+          links: [{ label: 'Website', url: 'https://example.org' }],
+          tags: ['cypherpunk'],
+        };
+        await updateMyProfile(details);
+        await verifyMyProfileDetails(details);
+
+        await addContact({ pubky: stagingContact.pubky, firstContact: true });
+        await verifyContactRowDisplayed(stagingContact.pubky);
+
+        // restart app and verify profile, pubky, and contact
+        await launchFreshApp();
+        await verifyMyProfileDetails(details);
+        const pubkyAfterRelaunch = await readPubkyFromProfileCopy();
+        await expect(pubkyAfterRelaunch).toBe(pubky.trim());
+        await verifyContactRowDisplayed(stagingContact.pubky);
+
+        // restore wallet and verify profile, pubky, and contact
+        const seed = await getSeed();
         try {
-          // create profile and verify pubky and details
-          const { pubky } = await createProfile({ name: 'Alice' });
-          hasProfile = true;
-          await verifyPubkyString(pubky);
-          const copiedPubky = await readPubkyFromProfileCopy();
-          await expect(copiedPubky).toBe(pubky.trim());
-
-          // update profile and verify details
-          const details = {
-            name: 'Bob',
-            notes: 'Notes for E2E',
-            links: [{ label: 'Website', url: 'https://example.org' }],
-            tags: ['cypherpunk'],
-          };
-          await updateMyProfile(details);
-          await verifyMyProfileDetails(details);
-
-          await addContact({ pubky: stagingContact.pubky, firstContact: true });
-          await verifyContactRowDisplayed(stagingContact.pubky);
-
-          // restart app and verify profile, pubky, and contact
-          await launchFreshApp();
-          await verifyMyProfileDetails(details);
-          const pubkyAfterRelaunch = await readPubkyFromProfileCopy();
-          await expect(pubkyAfterRelaunch).toBe(pubky.trim());
-          await verifyContactRowDisplayed(stagingContact.pubky);
-
-          // restore wallet and verify profile, pubky, and contact
-          const seed = await getSeed();
-          try {
-            await waitForBackup();
-          } catch (error) {
-            console.warn('waitForBackup failed, continuing with restore...');
-            console.warn(error);
-          }
-          await restoreWallet(seed);
-          await enablePaykitUi();
-          await verifyMyProfileDetails(details);
-          const pubkyAfterRestore = await readPubkyFromProfileCopy();
-          await expect(pubkyAfterRestore).toBe(pubky.trim());
-          await verifyContactRowDisplayed(stagingContact.pubky);
-
-          // remove link and tag and update profile and verify profile details
-          await openEditProfile();
-          await removeEditProfileLinkAt(0);
-          await removeEditProfileTag('cypherpunk');
-          await saveEditProfile();
-          const detailsAfterRemovals: ProfileDetails = {
-            name: 'Bob',
-            notes: 'Notes for E2E',
-            links: [],
-            tags: [],
-          };
-          await verifyMyProfileDetails(detailsAfterRemovals);
-
-          // delete profile and create new profile and verify pubky
-          await deleteProfile();
-          hasProfile = false;
-          const { pubky: pubkyAfterRecreate } = await createProfile({ name: 'Alice2' });
-          hasProfile = true;
-          await expect(pubkyAfterRecreate.trim()).toBe(pubky.trim());
-        } finally {
-          if (hasProfile) {
-            await cleanupProfile('@pubky_profile_2');
-          }
+          await waitForBackup();
+        } catch (error) {
+          console.warn('waitForBackup failed, continuing with restore...');
+          console.warn(error);
         }
+        await restoreWallet(seed);
+        await enablePaykitUi();
+        await verifyMyProfileDetails(details);
+        const pubkyAfterRestore = await readPubkyFromProfileCopy();
+        await expect(pubkyAfterRestore).toBe(pubky.trim());
+        await verifyContactRowDisplayed(stagingContact.pubky);
+
+        // remove link and tag and update profile and verify profile details
+        await openEditProfile();
+        await removeEditProfileLinkAt(0);
+        await removeEditProfileTag('cypherpunk');
+        await saveEditProfile();
+        const detailsAfterRemovals: ProfileDetails = {
+          name: 'Bob',
+          notes: 'Notes for E2E',
+          links: [],
+          tags: [],
+        };
+        await verifyMyProfileDetails(detailsAfterRemovals);
+
+        // delete profile and create new profile and verify pubky
+        await deleteProfile();
+        const { pubky: pubkyAfterRecreate } = await createProfile({ name: 'Alice2' });
+        await expect(pubkyAfterRecreate.trim()).toBe(pubky.trim());
       }
     );
   });
@@ -168,69 +157,57 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
     ciIt(
       '@pubky_profile_3 - Cannot add invalid or self pubky; can add/delete valid contacts',
       async () => {
-        let hasProfile = false;
+        const { pubky } = await createProfile({ name: 'Contact Validation Professor' });
+        const [firstStagingContact] = STAGING_TEST_CONTACTS;
 
-        try {
-          const { pubky } = await createProfile({ name: 'Contact Validation Professor' });
-          hasProfile = true;
-          const [firstStagingContact] = STAGING_TEST_CONTACTS;
+        // invalid pubky
+        const invalidPubky = 'pubkyinvalid';
+        await addContact({ pubky: invalidPubky, firstContact: true, save: false });
+        await expect(elementById('AddContactAdd')).toBeDisabled();
+        await elementByText(ADD_CONTACT_INVALID_KEY_MESSAGE_SNIPPET, 'contains').waitForDisplayed();
+        await swipeFullScreen('down');
 
-          // invalid pubky
-          const invalidPubky = 'pubkyinvalid';
-          await addContact({ pubky: invalidPubky, firstContact: true, save: false });
-          await expect(elementById('AddContactAdd')).toBeDisabled();
-          await elementByText(
-            ADD_CONTACT_INVALID_KEY_MESSAGE_SNIPPET,
-            'contains'
-          ).waitForDisplayed();
-          await swipeFullScreen('down');
+        // self-add
+        await addContact({ pubky: pubky, firstContact: false, save: false });
+        await expect(elementById('AddContactAdd')).toBeDisabled();
+        await elementByText(ADD_CONTACT_OWN_PUBKY_MESSAGE_SNIPPET, 'contains').waitForDisplayed();
+        await swipeFullScreen('down');
 
-          // self-add
-          await addContact({ pubky: pubky, firstContact: false, save: false });
-          await expect(elementById('AddContactAdd')).toBeDisabled();
-          await elementByText(ADD_CONTACT_OWN_PUBKY_MESSAGE_SNIPPET, 'contains').waitForDisplayed();
-          await swipeFullScreen('down');
+        await doNavigationClose();
 
-          await doNavigationClose();
+        // route unsaved pubky from Send → Enter manually
+        await enterAddress(firstStagingContact.pubky, { acceptCameraPermission: true });
+        await verifyAddContactRoute(firstStagingContact.pubky, {
+          ableToPay: firstStagingContact.ableToPay,
+        });
+        await doNavigationClose();
 
-          // route unsaved pubky from Send → Enter manually
-          await enterAddress(firstStagingContact.pubky, { acceptCameraPermission: true });
-          await verifyAddContactRoute(firstStagingContact.pubky, {
-            ableToPay: firstStagingContact.ableToPay,
-          });
-          await doNavigationClose();
+        // route unsaved pubky from QR scanner prompt
+        await enterAddressViaScanPrompt(firstStagingContact.pubky, {
+          acceptCameraPermission: false,
+        });
+        await verifyAddContactRoute(firstStagingContact.pubky, {
+          ableToPay: firstStagingContact.ableToPay,
+        });
+        await doNavigationClose();
 
-          // route unsaved pubky from QR scanner prompt
-          await enterAddressViaScanPrompt(firstStagingContact.pubky, {
-            acceptCameraPermission: false,
-          });
-          await verifyAddContactRoute(firstStagingContact.pubky, {
-            ableToPay: firstStagingContact.ableToPay,
-          });
-          await doNavigationClose();
+        // add valid contacts
+        for (const [i, stagingContact] of STAGING_TEST_CONTACTS.entries()) {
+          await addContact({ pubky: stagingContact.pubky, firstContact: i === 0 });
+          await verifyContactRowDisplayed(stagingContact.pubky);
+          await expectText(stagingContact.name);
+        }
 
-          // add valid contacts
-          for (const [i, stagingContact] of STAGING_TEST_CONTACTS.entries()) {
-            await addContact({ pubky: stagingContact.pubky, firstContact: i === 0 });
-            await verifyContactRowDisplayed(stagingContact.pubky);
-            await expectText(stagingContact.name);
-          }
+        // try add duplicate contact
+        // await addContact({ pubky: STAGING_TEST_CONTACTS[0].pubky, firstContact: false });
+        // await expect(elementById('AddContactAdd')).toBeDisabled();
+        // await elementByText(ADD_CONTACT_DUPLICATE_CONTACT_MESSAGE_SNIPPET, 'contains').waitForDisplayed();
+        // await swipeFullScreen('down');
 
-          // try add duplicate contact
-          // await addContact({ pubky: STAGING_TEST_CONTACTS[0].pubky, firstContact: false });
-          // await expect(elementById('AddContactAdd')).toBeDisabled();
-          // await elementByText(ADD_CONTACT_DUPLICATE_CONTACT_MESSAGE_SNIPPET, 'contains').waitForDisplayed();
-          // await swipeFullScreen('down');
-
-          // delete contacts
-          for (const c of STAGING_TEST_CONTACTS) {
-            await deleteContact(c.pubky);
-            await verifyContactRowNotDisplayed(c.pubky);
-          }
-        } finally {
-          if (hasProfile) {
-            await cleanupProfile('@pubky_profile_3');
-          }
+        // delete contacts
+        for (const c of STAGING_TEST_CONTACTS) {
+          await deleteContact(c.pubky);
+          await verifyContactRowNotDisplayed(c.pubky);
         }
       }
     );
@@ -238,9 +215,6 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
     ciIt(
       '@pubky_profile_4 - Editing wallet A contact on wallet B does not change wallet A profile',
       async () => {
-        let currentWallet: 'A' | 'B' | null = null;
-        let seedA: string | undefined;
-
         const detailsA: ProfileDetails = {
           name: 'Alice Wallet A',
           notes: 'Wallet A original notes',
@@ -248,68 +222,42 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
           tags: ['wallet-a-tag'],
         };
 
-        try {
-          // Wallet A: create and customize profile, then capture seed.
-          console.log('Wallet A: create and customize profile, then capture seed.');
-          const { pubky: pubkyA } = await createProfile({ name: 'Alice Wallet A' });
-          currentWallet = 'A';
-          await updateMyProfile(detailsA);
-          await verifyMyProfileDetails(detailsA);
-          seedA = await getSeed();
+        // Wallet A: create and customize profile, then capture seed.
+        console.log('Wallet A: create and customize profile, then capture seed.');
+        const { pubky: pubkyA } = await createProfile({ name: 'Alice Wallet A' });
+        await updateMyProfile(detailsA);
+        await verifyMyProfileDetails(detailsA);
+        const seedA = await getSeed();
 
-          // Wallet B: fresh install + onboarding, create profile, then add wallet A as contact.
-          console.log(
-            'Wallet B: fresh install + onboarding, create profile, then add wallet A as contact.'
-          );
-          await reinstallApp();
-          currentWallet = null;
-          await completeOnboarding();
-          await enablePaykitUi();
-          await createProfile({ name: 'Bob Wallet B' });
-          currentWallet = 'B';
+        // Wallet B: fresh install + onboarding, create profile, then add wallet A as contact.
+        console.log(
+          'Wallet B: fresh install + onboarding, create profile, then add wallet A as contact.'
+        );
+        await reinstallApp();
+        await completeOnboarding();
+        await enablePaykitUi();
+        await createProfile({ name: 'Bob Wallet B' });
 
-          await addContact({ pubky: pubkyA, firstContact: true });
-          await verifyContactRowDisplayed(pubkyA);
+        await addContact({ pubky: pubkyA, firstContact: true });
+        await verifyContactRowDisplayed(pubkyA);
 
-          // Wallet B: edit wallet A contact.
-          const detailsAUpdated: ProfileDetails = {
-            name: 'Alice Edited On B',
-            notes: 'Edited from wallet B',
-            links: [],
-            tags: [],
-          };
-          await updateContactProfile({ pubky: pubkyA, details: detailsAUpdated });
-          await verifyContactDetails({ pubky: pubkyA, details: detailsAUpdated });
+        // Wallet B: edit wallet A contact.
+        const detailsAUpdated: ProfileDetails = {
+          name: 'Alice Edited On B',
+          notes: 'Edited from wallet B',
+          links: [],
+          tags: [],
+        };
+        await updateContactProfile({ pubky: pubkyA, details: detailsAUpdated });
+        await verifyContactDetails({ pubky: pubkyA, details: detailsAUpdated });
 
-          // temp: turn on after fix
-          // https://github.com/synonymdev/bitkit-android/pull/1108
-          // https://github.com/synonymdev/bitkit-ios/pull/640
-          // await deleteProfile();
-          // currentWallet = null;
-
-          // Restore wallet A and verify wallet A profile is unchanged by wallet B contact edits.
-          console.log(
-            'Wallet A: restore wallet A and verify wallet A profile is unchanged by wallet B contact edits.'
-          );
-          await restoreWallet(seedA);
-          await enablePaykitUi();
-          currentWallet = 'A';
-          await verifyMyProfileDetails(detailsA);
-        } finally {
-          if (currentWallet != null) {
-            await cleanupProfile(`@pubky_profile_4 wallet ${currentWallet}`);
-          }
-
-          if (seedA !== undefined && currentWallet !== 'A') {
-            try {
-              await restoreWallet(seedA);
-              await enablePaykitUi();
-              await cleanupProfile('@pubky_profile_4 wallet A');
-            } catch (error) {
-              console.error('Could not restore and cleanup wallet A profile:', error);
-            }
-          }
-        }
+        // Restore wallet A and verify wallet A profile is unchanged by wallet B contact edits.
+        console.log(
+          'Wallet A: restore wallet A and verify wallet A profile is unchanged by wallet B contact edits.'
+        );
+        await restoreWallet(seedA);
+        await enablePaykitUi();
+        await verifyMyProfileDetails(detailsA);
       }
     );
   });
