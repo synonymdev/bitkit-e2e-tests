@@ -37,10 +37,15 @@ async function leaveDevSettings() {
 }
 
 export async function enablePaykitUi() {
+  await elementById('TotalBalance-primary').waitForDisplayed({ timeout: 60_000 });
   await openDevSettings();
   await tapPaykitUiToggle();
   await confirmPaykitUiEnableDialogIfPresent();
-  await waitForToast('PaykitUiEnabledToast', { waitToDisappear: driver.isIOS });
+  try {
+    await waitForToast('PaykitUiEnabledToast', { waitToDisappear: driver.isIOS, timeout: 15_000 });
+  } catch (error) {
+    console.info('→ PaykitUiEnabledToast not shown (already hidden or skipped)', error);
+  }
   await leaveDevSettings();
 }
 

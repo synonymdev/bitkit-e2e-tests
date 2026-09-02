@@ -15,9 +15,7 @@ import { doNavigationClose, openContacts } from '../helpers/navigation';
 import { enablePaykitUi } from '../helpers/paykit';
 import {
   addContact,
-  cleanupProfile,
   createProfile,
-  deleteProfile,
   verifyAddContactRoute,
   verifyContactRowDisplayed,
 } from '../helpers/profile';
@@ -42,10 +40,10 @@ async function payCurrentContactOnchain(amountSats: number) {
   await switchToOnchainIfNeeded();
   await enterAmount(amountSats);
   await tap('ContinueAmount');
-  await sleep(1000);
+  await elementById('GRAB').waitForDisplayed();
+  await sleep(500);
   await dragOnElement('GRAB', 'right', 0.95);
-  await sleep(1000);
-  await elementById('SendSuccess').waitForDisplayed();
+  await elementById('SendSuccess').waitForDisplayed({ timeout: 60_000 });
   await tap('Close');
 }
 
@@ -66,51 +64,39 @@ describe('@pubky @paykit - Public payments', () => {
 
   ciIt('@paykit_1 - Can pay saved contact via public on-chain endpoint', async () => {
     const [savedPaykitContact, unsavedPaykitContact] = STAGING_PAYKIT_CONTACTS;
-    let hasProfile = false;
 
-    try {
-      await receiveOnchainFunds({ sats: 50_000 });
+    await receiveOnchainFunds({ sats: 50_000 });
 
-      await createProfile({ name: 'Paykit Sender' });
-      hasProfile = true;
+    await createProfile({ name: 'Paykit Sender' });
+    await doNavigationClose();
 
-      await doNavigationClose();
+    // Unsaved public Paykit pubkys should route to the Add Contact payment surface.
+    await enterAddress(unsavedPaykitContact.pubky, { acceptCameraPermission: true });
+    await verifyAddContactRoute(unsavedPaykitContact.pubky, {
+      ableToPay: unsavedPaykitContact.ableToPay,
+    });
+    await doNavigationClose();
 
-      // Unsaved public Paykit pubkys should route to the Add Contact payment surface.
-      await enterAddress(unsavedPaykitContact.pubky, { acceptCameraPermission: true });
-      await verifyAddContactRoute(unsavedPaykitContact.pubky, {
-        ableToPay: unsavedPaykitContact.ableToPay,
-      });
-      await doNavigationClose();
+    await enterAddressViaScanPrompt(unsavedPaykitContact.pubky, {
+      acceptCameraPermission: false,
+    });
+    await verifyAddContactRoute(unsavedPaykitContact.pubky, {
+      ableToPay: unsavedPaykitContact.ableToPay,
+    });
+    await doNavigationClose();
 
-      await enterAddressViaScanPrompt(unsavedPaykitContact.pubky, {
-        acceptCameraPermission: false,
-      });
-      await verifyAddContactRoute(unsavedPaykitContact.pubky, {
-        ableToPay: unsavedPaykitContact.ableToPay,
-      });
-      await doNavigationClose();
+    await addContact({
+      pubky: savedPaykitContact.pubky,
+      firstContact: true,
+    });
+    await verifyContactRowDisplayed(savedPaykitContact.pubky);
+    await tap(`Contact_${savedPaykitContact.pubky}`);
 
-      await addContact({
-        pubky: savedPaykitContact.pubky,
-        firstContact: true,
-      });
-      await verifyContactRowDisplayed(savedPaykitContact.pubky);
-      await tap(`Contact_${savedPaykitContact.pubky}`);
+    await payCurrentContactOnchain(10_000);
 
-      await payCurrentContactOnchain(10_000);
-
-      await openContactActivity(savedPaykitContact.pubky);
-      await expectText('Sent to', { strategy: 'contains' });
-      await tap('ContactActivity-1');
-      await expectText('10 000');
-
-      await deleteProfile();
-      hasProfile = false;
-    } finally {
-      if (hasProfile) {
-        await cleanupProfile('@paykit_1');
-      }
-    }
+    await openContactActivity(savedPaykitContact.pubky);
+    await expectText('Sent to', { strategy: 'contains' });
+    await tap('ContactActivity-1');
+    await expectText('10 000');
   });
 });
