@@ -102,7 +102,7 @@ describe('@transfer - Transfer', () => {
       await sleep(1000);
       await tap('SpendingAdvancedNumberField'); // change back to sats
       await tap('SpendingAdvancedContinue');
-      await sleep(500);
+      await elementById('SpendingConfirmAdvanced').waitForDisplayed();
       await tap('NavigationBack');
       await sleep(1000);
 
@@ -179,7 +179,7 @@ describe('@transfer - Transfer', () => {
       await expectText('2 500');
       await expectText('—', { visible: false });
       await tap('SpendingAdvancedContinue');
-      await sleep(500);
+      await elementById('SpendingConfirmDefault').waitForDisplayed();
       await tap('SpendingConfirmDefault');
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
@@ -190,7 +190,7 @@ describe('@transfer - Transfer', () => {
       await sleep(500);
       await expectText('—', { visible: false });
       await tap('SpendingAdvancedContinue');
-      await sleep(500);
+      await elementById('SpendingConfirmDefault').waitForDisplayed();
       await tap('SpendingConfirmDefault');
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
@@ -201,7 +201,7 @@ describe('@transfer - Transfer', () => {
       await sleep(500);
       await expectText('—', { visible: false });
       await tap('SpendingAdvancedContinue');
-      await sleep(500);
+      await elementById('SpendingConfirmDefault').waitForDisplayed();
       await tap('SpendingConfirmDefault');
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
