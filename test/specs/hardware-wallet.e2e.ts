@@ -25,7 +25,6 @@ import {
   startHardwareWalletFlowFromSuggestion,
   stopTrezorEmulator,
   transferHardwareWalletToSpending,
-  type TrezorEmulatorFixture,
 } from '../helpers/hardware-wallet';
 import { ensureLocalFunds, getBackend, getExternalAddress } from '../helpers/regtest';
 import { reinstallApp } from '../helpers/setup';
@@ -34,7 +33,6 @@ import { ciIt } from '../helpers/suite';
 describe('@hardware_wallet - Hardware Wallet', () => {
   const walletLabel = 'E2E Trezor';
   const renamedWalletLabel = 'E2E Renamed Trezor';
-  let trezorFixture: TrezorEmulatorFixture;
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
 
   before(async function () {
@@ -43,7 +41,7 @@ describe('@hardware_wallet - Hardware Wallet', () => {
   });
 
   beforeEach(async () => {
-    trezorFixture = ensureTrezorEmulator({ fresh: true });
+    ensureTrezorEmulator({ fresh: true });
     await reinstallApp();
     await completeOnboarding();
     await electrum?.waitForSync();
@@ -77,7 +75,7 @@ describe('@hardware_wallet - Hardware Wallet', () => {
     const sats = 15_000;
 
     await connectHardwareWalletFromSettings(walletLabel);
-    await fundHardwareWalletAndAcknowledge(trezorFixture, { sats });
+    await fundHardwareWalletAndAcknowledge({ sats });
     await expectHardwareWalletReceivedActivity(sats);
     await doNavigationClose();
     await expectTotalBalance(sats);
@@ -97,7 +95,7 @@ describe('@hardware_wallet - Hardware Wallet', () => {
     const transferSats = 20_000;
 
     await connectHardwareWalletFromSettings(walletLabel);
-    await fundHardwareWalletAndAcknowledge(trezorFixture, { sats: fundingSats });
+    await fundHardwareWalletAndAcknowledge({ sats: fundingSats });
     await expectHardwareWalletBalance(fundingSats);
     await transferHardwareWalletToSpending({
       amountSats: transferSats,
@@ -127,7 +125,7 @@ describe('@hardware_wallet - Hardware Wallet', () => {
 
     // connect hardware wallet and send onchain
     await connectHardwareWalletFromSettings(walletLabel);
-    await fundHardwareWalletAndAcknowledge(trezorFixture, { sats: fundingSats });
+    await fundHardwareWalletAndAcknowledge({ sats: fundingSats });
     await expectHardwareWalletBalance(fundingSats);
     await expectTotalBalance(fundingSats * 2);
     await sendOnchainFromHardwareWallet({

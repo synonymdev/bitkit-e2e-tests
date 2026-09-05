@@ -16,9 +16,11 @@ import {
   expectText,
   formatSats,
   getAccessibleText,
+  getAddressFromQRCode,
   getAmountUnder,
   getTextUnder,
   sleep,
+  swipeFullScreen,
   tap,
   tapFirstByAccessibilityIdPrefix,
   typeText,
@@ -190,15 +192,55 @@ export async function expectHardwareWalletBalance(
   );
 }
 
-export async function fundHardwareWalletAndAcknowledge(
-  fixture: TrezorEmulatorFixture,
-  { sats = 15_000, blocksToMine = 1 }: { sats?: number; blocksToMine?: number } = {}
-) {
-  await deposit(fixture.address.value, sats);
+export async function fundHardwareWalletAndAcknowledge({
+  sats = 15_000,
+  blocksToMine = 1,
+}: { sats?: number; blocksToMine?: number } = {}) {
+  const address = await getHardwareReceiveAddress();
+  await swipeFullScreen('down');
+  await deposit(address, sats);
   if (blocksToMine > 0) {
     await mineBlocks(blocksToMine);
   }
   await acknowledgeReceivedPaymentIfPresent();
+}
+
+async function getHardwareReceiveAddress(): Promise<string> {
+  await doNavigationClose();
+  await tap('Receive');
+  await elementById('ReceiveScreen').waitForDisplayed({ timeout: 30_000 });
+
+  let defaultTabAddress = '';
+  try {
+    defaultTabAddress = await getAddressFromQRCode('bitcoin');
+  } catch {
+    // Default tab may not have a QR yet (for example while lightning is still loading).
+  }
+
+  await elementById('Tab-trezor').waitForDisplayed({ timeout: 30_000 });
+  await browser.waitUntil(
+    async () => {
+      try {
+        await tap('Tab-trezor');
+        const address = await peekQrOnchainAddress();
+        return Boolean(address && address !== defaultTabAddress);
+      } catch {
+        return false;
+      }
+    },
+    {
+      timeout: 30_000,
+      interval: 500,
+      timeoutMsg: 'Timed out waiting for hardware receive address',
+    }
+  );
+
+  return getAddressFromQRCode('bitcoin');
+}
+
+async function peekQrOnchainAddress(): Promise<string> {
+  const uri = (await getAccessibleText(elementById('QRCode'))).trim();
+  return uri.replace(/^bitcoin:/i, '').replace(/\?.*$/, '');
 }
 
 export async function expectHardwareWalletReceivedActivity(sats: number) {
