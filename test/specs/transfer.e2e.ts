@@ -22,6 +22,7 @@ import {
   dismissBackgroundPaymentsTimedSheet,
   expectNoTextWithin,
   enterAmount,
+  expectSavingsBalance,
 } from '../helpers/actions';
 import {
   checkChannelStatus,
@@ -75,6 +76,7 @@ describe('@transfer - Transfer', () => {
   // 	- can change amount
   // 	Advanced
   // 	- can change amount
+  // Can fund a channel at the settled Max (happy path; fee-direction math is unit-tested)
   // Can open a channel to external node
   // 	- open channel to LND
   // 	- send payment
@@ -295,6 +297,41 @@ describe('@transfer - Transfer', () => {
       await elementById('Activity-3').waitForDisplayed({ reverse: true });
     }
   );
+
+  ciIt('@transfer_max - Can fund a Blocktank channel at the settled maximum', async () => {
+    await receiveOnchainFunds({ sats: 100_000 });
+
+    await tap('ActivitySavings');
+    await elementById('TransferToSpending').waitForDisplayed();
+    await tap('TransferToSpending');
+    if (await elementById('SpendingIntro-button').isDisplayed().catch(() => false)) {
+      await tap('SpendingIntro-button');
+    }
+
+    await elementById('SpendingAmountAvailable').waitForDisplayed();
+    await elementById('SpendingAmountContinue').waitForEnabled();
+    await elementById('SpendingAmountMax').waitForEnabled();
+    await sleep(500);
+
+    await tap('SpendingAmountMax');
+    await elementById('SpendingAmountContinue').waitForEnabled();
+    await tap('SpendingAmountContinue');
+    await elementById('SpendingConfirmMore').waitForDisplayed();
+    await sleep(500);
+
+    await dragOnElement('GRAB', 'right', 0.95);
+    await elementById('LightningSettingUp').waitForDisplayed();
+    await tap('TransferSuccess-button');
+
+    await expectSavingsBalance(0);
+
+    // Short-0 is already the receive row from `receiveOnchainFunds`. Wait until that
+    // row becomes Short-1 so Short-0 is the transfer, same as @onchain / @transfer_2.
+    await elementById('ActivityShort-0').waitForDisplayed();
+    await elementById('ActivityShort-1').waitForDisplayed();
+    await expectTextWithin('ActivityShort-0', 'Transfer');
+    await expectTextWithin('ActivityShort-1', 'Received');
+  });
 
   ciIt('@transfer_2 - Can open a channel to external node', async () => {
     const rpc = getBitcoinRpc();
