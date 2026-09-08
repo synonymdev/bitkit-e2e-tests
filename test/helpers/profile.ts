@@ -177,6 +177,7 @@ export async function addContact({
     return;
   }
 
+  await elementById('AddContactAdd').waitForEnabled();
   await tap('AddContactAdd');
   await elementById('AddContactSave').waitForDisplayed();
   await tap('AddContactSave');
