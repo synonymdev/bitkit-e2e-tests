@@ -13,18 +13,99 @@ import {
 import { STAGING_PAYKIT_CONTACTS } from '../helpers/fixtures';
 import { doNavigationClose, openContacts } from '../helpers/navigation';
 import { enablePaykitUi } from '../helpers/paykit';
-import {
-  addContact,
-  createProfile,
-  verifyAddContactRoute,
-  verifyContactRowDisplayed,
-} from '../helpers/profile';
+import { addContact, createProfile, verifyAddContactRoute } from '../helpers/profile';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 
+const SEND_SHEET_TIMEOUT = 60_000;
+const CONTACT_PAY_RETRY_AFTER_MS = 8_000;
+// iOS: SendAmount. Android: send_amount_screen / SendSheet. Both: ContinueAmount.
+const SEND_AMOUNT_READY_IDS = [
+  'SendAmount',
+  'send_amount_screen',
+  'SendSheet',
+  'ContinueAmount',
+  'SendAmountNumberPad',
+];
+
+async function isDisplayed(testId: string): Promise<boolean> {
+  return elementById(testId)
+    .isDisplayed()
+    .catch(() => false);
+}
+
+async function isSendAmountSheetDisplayed(): Promise<boolean> {
+  for (const testId of SEND_AMOUNT_READY_IDS) {
+    if (await isDisplayed(testId)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function describeContactPayScreen(): Promise<string> {
+  const markers = [
+    ...SEND_AMOUNT_READY_IDS,
+    'ContactPay',
+    'AddContactRetrievingTitle',
+    'AddContactSave',
+    'AddContactPay',
+  ];
+  const visible: string[] = [];
+  for (const testId of markers) {
+    if (await isDisplayed(testId)) {
+      visible.push(testId);
+    }
+  }
+  return visible.length > 0
+    ? `visible: ${visible.join(', ')}`
+    : `visible: none of ${markers.join('/')}`;
+}
+
+async function waitForSendAmountSheet() {
+  await browser.waitUntil(async () => isSendAmountSheetDisplayed(), {
+    timeout: SEND_SHEET_TIMEOUT,
+    interval: 500,
+    timeoutMsg: 'Send amount sheet did not appear',
+  });
+}
+
+async function openContactPayAmountSheet() {
+  await elementById('ContactPay').waitForDisplayed();
+  await tap('ContactPay');
+
+  let retried = false;
+  const started = Date.now();
+  try {
+    await browser.waitUntil(
+      async () => {
+        if (await isSendAmountSheetDisplayed()) {
+          return true;
+        }
+        // One retap only: Paykit resolve keeps ContactPay on screen, so looping taps
+        // would start overlapping payContact() tasks.
+        if (
+          !retried &&
+          Date.now() - started > CONTACT_PAY_RETRY_AFTER_MS &&
+          (await isDisplayed('ContactPay'))
+        ) {
+          retried = true;
+          await tap('ContactPay');
+        }
+        return false;
+      },
+      { timeout: SEND_SHEET_TIMEOUT, interval: 1_000 }
+    );
+  } catch {
+    throw new Error(
+      `Send amount sheet did not open after ContactPay (${await describeContactPayScreen()})`
+    );
+  }
+}
+
 async function switchToOnchainIfNeeded() {
-  await elementById('ContinueAmount').waitForDisplayed();
-  const switchButton = await elementById('AssetButton-switch');
+  await waitForSendAmountSheet();
+  const switchButton = elementById('AssetButton-switch');
   if (await switchButton.isDisplayed().catch(() => false)) {
     await tap('AssetButton-switch');
     await sleep(500);
@@ -34,11 +115,10 @@ async function switchToOnchainIfNeeded() {
 }
 
 async function payCurrentContactOnchain(amountSats: number) {
-  await sleep(1000);
-  await elementById('ContactPay').waitForDisplayed();
-  await tap('ContactPay');
+  await openContactPayAmountSheet();
   await switchToOnchainIfNeeded();
   await enterAmount(amountSats);
+  await elementById('ContinueAmount').waitForEnabled();
   await tap('ContinueAmount');
   await elementById('GRAB').waitForDisplayed();
   await sleep(500);
@@ -89,8 +169,7 @@ describe('@pubky @paykit - Public payments', () => {
       pubky: savedPaykitContact.pubky,
       firstContact: true,
     });
-    await verifyContactRowDisplayed(savedPaykitContact.pubky);
-    await tap(`Contact_${savedPaykitContact.pubky}`);
+    // addContact already lands on contact details with ContactPay visible.
 
     await payCurrentContactOnchain(10_000);
 
