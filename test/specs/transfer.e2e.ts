@@ -22,6 +22,7 @@ import {
   dismissBackgroundPaymentsTimedSheet,
   expectNoTextWithin,
   enterAmount,
+  expectSavingsBalance,
 } from '../helpers/actions';
 import {
   checkChannelStatus,
@@ -37,6 +38,19 @@ import { ensureLocalFunds, getBitcoinRpc, mineBlocks } from '../helpers/regtest'
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 import { openSettings } from '../helpers/navigation';
+
+/** One Back should leave Confirm. iOS sometimes needs a second Back; Android does not. */
+async function backToSpendingAmount() {
+  await tap('NavigationBack');
+  await sleep(500);
+  if (driver.isIOS && (await elementById('SpendingConfirmMore').isDisplayed().catch(() => false))) {
+    console.info('→ Still on spending confirm, tapping Back again...');
+    await tap('NavigationBack');
+    await sleep(500);
+  }
+  await elementById('SpendingAmountAvailable').waitForDisplayed();
+  await sleep(1000);
+}
 
 describe('@transfer - Transfer', () => {
   let electrum: { waitForSync: () => any; stop: () => void };
@@ -62,6 +76,7 @@ describe('@transfer - Transfer', () => {
   // 	- can change amount
   // 	Advanced
   // 	- can change amount
+  // Can fund a channel at the settled Max (happy path; fee-direction math is unit-tested)
   // Can open a channel to external node
   // 	- open channel to LND
   // 	- send payment
@@ -89,8 +104,10 @@ describe('@transfer - Transfer', () => {
       // can continue with default client balance (0)
       await elementById('SpendingAmountContinue').waitForEnabled();
       await tap('SpendingAmountContinue');
-      await sleep(700);
+      await elementById('SpendingConfirmAdvanced').waitForDisplayed();
+      await sleep(500);
       await tap('SpendingConfirmAdvanced');
+      await sleep(500);
       await tap('SpendingAdvancedMin');
       await expectText('100 000', { strategy: 'contains' });
       await tap('SpendingAdvancedDefault');
@@ -102,9 +119,9 @@ describe('@transfer - Transfer', () => {
       await sleep(1000);
       await tap('SpendingAdvancedNumberField'); // change back to sats
       await tap('SpendingAdvancedContinue');
+      await elementById('SpendingConfirmDefault').waitForDisplayed();
       await sleep(500);
-      await tap('NavigationBack');
-      await sleep(1000);
+      await backToSpendingAmount();
 
       // can continue with max client balance
       await tap('SpendingAmountMax').catch(async () => {
@@ -117,25 +134,30 @@ describe('@transfer - Transfer', () => {
       await sleep(500);
       await tap('SpendingAmountContinue');
       await elementById('SpendingConfirmAdvanced').waitForDisplayed();
-      await tap('NavigationBack');
-      await sleep(1000);
+      await backToSpendingAmount();
 
       // can continue with 25% client balance
-      await elementById('SpendingAmountQuarter').waitForEnabled();
       await tap('SpendingAmountQuarter');
       await elementById('SpendingAmountContinue').waitForEnabled();
       await sleep(500);
       await tap('SpendingAmountContinue');
       await elementById('SpendingConfirmAdvanced').waitForDisplayed();
-      await tap('NavigationBack');
+      await backToSpendingAmount();
       await tap('NavigationBack');
       await sleep(1000);
       await tap('SpendingIntro-button');
       await sleep(2000);
+      await elementById('SpendingAmountAvailable').waitForDisplayed();
+      await elementById('N2').waitForEnabled();
+      await sleep(500);
 
       // can change client balance
       await enterAmount(200000);
+      await sleep(500);
+      await expectText('200 000', { strategy: 'contains' });
       await tap('SpendingAmountContinue');
+      await elementById('SpendingConfirmMore').waitForDisplayed();
+      await sleep(500);
       await expectText('200 000', { strategy: 'contains' });
       await tap('SpendingConfirmMore');
       await expectText('200 000');
@@ -166,10 +188,12 @@ describe('@transfer - Transfer', () => {
       await elementById('SpendingAmountContinue').waitForEnabled();
       await sleep(2000);
       await enterAmount(100000);
+      await sleep(500);
       await tap('SpendingAmountContinue');
       await expectText('100 000', { strategy: 'contains' });
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
+      await elementById('SpendingAdvancedMin').waitForDisplayed();
       await sleep(500);
 
       // Receiving Capacity
@@ -179,33 +203,33 @@ describe('@transfer - Transfer', () => {
       await expectText('2 500');
       await expectText('—', { visible: false });
       await tap('SpendingAdvancedContinue');
-      await sleep(500);
+      await elementById('SpendingConfirmDefault').waitForDisplayed();
       await tap('SpendingConfirmDefault');
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
-      await sleep(500);
+      await elementById('SpendingAdvancedDefault').waitForDisplayed();
 
       // can continue with default amount
       await tap('SpendingAdvancedDefault');
       await sleep(500);
       await expectText('—', { visible: false });
       await tap('SpendingAdvancedContinue');
-      await sleep(500);
+      await elementById('SpendingConfirmDefault').waitForDisplayed();
       await tap('SpendingConfirmDefault');
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
-      await sleep(500);
+      await elementById('SpendingAdvancedMax').waitForDisplayed();
 
       // can continue with max amount
       await tap('SpendingAdvancedMax');
       await sleep(500);
       await expectText('—', { visible: false });
       await tap('SpendingAdvancedContinue');
-      await sleep(500);
+      await elementById('SpendingConfirmDefault').waitForDisplayed();
       await tap('SpendingConfirmDefault');
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
-      await sleep(2000);
+      await elementById('SpendingAdvancedNumberField').waitForDisplayed();
 
       // can set custom amount
       await enterAmount(150000);
@@ -273,6 +297,41 @@ describe('@transfer - Transfer', () => {
       await elementById('Activity-3').waitForDisplayed({ reverse: true });
     }
   );
+
+  ciIt('@transfer_max - Can fund a Blocktank channel at the settled maximum', async () => {
+    await receiveOnchainFunds({ sats: 100_000 });
+
+    await tap('ActivitySavings');
+    await elementById('TransferToSpending').waitForDisplayed();
+    await tap('TransferToSpending');
+    if (await elementById('SpendingIntro-button').isDisplayed().catch(() => false)) {
+      await tap('SpendingIntro-button');
+    }
+
+    await elementById('SpendingAmountAvailable').waitForDisplayed();
+    await elementById('SpendingAmountContinue').waitForEnabled();
+    await elementById('SpendingAmountMax').waitForEnabled();
+    await sleep(500);
+
+    await tap('SpendingAmountMax');
+    await elementById('SpendingAmountContinue').waitForEnabled();
+    await tap('SpendingAmountContinue');
+    await elementById('SpendingConfirmMore').waitForDisplayed();
+    await sleep(500);
+
+    await dragOnElement('GRAB', 'right', 0.95);
+    await elementById('LightningSettingUp').waitForDisplayed();
+    await tap('TransferSuccess-button');
+
+    await expectSavingsBalance(0);
+
+    // Short-0 is already the receive row from `receiveOnchainFunds`. Wait until that
+    // row becomes Short-1 so Short-0 is the transfer, same as @onchain / @transfer_2.
+    await elementById('ActivityShort-0').waitForDisplayed();
+    await elementById('ActivityShort-1').waitForDisplayed();
+    await expectTextWithin('ActivityShort-0', 'Transfer');
+    await expectTextWithin('ActivityShort-1', 'Received');
+  });
 
   ciIt('@transfer_2 - Can open a channel to external node', async () => {
     const rpc = getBitcoinRpc();
