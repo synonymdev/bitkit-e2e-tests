@@ -234,8 +234,8 @@ export async function expectTextWithin(
     }
 
     return strategy === 'exact'
-      ? `.//*[self::XCUIElementTypeStaticText or self::XCUIElementTypeTextView or self::XCUIElementTypeTextField][@label='${text}' or @value='${text}']`
-      : `.//*[self::XCUIElementTypeStaticText or self::XCUIElementTypeTextView or self::XCUIElementTypeTextField][contains(@label,'${text}') or contains(@value,'${text}')]`;
+      ? `.//*[self::XCUIElementTypeStaticText or self::XCUIElementTypeTextView or self::XCUIElementTypeTextField or self::XCUIElementTypeButton][@label='${text}' or @value='${text}']`
+      : `.//*[self::XCUIElementTypeStaticText or self::XCUIElementTypeTextView or self::XCUIElementTypeTextField or self::XCUIElementTypeButton][contains(@label,'${text}') or contains(@value,'${text}')]`;
   })();
 
   if (!visible) {
