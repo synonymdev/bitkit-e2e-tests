@@ -45,7 +45,7 @@ describe('@settings - Settings', () => {
       }
       await expect(fiatSymbol).toHaveText('$');
       if (driver.isIOS) {
-        await waitForToast('BalanceUnitSwitchedToast');
+        await waitForToast('BalanceUnitSwitchedToast', { waitToDisappear: true });
       }
 
       // - change settings (currency to EUR) //

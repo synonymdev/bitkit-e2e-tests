@@ -25,7 +25,7 @@ import {
   editRecipientAddress,
   typeRecipientInput,
   tap,
-  enterAmount,
+  exceedAvailableAmountInputCap,
   verifyAmountToSend,
 } from '../helpers/actions';
 import { lndConfig } from '../helpers/constants';
@@ -145,14 +145,7 @@ describe('@send - Send', () => {
 
     // type amount over balance and verify you cannot continue
     await tap('AddressContinue');
-    await enterAmount(amount + 1);
-    try {
-      await waitForToast('SendAmountExceededToast');
-    } catch {
-      console.warn('SendAmountExceededToast not triggered, trying again...');
-      await elementById('N1').click();
-      await waitForToast('SendAmountExceededToast');
-    }
+    await exceedAvailableAmountInputCap();
     await tap('NavigationBack');
 
     // check validation for unified invoice when balance is enough (10_000 sats)
@@ -265,14 +258,7 @@ describe('@send - Send', () => {
     const { paymentRequest: invoice0 } = await lnd.addInvoice({});
     console.info({ invoice0 });
     await enterAddress(invoice0);
-    await enterAmount(10_000 + 1);
-    try {
-      await waitForToast('SendAmountExceededToast');
-    } catch {
-      console.warn('SendAmountExceededToast not triggered, trying again...');
-      await elementById('N1').click();
-      await waitForToast('SendAmountExceededToast');
-    }
+    await exceedAvailableAmountInputCap();
     await swipeFullScreen('down');
 
     // send to onchain address

@@ -95,11 +95,35 @@ async def raw(payload: str) -> None:
     await send(parsed)
 
 
+def _translate_bridge_timeouts() -> None:
+    """Raise trezorlib's Timeout for a slow bridge, not the requests one.
+
+    protocol_v1.probe drains stale responses with a 0.1s read and relies on
+    catching Timeout to stop. call_bridge lets the requests exception through,
+    which only shows up once the bridge is reached over a link slower than that
+    read timeout.
+    """
+    import requests
+    from trezorlib.transport import Timeout, bridge
+
+    original = bridge.call_bridge
+
+    def call_bridge(*args, **kwargs):
+        try:
+            return original(*args, **kwargs)
+        except requests.exceptions.Timeout as exc:
+            raise Timeout(str(exc)) from exc
+
+    bridge.call_bridge = call_bridge
+
+
 def get_address() -> None:
     from trezorlib import btc, messages
     from trezorlib.client import get_default_client
     from trezorlib.tools import parse_path
     from trezorlib.transport.bridge import BridgeTransport
+
+    _translate_bridge_timeouts()
 
     transport = None
     for _ in range(30):
