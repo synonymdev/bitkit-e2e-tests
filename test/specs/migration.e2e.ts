@@ -658,8 +658,11 @@ async function restoreRnWallet(
     await confirmInputOnKeyboard();
   }
 
-  // Restore wallet
-  await tap('RestoreButton');
+  // Restore wallet (wait explicitly — empty/failed paste leaves RestoreButton hidden)
+  const restoreBtn = await elementById('RestoreButton');
+  await restoreBtn.waitForDisplayed({ timeout: 60_000 });
+  await sleep(150);
+  await restoreBtn.click();
   await waitForSetupWalletScreenFinish();
 
   // Wait for Get Started
