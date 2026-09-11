@@ -479,24 +479,69 @@ export async function getClipboardPlaintext(): Promise<string> {
   return Buffer.from(b64, 'base64').toString('utf8');
 }
 
+/**
+ * Paste text into an iOS field via the simulator pasteboard + Paste menu.
+ *
+ * CI intermittently fails `mobile: setPasteboard` with:
+ *   Process ended with exitcode 60 (cmd: 'xcrun simctl pbcopy <udid>')
+ * Retries that call, then falls back to typeText if the Paste menu never appears
+ * (so RestoreButton waits don't hang after a silent empty paste).
+ */
 export async function pasteIOSText(testId: string, text: string) {
   if (!driver.isIOS) {
     throw new Error('pasteIOSText can only be used on iOS devices');
   }
-  await driver.execute('mobile: setPasteboard', {
-    content: text,
-    encoding: 'utf8',
-  });
+
+  const maxPasteboardAttempts = 4;
+  let lastPasteboardError: unknown;
+  for (let attempt = 1; attempt <= maxPasteboardAttempts; attempt++) {
+    try {
+      await driver.execute('mobile: setPasteboard', {
+        content: text,
+        encoding: 'utf8',
+      });
+      lastPasteboardError = undefined;
+      break;
+    } catch (err) {
+      lastPasteboardError = err;
+      const message = err instanceof Error ? err.message : String(err);
+      const isPbcopyFlake =
+        message.includes('exitcode 60') ||
+        message.includes('pbcopy') ||
+        message.includes('setPasteboard');
+      console.warn(
+        `→ pasteIOSText setPasteboard attempt ${attempt}/${maxPasteboardAttempts} failed: ${message}`
+      );
+      if (!isPbcopyFlake || attempt === maxPasteboardAttempts) {
+        break;
+      }
+      await sleep(500 * attempt);
+    }
+  }
+
+  if (lastPasteboardError) {
+    console.warn('→ pasteIOSText: pasteboard unavailable, falling back to typeText');
+    await typeText(testId, text);
+    return;
+  }
+
   const el = await elementById(testId);
   await el.waitForDisplayed();
   await sleep(500); // Allow time for the element to settle
   await el.click(); // focus the field
   await sleep(200);
   await el.click(); // trigger the paste menu
-  const pasteButton = await elementByText('Paste', 'exact');
-  await pasteButton.waitForDisplayed();
-  await pasteButton.click();
-  await sleep(200); // Allow time for the paste action to propagate
+
+  try {
+    const pasteButton = await elementByText('Paste', 'exact');
+    await pasteButton.waitForDisplayed({ timeout: 5_000 });
+    await pasteButton.click();
+    await sleep(200); // Allow time for the paste action to propagate
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`→ pasteIOSText: Paste menu unavailable (${message}); falling back to typeText`);
+    await typeText(testId, text);
+  }
 }
 
 export async function typeText(testId: string, text: string) {
