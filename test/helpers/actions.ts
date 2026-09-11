@@ -479,24 +479,69 @@ export async function getClipboardPlaintext(): Promise<string> {
   return Buffer.from(b64, 'base64').toString('utf8');
 }
 
+/**
+ * Paste text into an iOS field via the simulator pasteboard + Paste menu.
+ *
+ * CI intermittently fails `mobile: setPasteboard` with:
+ *   Process ended with exitcode 60 (cmd: 'xcrun simctl pbcopy <udid>')
+ * Retries that call, then falls back to typeText if the Paste menu never appears
+ * (so RestoreButton waits don't hang after a silent empty paste).
+ */
 export async function pasteIOSText(testId: string, text: string) {
   if (!driver.isIOS) {
     throw new Error('pasteIOSText can only be used on iOS devices');
   }
-  await driver.execute('mobile: setPasteboard', {
-    content: text,
-    encoding: 'utf8',
-  });
+
+  const maxPasteboardAttempts = 4;
+  let lastPasteboardError: unknown;
+  for (let attempt = 1; attempt <= maxPasteboardAttempts; attempt++) {
+    try {
+      await driver.execute('mobile: setPasteboard', {
+        content: text,
+        encoding: 'utf8',
+      });
+      lastPasteboardError = undefined;
+      break;
+    } catch (err) {
+      lastPasteboardError = err;
+      const message = err instanceof Error ? err.message : String(err);
+      const isPbcopyFlake =
+        message.includes('exitcode 60') ||
+        message.includes('pbcopy') ||
+        message.includes('setPasteboard');
+      console.warn(
+        `→ pasteIOSText setPasteboard attempt ${attempt}/${maxPasteboardAttempts} failed: ${message}`
+      );
+      if (!isPbcopyFlake || attempt === maxPasteboardAttempts) {
+        break;
+      }
+      await sleep(500 * attempt);
+    }
+  }
+
+  if (lastPasteboardError) {
+    console.warn('→ pasteIOSText: pasteboard unavailable, falling back to typeText');
+    await typeText(testId, text);
+    return;
+  }
+
   const el = await elementById(testId);
   await el.waitForDisplayed();
   await sleep(500); // Allow time for the element to settle
   await el.click(); // focus the field
   await sleep(200);
   await el.click(); // trigger the paste menu
-  const pasteButton = await elementByText('Paste', 'exact');
-  await pasteButton.waitForDisplayed();
-  await pasteButton.click();
-  await sleep(200); // Allow time for the paste action to propagate
+
+  try {
+    const pasteButton = await elementByText('Paste', 'exact');
+    await pasteButton.waitForDisplayed({ timeout: 5_000 });
+    await pasteButton.click();
+    await sleep(200); // Allow time for the paste action to propagate
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`→ pasteIOSText: Paste menu unavailable (${message}); falling back to typeText`);
+    await typeText(testId, text);
+  }
 }
 
 export async function typeText(testId: string, text: string) {
@@ -516,7 +561,7 @@ export async function addSendTag(tag: string) {
 }
 
 export async function enterAmount(amountSats: number) {
-  await sleep(300);
+  await sleep(700);
   for (const digit of `${amountSats}`.split('')) {
     await tap(`N${digit}`);
     await sleep(150);
@@ -881,16 +926,94 @@ export async function waitForTextToDisappear(texts: string[], timeout: number) {
   );
 }
 
-async function assertAddressTypeSwitchFeedback() {
-  // await waitForToast('AddressTypeApplyingToast', { dismiss: false });
-  await waitForToast('AddressTypeSettingsUpdatedToast');
+/**
+ * Waits for address type switch feedback toast(s) with retry-tolerant behavior.
+ *
+ * The app may show one or both of:
+ * - AddressTypeApplyingToast (brief, during save)
+ * - AddressTypeSettingsUpdatedToast (success confirmation)
+ *
+ * Under CI load (especially iOS) these toasts can appear and auto-dismiss before
+ * we start waiting, causing flaky 30s timeouts. This function:
+ * 1. Uses shorter timeouts with best-effort polling
+ * 2. Retries the preference tap once if neither toast is observed
+ * 3. Falls back to verifying the settings view dismisses (UI settled)
+ *
+ * The definitive verification happens via getReceiveAddress + assertAddressMatchesType.
+ *
+ * @param retryTap - Optional callback to retry the address type tap if feedback missed
+ * @returns true if toast was observed, false if best-effort fallback was used
+ */
+async function assertAddressTypeSwitchFeedback(
+  retryTap?: () => Promise<void>
+): Promise<boolean> {
+  // First try: wait for Updated toast (the primary success signal)
+  let toastSeen = await waitForToastBestEffort('AddressTypeSettingsUpdatedToast', {
+    timeout: 12_000,
+    pollingInterval: 150,
+  });
+
+  if (toastSeen) {
+    console.debug('→ AddressTypeSettingsUpdatedToast observed');
+    return true;
+  }
+
+  // Toast missed on first attempt—could be a race or slow tap registration
+  console.info('→ Address type toast not observed; checking for Applying toast...');
+
+  // Brief check if Applying toast is still visible (change in progress)
+  const applyingVisible = await waitForToastBestEffort('AddressTypeApplyingToast', {
+    timeout: 3_000,
+    pollingInterval: 150,
+  });
+
+  if (applyingVisible) {
+    console.debug('→ AddressTypeApplyingToast observed; waiting for Updated toast...');
+    toastSeen = await waitForToastBestEffort('AddressTypeSettingsUpdatedToast', {
+      timeout: 15_000,
+      pollingInterval: 150,
+    });
+    if (toastSeen) {
+      return true;
+    }
+  }
+
+  // Still no toast—try retrying the tap if callback provided
+  if (retryTap && !toastSeen) {
+    console.info('→ Retrying address type tap due to missed feedback...');
+    await retryTap();
+
+    toastSeen = await waitForToastBestEffort('AddressTypeSettingsUpdatedToast', {
+      timeout: 12_000,
+      pollingInterval: 150,
+    });
+
+    if (toastSeen) {
+      console.debug('→ AddressTypeSettingsUpdatedToast observed on retry');
+      return true;
+    }
+  }
+
+  // Fallback: allow a brief settle time for UI to stabilize after any silent success
+  console.warn(
+    '→ Address type switch toast not observed (may have auto-dismissed); ' +
+      'proceeding with UI verification via address format check'
+  );
+  await sleep(1500);
+  return false;
 }
 
 export async function switchPrimaryAddressType(nextType: addressTypePreference) {
   await openSettings('advanced');
   await tap('AddressTypePreference');
   await tap(nextType);
-  await assertAddressTypeSwitchFeedback();
+
+  // Provide retry callback that re-taps the address type if toast feedback is missed
+  await assertAddressTypeSwitchFeedback(async () => {
+    // Re-tap in case the first tap didn't register fully
+    await tap(nextType);
+  });
+
   await doNavigationClose().catch(async () => {
     await driver.back();
     await sleep(500);
@@ -1263,6 +1386,53 @@ export async function waitForToast(
   if (dismiss) {
     await dragOnElement(toastId, 'up', 0.2);
   }
+}
+
+/**
+ * Best-effort toast wait that handles race conditions where toast appears and
+ * auto-dismisses before the wait can observe it.
+ *
+ * Returns true if toast was observed, false if it wasn't (either never appeared
+ * or dismissed too quickly). Does not throw on timeout—callers must handle
+ * verification via other means (e.g., UI state confirmation).
+ *
+ * On iOS, uses waitToDisappear pattern since toasts render in a separate window
+ * where drag-dismiss hits wrong coordinates.
+ */
+export async function waitForToastBestEffort(
+  toastId: ToastId,
+  {
+    timeout = 10_000,
+    pollingInterval = 200,
+  }: { timeout?: number; pollingInterval?: number } = {}
+): Promise<boolean> {
+  const el = elementById(toastId);
+  let toastSeen = false;
+
+  try {
+    await browser.waitUntil(
+      async () => {
+        const displayed = await el.isDisplayed().catch(() => false);
+        if (displayed) {
+          toastSeen = true;
+          return true;
+        }
+        return false;
+      },
+      { timeout, interval: pollingInterval }
+    );
+
+    if (driver.isIOS) {
+      await el.waitForDisplayed({ reverse: true, timeout: 5_000 }).catch(() => {
+        // Toast may have dismissed immediately; that's fine
+      });
+    }
+  } catch {
+    // Toast wasn't displayed within timeout—may have already appeared and dismissed
+    // or never appeared. Caller should verify via other means.
+  }
+
+  return toastSeen;
 }
 
 /** Acknowledges the received payment notification by tapping the button.

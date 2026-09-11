@@ -232,7 +232,9 @@ describe('@transfer - Transfer', () => {
       await elementById('SpendingAdvancedNumberField').waitForDisplayed();
 
       // can set custom amount
+      await sleep(500);
       await enterAmount(150000);
+      await sleep(500);
       await tap('SpendingAdvancedContinue');
       await expectTextWithin('SpendingConfirmChannel', '100 000');
       await expectTextWithin('SpendingConfirmChannel', '150 000');
