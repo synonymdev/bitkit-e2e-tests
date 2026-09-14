@@ -261,4 +261,22 @@ describe('@pubky @pubky_profile - Pubky profile', () => {
       }
     );
   });
+
+  // Scanner signup from #1224 / #724. Same @pubky_profile suite; needs BACKEND=regtest
+  // (staging Homegate). Send/manual ignores pubkyauth:// — only the home scanner handles it.
+  // Ring QR (`pubkyring://signup`) and Import-with-Ring stay manual (charter C).
+  describe('Scanner signup (no Ring)', () => {
+    ciIt('@pubky_profile_5 - After profile, home scanner signup says already signed in', async () => {
+      const directSignupUrl =
+        'pubkyauth://direct_signup?hs=ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy';
+
+      await createProfile({ name: 'Signup Scanner' });
+      await doNavigationClose();
+
+      await enterAddressViaScanPrompt(directSignupUrl, { acceptCameraPermission: true });
+      await elementByText('Already signed in', 'exact').waitForDisplayed({ timeout: 15_000 });
+      await expect(elementById('CreateProfileUsername')).not.toBeDisplayed();
+      await expect(elementById('PubkyAuthAuthorize')).not.toBeDisplayed();
+    });
+  });
 });
