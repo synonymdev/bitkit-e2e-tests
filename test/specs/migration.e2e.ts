@@ -99,10 +99,9 @@ describe('@migration - Migration from legacy RN app to native app', () => {
       mnemonic,
       balance,
     });
-    // Backup includes LN channel state after getRnMnemonicWithBackupWait().
-    // Additional wait ensures remote backup propagation before env artifact upload.
-    console.info('→ Waiting 90 seconds to ensure backups fully propagate...');
-    await sleep(90_000);
+    // Wait for backup propagation (tags, activity metadata) before env artifact upload
+    console.info('→ Waiting 40 seconds to ensure backups (incl. tags)...');
+    await sleep(40_000);
   });
 
   ciIt(
@@ -123,10 +122,9 @@ describe('@migration - Migration from legacy RN app to native app', () => {
         mnemonic,
         balance,
       });
-      // Backup includes LN channel state after getRnMnemonicWithBackupWait().
-      // Additional wait ensures remote backup propagation before env artifact upload.
-      console.info('→ Waiting 90 seconds to ensure backups fully propagate...');
-      await sleep(90_000);
+      // Wait for backup propagation (tags, activity metadata) before env artifact upload
+      console.info('→ Waiting 40 seconds to ensure backups (incl. tags)...');
+      await sleep(40_000);
     }
   );
 
@@ -143,10 +141,9 @@ describe('@migration - Migration from legacy RN app to native app', () => {
       mnemonic,
       balance,
     });
-    // Backup includes wallet state after getRnMnemonicWithBackupWait().
-    // Additional wait ensures remote backup propagation before env artifact upload.
-    console.info('→ Waiting 90 seconds to ensure backups fully propagate...');
-    await sleep(90_000);
+    // Wait for backup propagation before env artifact upload
+    console.info('→ Waiting 40 seconds to ensure backups...');
+    await sleep(40_000);
   });
 
   ciIt('@migration_ios - setupLegacyWallet on iOS', async () => {
@@ -167,11 +164,10 @@ describe('@migration - Migration from legacy RN app to native app', () => {
       balance = IOS_RN_BALANCE!;
     } else {
       ({ mnemonic, balance } = await setupLegacyWallet({ returnSeed: true }));
-      // getRnMnemonicWithBackupWait() already waits for backup with channel state.
-      // Additional wait ensures all metadata (tags, LN channel) fully propagates
-      // to remote backup before uninstall — prevents -100k balance and Tag-* flakes.
-      console.info('→ Waiting for RN metadata backup to propagate before uninstall...');
-      await sleep(90_000);
+      // Tags/activity metadata are written AFTER getRnMnemonic()'s backup wait.
+      // Give remote backup time before wipe — otherwise migration_1 Tag-* asserts flake.
+      console.info('→ Waiting for RN metadata backup before uninstall...');
+      await sleep(30_000);
     }
 
     // Uninstall RN app
@@ -194,9 +190,8 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     });
 
     // Balance syncs from Electrum first; tag metadata can lag behind on restore.
-    // Increased wait to ensure LDK backup with channel state is fully restored.
-    console.info('→ Waiting for metadata restore before tag checks...');
-    await sleep(30_000);
+    console.info('→ Waiting briefly for metadata restore before tag checks...');
+    await sleep(15_000);
 
     // Verify migration
     await verifyMigration(balance);
@@ -348,6 +343,13 @@ async function setupLegacyWallet(
   await installLegacyRnApp();
   await createLegacyRnWallet({ passphrase });
 
+  // Get mnemonic early (mnemonic is constant; does not change after channel/backup)
+  let mnemonic: string | undefined;
+  if (returnSeed) {
+    mnemonic = await getRnMnemonic();
+    console.info(`→ Legacy RN wallet mnemonic: ${mnemonic}`);
+  }
+
   // Set legacy address type if requested (before funding)
   if (setLegacyAddress) {
     console.info('→ Setting legacy (p2pkh) address type...');
@@ -368,20 +370,12 @@ async function setupLegacyWallet(
   console.info('→ Step 3: Creating spending balance (channel)...');
   await transferToSpendingRN(TRANSFER_TO_SPENDING_SATS);
 
-  // Assert spending balance is visible before proceeding (channel must exist)
+  // Verify spending balance is visible (channel created)
   console.info('→ Verifying spending balance is visible...');
   await assertRnSpendingBalanceVisible(TRANSFER_TO_SPENDING_SATS);
 
   // Get final balance before migration
   const balance = await getRnTotalBalance();
-
-  // IMPORTANT: Get mnemonic AFTER channel creation so backup includes LN state.
-  // Previously this was called before funding/channel, causing -100k balance on restore.
-  let mnemonic: string | undefined;
-  if (returnSeed) {
-    mnemonic = await getRnMnemonicWithBackupWait();
-    console.info(`→ Legacy RN wallet mnemonic: ${mnemonic}`);
-  }
 
   console.info('=== Legacy wallet setup complete ===');
 
@@ -466,6 +460,13 @@ async function setupWalletWithLegacyFunds(
   await installLegacyRnApp();
   await createLegacyRnWallet();
 
+  // Get mnemonic early (mnemonic is constant; does not change after operations)
+  let mnemonic: string | undefined;
+  if (returnSeed) {
+    mnemonic = await getRnMnemonic();
+    console.info(`→ Legacy RN sweep wallet mnemonic: ${mnemonic}`);
+  }
+
   // 1. Fund wallet on native segwit (works with Blocktank)
   console.info('→ Step 1: Funding wallet on native segwit...');
   await fundRnWallet(SWEEP_INITIAL_FUND_SATS);
@@ -480,13 +481,6 @@ async function setupWalletWithLegacyFunds(
 
   // Get final balance before migration
   const balance = await getRnTotalBalance();
-
-  // IMPORTANT: Get mnemonic AFTER all wallet operations so backup includes full state.
-  let mnemonic: string | undefined;
-  if (returnSeed) {
-    mnemonic = await getRnMnemonicWithBackupWait();
-    console.info(`→ Legacy RN sweep wallet mnemonic: ${mnemonic}`);
-  }
 
   console.info('=== Legacy funds setup complete ===');
 
@@ -940,15 +934,16 @@ async function createCJIT(sats: number): Promise<void> {
  *
  * Improved version with:
  * 1. Wait for balance element to stabilize (confirms home screen is ready)
- * 2. Retry loop with scroll recovery
+ * 2. Retry loop with scroll recovery for ActivityShort-1
  * 3. Fallback to full activity list (ActivityShowAll) if short list doesn't show item
+ * 4. Robust ActivityTag wait with retry/back-and-reopen recovery
  */
 async function tagLatestTransaction(tag: string): Promise<void> {
   // Wait for home screen to be ready - TotalBalance confirms we're on the right screen
   console.info('→ Waiting for home screen to settle before tagging...');
-  await sleep(2_000);
+  await sleep(1_500);
   try {
-    await elementById('TotalBalance').waitForDisplayed({ timeout: 15_000 });
+    await elementById('TotalBalance').waitForDisplayed({ timeout: 10_000 });
   } catch {
     console.info('→ TotalBalance not immediately visible, scrolling down to find it...');
     await swipeFullScreenRN('down');
@@ -956,58 +951,30 @@ async function tagLatestTransaction(tag: string): Promise<void> {
     await elementById('TotalBalance').waitForDisplayed({ timeout: 10_000 });
   }
 
-  // Additional settle time for activity list to populate after balance updates
-  await sleep(3_000);
-
-  // Try to find ActivityShort-1 on home screen (short activity list)
-  let foundActivityItem = false;
-  for (let attempt = 1; attempt <= 5; attempt++) {
+  // Try to find ActivityShort-1, scroll if needed
+  let foundShort = false;
+  for (let attempt = 0; attempt < 5; attempt++) {
     try {
-      await elementById('ActivityShort-1').waitForDisplayed({ timeout: 8_000 });
-      foundActivityItem = true;
-      console.info(`→ Found ActivityShort-1 on attempt ${attempt}`);
+      await elementById('ActivityShort-1').waitForDisplayed({ timeout: 5_000 });
+      foundShort = true;
       break;
     } catch {
-      console.info(`→ ActivityShort-1 not visible (attempt ${attempt}/5), scrolling to find it...`);
-      // Scroll down first to ensure we're at top, then up to reveal activity
-      await swipeFullScreenRN('down');
-      await sleep(500);
+      console.info(`→ Scrolling to find latest transaction... (attempt ${attempt + 1})`);
       await swipeFullScreenRN('up');
-      await sleep(1_000);
-    }
-  }
-
-  if (!foundActivityItem) {
-    // Fallback: Open full activity list via ActivityShowAll
-    console.info('→ ActivityShort-1 not found in short list, trying full activity list...');
-    try {
-      await elementById('ActivityShowAll').waitForDisplayed({ timeout: 10_000 });
-      await tap('ActivityShowAll');
-      await sleep(2_000);
-
-      // In full activity list, look for Activity-1 instead
-      await elementById('Activity-1').waitForDisplayed({ timeout: 15_000 });
-      await tap('Activity-1');
-      foundActivityItem = true;
-      console.info('→ Found Activity-1 in full activity list');
-    } catch (error) {
-      // Last resort: try ActivityShort-1 one more time with longer timeout
-      console.info('→ Full activity list fallback failed, final attempt on ActivityShort-1...');
-      await driver.back(); // Close activity list if it opened
+      await swipeFullScreenRN('up');
       await sleep(500);
-      await swipeFullScreenRN('down');
-      await elementById('ActivityShort-1').waitForDisplayed({ timeout: 45_000 });
-      foundActivityItem = true;
     }
   }
-
-  if (foundActivityItem && !(await elementById('ActivityTag').isDisplayed().catch(() => false))) {
-    // We found activity but haven't tapped it yet (short list path)
-    await tap('ActivityShort-1');
+  if (!foundShort) {
+    // Final longer wait — balance already confirmed, activity row is often just delayed
+    console.info('→ ActivityShort-1 still hidden after scrolls; waiting longer...');
+    await elementById('ActivityShort-1').waitForDisplayed({ timeout: 45_000 });
   }
+
+  // Tap activity item and wait for ActivityTag with retry/recovery
+  await tapActivityAndWaitForTag('ActivityShort-1');
 
   // Add tag
-  await sleep(500);
   await tap('ActivityTag');
   await elementById('TagInput').waitForDisplayed();
   const tagInput = await elementById('TagInput');
@@ -1028,6 +995,54 @@ async function tagLatestTransaction(tag: string): Promise<void> {
   await swipeFullScreenRN('down');
   await swipeFullScreenRN('down');
   console.info(`→ Tagged latest transaction with "${tag}"`);
+}
+
+/**
+ * Tap an activity item and wait for ActivityTag to be displayed.
+ * Retries with back-and-reopen if the tag button doesn't appear.
+ */
+async function tapActivityAndWaitForTag(activityId: string): Promise<void> {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    await tap(activityId);
+    await sleep(500);
+
+    try {
+      await elementById('ActivityTag').waitForDisplayed({ timeout: 10_000 });
+      console.info(`→ ActivityTag displayed on attempt ${attempt}`);
+      return;
+    } catch {
+      console.info(`→ ActivityTag not visible after tap (attempt ${attempt}/3), retrying...`);
+      // Go back and retry tap
+      try {
+        await driver.back();
+        await sleep(500);
+      } catch {
+        // May already be on home screen
+      }
+    }
+  }
+
+  // Final attempt: try full activity list as fallback
+  console.info('→ ActivityTag still not visible, trying full activity list fallback...');
+  try {
+    await swipeFullScreenRN('down');
+    await elementById('ActivityShowAll').waitForDisplayed({ timeout: 5_000 });
+    await tap('ActivityShowAll');
+    await sleep(1_500);
+    await elementById('Activity-1').waitForDisplayed({ timeout: 10_000 });
+    await tap('Activity-1');
+    await sleep(500);
+    await elementById('ActivityTag').waitForDisplayed({ timeout: 15_000 });
+    console.info('→ ActivityTag displayed via full activity list fallback');
+  } catch {
+    // Last resort: one more tap on original activity with longer timeout
+    console.info('→ Fallback failed, final attempt with longer timeout...');
+    await driver.back();
+    await sleep(500);
+    await tap(activityId);
+    await sleep(1_000);
+    await elementById('ActivityTag').waitForDisplayed({ timeout: 30_000 });
+  }
 }
 
 /**
@@ -1055,13 +1070,9 @@ async function assertRnSpendingBalanceVisible(expectedSats: number): Promise<voi
 }
 
 /**
- * Get mnemonic from RN wallet AND ensure backup completes with current wallet state.
- * This version explicitly triggers a backup after reading the mnemonic and waits
- * for the backup to sync (including LN channel state).
- *
- * IMPORTANT: Call this AFTER channel creation to ensure the backup includes LN state.
+ * Get mnemonic from RN wallet settings
  */
-async function getRnMnemonicWithBackupWait(): Promise<string> {
+async function getRnMnemonic(): Promise<string> {
   // Navigate to backup settings
   try {
     await tap('HeaderMenu');
@@ -1089,28 +1100,13 @@ async function getRnMnemonicWithBackupWait(): Promise<string> {
 
   if (!seed) throw new Error('Could not read seed from "SeedContaider"');
   console.info(`→ RN mnemonic retrieved: ${seed}`);
-
-  // Close mnemonic sheet
+  // Close mnemonic sheet using back button - more reliable than swipe for RN
   await dismissSheetRN();
+  // Wait for backup to be performed
+  await sleep(10_000);
 
-  // Wait for backup to include current wallet state (including LN channel).
-  // The backup is triggered by visiting the seed screen. Give it time to sync.
-  console.info('→ Waiting for backup to sync (including LN channel state)...');
-  await sleep(15_000);
-
-  // Re-enter backup settings to trigger another backup cycle and verify it completes.
-  // This ensures the LDK backup with channel state is written to remote.
-  console.info('→ Triggering explicit backup verification...');
-  await elementById('BackupWallet').waitForDisplayed();
-  await tap('BackupWallet');
-  await sleep(2_000);
-  await dismissSheetRN();
-
-  // Wait for backup to fully sync after second trigger
-  console.info('→ Waiting for backup sync to complete...');
-  await sleep(20_000);
-
-  // Navigate back to main screen
+  // Navigate back to main screen using Android back button
+  // ShowMnemonic -> BackupSettings -> Settings -> Main
   await driver.back();
   await sleep(300);
   await driver.back();
