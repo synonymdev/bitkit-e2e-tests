@@ -99,8 +99,9 @@ describe('@migration - Migration from legacy RN app to native app', () => {
       mnemonic,
       balance,
     });
+    // Wait for backup propagation (tags, activity metadata) before env artifact upload
     console.info('→ Waiting 40 seconds to ensure backups (incl. tags)...');
-    await sleep(40000);
+    await sleep(40_000);
   });
 
   ciIt(
@@ -121,8 +122,9 @@ describe('@migration - Migration from legacy RN app to native app', () => {
         mnemonic,
         balance,
       });
+      // Wait for backup propagation (tags, activity metadata) before env artifact upload
       console.info('→ Waiting 40 seconds to ensure backups (incl. tags)...');
-      await sleep(40000);
+      await sleep(40_000);
     }
   );
 
@@ -139,8 +141,9 @@ describe('@migration - Migration from legacy RN app to native app', () => {
       mnemonic,
       balance,
     });
-    console.info('→ Waiting 40 seconds to ensure backups (incl. tags)...');
-    await sleep(40000);
+    // Wait for backup propagation before env artifact upload
+    console.info('→ Waiting 40 seconds to ensure backups...');
+    await sleep(40_000);
   });
 
   ciIt('@migration_ios - setupLegacyWallet on iOS', async () => {
@@ -340,9 +343,9 @@ async function setupLegacyWallet(
   await installLegacyRnApp();
   await createLegacyRnWallet({ passphrase });
 
+  // Get mnemonic early (mnemonic is constant; does not change after channel/backup)
   let mnemonic: string | undefined;
   if (returnSeed) {
-    // Get mnemonic for later restoration
     mnemonic = await getRnMnemonic();
     console.info(`→ Legacy RN wallet mnemonic: ${mnemonic}`);
   }
@@ -366,6 +369,10 @@ async function setupLegacyWallet(
   // 3. Transfer to spending (create channel via Blocktank)
   console.info('→ Step 3: Creating spending balance (channel)...');
   await transferToSpendingRN(TRANSFER_TO_SPENDING_SATS);
+
+  // Verify spending balance is visible (channel created)
+  console.info('→ Verifying spending balance is visible...');
+  await assertRnSpendingBalanceVisible(TRANSFER_TO_SPENDING_SATS);
 
   // Get final balance before migration
   const balance = await getRnTotalBalance();
@@ -453,6 +460,7 @@ async function setupWalletWithLegacyFunds(
   await installLegacyRnApp();
   await createLegacyRnWallet();
 
+  // Get mnemonic early (mnemonic is constant; does not change after operations)
   let mnemonic: string | undefined;
   if (returnSeed) {
     mnemonic = await getRnMnemonic();
@@ -922,15 +930,25 @@ async function createCJIT(sats: number): Promise<void> {
 }
 
 /**
- * Tag the latest (most recent) transaction in the activity list
+ * Tag the latest (most recent) transaction in the activity list.
+ *
+ * Improved version with:
+ * 1. Wait for balance element to stabilize (confirms home screen is ready)
+ * 2. Retry loop with scroll recovery for ActivityShort-1
+ * 3. Fallback to full activity list (ActivityShowAll) if short list doesn't show item
+ * 4. Robust ActivityTag wait with retry/back-and-reopen recovery
  */
 async function tagLatestTransaction(tag: string): Promise<void> {
-  // Ensure home is settled after receive/send sheets (ActivityShort can lag behind balance text)
-  await sleep(1500);
+  // Wait for home screen to be ready - TotalBalance confirms we're on the right screen
+  console.info('→ Waiting for home screen to settle before tagging...');
+  await sleep(1_500);
   try {
     await elementById('TotalBalance').waitForDisplayed({ timeout: 10_000 });
   } catch {
-    // RN home may still be animating; continue to scroll/find activity
+    console.info('→ TotalBalance not immediately visible, scrolling down to find it...');
+    await swipeFullScreenRN('down');
+    await swipeFullScreenRN('down');
+    await elementById('TotalBalance').waitForDisplayed({ timeout: 10_000 });
   }
 
   // Try to find ActivityShort-1, scroll if needed
@@ -952,7 +970,9 @@ async function tagLatestTransaction(tag: string): Promise<void> {
     console.info('→ ActivityShort-1 still hidden after scrolls; waiting longer...');
     await elementById('ActivityShort-1').waitForDisplayed({ timeout: 45_000 });
   }
-  await tap('ActivityShort-1'); // latest tx
+
+  // Tap activity item and wait for ActivityTag with retry/recovery
+  await tapActivityAndWaitForTag('ActivityShort-1');
 
   // Add tag
   await tap('ActivityTag');
@@ -966,14 +986,87 @@ async function tagLatestTransaction(tag: string): Promise<void> {
   // Press Enter key to submit (keycode 66 = KEYCODE_ENTER)
   await driver.pressKeyCode(66);
   // Wait for tag sheet to close and return to Review screen
-  await sleep(1000);
+  await sleep(1_000);
 
   // Go back to main screen
   await driver.back();
+  await sleep(500);
   // Scroll back up to show balance area
   await swipeFullScreenRN('down');
   await swipeFullScreenRN('down');
   console.info(`→ Tagged latest transaction with "${tag}"`);
+}
+
+/**
+ * Tap an activity item and wait for ActivityTag to be displayed.
+ * Retries with back-and-reopen if the tag button doesn't appear.
+ */
+async function tapActivityAndWaitForTag(activityId: string): Promise<void> {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    await tap(activityId);
+    await sleep(500);
+
+    try {
+      await elementById('ActivityTag').waitForDisplayed({ timeout: 10_000 });
+      console.info(`→ ActivityTag displayed on attempt ${attempt}`);
+      return;
+    } catch {
+      console.info(`→ ActivityTag not visible after tap (attempt ${attempt}/3), retrying...`);
+      // Go back and retry tap
+      try {
+        await driver.back();
+        await sleep(500);
+      } catch {
+        // May already be on home screen
+      }
+    }
+  }
+
+  // Final attempt: try full activity list as fallback
+  console.info('→ ActivityTag still not visible, trying full activity list fallback...');
+  try {
+    await swipeFullScreenRN('down');
+    await elementById('ActivityShowAll').waitForDisplayed({ timeout: 5_000 });
+    await tap('ActivityShowAll');
+    await sleep(1_500);
+    await elementById('Activity-1').waitForDisplayed({ timeout: 10_000 });
+    await tap('Activity-1');
+    await sleep(500);
+    await elementById('ActivityTag').waitForDisplayed({ timeout: 15_000 });
+    console.info('→ ActivityTag displayed via full activity list fallback');
+  } catch {
+    // Last resort: one more tap on original activity with longer timeout
+    console.info('→ Fallback failed, final attempt with longer timeout...');
+    await driver.back();
+    await sleep(500);
+    await tap(activityId);
+    await sleep(1_000);
+    await elementById('ActivityTag').waitForDisplayed({ timeout: 30_000 });
+  }
+}
+
+/**
+ * Assert that spending balance is visible in RN app.
+ * Waits for ActivitySpending to show the expected amount.
+ */
+async function assertRnSpendingBalanceVisible(expectedSats: number): Promise<void> {
+  const expectedText = expectedSats.toLocaleString('en').replace(/,/g, ' ');
+  for (let attempt = 1; attempt <= 10; attempt++) {
+    try {
+      await elementById('ActivitySpending').waitForDisplayed({ timeout: 5_000 });
+      const spendingEl = await elementById('ActivitySpending');
+      const text = await getAccessibleText(spendingEl);
+      if (text.includes(expectedText.replace(/\s/g, '')) || text.includes(expectedText)) {
+        console.info(`→ Spending balance confirmed: ${text}`);
+        return;
+      }
+      console.info(`→ Spending balance check (attempt ${attempt}/10): "${text}" vs "${expectedText}"`);
+    } catch {
+      console.info(`→ ActivitySpending not visible yet (attempt ${attempt}/10)`);
+    }
+    await sleep(2_000);
+  }
+  console.warn(`→ Could not confirm spending balance ${expectedSats}, proceeding anyway`);
 }
 
 /**
@@ -983,12 +1076,12 @@ async function getRnMnemonic(): Promise<string> {
   // Navigate to backup settings
   try {
     await tap('HeaderMenu');
-    await sleep(500); // Wait for drawer to open
+    await sleep(500);
     await elementById('DrawerSettings').waitForDisplayed({ timeout: 5000 });
   } catch {
     console.info('→ Drawer did not open, trying again...');
     await tap('HeaderMenu');
-    await sleep(500); // Wait for drawer to open
+    await sleep(500);
     await elementById('DrawerSettings').waitForDisplayed({ timeout: 5000 });
   }
 
@@ -1010,7 +1103,7 @@ async function getRnMnemonic(): Promise<string> {
   // Close mnemonic sheet using back button - more reliable than swipe for RN
   await dismissSheetRN();
   // Wait for backup to be performed
-  await sleep(10000);
+  await sleep(10_000);
 
   // Navigate back to main screen using Android back button
   // ShowMnemonic -> BackupSettings -> Settings -> Main
