@@ -289,6 +289,8 @@ npm run e2e:android -- --mochaOpts.grep "@onchain|@backup|@onboarding"
 npm run e2e:android -- --mochaOpts.grep "@backup" --mochaOpts.invert
 ```
 
+**Local vs staging (CI):** the app merge gate uses `BACKEND=local` and specific tags (`@transfer_2`, not blob `@transfer`). Staging-only cases also carry `@staging` (replaces `@regtest_only`): `@transfer_max`, `@multi_address_2`, `@pubky`. `@transfer_1` is tagged `@staging` but is not on the staging workflow yet. Migration (`@migration_*`) is a separate nightly / dispatch / `release-*` PR workflow.
+
 ---
 
 ### 🤖 CI Helper Scripts
