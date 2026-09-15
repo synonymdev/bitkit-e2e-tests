@@ -32,12 +32,14 @@ import {
   waitForActiveChannel,
   waitForPeerConnection,
 } from '../helpers/lnd';
-import { lndConfig } from '../helpers/constants';
+import { getBackend, lndConfig } from '../helpers/constants';
 import { ensureLocalFunds, getBitcoinRpc, mineBlocks } from '../helpers/regtest';
 
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 import { openSettings } from '../helpers/navigation';
+
+const ciItLocalLsp = getBackend() === 'local' ? ciIt.skip : ciIt;
 
 /** One Back should leave Confirm. iOS sometimes needs a second Back; Android does not. */
 async function backToSpendingAmount() {
@@ -81,7 +83,7 @@ describe('@transfer - Transfer', () => {
   // 	- open channel to LND
   // 	- send payment
   // 	- close the channel
-  ciIt(
+  ciItLocalLsp(
     '@transfer_1 - Can buy a channel from Blocktank with default and custom receive capacity',
     async () => {
       await receiveOnchainFunds({ sats: 1000_000, expectHighBalanceWarning: true });
@@ -300,7 +302,7 @@ describe('@transfer - Transfer', () => {
     }
   );
 
-  ciIt('@transfer_max - Can fund a Blocktank channel at the settled maximum', async () => {
+  ciItLocalLsp('@transfer_max - Can fund a Blocktank channel at the settled maximum', async () => {
     await receiveOnchainFunds({ sats: 100_000 });
 
     await tap('ActivitySavings');
