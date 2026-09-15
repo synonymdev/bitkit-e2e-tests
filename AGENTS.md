@@ -151,8 +151,8 @@ The app merge gate (`e2e.yml` / `e2e-tests.yml`) runs `BACKEND=local` (docker El
 | Tags | Where |
 |---|---|
 | `@transfer_2` | Local only (LND channel, no Blocktank) |
-| `@transfer_1`, `@transfer_max` | Staging only — skipped when `BACKEND=local` so they do not create unpaid stag0 orders |
-| `@multi_address_2`, `@pubky` | Staging |
+| `@transfer_max`, `@multi_address_2`, `@pubky` | Staging (`@staging` next to the main tag). Local grep uses specific tags, not `@transfer`. |
+| `@transfer_1`, `@staging` | Staging-only, not in CI yet — add to `e2e-staging.yml` once it is stable |
 | `@hardware_wallet` | iOS local (connect/receive/on-chain); Android full path on staging |
 | `@migration_*` | Migration workflow (nightly, dispatch, `release-*` PRs) |
 
