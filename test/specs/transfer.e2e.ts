@@ -170,6 +170,15 @@ describe('@transfer - Transfer', () => {
       await doNavigationClose();
       await expect(fiatSymbol).toHaveText('€');
 
+      // Switch display unit back to sats so SpendingAdvancedMin shows "100 000".
+      // Currency stays EUR — later SpendingAdvancedNumberField still asserts ~€450 inbound.
+      await tap('TotalBalance');
+      await sleep(500);
+      await expect(fiatSymbol).toHaveText('₿');
+      if (driver.isIOS) {
+        await waitForToast('BalanceUnitSwitchedToast');
+      }
+
       await sleep(1000);
       await swipeFullScreen('up');
       await sleep(1000);
