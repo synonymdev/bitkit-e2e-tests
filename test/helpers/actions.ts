@@ -1590,6 +1590,27 @@ export async function tryDismissQuickPayIntroIfVisible({
 }
 
 /**
+ * Dismisses the Background Payments timed sheet if it is already visible.
+ * Does nothing if the sheet is not showing. After a Blocktank transfer the
+ * sheet can cover HeaderMenu / Settings (iOS #741 @transfer_1).
+ */
+export async function tryDismissBackgroundPaymentsIfVisible(): Promise<boolean> {
+  const testId = driver.isAndroid
+    ? 'BackgroundPaymentsIntro-later'
+    : 'BackgroundPaymentsDescription';
+  const isVisible = await elementById(testId)
+    .isDisplayed()
+    .catch(() => false);
+  if (!isVisible) {
+    return false;
+  }
+
+  console.info('→ Background Payments sheet visible, dismissing...');
+  await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: false });
+  return true;
+}
+
+/**
  * Acknowledges the high balance warning that appears when wallet balance exceeds a threshold (>$500).
  * This sheet is triggered by onchain balance change if it exceeds a threshold.
  *

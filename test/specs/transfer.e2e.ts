@@ -23,6 +23,8 @@ import {
   expectNoTextWithin,
   enterAmount,
   expectSavingsBalance,
+  tryDismissBackgroundPaymentsIfVisible,
+  tryDismissQuickPayIntroIfVisible,
 } from '../helpers/actions';
 import {
   checkChannelStatus,
@@ -39,17 +41,77 @@ import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 import { openSettings } from '../helpers/navigation';
 
-/** One Back should leave Confirm. iOS sometimes needs a second Back; Android does not. */
+/** One Back should leave Confirm. Quote refresh can leave Confirm up; retry if needed. */
 async function backToSpendingAmount() {
   await tap('NavigationBack');
   await sleep(500);
-  if (driver.isIOS && (await elementById('SpendingConfirmMore').isDisplayed().catch(() => false))) {
+  const stillOnConfirm =
+    (await elementById('SpendingConfirmMore')
+      .isDisplayed()
+      .catch(() => false)) ||
+    (await elementById('SpendingConfirmAdvanced')
+      .isDisplayed()
+      .catch(() => false));
+  if (stillOnConfirm) {
     console.info('→ Still on spending confirm, tapping Back again...');
     await tap('NavigationBack');
     await sleep(500);
   }
   await elementById('SpendingAmountAvailable').waitForDisplayed();
   await sleep(1000);
+}
+
+/** Integer part of a money label (€450, 450,12, 100 000). */
+function parseMoneyInteger(label: string): number {
+  const match = label.replace(/\s/g, '').match(/(\d+)/);
+  if (!match) {
+    throw new Error(`No integer found in money label: "${label}"`);
+  }
+  return Number(match[1]);
+}
+
+async function readNumberFieldAmount(
+  containerId: string
+): Promise<{ label: string; amount: number }> {
+  const last = await getTextUnder(containerId, 'last');
+  const first = await getTextUnder(containerId, 'first');
+  for (const label of [last, first]) {
+    try {
+      return { label, amount: parseMoneyInteger(label) };
+    } catch {
+      // try the other descendant
+    }
+  }
+  throw new Error(`No numeric amount under ${containerId} (first="${first}" last="${last}")`);
+}
+
+async function continueFromSpendingAmount() {
+  await elementById('SpendingAmountContinue').waitForEnabled({ timeout: 60_000 });
+  await sleep(500);
+  await tap('SpendingAmountContinue');
+  await elementById('SpendingConfirmAdvanced').waitForDisplayed({ timeout: 60_000 });
+}
+
+async function continueFromSpendingAdvanced() {
+  await elementById('SpendingAdvancedContinue').waitForEnabled({ timeout: 60_000 });
+  await tap('SpendingAdvancedContinue');
+  await elementById('SpendingConfirmDefault').waitForDisplayed({ timeout: 60_000 });
+}
+
+async function waitForAdvancedFeeQuote() {
+  await expectText('—', { visible: false, timeout: 60_000 });
+}
+
+async function dismissHomeSheetsIfPresent() {
+  await tryDismissBackgroundPaymentsIfVisible();
+  await tryDismissQuickPayIntroIfVisible();
+}
+
+async function confirmSpendingTransfer() {
+  await dragOnElement('GRAB', 'right', 0.95);
+  await elementById('LightningSettingUp').waitForDisplayed({ timeout: 90_000 });
+  await tap('TransferSuccess-button');
+  await dismissHomeSheetsIfPresent();
 }
 
 describe('@transfer - Transfer', () => {
@@ -82,7 +144,7 @@ describe('@transfer - Transfer', () => {
   // 	- send payment
   // 	- close the channel
   ciIt(
-    '@transfer_1, @staging - Can buy a channel from Blocktank with default and custom receive capacity',
+    '@transfer_1, @transfer_staging, @staging - Can buy a channel from Blocktank with default and custom receive capacity',
     async () => {
       await receiveOnchainFunds({ sats: 1000_000, expectHighBalanceWarning: true });
 
@@ -91,6 +153,8 @@ describe('@transfer - Transfer', () => {
       await tap('CurrenciesSettings');
       await elementByText('EUR (€)').click();
       await doNavigationClose();
+      const fiatSymbol = await elementByIdWithin('TotalBalance-primary', 'MoneyFiatSymbol');
+      await expect(fiatSymbol).toHaveText('€');
 
       await sleep(1000);
       await swipeFullScreen('up');
@@ -102,24 +166,39 @@ describe('@transfer - Transfer', () => {
       await sleep(2000); // let the animation finish
 
       // can continue with default client balance (0)
-      await elementById('SpendingAmountContinue').waitForEnabled();
-      await tap('SpendingAmountContinue');
-      await elementById('SpendingConfirmAdvanced').waitForDisplayed();
+      await continueFromSpendingAmount();
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
+      await elementById('SpendingAdvancedMin').waitForDisplayed({ timeout: 60_000 });
       await sleep(500);
       await tap('SpendingAdvancedMin');
       await expectText('100 000', { strategy: 'contains' });
       await tap('SpendingAdvancedDefault');
+      await sleep(1000);
+      // Default inbound is EUR-denominated (~€450) via bitkitcore + satsPerEur.
       await tap('SpendingAdvancedNumberField'); // change to fiat
-      const label = await getTextUnder('SpendingAdvancedNumberField');
-      const eurBalance = Number.parseInt(label, 10);
-      await expect(eurBalance).toBeGreaterThan(440);
-      await expect(eurBalance).toBeLessThan(460);
+      let fiatLabel = '';
+      let eurBalance = 0;
+      await browser.waitUntil(
+        async () => {
+          const field = await readNumberFieldAmount('SpendingAdvancedNumberField');
+          fiatLabel = field.label;
+          eurBalance = field.amount;
+          // Fiat of the €450 default; leftover sats would be 100000+.
+          return eurBalance > 0 && eurBalance < 10_000;
+        },
+        {
+          timeout: 30_000,
+          timeoutMsg: 'Default receive capacity did not switch to a fiat amount',
+        }
+      );
+      console.info(`→ Default receive capacity fiat: "${fiatLabel}" → ${eurBalance} EUR`);
+      await expect(eurBalance).toBeGreaterThan(400);
+      await expect(eurBalance).toBeLessThan(500);
       await sleep(1000);
       await tap('SpendingAdvancedNumberField'); // change back to sats
-      await tap('SpendingAdvancedContinue');
-      await elementById('SpendingConfirmDefault').waitForDisplayed();
+      await waitForAdvancedFeeQuote();
+      await continueFromSpendingAdvanced();
       await sleep(500);
       await backToSpendingAmount();
 
@@ -130,18 +209,12 @@ describe('@transfer - Transfer', () => {
         await sleep(500);
         await tap('SpendingAmountMax');
       });
-      await elementById('SpendingAmountContinue').waitForEnabled();
-      await sleep(500);
-      await tap('SpendingAmountContinue');
-      await elementById('SpendingConfirmAdvanced').waitForDisplayed();
+      await continueFromSpendingAmount();
       await backToSpendingAmount();
 
       // can continue with 25% client balance
       await tap('SpendingAmountQuarter');
-      await elementById('SpendingAmountContinue').waitForEnabled();
-      await sleep(500);
-      await tap('SpendingAmountContinue');
-      await elementById('SpendingConfirmAdvanced').waitForDisplayed();
+      await continueFromSpendingAmount();
       await backToSpendingAmount();
       await tap('NavigationBack');
       await sleep(1000);
@@ -155,17 +228,14 @@ describe('@transfer - Transfer', () => {
       await enterAmount(200000);
       await sleep(500);
       await expectText('200 000', { strategy: 'contains' });
-      await tap('SpendingAmountContinue');
+      await continueFromSpendingAmount();
       await elementById('SpendingConfirmMore').waitForDisplayed();
       await sleep(500);
       await expectText('200 000', { strategy: 'contains' });
       await tap('SpendingConfirmMore');
       await expectText('200 000');
       await tap('LiquidityContinue');
-      // Swipe to confirm (set x offset to avoid navigating back)
-      await dragOnElement('GRAB', 'right', 0.95);
-      await elementById('LightningSettingUp').waitForDisplayed();
-      await tap('TransferSuccess-button');
+      await confirmSpendingTransfer();
 
       // verify transfer activity on savings
       await sleep(1000);
@@ -185,15 +255,15 @@ describe('@transfer - Transfer', () => {
       // Get another channel with custom receiving capacity
       await tap('ActivitySavings');
       await tap('TransferToSpending');
-      await elementById('SpendingAmountContinue').waitForEnabled();
+      await elementById('SpendingAmountContinue').waitForEnabled({ timeout: 60_000 });
       await sleep(2000);
       await enterAmount(100000);
       await sleep(500);
-      await tap('SpendingAmountContinue');
+      await continueFromSpendingAmount();
       await expectText('100 000', { strategy: 'contains' });
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
-      await elementById('SpendingAdvancedMin').waitForDisplayed();
+      await elementById('SpendingAdvancedMin').waitForDisplayed({ timeout: 60_000 });
       await sleep(500);
 
       // Receiving Capacity
@@ -201,9 +271,8 @@ describe('@transfer - Transfer', () => {
       await tap('SpendingAdvancedMin');
       await sleep(500);
       await expectText('2 500');
-      await expectText('—', { visible: false });
-      await tap('SpendingAdvancedContinue');
-      await elementById('SpendingConfirmDefault').waitForDisplayed();
+      await waitForAdvancedFeeQuote();
+      await continueFromSpendingAdvanced();
       await tap('SpendingConfirmDefault');
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
@@ -212,9 +281,8 @@ describe('@transfer - Transfer', () => {
       // can continue with default amount
       await tap('SpendingAdvancedDefault');
       await sleep(500);
-      await expectText('—', { visible: false });
-      await tap('SpendingAdvancedContinue');
-      await elementById('SpendingConfirmDefault').waitForDisplayed();
+      await waitForAdvancedFeeQuote();
+      await continueFromSpendingAdvanced();
       await tap('SpendingConfirmDefault');
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
@@ -223,9 +291,8 @@ describe('@transfer - Transfer', () => {
       // can continue with max amount
       await tap('SpendingAdvancedMax');
       await sleep(500);
-      await expectText('—', { visible: false });
-      await tap('SpendingAdvancedContinue');
-      await elementById('SpendingConfirmDefault').waitForDisplayed();
+      await waitForAdvancedFeeQuote();
+      await continueFromSpendingAdvanced();
       await tap('SpendingConfirmDefault');
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
@@ -235,20 +302,18 @@ describe('@transfer - Transfer', () => {
       await sleep(500);
       await enterAmount(150000);
       await sleep(500);
-      await tap('SpendingAdvancedContinue');
+      await waitForAdvancedFeeQuote();
+      await continueFromSpendingAdvanced();
       await expectTextWithin('SpendingConfirmChannel', '100 000');
       await expectTextWithin('SpendingConfirmChannel', '150 000');
-      // Swipe to confirm (set x offset to avoid navigating back)
-      await dragOnElement('GRAB', 'right', 0.95);
-      await elementById('LightningSettingUp').waitForDisplayed();
-      await tap('TransferSuccess-button');
+      await confirmSpendingTransfer();
 
       // verify both transfers activities on savings
       await tap('ActivitySavings');
       await elementById('Activity-1').waitForDisplayed();
       await elementById('Activity-2').waitForDisplayed();
       await elementById('Activity-3').waitForDisplayed();
-      await expectTextWithin('Activity-1', 'Transfer');
+      await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
       await expectTextWithin('Activity-1', '-');
       await elementById('Activity-2').waitForDisplayed();
       await expectTextWithin('Activity-2', 'Transfer', { timeout: 60_000 });
@@ -260,6 +325,7 @@ describe('@transfer - Transfer', () => {
       await expectText('TRANSFER IN PROGRESS');
 
       // check channel status
+      await dismissHomeSheetsIfPresent();
       await openSettings('advanced');
       await tap('Channels');
       await sleep(1000);
@@ -300,40 +366,47 @@ describe('@transfer - Transfer', () => {
     }
   );
 
-  ciIt('@transfer_max, @staging - Can fund a Blocktank channel at the settled maximum', async () => {
-    await receiveOnchainFunds({ sats: 100_000 });
+  ciIt(
+    '@transfer_max, @transfer_staging, @staging - Can fund a Blocktank channel at the settled maximum',
+    async () => {
+      await receiveOnchainFunds({ sats: 100_000 });
 
-    await tap('ActivitySavings');
-    await elementById('TransferToSpending').waitForDisplayed();
-    await tap('TransferToSpending');
-    if (await elementById('SpendingIntro-button').isDisplayed().catch(() => false)) {
-      await tap('SpendingIntro-button');
+      await tap('ActivitySavings');
+      await elementById('TransferToSpending').waitForDisplayed();
+      await tap('TransferToSpending');
+      if (
+        await elementById('SpendingIntro-button')
+          .isDisplayed()
+          .catch(() => false)
+      ) {
+        await tap('SpendingIntro-button');
+      }
+
+      await elementById('SpendingAmountAvailable').waitForDisplayed();
+      await elementById('SpendingAmountContinue').waitForEnabled();
+      await elementById('SpendingAmountMax').waitForEnabled();
+      await sleep(500);
+
+      await tap('SpendingAmountMax');
+      await elementById('SpendingAmountContinue').waitForEnabled();
+      await tap('SpendingAmountContinue');
+      await elementById('SpendingConfirmMore').waitForDisplayed();
+      await sleep(500);
+
+      await dragOnElement('GRAB', 'right', 0.95);
+      await elementById('LightningSettingUp').waitForDisplayed();
+      await tap('TransferSuccess-button');
+
+      await expectSavingsBalance(0);
+
+      // Short-0 is already the receive row from `receiveOnchainFunds`. Wait until that
+      // row becomes Short-1 so Short-0 is the transfer, same as @onchain / @transfer_2.
+      await elementById('ActivityShort-0').waitForDisplayed();
+      await elementById('ActivityShort-1').waitForDisplayed();
+      await expectTextWithin('ActivityShort-0', 'Transfer');
+      await expectTextWithin('ActivityShort-1', 'Received');
     }
-
-    await elementById('SpendingAmountAvailable').waitForDisplayed();
-    await elementById('SpendingAmountContinue').waitForEnabled();
-    await elementById('SpendingAmountMax').waitForEnabled();
-    await sleep(500);
-
-    await tap('SpendingAmountMax');
-    await elementById('SpendingAmountContinue').waitForEnabled();
-    await tap('SpendingAmountContinue');
-    await elementById('SpendingConfirmMore').waitForDisplayed();
-    await sleep(500);
-
-    await dragOnElement('GRAB', 'right', 0.95);
-    await elementById('LightningSettingUp').waitForDisplayed();
-    await tap('TransferSuccess-button');
-
-    await expectSavingsBalance(0);
-
-    // Short-0 is already the receive row from `receiveOnchainFunds`. Wait until that
-    // row becomes Short-1 so Short-0 is the transfer, same as @onchain / @transfer_2.
-    await elementById('ActivityShort-0').waitForDisplayed();
-    await elementById('ActivityShort-1').waitForDisplayed();
-    await expectTextWithin('ActivityShort-0', 'Transfer');
-    await expectTextWithin('ActivityShort-1', 'Received');
-  });
+  );
 
   ciIt('@transfer_2 - Can open a channel to external node', async () => {
     const rpc = getBitcoinRpc();

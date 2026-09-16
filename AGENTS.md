@@ -148,12 +148,13 @@ Implication for feature work:
 
 The app merge gate (`e2e.yml` / `e2e-tests.yml`) runs `BACKEND=local` (docker Electrum/LND). Staging (`e2e-staging.yml`) and migration (`e2e_migration.yml`) run `BACKEND=regtest` against stag0.
 
-| Tags | Where |
-|---|---|
-| `@transfer_2` | Local only (LND channel, no Blocktank) |
-| `@transfer_max`, `@multi_address_2`, `@pubky` | Staging (`@staging` next to the main tag). Local grep uses specific tags, not `@transfer`. |
-| `@transfer_1`, `@staging` | Staging-only, not in CI yet — add to `e2e-staging.yml` once it is stable |
-| `@hardware_wallet` | iOS local (connect/receive/on-chain); Android full path on staging |
-| `@migration_*` | Migration workflow (nightly, dispatch, `release-*` PRs) |
+| Tags                           | Where                                                                                                                                                                                 |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@transfer_2`                  | Local only (LND channel, no Blocktank)                                                                                                                                                |
+| `@transfer_1`, `@transfer_max` | Staging via `@transfer_staging` (keep `@transfer_1` / `@transfer_max` / `@transfer`). `@transfer_1` is not in app `e2e-staging.yml` yet — add the transfer shard once it is 3× green. |
+| `@multi_address_2`             | Staging via `@multi_address_staging` (keep `@multi_address_2` for other greps). Staging workflow greps `@multi_address_staging` only.                                                 |
+| `@pubky` / `@paykit`           | Staging public-payments via `@pubky_staging` (keep `@pubky` / `@paykit` for other greps).                                                                                             |
+| `@hardware_wallet`             | iOS local (connect/receive/on-chain); Android full path on staging. Do **not** add `@hardware_wallet_staging` — local merge-gate still greps `@hardware_wallet`.                      |
+| `@migration_*`                 | Migration workflow (nightly, dispatch, `release-*` PRs)                                                                                                                               |
 
 Poke staging with `gh workflow run e2e-staging.yml` on the app repo (does not queue the iOS Mini). Optional Slack post to `#bitkit-staging-nightly` via dispatch `post_to_slack`.
