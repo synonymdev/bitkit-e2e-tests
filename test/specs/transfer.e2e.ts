@@ -418,7 +418,6 @@ describe('@transfer - Transfer', () => {
     await dragOnElement('GRAB', 'right', 0.95);
     await elementById('TransferSuccess').waitForDisplayed();
     await tap('TransferSuccess-button');
-    if (driver.isAndroid) await tap('NavigationBack');
     await sleep(1000);
 
     // check channel is closed
