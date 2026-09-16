@@ -44,7 +44,7 @@ import { ciIt } from '../helpers/suite';
 // Covers scenarios from docs/pubky-profile-manual-e2e.md.
 // Each test reinstalls + onboards so any single test can be run in isolation
 // (e.g. `--mochaOpts.grep "@pubky_profile_2"` or `"@pubky_profile_3"`).
-describe('@pubky @pubky_profile, @staging - Pubky profile', () => {
+describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () => {
   beforeEach(async () => {
     await reinstallApp();
     await completeOnboarding();
@@ -266,17 +266,20 @@ describe('@pubky @pubky_profile, @staging - Pubky profile', () => {
   // (staging Homegate). Send/manual ignores pubkyauth:// — only the home scanner handles it.
   // Ring QR (`pubkyring://signup`) and Import-with-Ring stay manual (charter C).
   describe('Scanner signup (no Ring)', () => {
-    ciIt('@pubky_profile_5 - After profile, home scanner signup says already signed in', async () => {
-      const directSignupUrl =
-        'pubkyauth://direct_signup?hs=ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy';
+    ciIt(
+      '@pubky_profile_5 - After profile, home scanner signup says already signed in',
+      async () => {
+        const directSignupUrl =
+          'pubkyauth://direct_signup?hs=ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy';
 
-      await createProfile({ name: 'Signup Scanner' });
-      await doNavigationClose();
+        await createProfile({ name: 'Signup Scanner' });
+        await doNavigationClose();
 
-      await enterAddressViaScanPrompt(directSignupUrl, { acceptCameraPermission: true });
-      await elementByText('Already signed in', 'exact').waitForDisplayed({ timeout: 15_000 });
-      await expect(elementById('CreateProfileUsername')).not.toBeDisplayed();
-      await expect(elementById('PubkyAuthAuthorize')).not.toBeDisplayed();
-    });
+        await enterAddressViaScanPrompt(directSignupUrl, { acceptCameraPermission: true });
+        await elementByText('Already signed in', 'exact').waitForDisplayed({ timeout: 15_000 });
+        await expect(elementById('CreateProfileUsername')).not.toBeDisplayed();
+        await expect(elementById('PubkyAuthAuthorize')).not.toBeDisplayed();
+      }
+    );
   });
 });

@@ -295,7 +295,7 @@ npm run e2e:android -- --mochaOpts.grep "@backup" --mochaOpts.invert
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `@transfer_staging`      | `@transfer_1` and `@transfer_max` (keep those tags plus `@transfer` on the describe). `@transfer_1` is not in app `e2e-staging.yml` yet. |
 | `@multi_address_staging` | Staging multi-address (`@multi_address_2` kept for other greps)                                                                          |
-| `@pubky_staging`         | Public-payments suite (`@pubky` / `@paykit` kept for other greps)                                                                        |
+| `@pubky_staging`         | Public-payments + pubky-profile (`@pubky` / `@paykit` / `@pubky_profile` kept for other greps)                                           |
 | `@hardware_wallet`       | Unchanged — do not add `@hardware_wallet_staging` (iOS local merge-gate still greps this)                                                |
 
 Bare `@staging` may still be present next to those tags. Migration (`@migration_*`) is a separate nightly / dispatch / `release-*` PR workflow.
