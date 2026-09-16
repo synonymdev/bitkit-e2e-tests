@@ -17,6 +17,7 @@ import {
   dismissQuickPayIntro,
   doNavigationClose,
   waitForToast,
+  waitForToastBestEffort,
   getTextUnder,
   acknowledgeExternalSuccess,
   dismissBackgroundPaymentsTimedSheet,
@@ -159,7 +160,9 @@ describe('@transfer - Transfer', () => {
       }
       await expect(fiatSymbol).toHaveText('$');
       if (driver.isIOS) {
-        await waitForToast('BalanceUnitSwitchedToast');
+        // iOS toasts live in a separate window; drag-dismiss hits wrong coords
+        // and races when the toast auto-dismisses. Unit text is the source of truth.
+        await waitForToastBestEffort('BalanceUnitSwitchedToast');
       }
 
       await openSettings();
@@ -172,12 +175,11 @@ describe('@transfer - Transfer', () => {
 
       // Switch display unit back to sats so SpendingAdvancedMin shows "100 000".
       // Currency stays EUR — later SpendingAdvancedNumberField still asserts ~€450 inbound.
+      // Match settings_01: do not hard-wait on BalanceUnitSwitchedToast after the second
+      // tap. A missed/auto-dismissed toast must not fail once MoneyFiatSymbol shows ₿.
       await tap('TotalBalance');
       await sleep(500);
       await expect(fiatSymbol).toHaveText('₿');
-      if (driver.isIOS) {
-        await waitForToast('BalanceUnitSwitchedToast');
-      }
 
       await sleep(1000);
       await swipeFullScreen('up');
