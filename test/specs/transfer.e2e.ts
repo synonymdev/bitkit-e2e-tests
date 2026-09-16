@@ -82,7 +82,7 @@ describe('@transfer - Transfer', () => {
   // 	- send payment
   // 	- close the channel
   ciIt(
-    '@transfer_1 - Can buy a channel from Blocktank with default and custom receive capacity',
+    '@transfer_1, @staging - Can buy a channel from Blocktank with default and custom receive capacity',
     async () => {
       await receiveOnchainFunds({ sats: 1000_000, expectHighBalanceWarning: true });
 
@@ -300,7 +300,7 @@ describe('@transfer - Transfer', () => {
     }
   );
 
-  ciIt('@transfer_max - Can fund a Blocktank channel at the settled maximum', async () => {
+  ciIt('@transfer_max, @staging - Can fund a Blocktank channel at the settled maximum', async () => {
     await receiveOnchainFunds({ sats: 100_000 });
 
     await tap('ActivitySavings');

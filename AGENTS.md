@@ -143,3 +143,17 @@ Implication for feature work:
 - Use `ciIt()` in specs (not `it()`) to enable CI retry-skipping behavior.
 - Keep Android/iOS platform differences behind helpers in `test/helpers/`.
 - Prefer extracting shared flows into `test/helpers/` over copying logic between specs. Keep helpers small and reuse existing ones before adding new test code.
+
+## Local vs staging tags
+
+The app merge gate (`e2e.yml` / `e2e-tests.yml`) runs `BACKEND=local` (docker Electrum/LND). Staging (`e2e-staging.yml`) and migration (`e2e_migration.yml`) run `BACKEND=regtest` against stag0.
+
+| Tags | Where |
+|---|---|
+| `@transfer_2` | Local only (LND channel, no Blocktank) |
+| `@transfer_max`, `@multi_address_2`, `@pubky` | Staging (`@staging` next to the main tag). Local grep uses specific tags, not `@transfer`. |
+| `@transfer_1`, `@staging` | Staging-only, not in CI yet — add to `e2e-staging.yml` once it is stable |
+| `@hardware_wallet` | iOS local (connect/receive/on-chain); Android full path on staging |
+| `@migration_*` | Migration workflow (nightly, dispatch, `release-*` PRs) |
+
+Poke staging with `gh workflow run e2e-staging.yml` on the app repo (does not queue the iOS Mini). Optional Slack post to `#bitkit-staging-nightly` via dispatch `post_to_slack`.

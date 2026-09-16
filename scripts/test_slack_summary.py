@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """Unit tests for slack_summary.py"""
 
+import io
 import os
 import unittest
+import urllib.error
 from unittest.mock import patch
 
 from slack_summary import (
     format_status,
     get_platform_display,
     get_status_icon,
+    post_to_slack,
+    render_e2e_migration_message,
     render_e2e_staging_message,
 )
 
@@ -145,6 +149,83 @@ class TestRenderMessage(unittest.TestCase):
         os.environ["PLATFORM"] = "android"
         message = render_e2e_staging_message()
         self.assertTrue(message.startswith(":white_check_mark: Bitkit Android E2E staging"))
+
+
+class TestRenderMigrationMessage(unittest.TestCase):
+    """Tests for render_e2e_migration_message."""
+
+    def setUp(self):
+        self.env_patcher = patch.dict(os.environ, {}, clear=True)
+        self.env_patcher.start()
+
+    def tearDown(self):
+        self.env_patcher.stop()
+
+    def test_ios_failure_includes_prepare_wallets(self):
+        os.environ.update({
+            "PLATFORM": "ios",
+            "MIGRATION_RESULT": "failure",
+            "BUILD_RESULT": "success",
+            "E2E_BRANCH_RESULT": "success",
+            "PREPARE_WALLETS_RESULT": "success",
+            "E2E_TESTS_RESULT": "failure",
+            "RUN_URL": "https://github.com/synonymdev/bitkit-ios/actions/runs/123",
+            "RUN_ATTEMPT": "1",
+            "E2E_TESTS_REF": "main",
+            "GITHUB_REPOSITORY": "synonymdev/bitkit-ios",
+        })
+
+        message = render_e2e_migration_message()
+
+        self.assertIn(":x: Bitkit iOS E2E migration: failure", message)
+        self.assertIn("build: :white_check_mark: success", message)
+        self.assertIn("prepare-wallets: :white_check_mark: success", message)
+        self.assertIn("e2e-tests: :x: failure", message)
+
+    def test_android_success_omits_prepare_wallets(self):
+        os.environ.update({
+            "PLATFORM": "android",
+            "MIGRATION_RESULT": "success",
+            "BUILD_RESULT": "success",
+            "E2E_BRANCH_RESULT": "success",
+            "E2E_TESTS_RESULT": "success",
+            "RUN_ATTEMPT": "1",
+        })
+
+        message = render_e2e_migration_message()
+
+        self.assertIn(":white_check_mark: Bitkit Android E2E migration: success", message)
+        self.assertIn("build: :white_check_mark: success", message)
+        self.assertIn("e2e-tests: :white_check_mark: success", message)
+        self.assertNotIn("prepare-wallets", message)
+
+
+class TestPostToSlack(unittest.TestCase):
+    """Tests for webhook posting."""
+
+    def setUp(self):
+        self.env_patcher = patch.dict(os.environ, {}, clear=True)
+        self.env_patcher.start()
+
+    def tearDown(self):
+        self.env_patcher.stop()
+
+    def test_missing_webhook_skips(self):
+        self.assertTrue(post_to_slack("hi"))
+
+    def test_http_error_prints_body_and_fails(self):
+        os.environ["SLACK_WEBHOOK_URL"] = "https://hooks.slack.com/services/x"
+        error = urllib.error.HTTPError(
+            "https://hooks.slack.com/services/x",
+            422,
+            "Unprocessable Entity",
+            hdrs={},
+            fp=io.BytesIO(b"invalid_payload"),
+        )
+        with patch("slack_summary.urllib.request.urlopen", side_effect=error):
+            with patch("sys.stderr", new=io.StringIO()) as stderr:
+                self.assertFalse(post_to_slack("hi"))
+                self.assertIn("invalid_payload", stderr.getvalue())
 
 
 if __name__ == "__main__":
