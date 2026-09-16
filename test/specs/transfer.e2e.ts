@@ -148,12 +148,26 @@ describe('@transfer - Transfer', () => {
     async () => {
       await receiveOnchainFunds({ sats: 1000_000, expectHighBalanceWarning: true });
 
-      // switch to EUR
+      // Currency selection alone does not switch the home balance unit off ₿.
+      // Match settings_01: tap TotalBalance until fiat shows, then change currency to EUR.
+      const fiatSymbol = await elementByIdWithin('TotalBalance-primary', 'MoneyFiatSymbol');
+      try {
+        await tap('TotalBalance');
+        await expect(fiatSymbol).toHaveText('$');
+      } catch {
+        await tap('TotalBalance');
+      }
+      await expect(fiatSymbol).toHaveText('$');
+      if (driver.isIOS) {
+        await waitForToast('BalanceUnitSwitchedToast');
+      }
+
       await openSettings();
       await tap('CurrenciesSettings');
-      await elementByText('EUR (€)').click();
+      const eur_opt = await elementByText('EUR (€)');
+      await eur_opt.waitForDisplayed();
+      await eur_opt.click();
       await doNavigationClose();
-      const fiatSymbol = await elementByIdWithin('TotalBalance-primary', 'MoneyFiatSymbol');
       await expect(fiatSymbol).toHaveText('€');
 
       await sleep(1000);
