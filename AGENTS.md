@@ -28,6 +28,7 @@ Android (builds from `../bitkit-android`, copies APK to `./aut/bitkit_e2e.apk`):
 
 # backend selection (local is default)
 BACKEND=regtest ./scripts/build-android-apk.sh
+BACKEND=regtest TREZOR_BRIDGE=true ./scripts/build-android-apk.sh
 ```
 
 iOS (builds from `../bitkit-ios`, copies app to `./aut/Bitkit.app`):
@@ -37,12 +38,14 @@ iOS (builds from `../bitkit-ios`, copies app to `./aut/Bitkit.app`):
 
 # backend selection (local is default)
 BACKEND=regtest ./scripts/build-ios-sim.sh
+BACKEND=regtest TREZOR_BRIDGE=true ./scripts/build-ios-sim.sh
 ```
 
 Notes:
 
 - `BACKEND=local` uses local Electrum (default).
 - `BACKEND=regtest` sets network Electrum against regtest.
+- Override the sibling checkout with `ANDROID_ROOT` / `IOS_ROOT` (worktree) so a dirty or `release-*` tree is left alone.
 
 ### Test fixtures (images for profile avatar, etc.)
 
@@ -91,6 +94,15 @@ Run by tag:
 npm run e2e:android -- --mochaOpts.grep "@backup"
 BACKEND=regtest npm run e2e:android -- --mochaOpts.grep "@migration"
 ```
+
+QA device fixtures (not CI — `test/qa-fixtures/`, never the default spec glob):
+
+```bash
+BACKEND=regtest ./scripts/qa-fixture.sh android empty   # onboard only
+BACKEND=regtest ./scripts/qa-fixture.sh ios full        # funds + spending + profile
+```
+
+Kinds: `empty` | `onchain` | `spending` | `pubky` | `full`. Then overlay the PR build; do not uninstall.
 
 ## CI Helper Scripts
 

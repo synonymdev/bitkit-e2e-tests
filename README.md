@@ -39,6 +39,7 @@ aut/                    # Place your .apk / .app files here (default: bitkit_e2e
 docker/                 # docker compose regtest based backend for Bitkit wallet
 test/
   ├── specs/            # Test suites (e.g., onboarding.e2e.ts)
+  ├── qa-fixtures/      # Local QA device setup (not CI)
   ├── helpers/          # Test helpers: selectors, setup, actions
 tools/                  # QA utilities and small manual test tools
 ```
@@ -101,6 +102,8 @@ TREZOR_BRIDGE=true TREZOR_ELECTRUM_URL=tcp://127.0.0.1:60001 ./scripts/build-ios
 # iOS simulator, staging regtest backend
 BACKEND=regtest TREZOR_BRIDGE=true ./scripts/build-ios-sim.sh
 ```
+
+To build from a worktree instead of `../bitkit-android` / `../bitkit-ios` (dirty or `release-*` checkout), set `ANDROID_ROOT` / `IOS_ROOT`.
 
 ---
 
@@ -299,6 +302,32 @@ npm run e2e:android -- --mochaOpts.grep "@backup" --mochaOpts.invert
 | `@hardware_wallet`       | Unchanged — do not add `@hardware_wallet_staging` (iOS local merge-gate still greps this)                                                |
 
 Bare `@staging` may still be present next to those tags. Migration (`@migration_*`) is a separate nightly / dispatch / `release-*` PR workflow.
+
+---
+
+### QA device fixtures (not CI)
+
+Appium setup for a probe: wipe, onboard, then leave a known wallet on the device. Lives in `test/qa-fixtures/` so a normal `npm run e2e:*` / CI run does not pick it up.
+
+```bash
+# BACKEND must match the AUT
+BACKEND=regtest ./scripts/qa-fixture.sh android empty
+BACKEND=regtest ./scripts/qa-fixture.sh ios full
+```
+
+| Kind | Wallet |
+| --- | --- |
+| `empty` | onboard only — no funds, no profile |
+| `onchain` | savings |
+| `spending` | savings + spending |
+| `pubky` | Paykit UI + profile, no funds, no contacts |
+| `full` | savings + spending + Paykit UI + profile |
+
+Optional: `QA_FIXTURE_ONCHAIN_SATS`, `QA_FIXTURE_SPENDING_SATS`, `QA_FIXTURE_PROFILE_NAME`.
+
+Writes `artifacts/qa-fixture.json` and, with a profile, `artifacts/qa-fixture.pubky`. After it finishes, overlay the PR build (`adb install -r` / sim install — do not uninstall) and start from `TotalBalance-primary`.
+
+iOS: the script pins `SIMULATOR_UDID` to the booted simulator (`SIMULATOR_NAME`, default iPhone 17). Appium `auto` can attach to a physical device; do not leave that unset.
 
 ---
 
