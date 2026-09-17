@@ -42,23 +42,35 @@ import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 import { openSettings } from '../helpers/navigation';
 
+async function isDisplayed(testId: string): Promise<boolean> {
+  return elementById(testId)
+    .isDisplayed()
+    .catch(() => false);
+}
+
+async function firstDisplayed(testIds: readonly string[]): Promise<string | undefined> {
+  for (const testId of testIds) {
+    if (await isDisplayed(testId)) {
+      return testId;
+    }
+  }
+  return undefined;
+}
+
+const SPENDING_AMOUNT_CONFIRM_IDS = ['SpendingConfirmAdvanced', 'SpendingConfirmMore'] as const;
+
 /** One Back should leave Confirm. Quote refresh can leave Confirm up; retry if needed. */
 async function backToSpendingAmount() {
   await tap('NavigationBack');
   await sleep(500);
-  const stillOnConfirm =
-    (await elementById('SpendingConfirmMore')
-      .isDisplayed()
-      .catch(() => false)) ||
-    (await elementById('SpendingConfirmAdvanced')
-      .isDisplayed()
-      .catch(() => false));
+  const stillOnConfirm = Boolean(await firstDisplayed(SPENDING_AMOUNT_CONFIRM_IDS));
   if (stillOnConfirm) {
     console.info('→ Still on spending confirm, tapping Back again...');
     await tap('NavigationBack');
     await sleep(500);
   }
   await elementById('SpendingAmountAvailable').waitForDisplayed();
+  await elementById('SpendingAmountContinue').waitForDisplayed();
   await sleep(1000);
 }
 
@@ -86,17 +98,103 @@ async function readNumberFieldAmount(
   throw new Error(`No numeric amount under ${containerId} (first="${first}" last="${last}")`);
 }
 
+/**
+ * Continue → Confirm can miss on iOS staging after Max / fiat↔sats / quote
+ * refresh: Continue tap lands on a settling screen, a leftover sheet covers
+ * Confirm, or the Continue node goes stale. Retry the tap only while still on
+ * the source screen; do not single-shot wait after one click.
+ */
+async function tapUntilAnyDisplayed(
+  tapId: string,
+  confirmIds: readonly string[],
+  { timeout = 90_000, sourceIds = [] }: { timeout?: number; sourceIds?: readonly string[] } = {}
+): Promise<void> {
+  if (await firstDisplayed(confirmIds)) {
+    return;
+  }
+
+  await elementById(tapId).waitForDisplayed({ timeout: 60_000 });
+  await elementById(tapId).waitForEnabled({ timeout: 60_000 });
+  await sleep(750);
+
+  const deadline = Date.now() + timeout;
+  let attempt = 0;
+  let lastError: unknown;
+
+  while (Date.now() < deadline) {
+    attempt += 1;
+    await dismissHomeSheetsIfPresent();
+
+    if (await firstDisplayed(confirmIds)) {
+      return;
+    }
+
+    const stillOnSource =
+      (await isDisplayed(tapId)) &&
+      (sourceIds.length === 0 || Boolean(await firstDisplayed(sourceIds)));
+    const enabled = stillOnSource
+      ? await elementById(tapId)
+          .isEnabled()
+          .catch(() => false)
+      : false;
+
+    if (stillOnSource && enabled) {
+      try {
+        console.info(`→ Tapping ${tapId} (attempt ${attempt})`);
+        await tap(tapId);
+      } catch (error) {
+        lastError = error;
+        console.info(
+          `→ ${tapId} tap failed (attempt ${attempt}): ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+        await sleep(750);
+        continue;
+      }
+    }
+
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      break;
+    }
+
+    try {
+      await browser.waitUntil(async () => Boolean(await firstDisplayed(confirmIds)), {
+        timeout: Math.min(20_000, remaining),
+        interval: 400,
+        timeoutMsg: `${confirmIds.join('/')} not displayed after ${tapId}`,
+      });
+      return;
+    } catch (error) {
+      lastError = error;
+      console.info(
+        `→ ${confirmIds.join('/')} not shown after ${tapId} (attempt ${attempt}), retrying if still on source screen`
+      );
+      await sleep(500);
+    }
+  }
+
+  const detail = lastError instanceof Error ? ` Last error: ${lastError.message}` : '';
+  throw new Error(`element ("~${confirmIds[0]}") still not displayed after ${timeout}ms.${detail}`);
+}
+
 async function continueFromSpendingAmount() {
-  await elementById('SpendingAmountContinue').waitForEnabled({ timeout: 60_000 });
-  await sleep(500);
-  await tap('SpendingAmountContinue');
-  await elementById('SpendingConfirmAdvanced').waitForDisplayed({ timeout: 60_000 });
+  await tapUntilAnyDisplayed('SpendingAmountContinue', SPENDING_AMOUNT_CONFIRM_IDS, {
+    sourceIds: ['SpendingAmountAvailable'],
+  });
+  // More can paint before Advanced; callers tap Advanced next.
+  if (await isDisplayed('SpendingConfirmAdvanced')) {
+    return;
+  }
+  await dismissHomeSheetsIfPresent();
+  await elementById('SpendingConfirmAdvanced').waitForDisplayed({ timeout: 30_000 });
 }
 
 async function continueFromSpendingAdvanced() {
-  await elementById('SpendingAdvancedContinue').waitForEnabled({ timeout: 60_000 });
-  await tap('SpendingAdvancedContinue');
-  await elementById('SpendingConfirmDefault').waitForDisplayed({ timeout: 60_000 });
+  await tapUntilAnyDisplayed('SpendingAdvancedContinue', ['SpendingConfirmDefault'], {
+    sourceIds: ['SpendingAdvancedNumberField', 'SpendingAdvancedMin', 'SpendingAdvancedDefault'],
+  });
 }
 
 async function waitForAdvancedFeeQuote() {
@@ -473,9 +571,9 @@ describe('@transfer - Transfer', () => {
       await sleep(500);
 
       await tap('SpendingAmountMax');
-      await elementById('SpendingAmountContinue').waitForEnabled();
-      await tap('SpendingAmountContinue');
-      await elementById('SpendingConfirmMore').waitForDisplayed();
+      await tapUntilAnyDisplayed('SpendingAmountContinue', ['SpendingConfirmMore'], {
+        sourceIds: ['SpendingAmountAvailable'],
+      });
       await sleep(500);
 
       await dragOnElement('GRAB', 'right', 0.95);
