@@ -290,6 +290,27 @@ async function waitForHomeAfterConfirmedTransfer({
   );
 }
 
+async function isProcessingPaymentDisplayed(): Promise<boolean> {
+  return elementByText('Processing payment', 'exact')
+    .isDisplayed()
+    .catch(() => false);
+}
+
+/**
+ * Channel detail after a Blocktank buy: "Processing payment" is transient.
+ * Fast settle can skip it by the time Settings → Channels opens; then the
+ * same usable flag as checkChannelStatus (IsUsableYes after swipe up).
+ */
+async function expectProcessingOrUsableChannel() {
+  if (await isProcessingPaymentDisplayed()) {
+    console.info('→ Channel still shows Processing payment');
+    return;
+  }
+  console.info('→ Processing payment not visible; asserting IsUsableYes after swipe');
+  await swipeFullScreen('up');
+  await elementById('IsUsableYes').waitForDisplayed();
+}
+
 /** Home must be settled before savings activity; list rows lag until then. */
 async function openSavingsActivityAfterTransfer() {
   await sleep(1000);
@@ -573,7 +594,7 @@ describe('@transfer - Transfer', () => {
       const channels = await elementsById('Channel');
       channels[driver.isAndroid ? 1 : 0].click();
       await expectTextWithin('TotalSize', '₿ 250 000');
-      await expectText('Processing payment');
+      await expectProcessingOrUsableChannel();
       await doNavigationClose();
 
       // check activities
