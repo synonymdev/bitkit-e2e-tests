@@ -92,6 +92,15 @@ npm run e2e:android -- --mochaOpts.grep "@backup"
 BACKEND=regtest npm run e2e:android -- --mochaOpts.grep "@migration"
 ```
 
+QA device fixtures (not CI — `test/qa-fixtures/`, never the default spec glob):
+
+```bash
+BACKEND=regtest ./scripts/qa-fixture.sh android empty   # onboard only
+BACKEND=regtest ./scripts/qa-fixture.sh ios full        # funds + spending + profile
+```
+
+Kinds: `empty` | `onchain` | `spending` | `pubky` | `full`. Then overlay the PR build; do not uninstall.
+
 ## CI Helper Scripts
 
 These wrap the `npm run e2e:*` commands and capture logs/artifacts:
