@@ -44,9 +44,7 @@ describe('@settings - Settings', () => {
         await tap('TotalBalance');
       }
       await expect(fiatSymbol).toHaveText('$');
-      if (driver.isIOS) {
-        await waitForToast('BalanceUnitSwitchedToast');
-      }
+      await waitForToast('BalanceUnitSwitchedToast');
 
       // - change settings (currency to EUR) //
       await openSettings();
@@ -207,9 +205,7 @@ describe('@settings - Settings', () => {
         await dragOnElement('TotalBalance', 'right', 0.5);
       }
       await elementById('ShowBalance').waitForDisplayed();
-      if (driver.isIOS) {
-        await waitForToast('BalanceHiddenToast', { waitToDisappear: false, dismiss: true });
-      }
+      await waitForToast('BalanceHiddenToast', { waitToDisappear: false, dismiss: true });
 
       // Disable 'swipe to hide balance'
       await openSettings('security');
