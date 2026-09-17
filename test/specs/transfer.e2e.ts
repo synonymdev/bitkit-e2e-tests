@@ -24,6 +24,7 @@ import {
   expectNoTextWithin,
   enterAmount,
   expectSavingsBalance,
+  getAmountUnder,
   tryDismissBackgroundPaymentsIfVisible,
   tryDismissQuickPayIntroIfVisible,
 } from '../helpers/actions';
@@ -208,26 +209,83 @@ async function dismissHomeSheetsIfPresent() {
 
 const TRANSFER_IN_PROGRESS_TIMEOUT = 90_000;
 
+async function isTransferInProgressBannerDisplayed(): Promise<boolean> {
+  return elementByText('TRANSFER IN PROGRESS')
+    .isDisplayed()
+    .catch(() => false);
+}
+
+async function activityShortShowsTransfer(shortId: string): Promise<boolean> {
+  const row = elementById(shortId);
+  if (!(await row.isDisplayed().catch(() => false))) {
+    return false;
+  }
+  if (driver.isIOS) {
+    const label = await row.getAttribute('label').catch(() => '');
+    const value = await row.getAttribute('value').catch(() => '');
+    if (
+      (typeof label === 'string' && label.includes('Transfer')) ||
+      (typeof value === 'string' && value.includes('Transfer'))
+    ) {
+      return true;
+    }
+  }
+  try {
+    const first = await getTextUnder(shortId, 'first');
+    const last = await getTextUnder(shortId, 'last');
+    return first.includes('Transfer') || last.includes('Transfer');
+  } catch {
+    return false;
+  }
+}
+
 /**
- * After TransferSuccess the home banner can lag past the default 30s, or a
- * leftover sheet can cover it. Retry swipe-to-home / sheet dismiss instead of
- * a single expectText.
+ * Home already proves the transfer landed: ActivityShort Transfer row and/or
+ * Spending balance funded. The in-progress banner can be gone by then.
  */
-async function waitForTransferInProgressBanner({
+async function hasSettledTransferOnHome(): Promise<boolean> {
+  for (const shortId of ['ActivityShort-0', 'ActivityShort-1'] as const) {
+    if (await activityShortShowsTransfer(shortId)) {
+      return true;
+    }
+  }
+  if (!(await isDisplayed('ActivitySpending'))) {
+    return false;
+  }
+  try {
+    return (await getAmountUnder('ActivitySpending')) > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * After TransferSuccess, home may still show TRANSFER IN PROGRESS, or the
+ * transfer may already be settled. A leftover sheet can cover either signal —
+ * swipe/dismiss and accept banner OR settled evidence. Do not require the
+ * banner once home already proves the transfer completed.
+ */
+async function waitForHomeAfterConfirmedTransfer({
   timeout = TRANSFER_IN_PROGRESS_TIMEOUT,
 }: { timeout?: number } = {}) {
   await browser.waitUntil(
     async () => {
       await dismissHomeSheetsIfPresent();
       await swipeFullScreen('down');
-      return elementByText('TRANSFER IN PROGRESS')
-        .isDisplayed()
-        .catch(() => false);
+      if (await isTransferInProgressBannerDisplayed()) {
+        return true;
+      }
+      if (await hasSettledTransferOnHome()) {
+        console.info('→ Home already shows settled transfer; not waiting for TRANSFER IN PROGRESS');
+        return true;
+      }
+      return false;
     },
     {
       timeout,
       interval: 3_000,
-      timeoutMsg: 'TRANSFER IN PROGRESS banner did not appear after confirmed transfer',
+      timeoutMsg:
+        'Home did not show TRANSFER IN PROGRESS or settled transfer after confirmed transfer',
     }
   );
 }
@@ -236,7 +294,7 @@ async function waitForTransferInProgressBanner({
 async function openSavingsActivityAfterTransfer() {
   await sleep(1000);
   try {
-    await waitForTransferInProgressBanner();
+    await waitForHomeAfterConfirmedTransfer();
   } catch (error) {
     // Transfer already confirmed on the success sheet; banner is a home-settle
     // signal, not a second product assertion. Open savings if home is usable.
@@ -439,8 +497,8 @@ describe('@transfer - Transfer', () => {
       await tap('NavigationBack');
       await sleep(1000);
 
-      // transfer in progress
-      await waitForTransferInProgressBanner();
+      // transfer in progress — or already settled on home
+      await waitForHomeAfterConfirmedTransfer();
 
       // Get another channel with custom receiving capacity
       await tap('ActivitySavings');
@@ -504,8 +562,8 @@ describe('@transfer - Transfer', () => {
       await tap('NavigationBack');
       await sleep(1000);
 
-      // transfer in progress
-      await waitForTransferInProgressBanner();
+      // transfer in progress — or already settled on home
+      await waitForHomeAfterConfirmedTransfer();
 
       // check channel status
       await dismissHomeSheetsIfPresent();
