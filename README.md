@@ -103,6 +103,8 @@ TREZOR_BRIDGE=true TREZOR_ELECTRUM_URL=tcp://127.0.0.1:60001 ./scripts/build-ios
 BACKEND=regtest TREZOR_BRIDGE=true ./scripts/build-ios-sim.sh
 ```
 
+To build from a worktree instead of `../bitkit-android` / `../bitkit-ios` (dirty or `release-*` checkout), set `ANDROID_ROOT` / `IOS_ROOT`.
+
 ---
 
 ### 🔐 Manual Trezor Emulator Setup

@@ -3,7 +3,7 @@
 #
 # Inputs/roots:
 # - E2E root: this repo (bitkit-e2e-tests)
-# - Android root: ../bitkit-android (resolved relative to this script)
+# - Android root: $ANDROID_ROOT, or ../bitkit-android if unset
 #
 # Output:
 # - Copies dev/regtest debug APK -> aut/bitkit_e2e.apk
@@ -21,7 +21,7 @@
 set -euo pipefail
 
 E2E_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-ANDROID_ROOT="$(cd "$E2E_ROOT/../bitkit-android" && pwd)"
+ANDROID_ROOT="${ANDROID_ROOT:-$(cd "$E2E_ROOT/../bitkit-android" && pwd)}"
 
 BACKEND="${BACKEND:-local}"
 TREZOR_BRIDGE="${TREZOR_BRIDGE:-false}"
