@@ -202,7 +202,7 @@ export async function expectTextWithin(
   } = {}
 ) {
   const parent = elementById(ancestorId);
-  await parent.waitForDisplayed();
+  await parent.waitForDisplayed({ timeout });
 
   if (driver.isIOS) {
     const parentLabel = await parent.getAttribute('label');

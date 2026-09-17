@@ -108,6 +108,40 @@ async function dismissHomeSheetsIfPresent() {
   await tryDismissQuickPayIntroIfVisible();
 }
 
+/** Home must be settled before savings activity; list rows lag until then. */
+async function openSavingsActivityAfterTransfer() {
+  await sleep(1000);
+  await swipeFullScreen('down');
+  await expectText('TRANSFER IN PROGRESS');
+  await tap('ActivitySavings');
+}
+
+/**
+ * Activity-1 starts as the on-chain receive until Transfer is inserted above it
+ * (same race as @transfer_max ActivityShort-0/1). Wait for Transfer labels at
+ * 60s instead of assuming Activity-2/3 exist at the default 30s.
+ */
+async function expectSavingsTransferRows(transferCount: 1 | 2) {
+  switch (transferCount) {
+    case 1:
+      await elementById('Activity-2').waitForDisplayed({ timeout: 60_000 });
+      await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
+      await expectTextWithin('Activity-1', '-');
+      return;
+    case 2:
+      await elementById('Activity-3').waitForDisplayed({ timeout: 60_000 });
+      await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
+      await expectTextWithin('Activity-1', '-');
+      await expectTextWithin('Activity-2', 'Transfer', { timeout: 60_000 });
+      await expectTextWithin('Activity-2', '-');
+      return;
+    default: {
+      const _exhaustive: never = transferCount;
+      throw new Error(`Unexpected transferCount: ${_exhaustive}`);
+    }
+  }
+}
+
 async function confirmSpendingTransfer() {
   await dragOnElement('GRAB', 'right', 0.95);
   await elementById('LightningSettingUp').waitForDisplayed({ timeout: 90_000 });
@@ -263,14 +297,8 @@ describe('@transfer - Transfer', () => {
       await confirmSpendingTransfer();
 
       // verify transfer activity on savings
-      await sleep(1000);
-      await swipeFullScreen('down');
-      await expectText('TRANSFER IN PROGRESS');
-      await tap('ActivitySavings');
-      await elementById('Activity-1').waitForDisplayed();
-      await elementById('Activity-2').waitForDisplayed();
-      await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
-      await expectTextWithin('Activity-1', '-');
+      await openSavingsActivityAfterTransfer();
+      await expectSavingsTransferRows(1);
       await tap('NavigationBack');
       await sleep(1000);
 
@@ -334,15 +362,8 @@ describe('@transfer - Transfer', () => {
       await confirmSpendingTransfer();
 
       // verify both transfers activities on savings
-      await tap('ActivitySavings');
-      await elementById('Activity-1').waitForDisplayed();
-      await elementById('Activity-2').waitForDisplayed();
-      await elementById('Activity-3').waitForDisplayed();
-      await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
-      await expectTextWithin('Activity-1', '-');
-      await elementById('Activity-2').waitForDisplayed();
-      await expectTextWithin('Activity-2', 'Transfer', { timeout: 60_000 });
-      await expectTextWithin('Activity-2', '-');
+      await openSavingsActivityAfterTransfer();
+      await expectSavingsTransferRows(2);
       await tap('NavigationBack');
       await sleep(1000);
 
