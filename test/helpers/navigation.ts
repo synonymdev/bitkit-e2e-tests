@@ -84,6 +84,7 @@ export async function doNavigationClose() {
  * we need to trigger them manually.
  */
 export async function doTriggerTimedSheet() {
+  await elementById('HeaderMenu').waitForDisplayed({ timeout: 45_000 });
   await sleep(700);
   await tap('HeaderMenu');
   await tap('DrawerSettings');
