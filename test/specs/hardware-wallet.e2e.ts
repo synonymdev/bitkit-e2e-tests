@@ -30,7 +30,7 @@ import { ensureLocalFunds, getBackend, getExternalAddress } from '../helpers/reg
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 
-describe('@hardware_wallet - Hardware Wallet', () => {
+describe('@hardware_wallet @ios_gate - Hardware Wallet', () => {
   const walletLabel = 'E2E Trezor';
   const renamedWalletLabel = 'E2E Renamed Trezor';
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;

@@ -41,7 +41,7 @@ import { ciIt } from '../helpers/suite';
 import { ensureLocalFunds, getBitcoinRpc, mineBlocks } from '../helpers/regtest';
 import { openSettings } from '../helpers/navigation';
 
-describe('@lightning - Lightning', () => {
+describe('@lightning @ios_gate - Lightning', () => {
   let electrum: { waitForSync: any; stop: any };
   // LND tests only work with BACKEND=local
   let rpc: ReturnType<typeof getBitcoinRpc>;

@@ -21,7 +21,7 @@ import { ensureLocalFunds } from '../helpers/regtest';
 import { openSettings } from '../helpers/navigation';
 import { deleteAllDefaultWidgets } from '../helpers/widgets';
 
-describe('@backup - Backup', () => {
+describe('@backup @ios_gate - Backup', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
 
   before(async () => {

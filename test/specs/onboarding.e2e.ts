@@ -15,7 +15,7 @@ import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 import { openSettings } from '../helpers/navigation';
 
-describe('@onboarding - Onboarding', () => {
+describe('@onboarding @ios_gate - Onboarding', () => {
   beforeEach(async () => {
     await reinstallApp();
   });

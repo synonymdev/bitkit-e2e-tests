@@ -19,12 +19,12 @@ import {
   waitForToastBestEffort,
   ToastId,
 } from '../helpers/actions';
-import { electrumHost, electrumPort } from '../helpers/constants';
+import { electrumHost, electrumPort, getBackend } from '../helpers/constants';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 import { openSettings, openSupport } from '../helpers/navigation';
 
-describe('@settings - Settings', () => {
+describe('@settings @ios_nightly - Settings', () => {
   before(async () => {
     await reinstallApp();
     await completeOnboarding();
@@ -322,6 +322,11 @@ describe('@settings - Settings', () => {
     });
 
     ciIt('@settings_10 - Can enter wrong Electrum server and get an error message', async () => {
+      if (getBackend() !== 'local') {
+        console.info('→ Skipping Electrum TCP/TLS format checks (BACKEND is not local)');
+        return;
+      }
+
       await openSettings('advanced');
       await tap('ElectrumConfig');
 
