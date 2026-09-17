@@ -208,6 +208,19 @@ async function dismissHomeSheetsIfPresent() {
 }
 
 const TRANSFER_IN_PROGRESS_TIMEOUT = 90_000;
+const ACTIVITY_SHORT_IDS = ['ActivityShort-0', 'ActivityShort-1', 'ActivityShort-2'] as const;
+
+type HomeTransferBaseline = {
+  transferShortCount: number;
+  spendingAmount: number;
+  transferInProgress: boolean;
+};
+
+const EMPTY_HOME_TRANSFER_BASELINE: HomeTransferBaseline = {
+  transferShortCount: 0,
+  spendingAmount: 0,
+  transferInProgress: false,
+};
 
 async function isTransferInProgressBannerDisplayed(): Promise<boolean> {
   return elementByText('TRANSFER IN PROGRESS')
@@ -239,43 +252,77 @@ async function activityShortShowsTransfer(shortId: string): Promise<boolean> {
   }
 }
 
-/**
- * Home already proves the transfer landed: ActivityShort Transfer row and/or
- * Spending balance funded. The in-progress banner can be gone by then.
- */
-async function hasSettledTransferOnHome(): Promise<boolean> {
-  for (const shortId of ['ActivityShort-0', 'ActivityShort-1'] as const) {
+async function countActivityShortTransfers(): Promise<number> {
+  let count = 0;
+  for (const shortId of ACTIVITY_SHORT_IDS) {
     if (await activityShortShowsTransfer(shortId)) {
-      return true;
+      count += 1;
     }
   }
+  return count;
+}
+
+async function readHomeSpendingAmount(): Promise<number> {
   if (!(await isDisplayed('ActivitySpending'))) {
-    return false;
+    return 0;
   }
   try {
-    return (await getAmountUnder('ActivitySpending')) > 0;
+    return await getAmountUnder('ActivitySpending');
   } catch {
-    return false;
+    return 0;
   }
 }
 
+/** Snapshot home Transfer rows / spending / banner before confirmSpendingTransfer. */
+async function snapshotHomeTransferState(): Promise<HomeTransferBaseline> {
+  await dismissHomeSheetsIfPresent();
+  const snapshot: HomeTransferBaseline = {
+    transferShortCount: await countActivityShortTransfers(),
+    spendingAmount: await readHomeSpendingAmount(),
+    transferInProgress: await isTransferInProgressBannerDisplayed(),
+  };
+  console.info(
+    `→ Home transfer baseline: shorts=${snapshot.transferShortCount} spending=${snapshot.spendingAmount} banner=${snapshot.transferInProgress}`
+  );
+  return snapshot;
+}
+
 /**
- * After TransferSuccess, home may still show TRANSFER IN PROGRESS, or the
- * transfer may already be settled. A leftover sheet can cover either signal —
- * swipe/dismiss and accept banner OR settled evidence. Do not require the
- * banner once home already proves the transfer completed.
+ * Home proves the *latest* transfer landed: ActivityShort Transfer count or
+ * Spending amount increased vs the pre-confirm snapshot. Leftover Transfer
+ * rows / already-funded Spending from an earlier buy do not count.
+ */
+async function hasSettledTransferOnHome(
+  baseline: HomeTransferBaseline = EMPTY_HOME_TRANSFER_BASELINE
+): Promise<boolean> {
+  const transferShortCount = await countActivityShortTransfers();
+  if (transferShortCount > baseline.transferShortCount) {
+    return true;
+  }
+  const spendingAmount = await readHomeSpendingAmount();
+  return spendingAmount > baseline.spendingAmount;
+}
+
+/**
+ * After TransferSuccess, home may still show a *fresh* TRANSFER IN PROGRESS,
+ * or the new transfer may already be settled. A leftover sheet can cover
+ * either signal — swipe/dismiss and accept a banner that was not already
+ * showing at baseline, OR settled evidence that advanced past baseline.
+ * Pre-existing Transfer rows are not proof the latest confirm settled.
  */
 async function waitForHomeAfterConfirmedTransfer({
+  baseline = EMPTY_HOME_TRANSFER_BASELINE,
   timeout = TRANSFER_IN_PROGRESS_TIMEOUT,
-}: { timeout?: number } = {}) {
+}: { baseline?: HomeTransferBaseline; timeout?: number } = {}) {
   await browser.waitUntil(
     async () => {
       await dismissHomeSheetsIfPresent();
       await swipeFullScreen('down');
-      if (await isTransferInProgressBannerDisplayed()) {
+      const banner = await isTransferInProgressBannerDisplayed();
+      if (banner && !baseline.transferInProgress) {
         return true;
       }
-      if (await hasSettledTransferOnHome()) {
+      if (await hasSettledTransferOnHome(baseline)) {
         console.info('→ Home already shows settled transfer; not waiting for TRANSFER IN PROGRESS');
         return true;
       }
@@ -285,7 +332,8 @@ async function waitForHomeAfterConfirmedTransfer({
       timeout,
       interval: 3_000,
       timeoutMsg:
-        'Home did not show TRANSFER IN PROGRESS or settled transfer after confirmed transfer',
+        `Home did not show a fresh TRANSFER IN PROGRESS or new settled transfer after confirm ` +
+        `(baseline shorts=${baseline.transferShortCount} spending=${baseline.spendingAmount} banner=${baseline.transferInProgress})`,
     }
   );
 }
@@ -312,17 +360,21 @@ async function expectProcessingOrUsableChannel() {
 }
 
 /** Home must be settled before savings activity; list rows lag until then. */
-async function openSavingsActivityAfterTransfer() {
+async function openSavingsActivityAfterTransfer(
+  baseline: HomeTransferBaseline = EMPTY_HOME_TRANSFER_BASELINE
+) {
   await sleep(1000);
   try {
-    await waitForHomeAfterConfirmedTransfer();
+    await waitForHomeAfterConfirmedTransfer({ baseline });
   } catch (error) {
     // Transfer already confirmed on the success sheet; banner is a home-settle
-    // signal, not a second product assertion. Open savings if home is usable.
+    // signal, not a second product assertion. Open savings if home is usable
+    // *and* settled evidence advanced past the pre-confirm snapshot.
     const savingsReady = await elementById('ActivitySavings')
       .isDisplayed()
       .catch(() => false);
-    if (!savingsReady) {
+    const settledPastBaseline = await hasSettledTransferOnHome(baseline);
+    if (!savingsReady || !settledPastBaseline) {
       throw error;
     }
     console.info(
@@ -431,6 +483,8 @@ describe('@transfer - Transfer', () => {
       await sleep(500);
       await expect(fiatSymbol).toHaveText('₿');
 
+      const homeBeforeFirstTransfer = await snapshotHomeTransferState();
+
       await sleep(1000);
       await swipeFullScreen('up');
       await sleep(1000);
@@ -513,13 +567,14 @@ describe('@transfer - Transfer', () => {
       await confirmSpendingTransfer();
 
       // verify transfer activity on savings
-      await openSavingsActivityAfterTransfer();
+      await openSavingsActivityAfterTransfer(homeBeforeFirstTransfer);
       await expectSavingsTransferRows(1);
       await tap('NavigationBack');
       await sleep(1000);
 
       // transfer in progress — or already settled on home
-      await waitForHomeAfterConfirmedTransfer();
+      await waitForHomeAfterConfirmedTransfer({ baseline: homeBeforeFirstTransfer });
+      const homeBeforeSecondTransfer = await snapshotHomeTransferState();
 
       // Get another channel with custom receiving capacity
       await tap('ActivitySavings');
@@ -578,13 +633,13 @@ describe('@transfer - Transfer', () => {
       await confirmSpendingTransfer();
 
       // verify both transfers activities on savings
-      await openSavingsActivityAfterTransfer();
+      await openSavingsActivityAfterTransfer(homeBeforeSecondTransfer);
       await expectSavingsTransferRows(2);
       await tap('NavigationBack');
       await sleep(1000);
 
       // transfer in progress — or already settled on home
-      await waitForHomeAfterConfirmedTransfer();
+      await waitForHomeAfterConfirmedTransfer({ baseline: homeBeforeSecondTransfer });
 
       // check channel status
       await dismissHomeSheetsIfPresent();
