@@ -202,7 +202,7 @@ export async function expectTextWithin(
   } = {}
 ) {
   const parent = elementById(ancestorId);
-  await parent.waitForDisplayed();
+  await parent.waitForDisplayed({ timeout });
 
   if (driver.isIOS) {
     const parentLabel = await parent.getAttribute('label');
@@ -1490,6 +1490,58 @@ export async function dismissBackgroundPaymentsTimedSheet({
   await sleep(500);
 }
 
+async function isTestIdDisplayed(testId: string): Promise<boolean> {
+  return elementById(testId)
+    .isDisplayed()
+    .catch(() => false);
+}
+
+/**
+ * Timed sheets can already cover home after a deposit or a previous dismiss.
+ * Do not HeaderMenu-trigger over them; wait for HeaderMenu/TotalBalance first.
+ */
+async function triggerTimedSheetUnlessPresent(
+  sheetId: string,
+  triggerTimedSheet: boolean
+): Promise<void> {
+  if (await isTestIdDisplayed(sheetId)) {
+    console.info(`→ ${sheetId} already visible, skipping HeaderMenu trigger`);
+    return;
+  }
+  if (!triggerTimedSheet) {
+    return;
+  }
+
+  await browser.waitUntil(
+    async () =>
+      (await isTestIdDisplayed(sheetId)) ||
+      (await isTestIdDisplayed('HeaderMenu')) ||
+      (await isTestIdDisplayed('TotalBalance')),
+    {
+      timeout: 45_000,
+      timeoutMsg: `${sheetId} or home chrome (HeaderMenu/TotalBalance) not visible before timed-sheet trigger`,
+    }
+  );
+
+  if (await isTestIdDisplayed(sheetId)) {
+    console.info(`→ ${sheetId} appeared while waiting, skipping HeaderMenu trigger`);
+    return;
+  }
+
+  // A queued sheet can surface a moment after the previous dismiss.
+  await sleep(700);
+  if (await isTestIdDisplayed(sheetId)) {
+    console.info(`→ ${sheetId} appeared after settle, skipping HeaderMenu trigger`);
+    return;
+  }
+
+  if (!(await isTestIdDisplayed('HeaderMenu'))) {
+    await elementById('HeaderMenu').waitForDisplayed({ timeout: 15_000 });
+  }
+
+  await doTriggerTimedSheet();
+}
+
 /**
  * Dismisses the backup reminder sheet.
  * This sheet is triggered by first onchain balance change.
@@ -1508,9 +1560,7 @@ export async function dismissBackgroundPaymentsTimedSheet({
 export async function dismissBackupTimedSheet({
   triggerTimedSheet = false,
 }: { triggerTimedSheet?: boolean } = {}) {
-  if (triggerTimedSheet) {
-    await doTriggerTimedSheet();
-  }
+  await triggerTimedSheetUnlessPresent('BackupIntroViewDescription', triggerTimedSheet);
   await elementById('BackupIntroViewDescription').waitForDisplayed();
   await sleep(500); // wait for the app to settle
   await swipeFullScreen('down');
@@ -1590,6 +1640,27 @@ export async function tryDismissQuickPayIntroIfVisible({
 }
 
 /**
+ * Dismisses the Background Payments timed sheet if it is already visible.
+ * Does nothing if the sheet is not showing. After a Blocktank transfer the
+ * sheet can cover HeaderMenu / Settings (iOS #741 @transfer_1).
+ */
+export async function tryDismissBackgroundPaymentsIfVisible(): Promise<boolean> {
+  const testId = driver.isAndroid
+    ? 'BackgroundPaymentsIntro-later'
+    : 'BackgroundPaymentsDescription';
+  const isVisible = await elementById(testId)
+    .isDisplayed()
+    .catch(() => false);
+  if (!isVisible) {
+    return false;
+  }
+
+  console.info('→ Background Payments sheet visible, dismissing...');
+  await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: false });
+  return true;
+}
+
+/**
  * Acknowledges the high balance warning that appears when wallet balance exceeds a threshold (>$500).
  * This sheet is triggered by onchain balance change if it exceeds a threshold.
  *
@@ -1607,9 +1678,7 @@ export async function tryDismissQuickPayIntroIfVisible({
 export async function acknowledgeHighBalanceWarning({
   triggerTimedSheet = false,
 }: { triggerTimedSheet?: boolean } = {}) {
-  if (triggerTimedSheet) {
-    await doTriggerTimedSheet();
-  }
+  await triggerTimedSheetUnlessPresent('HighBalanceSheetDescription', triggerTimedSheet);
   await elementById('HighBalanceSheetDescription').waitForDisplayed();
   await sleep(700); // wait for the app to settle
   await tap('HighBalanceSheetContinue');

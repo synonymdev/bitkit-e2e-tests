@@ -221,7 +221,7 @@ Use this table to verify persistence expectations. Fill in observed behavior if 
   - `@pubky_profile_4` — Wallet A profile edited as a contact on Wallet B remains a local contact edit; restoring Wallet A verifies its own profile was not changed.
   - `@pubky_profile_5` — after create, home-scan `pubkyauth://direct_signup` and expect **Already signed in** (Send/manual does not process signup).
 - **Known gaps in automation**: Ring import, avatar add/remove, scan-QR contact add, paste-from-clipboard contact add, duplicate-add behavior, contacts list header/My Profile row/empty copy, contact refresh behavior, profile/contact field-boundary behavior, and network/error paths.
-- **Tags**: suite `@pubky_profile`; tests `@pubky_profile_1`, `@pubky_profile_2`, …; reserve e.g. `@pubky_ring_required` if you add Ring-specific specs later.
+- **Tags**: suite `@pubky_profile` (also `@pubky_staging` for the staging pubky shard); tests `@pubky_profile_1`, `@pubky_profile_2`, …; reserve e.g. `@pubky_ring_required` if you add Ring-specific specs later.
 - **Use `ciIt()`** instead of `it()` in this suite so it matches the repo’s `ci_run_*` / lockfile retry pattern when you wire runs up.
 - Shared test IDs: **H.1** below. Implementation lives under `test/helpers/` next to other E2E specs.
 

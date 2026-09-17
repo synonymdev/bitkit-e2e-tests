@@ -17,12 +17,16 @@ import {
   dismissQuickPayIntro,
   doNavigationClose,
   waitForToast,
+  waitForToastBestEffort,
   getTextUnder,
   acknowledgeExternalSuccess,
   dismissBackgroundPaymentsTimedSheet,
   expectNoTextWithin,
   enterAmount,
   expectSavingsBalance,
+  getAmountUnder,
+  tryDismissBackgroundPaymentsIfVisible,
+  tryDismissQuickPayIntroIfVisible,
 } from '../helpers/actions';
 import {
   checkChannelStatus,
@@ -39,17 +43,378 @@ import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 import { openSettings } from '../helpers/navigation';
 
-/** One Back should leave Confirm. iOS sometimes needs a second Back; Android does not. */
+async function isDisplayed(testId: string): Promise<boolean> {
+  return elementById(testId)
+    .isDisplayed()
+    .catch(() => false);
+}
+
+async function firstDisplayed(testIds: readonly string[]): Promise<string | undefined> {
+  for (const testId of testIds) {
+    if (await isDisplayed(testId)) {
+      return testId;
+    }
+  }
+  return undefined;
+}
+
+const SPENDING_AMOUNT_CONFIRM_IDS = ['SpendingConfirmAdvanced', 'SpendingConfirmMore'] as const;
+
+/** One Back should leave Confirm. Quote refresh can leave Confirm up; retry if needed. */
 async function backToSpendingAmount() {
   await tap('NavigationBack');
   await sleep(500);
-  if (driver.isIOS && (await elementById('SpendingConfirmMore').isDisplayed().catch(() => false))) {
+  const stillOnConfirm = Boolean(await firstDisplayed(SPENDING_AMOUNT_CONFIRM_IDS));
+  if (stillOnConfirm) {
     console.info('→ Still on spending confirm, tapping Back again...');
     await tap('NavigationBack');
     await sleep(500);
   }
   await elementById('SpendingAmountAvailable').waitForDisplayed();
+  await elementById('SpendingAmountContinue').waitForDisplayed();
   await sleep(1000);
+}
+
+/** Integer part of a money label (€450, 450,12, 100 000). */
+function parseMoneyInteger(label: string): number {
+  const match = label.replace(/\s/g, '').match(/(\d+)/);
+  if (!match) {
+    throw new Error(`No integer found in money label: "${label}"`);
+  }
+  return Number(match[1]);
+}
+
+async function readNumberFieldAmount(
+  containerId: string
+): Promise<{ label: string; amount: number }> {
+  const last = await getTextUnder(containerId, 'last');
+  const first = await getTextUnder(containerId, 'first');
+  for (const label of [last, first]) {
+    try {
+      return { label, amount: parseMoneyInteger(label) };
+    } catch {
+      // try the other descendant
+    }
+  }
+  throw new Error(`No numeric amount under ${containerId} (first="${first}" last="${last}")`);
+}
+
+/**
+ * Continue → Confirm can miss on iOS staging after Max / fiat↔sats / quote
+ * refresh: Continue tap lands on a settling screen, a leftover sheet covers
+ * Confirm, or the Continue node goes stale. Retry the tap only while still on
+ * the source screen; do not single-shot wait after one click.
+ */
+async function tapUntilAnyDisplayed(
+  tapId: string,
+  confirmIds: readonly string[],
+  { timeout = 90_000, sourceIds = [] }: { timeout?: number; sourceIds?: readonly string[] } = {}
+): Promise<void> {
+  if (await firstDisplayed(confirmIds)) {
+    return;
+  }
+
+  await elementById(tapId).waitForDisplayed({ timeout: 60_000 });
+  await elementById(tapId).waitForEnabled({ timeout: 60_000 });
+  await sleep(750);
+
+  const deadline = Date.now() + timeout;
+  let attempt = 0;
+  let lastError: unknown;
+
+  while (Date.now() < deadline) {
+    attempt += 1;
+    await dismissHomeSheetsIfPresent();
+
+    if (await firstDisplayed(confirmIds)) {
+      return;
+    }
+
+    const stillOnSource =
+      (await isDisplayed(tapId)) &&
+      (sourceIds.length === 0 || Boolean(await firstDisplayed(sourceIds)));
+    const enabled = stillOnSource
+      ? await elementById(tapId)
+          .isEnabled()
+          .catch(() => false)
+      : false;
+
+    if (stillOnSource && enabled) {
+      try {
+        console.info(`→ Tapping ${tapId} (attempt ${attempt})`);
+        await tap(tapId);
+      } catch (error) {
+        lastError = error;
+        console.info(
+          `→ ${tapId} tap failed (attempt ${attempt}): ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+        await sleep(750);
+        continue;
+      }
+    }
+
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      break;
+    }
+
+    try {
+      await browser.waitUntil(async () => Boolean(await firstDisplayed(confirmIds)), {
+        timeout: Math.min(20_000, remaining),
+        interval: 400,
+        timeoutMsg: `${confirmIds.join('/')} not displayed after ${tapId}`,
+      });
+      return;
+    } catch (error) {
+      lastError = error;
+      console.info(
+        `→ ${confirmIds.join('/')} not shown after ${tapId} (attempt ${attempt}), retrying if still on source screen`
+      );
+      await sleep(500);
+    }
+  }
+
+  const detail = lastError instanceof Error ? ` Last error: ${lastError.message}` : '';
+  throw new Error(`element ("~${confirmIds[0]}") still not displayed after ${timeout}ms.${detail}`);
+}
+
+async function continueFromSpendingAmount() {
+  await tapUntilAnyDisplayed('SpendingAmountContinue', SPENDING_AMOUNT_CONFIRM_IDS, {
+    sourceIds: ['SpendingAmountAvailable'],
+  });
+  // More can paint before Advanced; callers tap Advanced next.
+  if (await isDisplayed('SpendingConfirmAdvanced')) {
+    return;
+  }
+  await dismissHomeSheetsIfPresent();
+  await elementById('SpendingConfirmAdvanced').waitForDisplayed({ timeout: 30_000 });
+}
+
+async function continueFromSpendingAdvanced() {
+  await tapUntilAnyDisplayed('SpendingAdvancedContinue', ['SpendingConfirmDefault'], {
+    sourceIds: ['SpendingAdvancedNumberField', 'SpendingAdvancedMin', 'SpendingAdvancedDefault'],
+  });
+}
+
+async function waitForAdvancedFeeQuote() {
+  await expectText('—', { visible: false, timeout: 60_000 });
+}
+
+async function dismissHomeSheetsIfPresent() {
+  await tryDismissBackgroundPaymentsIfVisible();
+  await tryDismissQuickPayIntroIfVisible();
+}
+
+const TRANSFER_IN_PROGRESS_TIMEOUT = 90_000;
+const ACTIVITY_SHORT_IDS = ['ActivityShort-0', 'ActivityShort-1', 'ActivityShort-2'] as const;
+
+type HomeTransferBaseline = {
+  transferShortCount: number;
+  spendingAmount: number;
+  transferInProgress: boolean;
+};
+
+const EMPTY_HOME_TRANSFER_BASELINE: HomeTransferBaseline = {
+  transferShortCount: 0,
+  spendingAmount: 0,
+  transferInProgress: false,
+};
+
+async function isTransferInProgressBannerDisplayed(): Promise<boolean> {
+  return elementByText('TRANSFER IN PROGRESS')
+    .isDisplayed()
+    .catch(() => false);
+}
+
+async function activityShortShowsTransfer(shortId: string): Promise<boolean> {
+  const row = elementById(shortId);
+  if (!(await row.isDisplayed().catch(() => false))) {
+    return false;
+  }
+  if (driver.isIOS) {
+    const label = await row.getAttribute('label').catch(() => '');
+    const value = await row.getAttribute('value').catch(() => '');
+    if (
+      (typeof label === 'string' && label.includes('Transfer')) ||
+      (typeof value === 'string' && value.includes('Transfer'))
+    ) {
+      return true;
+    }
+  }
+  try {
+    const first = await getTextUnder(shortId, 'first');
+    const last = await getTextUnder(shortId, 'last');
+    return first.includes('Transfer') || last.includes('Transfer');
+  } catch {
+    return false;
+  }
+}
+
+async function countActivityShortTransfers(): Promise<number> {
+  let count = 0;
+  for (const shortId of ACTIVITY_SHORT_IDS) {
+    if (await activityShortShowsTransfer(shortId)) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+async function readHomeSpendingAmount(): Promise<number> {
+  if (!(await isDisplayed('ActivitySpending'))) {
+    return 0;
+  }
+  try {
+    return await getAmountUnder('ActivitySpending');
+  } catch {
+    return 0;
+  }
+}
+
+/** Snapshot home Transfer rows / spending / banner before confirmSpendingTransfer. */
+async function snapshotHomeTransferState(): Promise<HomeTransferBaseline> {
+  await dismissHomeSheetsIfPresent();
+  const snapshot: HomeTransferBaseline = {
+    transferShortCount: await countActivityShortTransfers(),
+    spendingAmount: await readHomeSpendingAmount(),
+    transferInProgress: await isTransferInProgressBannerDisplayed(),
+  };
+  console.info(
+    `→ Home transfer baseline: shorts=${snapshot.transferShortCount} spending=${snapshot.spendingAmount} banner=${snapshot.transferInProgress}`
+  );
+  return snapshot;
+}
+
+/**
+ * Home proves the *latest* transfer landed: ActivityShort Transfer count or
+ * Spending amount increased vs the pre-confirm snapshot. Leftover Transfer
+ * rows / already-funded Spending from an earlier buy do not count.
+ */
+async function hasSettledTransferOnHome(
+  baseline: HomeTransferBaseline = EMPTY_HOME_TRANSFER_BASELINE
+): Promise<boolean> {
+  const transferShortCount = await countActivityShortTransfers();
+  if (transferShortCount > baseline.transferShortCount) {
+    return true;
+  }
+  const spendingAmount = await readHomeSpendingAmount();
+  return spendingAmount > baseline.spendingAmount;
+}
+
+/**
+ * After TransferSuccess, home may still show a *fresh* TRANSFER IN PROGRESS,
+ * or the new transfer may already be settled. A leftover sheet can cover
+ * either signal — swipe/dismiss and accept a banner that was not already
+ * showing at baseline, OR settled evidence that advanced past baseline.
+ * Pre-existing Transfer rows are not proof the latest confirm settled.
+ */
+async function waitForHomeAfterConfirmedTransfer({
+  baseline = EMPTY_HOME_TRANSFER_BASELINE,
+  timeout = TRANSFER_IN_PROGRESS_TIMEOUT,
+}: { baseline?: HomeTransferBaseline; timeout?: number } = {}) {
+  await browser.waitUntil(
+    async () => {
+      await dismissHomeSheetsIfPresent();
+      await swipeFullScreen('down');
+      const banner = await isTransferInProgressBannerDisplayed();
+      if (banner && !baseline.transferInProgress) {
+        return true;
+      }
+      if (await hasSettledTransferOnHome(baseline)) {
+        console.info('→ Home already shows settled transfer; not waiting for TRANSFER IN PROGRESS');
+        return true;
+      }
+      return false;
+    },
+    {
+      timeout,
+      interval: 3_000,
+      timeoutMsg:
+        `Home did not show a fresh TRANSFER IN PROGRESS or new settled transfer after confirm ` +
+        `(baseline shorts=${baseline.transferShortCount} spending=${baseline.spendingAmount} banner=${baseline.transferInProgress})`,
+    }
+  );
+}
+
+async function isProcessingPaymentDisplayed(): Promise<boolean> {
+  return elementByText('Processing payment', 'exact')
+    .isDisplayed()
+    .catch(() => false);
+}
+
+/**
+ * Channel detail after a Blocktank buy: "Processing payment" is transient.
+ * Fast settle can skip it by the time Settings → Channels opens; then the
+ * same usable flag as checkChannelStatus (IsUsableYes after swipe up).
+ */
+async function expectProcessingOrUsableChannel() {
+  if (await isProcessingPaymentDisplayed()) {
+    console.info('→ Channel still shows Processing payment');
+    return;
+  }
+  console.info('→ Processing payment not visible; asserting IsUsableYes after swipe');
+  await swipeFullScreen('up');
+  await elementById('IsUsableYes').waitForDisplayed();
+}
+
+/** Home must be settled before savings activity; list rows lag until then. */
+async function openSavingsActivityAfterTransfer(
+  baseline: HomeTransferBaseline = EMPTY_HOME_TRANSFER_BASELINE
+) {
+  await sleep(1000);
+  try {
+    await waitForHomeAfterConfirmedTransfer({ baseline });
+  } catch (error) {
+    // Transfer already confirmed on the success sheet; banner is a home-settle
+    // signal, not a second product assertion. Open savings if home is usable
+    // *and* settled evidence advanced past the pre-confirm snapshot.
+    const savingsReady = await elementById('ActivitySavings')
+      .isDisplayed()
+      .catch(() => false);
+    const settledPastBaseline = await hasSettledTransferOnHome(baseline);
+    if (!savingsReady || !settledPastBaseline) {
+      throw error;
+    }
+    console.info(
+      '→ TRANSFER IN PROGRESS lagged after success sheet; opening savings activity from home'
+    );
+  }
+  await tap('ActivitySavings');
+}
+
+/**
+ * Activity-1 starts as the on-chain receive until Transfer is inserted above it
+ * (same race as @transfer_max ActivityShort-0/1). Wait for Transfer labels at
+ * 60s instead of assuming Activity-2/3 exist at the default 30s.
+ */
+async function expectSavingsTransferRows(transferCount: 1 | 2) {
+  switch (transferCount) {
+    case 1:
+      await elementById('Activity-2').waitForDisplayed({ timeout: 60_000 });
+      await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
+      await expectTextWithin('Activity-1', '-');
+      return;
+    case 2:
+      await elementById('Activity-3').waitForDisplayed({ timeout: 60_000 });
+      await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
+      await expectTextWithin('Activity-1', '-');
+      await expectTextWithin('Activity-2', 'Transfer', { timeout: 60_000 });
+      await expectTextWithin('Activity-2', '-');
+      return;
+    default: {
+      const _exhaustive: never = transferCount;
+      throw new Error(`Unexpected transferCount: ${_exhaustive}`);
+    }
+  }
+}
+
+async function confirmSpendingTransfer() {
+  await dragOnElement('GRAB', 'right', 0.95);
+  await elementById('LightningSettingUp').waitForDisplayed({ timeout: 90_000 });
+  await tap('TransferSuccess-button');
+  await dismissHomeSheetsIfPresent();
 }
 
 describe('@transfer - Transfer', () => {
@@ -82,15 +447,43 @@ describe('@transfer - Transfer', () => {
   // 	- send payment
   // 	- close the channel
   ciIt(
-    '@transfer_1, @staging - Can buy a channel from Blocktank with default and custom receive capacity',
+    '@transfer_1, @transfer_staging, @staging - Can buy a channel from Blocktank with default and custom receive capacity',
     async () => {
       await receiveOnchainFunds({ sats: 1000_000, expectHighBalanceWarning: true });
 
-      // switch to EUR
+      // Currency selection alone does not switch the home balance unit off ₿.
+      // Match settings_01: tap TotalBalance until fiat shows, then change currency to EUR.
+      const fiatSymbol = await elementByIdWithin('TotalBalance-primary', 'MoneyFiatSymbol');
+      try {
+        await tap('TotalBalance');
+        await expect(fiatSymbol).toHaveText('$');
+      } catch {
+        await tap('TotalBalance');
+      }
+      await expect(fiatSymbol).toHaveText('$');
+      if (driver.isIOS) {
+        // iOS toasts live in a separate window; drag-dismiss hits wrong coords
+        // and races when the toast auto-dismisses. Unit text is the source of truth.
+        await waitForToastBestEffort('BalanceUnitSwitchedToast');
+      }
+
       await openSettings();
       await tap('CurrenciesSettings');
-      await elementByText('EUR (€)').click();
+      const eur_opt = await elementByText('EUR (€)');
+      await eur_opt.waitForDisplayed();
+      await eur_opt.click();
       await doNavigationClose();
+      await expect(fiatSymbol).toHaveText('€');
+
+      // Switch display unit back to sats so SpendingAdvancedMin shows "100 000".
+      // Currency stays EUR — later SpendingAdvancedNumberField still asserts ~€450 inbound.
+      // Match settings_01: do not hard-wait on BalanceUnitSwitchedToast after the second
+      // tap. A missed/auto-dismissed toast must not fail once MoneyFiatSymbol shows ₿.
+      await tap('TotalBalance');
+      await sleep(500);
+      await expect(fiatSymbol).toHaveText('₿');
+
+      const homeBeforeFirstTransfer = await snapshotHomeTransferState();
 
       await sleep(1000);
       await swipeFullScreen('up');
@@ -102,24 +495,39 @@ describe('@transfer - Transfer', () => {
       await sleep(2000); // let the animation finish
 
       // can continue with default client balance (0)
-      await elementById('SpendingAmountContinue').waitForEnabled();
-      await tap('SpendingAmountContinue');
-      await elementById('SpendingConfirmAdvanced').waitForDisplayed();
+      await continueFromSpendingAmount();
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
+      await elementById('SpendingAdvancedMin').waitForDisplayed({ timeout: 60_000 });
       await sleep(500);
       await tap('SpendingAdvancedMin');
       await expectText('100 000', { strategy: 'contains' });
       await tap('SpendingAdvancedDefault');
+      await sleep(1000);
+      // Default inbound is EUR-denominated (~€450) via bitkitcore + satsPerEur.
       await tap('SpendingAdvancedNumberField'); // change to fiat
-      const label = await getTextUnder('SpendingAdvancedNumberField');
-      const eurBalance = Number.parseInt(label, 10);
-      await expect(eurBalance).toBeGreaterThan(440);
-      await expect(eurBalance).toBeLessThan(460);
+      let fiatLabel = '';
+      let eurBalance = 0;
+      await browser.waitUntil(
+        async () => {
+          const field = await readNumberFieldAmount('SpendingAdvancedNumberField');
+          fiatLabel = field.label;
+          eurBalance = field.amount;
+          // Fiat of the €450 default; leftover sats would be 100000+.
+          return eurBalance > 0 && eurBalance < 10_000;
+        },
+        {
+          timeout: 30_000,
+          timeoutMsg: 'Default receive capacity did not switch to a fiat amount',
+        }
+      );
+      console.info(`→ Default receive capacity fiat: "${fiatLabel}" → ${eurBalance} EUR`);
+      await expect(eurBalance).toBeGreaterThan(400);
+      await expect(eurBalance).toBeLessThan(500);
       await sleep(1000);
       await tap('SpendingAdvancedNumberField'); // change back to sats
-      await tap('SpendingAdvancedContinue');
-      await elementById('SpendingConfirmDefault').waitForDisplayed();
+      await waitForAdvancedFeeQuote();
+      await continueFromSpendingAdvanced();
       await sleep(500);
       await backToSpendingAmount();
 
@@ -130,18 +538,12 @@ describe('@transfer - Transfer', () => {
         await sleep(500);
         await tap('SpendingAmountMax');
       });
-      await elementById('SpendingAmountContinue').waitForEnabled();
-      await sleep(500);
-      await tap('SpendingAmountContinue');
-      await elementById('SpendingConfirmAdvanced').waitForDisplayed();
+      await continueFromSpendingAmount();
       await backToSpendingAmount();
 
       // can continue with 25% client balance
       await tap('SpendingAmountQuarter');
-      await elementById('SpendingAmountContinue').waitForEnabled();
-      await sleep(500);
-      await tap('SpendingAmountContinue');
-      await elementById('SpendingConfirmAdvanced').waitForDisplayed();
+      await continueFromSpendingAmount();
       await backToSpendingAmount();
       await tap('NavigationBack');
       await sleep(1000);
@@ -155,45 +557,37 @@ describe('@transfer - Transfer', () => {
       await enterAmount(200000);
       await sleep(500);
       await expectText('200 000', { strategy: 'contains' });
-      await tap('SpendingAmountContinue');
+      await continueFromSpendingAmount();
       await elementById('SpendingConfirmMore').waitForDisplayed();
       await sleep(500);
       await expectText('200 000', { strategy: 'contains' });
       await tap('SpendingConfirmMore');
       await expectText('200 000');
       await tap('LiquidityContinue');
-      // Swipe to confirm (set x offset to avoid navigating back)
-      await dragOnElement('GRAB', 'right', 0.95);
-      await elementById('LightningSettingUp').waitForDisplayed();
-      await tap('TransferSuccess-button');
+      await confirmSpendingTransfer();
 
       // verify transfer activity on savings
-      await sleep(1000);
-      await swipeFullScreen('down');
-      await expectText('TRANSFER IN PROGRESS');
-      await tap('ActivitySavings');
-      await elementById('Activity-1').waitForDisplayed();
-      await elementById('Activity-2').waitForDisplayed();
-      await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
-      await expectTextWithin('Activity-1', '-');
+      await openSavingsActivityAfterTransfer(homeBeforeFirstTransfer);
+      await expectSavingsTransferRows(1);
       await tap('NavigationBack');
       await sleep(1000);
 
-      // transfer in progress
-      await expectText('TRANSFER IN PROGRESS');
+      // transfer in progress — or already settled on home
+      await waitForHomeAfterConfirmedTransfer({ baseline: homeBeforeFirstTransfer });
+      const homeBeforeSecondTransfer = await snapshotHomeTransferState();
 
       // Get another channel with custom receiving capacity
       await tap('ActivitySavings');
       await tap('TransferToSpending');
-      await elementById('SpendingAmountContinue').waitForEnabled();
+      await elementById('SpendingAmountContinue').waitForEnabled({ timeout: 60_000 });
       await sleep(2000);
       await enterAmount(100000);
       await sleep(500);
-      await tap('SpendingAmountContinue');
+      await continueFromSpendingAmount();
       await expectText('100 000', { strategy: 'contains' });
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
-      await elementById('SpendingAdvancedMin').waitForDisplayed();
+      await elementById('SpendingAdvancedMin').waitForDisplayed({ timeout: 60_000 });
       await sleep(500);
 
       // Receiving Capacity
@@ -201,9 +595,8 @@ describe('@transfer - Transfer', () => {
       await tap('SpendingAdvancedMin');
       await sleep(500);
       await expectText('2 500');
-      await expectText('—', { visible: false });
-      await tap('SpendingAdvancedContinue');
-      await elementById('SpendingConfirmDefault').waitForDisplayed();
+      await waitForAdvancedFeeQuote();
+      await continueFromSpendingAdvanced();
       await tap('SpendingConfirmDefault');
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
@@ -212,9 +605,8 @@ describe('@transfer - Transfer', () => {
       // can continue with default amount
       await tap('SpendingAdvancedDefault');
       await sleep(500);
-      await expectText('—', { visible: false });
-      await tap('SpendingAdvancedContinue');
-      await elementById('SpendingConfirmDefault').waitForDisplayed();
+      await waitForAdvancedFeeQuote();
+      await continueFromSpendingAdvanced();
       await tap('SpendingConfirmDefault');
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
@@ -223,9 +615,8 @@ describe('@transfer - Transfer', () => {
       // can continue with max amount
       await tap('SpendingAdvancedMax');
       await sleep(500);
-      await expectText('—', { visible: false });
-      await tap('SpendingAdvancedContinue');
-      await elementById('SpendingConfirmDefault').waitForDisplayed();
+      await waitForAdvancedFeeQuote();
+      await continueFromSpendingAdvanced();
       await tap('SpendingConfirmDefault');
       await sleep(500);
       await tap('SpendingConfirmAdvanced');
@@ -235,38 +626,30 @@ describe('@transfer - Transfer', () => {
       await sleep(500);
       await enterAmount(150000);
       await sleep(500);
-      await tap('SpendingAdvancedContinue');
+      await waitForAdvancedFeeQuote();
+      await continueFromSpendingAdvanced();
       await expectTextWithin('SpendingConfirmChannel', '100 000');
       await expectTextWithin('SpendingConfirmChannel', '150 000');
-      // Swipe to confirm (set x offset to avoid navigating back)
-      await dragOnElement('GRAB', 'right', 0.95);
-      await elementById('LightningSettingUp').waitForDisplayed();
-      await tap('TransferSuccess-button');
+      await confirmSpendingTransfer();
 
       // verify both transfers activities on savings
-      await tap('ActivitySavings');
-      await elementById('Activity-1').waitForDisplayed();
-      await elementById('Activity-2').waitForDisplayed();
-      await elementById('Activity-3').waitForDisplayed();
-      await expectTextWithin('Activity-1', 'Transfer');
-      await expectTextWithin('Activity-1', '-');
-      await elementById('Activity-2').waitForDisplayed();
-      await expectTextWithin('Activity-2', 'Transfer', { timeout: 60_000 });
-      await expectTextWithin('Activity-2', '-');
+      await openSavingsActivityAfterTransfer(homeBeforeSecondTransfer);
+      await expectSavingsTransferRows(2);
       await tap('NavigationBack');
       await sleep(1000);
 
-      // transfer in progress
-      await expectText('TRANSFER IN PROGRESS');
+      // transfer in progress — or already settled on home
+      await waitForHomeAfterConfirmedTransfer({ baseline: homeBeforeSecondTransfer });
 
       // check channel status
+      await dismissHomeSheetsIfPresent();
       await openSettings('advanced');
       await tap('Channels');
       await sleep(1000);
       const channels = await elementsById('Channel');
       channels[driver.isAndroid ? 1 : 0].click();
       await expectTextWithin('TotalSize', '₿ 250 000');
-      await expectText('Processing payment');
+      await expectProcessingOrUsableChannel();
       await doNavigationClose();
 
       // check activities
@@ -300,40 +683,47 @@ describe('@transfer - Transfer', () => {
     }
   );
 
-  ciIt('@transfer_max, @staging - Can fund a Blocktank channel at the settled maximum', async () => {
-    await receiveOnchainFunds({ sats: 100_000 });
+  ciIt(
+    '@transfer_max, @transfer_staging, @staging - Can fund a Blocktank channel at the settled maximum',
+    async () => {
+      await receiveOnchainFunds({ sats: 100_000 });
 
-    await tap('ActivitySavings');
-    await elementById('TransferToSpending').waitForDisplayed();
-    await tap('TransferToSpending');
-    if (await elementById('SpendingIntro-button').isDisplayed().catch(() => false)) {
-      await tap('SpendingIntro-button');
+      await tap('ActivitySavings');
+      await elementById('TransferToSpending').waitForDisplayed();
+      await tap('TransferToSpending');
+      if (
+        await elementById('SpendingIntro-button')
+          .isDisplayed()
+          .catch(() => false)
+      ) {
+        await tap('SpendingIntro-button');
+      }
+
+      await elementById('SpendingAmountAvailable').waitForDisplayed();
+      await elementById('SpendingAmountContinue').waitForEnabled();
+      await elementById('SpendingAmountMax').waitForEnabled();
+      await sleep(500);
+
+      await tap('SpendingAmountMax');
+      await tapUntilAnyDisplayed('SpendingAmountContinue', ['SpendingConfirmMore'], {
+        sourceIds: ['SpendingAmountAvailable'],
+      });
+      await sleep(500);
+
+      await dragOnElement('GRAB', 'right', 0.95);
+      await elementById('LightningSettingUp').waitForDisplayed();
+      await tap('TransferSuccess-button');
+
+      await expectSavingsBalance(0);
+
+      // Short-0 is already the receive row from `receiveOnchainFunds`. Wait until that
+      // row becomes Short-1 so Short-0 is the transfer, same as @onchain / @transfer_2.
+      await elementById('ActivityShort-0').waitForDisplayed();
+      await elementById('ActivityShort-1').waitForDisplayed();
+      await expectTextWithin('ActivityShort-0', 'Transfer');
+      await expectTextWithin('ActivityShort-1', 'Received');
     }
-
-    await elementById('SpendingAmountAvailable').waitForDisplayed();
-    await elementById('SpendingAmountContinue').waitForEnabled();
-    await elementById('SpendingAmountMax').waitForEnabled();
-    await sleep(500);
-
-    await tap('SpendingAmountMax');
-    await elementById('SpendingAmountContinue').waitForEnabled();
-    await tap('SpendingAmountContinue');
-    await elementById('SpendingConfirmMore').waitForDisplayed();
-    await sleep(500);
-
-    await dragOnElement('GRAB', 'right', 0.95);
-    await elementById('LightningSettingUp').waitForDisplayed();
-    await tap('TransferSuccess-button');
-
-    await expectSavingsBalance(0);
-
-    // Short-0 is already the receive row from `receiveOnchainFunds`. Wait until that
-    // row becomes Short-1 so Short-0 is the transfer, same as @onchain / @transfer_2.
-    await elementById('ActivityShort-0').waitForDisplayed();
-    await elementById('ActivityShort-1').waitForDisplayed();
-    await expectTextWithin('ActivityShort-0', 'Transfer');
-    await expectTextWithin('ActivityShort-1', 'Received');
-  });
+  );
 
   ciIt('@transfer_2 - Can open a channel to external node', async () => {
     const rpc = getBitcoinRpc();
