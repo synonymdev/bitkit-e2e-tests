@@ -50,11 +50,8 @@ import { openSettings } from '../helpers/navigation';
 
 describe('@send - Send', () => {
   let electrum: { waitForSync: any; stop: any };
-  // LND tests only work with BACKEND=local
-  let rpc: ReturnType<typeof getBitcoinRpc>;
 
   before(async () => {
-    rpc = getBitcoinRpc();
     await ensureLocalFunds();
     electrum = await initElectrum();
   });
@@ -69,7 +66,7 @@ describe('@send - Send', () => {
     electrum?.stop();
   });
 
-  ciIt('@send_1 - Validates payment data in the manual input', async () => {
+  ciIt('@send_1 @ios_nightly - Validates payment data in the manual input', async () => {
     await tap('Send');
     await sleep(1000);
     await handleAndroidAlert('permission_allow_foreground_only_button');
@@ -98,7 +95,7 @@ describe('@send - Send', () => {
     }
 
     // check validation for address when balance is 0
-    const address = await rpc.getNewAddress();
+    const address = await getExternalAddress();
     console.info({ address });
     try {
       await typeRecipientInput(address, { confirmKeyboard: false });
@@ -184,7 +181,7 @@ describe('@send - Send', () => {
     }
   });
 
-  ciIt('@send_2 - Can receive funds and send to different invoices', async () => {
+  ciIt('@send_2 @ios_gate - Can receive funds and send to different invoices', async () => {
     // Test plan:
     // Prepare
     // - receive onchain funds
@@ -201,7 +198,7 @@ describe('@send - Send', () => {
 
     await receiveOnchainFunds();
 
-    // send funds to LND node and open a channel
+    const rpc = getBitcoinRpc();
     const { lnd, lndNodeID } = await setupLND(rpc, lndConfig);
     await electrum?.waitForSync();
 
@@ -554,10 +551,10 @@ describe('@send - Send', () => {
     await elementById('Activity-2').waitForDisplayed();
   });
 
-  ciIt('@send_3 - Can pay regular invoices with msat precision', async () => {
+  ciIt('@send_3 @ios_gate - Can pay regular invoices with msat precision', async () => {
     await receiveOnchainFunds();
 
-    // send funds to LND node and open a channel
+    const rpc = getBitcoinRpc();
     const { lnd, lndNodeID } = await setupLND(rpc, lndConfig);
     await electrum?.waitForSync();
 
