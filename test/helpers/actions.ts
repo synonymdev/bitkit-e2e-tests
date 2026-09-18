@@ -1396,6 +1396,10 @@ export async function waitForToast(
  * or dismissed too quickly). Does not throw on timeout—callers must handle
  * verification via other means (e.g., UI state confirmation).
  *
+ * Once the toast is observed it is cleared before returning, so it cannot keep
+ * covering the header: a toast overlays HeaderMenu for its whole lifetime and
+ * swallows the tap that opens the drawer.
+ *
  * On iOS, uses waitToDisappear pattern since toasts render in a separate window
  * where drag-dismiss hits wrong coordinates.
  */
@@ -1421,16 +1425,30 @@ export async function waitForToastBestEffort(
       },
       { timeout, interval: pollingInterval }
     );
-
-    if (driver.isIOS) {
-      await el.waitForDisplayed({ reverse: true, timeout: 5_000 }).catch(() => {
-        // Toast may have dismissed immediately; that's fine
-      });
-    }
   } catch {
     // Toast wasn't displayed within timeout—may have already appeared and dismissed
     // or never appeared. Caller should verify via other means.
   }
+
+  if (!toastSeen) {
+    return false;
+  }
+
+  // Re-check instead of trusting toastSeen: dragOnElement waits on the element
+  // with the global 30s timeout, which would be spent in full on a toast that
+  // already went away.
+  if (driver.isAndroid && (await el.isDisplayed().catch(() => false))) {
+    // Drag it away like waitForToast does: an undismissed toast keeps covering
+    // HeaderMenu for its full duration, so the next openSettings() tap lands on
+    // the toast instead of the drawer button.
+    await dragOnElement(toastId, 'up', 0.2).catch(() => {
+      // Toast may have auto-dismissed mid-drag; the wait below settles it
+    });
+  }
+
+  await el.waitForDisplayed({ reverse: true, timeout: 5_000 }).catch(() => {
+    // Toast may have dismissed immediately; that's fine
+  });
 
   return toastSeen;
 }
