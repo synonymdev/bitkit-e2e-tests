@@ -1483,9 +1483,14 @@ export async function dismissBackgroundPaymentsTimedSheet({
     await sleep(500); // wait for the app to settle
     await tap('BackgroundPaymentsIntro-later');
   } else {
-    await elementById('BackgroundPaymentsDescription').waitForDisplayed();
-    await sleep(500); // wait for the app to settle
-    await tap('BackgroundPaymentsCancel');
+    const description = elementById('BackgroundPaymentsDescription');
+    await description.waitForDisplayed();
+    const cancel = elementById('BackgroundPaymentsCancel');
+    await cancel.waitForDisplayed();
+    // The iOS sheet animates while appearing. Click a fresh element reference
+    // immediately; the generic tap() delay makes this button prone to staleness.
+    await cancel.click();
+    await description.waitForDisplayed({ reverse: true });
   }
   await sleep(500);
 }
