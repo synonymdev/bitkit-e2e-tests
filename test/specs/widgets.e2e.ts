@@ -24,7 +24,7 @@ import {
   type WidgetId,
 } from '../helpers/widgets';
 
-describe('@widgets - Widgets', () => {
+describe('@widgets @ios_nightly - Widgets', () => {
   beforeEach(async () => {
     await reinstallApp();
     await completeOnboarding();

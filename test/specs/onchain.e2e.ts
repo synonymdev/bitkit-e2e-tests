@@ -55,7 +55,7 @@ describe('@onchain - Onchain', () => {
     await electrum?.stop();
   });
 
-  ciIt('@onchain_1 - Receive and send some out', async () => {
+  ciIt('@onchain_1 @ios_gate - Receive and send some out', async () => {
     // receive some first
     const satsToReceive = 100_000;
     await receiveOnchainFunds({ sats: satsToReceive, expectHighBalanceWarning: false });
@@ -107,7 +107,7 @@ describe('@onchain - Onchain', () => {
   // - shows warnings for sending over 100$ or 50% of total
   // - avoid creating dust output
 
-  ciIt('@onchain_2 - Can receive 2 transactions and send them all at once', async () => {
+  ciIt('@onchain_2 @ios_gate - Can receive 2 transactions and send them all at once', async () => {
     // - can receive to 2 addresses and tag them //
     for (let i = 1; i <= 2; i++) {
       const address = await getReceiveAddress();

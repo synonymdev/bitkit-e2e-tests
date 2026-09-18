@@ -440,7 +440,7 @@ describe('@transfer - Transfer', () => {
     }
   );
 
-  ciIt('@transfer_2 - Can open a channel to external node', async () => {
+  ciIt('@transfer_2 @ios_gate - Can open a channel to external node', async () => {
     const rpc = getBitcoinRpc();
     await receiveOnchainFunds({ sats: 100_000 });
 

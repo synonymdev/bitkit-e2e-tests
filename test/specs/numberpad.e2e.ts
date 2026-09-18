@@ -17,7 +17,7 @@ import { ciIt } from '../helpers/suite';
 import { ensureLocalFunds } from '../helpers/regtest';
 import { openSettings } from '../helpers/navigation';
 
-describe('@numberpad - NumberPad', () => {
+describe('@numberpad @ios_nightly - NumberPad', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
 
   before(async () => {

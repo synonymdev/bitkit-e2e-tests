@@ -160,13 +160,23 @@ Implication for feature work:
 
 The app merge gate (`e2e.yml` / `e2e-tests.yml`) runs `BACKEND=local` (docker Electrum/LND). Staging (`e2e-staging.yml`) and migration (`e2e_migration.yml`) run `BACKEND=regtest` against stag0.
 
-| Tags                                    | Where                                                                                                                                                                                 |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@transfer_2`                           | Local only (LND channel, no Blocktank)                                                                                                                                                |
-| `@transfer_1`, `@transfer_max`          | Staging via `@transfer_staging` (keep `@transfer_1` / `@transfer_max` / `@transfer`). `@transfer_1` is not in app `e2e-staging.yml` yet — add the transfer shard once it is 3× green. |
-| `@multi_address_2`                      | Staging via `@multi_address_staging` (keep `@multi_address_2` for other greps). Staging workflow greps `@multi_address_staging` only.                                                 |
-| `@pubky` / `@paykit` / `@pubky_profile` | Staging pubky shard via `@pubky_staging` (public-payments + profile). Keep `@pubky` / `@paykit` / `@pubky_profile` for other greps.                                                   |
-| `@hardware_wallet`                      | iOS local (connect/receive/on-chain); Android full path on staging. Do **not** add `@hardware_wallet_staging` — local merge-gate still greps `@hardware_wallet`.                      |
-| `@migration_*`                          | Migration workflow (nightly, dispatch, `release-*` PRs)                                                                                                                               |
+Capability tags (`@settings`, `@boost`, `@send`, …) stay on titles so Android local can keep grepping them. iOS queue tags are disjoint from `@staging` and from `*_staging` (mocha grep is a regex substring).
+
+| Tag | Android local | iOS Mini (`e2e-tests.yml`) | Staging (`e2e-staging.yml`) |
+|---|---|---|---|
+| `@ios_gate` | ignored | merge gate grep | no |
+| `@ios_nightly` | ignored (still run via `@settings` etc.) | no | extra iOS shard (`ios_nightly_ui`), GitHub mac, not Mini |
+| `@transfer_2` | yes | `@ios_gate` | no (LND, no Blocktank) |
+| `@transfer_1`, `@transfer_max` | no | no | `@transfer_staging` (keep `@transfer_1` / `@transfer_max` / `@transfer`). `@transfer_1` is not in app `e2e-staging.yml` yet — add the transfer shard once it is 3× green. |
+| `@multi_address_2` | no | no | `@multi_address_staging` only |
+| `@pubky` / `@paykit` / `@pubky_profile` | no | no | `@pubky_staging` (keep capability tags for other greps) |
+| `@boost`, `@multi_address_3` | yes | `@ios_gate` (needs exclusive miner) | no |
+| `@send_2`, `@send_3`, `@lightning`, `@lnurl`, `@onboarding`, `@backup`, `@onchain_1`, `@onchain_2`, `@receive`, `@multi_address_4` | yes | `@ios_gate` | no |
+| `@settings`, `@numberpad`, `@widgets`, `@security`, `@send_1`, `@multi_address_1` | yes | `@ios_nightly` | iOS nightly shard |
+| `@onchain_3` | yes (`@onchain`) | no | no |
+| `@hardware_wallet` | no (staging only) | `@ios_gate` | Android staging greps `@hardware_wallet`; do **not** add `@hardware_wallet_staging`. iOS Mini greps `@ios_gate` on this describe. No Trezor on GitHub mac. |
+| `@migration_*` | migration workflow (nightly, dispatch, `release-*` PRs) | same | no |
+
+Put `@ios_gate` / `@ios_nightly` on `describe` when the whole file is one iOS queue; on `ciIt` when siblings split (`@send_1` vs `@send_2`, `@multi_address_1` vs `_3`).
 
 Poke staging with `gh workflow run e2e-staging.yml` on the app repo (does not queue the iOS Mini). Optional Slack post to `#bitkit-staging-nightly` via dispatch `post_to_slack`.
