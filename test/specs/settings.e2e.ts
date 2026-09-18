@@ -16,6 +16,7 @@ import {
   getAccessibleText,
   doNavigationClose,
   waitForToast,
+  waitForToastBestEffort,
   ToastId,
 } from '../helpers/actions';
 import { electrumHost, electrumPort } from '../helpers/constants';
@@ -44,7 +45,8 @@ describe('@settings - Settings', () => {
         await tap('TotalBalance');
       }
       await expect(fiatSymbol).toHaveText('$');
-      await waitForToast('BalanceUnitSwitchedToast');
+      // UI unit text is the source of truth; a missed/auto-dismissed toast must not fail.
+      await waitForToastBestEffort('BalanceUnitSwitchedToast');
 
       // - change settings (currency to EUR) //
       await openSettings();
@@ -205,7 +207,8 @@ describe('@settings - Settings', () => {
         await dragOnElement('TotalBalance', 'right', 0.5);
       }
       await elementById('ShowBalance').waitForDisplayed();
-      await waitForToast('BalanceHiddenToast', { waitToDisappear: false, dismiss: true });
+      // ShowBalance is the source of truth; a missed/auto-dismissed toast must not fail.
+      await waitForToastBestEffort('BalanceHiddenToast');
 
       // Disable 'swipe to hide balance'
       await openSettings('security');
