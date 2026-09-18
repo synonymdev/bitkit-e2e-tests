@@ -1,22 +1,27 @@
 #!/usr/bin/env python3
 """
-Slack summary script for Bitkit E2E Staging nightlies.
+Slack summary script for Bitkit E2E staging and migration workflows.
 
 Renders a summary message from environment variables and posts it to a
 Slack webhook. Modeled on synonymdev/bitkit-nightly slack_summary.py style.
 
 Usage:
     python3 scripts/slack_summary.py e2e-staging
+    python3 scripts/slack_summary.py e2e-migration
 
 Required env vars:
     SLACK_WEBHOOK_URL   - Slack incoming webhook URL (skips gracefully if unset)
     PLATFORM            - ios|android
-    STAGING_RESULT      - Overall workflow result (success|failure|cancelled|...)
-    BUILD_RESULT        - build-staging job result
+    BUILD_RESULT        - build job result
     E2E_BRANCH_RESULT   - e2e-branch job result
-    E2E_TESTS_RESULT    - e2e-tests-staging job result
+    E2E_TESTS_RESULT    - e2e-tests job result
     RUN_URL             - GitHub Actions run URL
     RUN_ATTEMPT         - Current run attempt number
+
+Mode-specific env vars:
+    STAGING_RESULT      - Overall result for e2e-staging
+    MIGRATION_RESULT    - Overall result for e2e-migration
+    PREPARE_WALLETS_RESULT - Optional iOS migration job result
 
 Optional env vars:
     E2E_TESTS_REF       - Resolved e2e-tests branch/ref
@@ -26,8 +31,11 @@ Optional env vars:
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
+
+MODES = ("e2e-staging", "e2e-migration")
 
 
 def get_status_icon(status: str) -> str:
@@ -62,24 +70,29 @@ def get_platform_display(platform: str) -> str:
         return platform or "Unknown"
 
 
-def render_e2e_staging_message() -> str:
-    """Render the E2E staging summary message from environment variables."""
+def _render_message(
+    *,
+    kind: str,
+    overall_result: str,
+    build_job: str,
+    tests_job: str,
+) -> str:
     platform = os.environ.get("PLATFORM", "")
-    staging_result = os.environ.get("STAGING_RESULT", "unknown")
     build_result = os.environ.get("BUILD_RESULT", "unknown")
     e2e_branch_result = os.environ.get("E2E_BRANCH_RESULT", "unknown")
     e2e_tests_result = os.environ.get("E2E_TESTS_RESULT", "unknown")
+    prepare_wallets_result = os.environ.get("PREPARE_WALLETS_RESULT", "")
     run_url = os.environ.get("RUN_URL", "")
     run_attempt = os.environ.get("RUN_ATTEMPT", "1")
     e2e_tests_ref = os.environ.get("E2E_TESTS_REF", "")
     repo = os.environ.get("GITHUB_REPOSITORY", "")
 
     platform_display = get_platform_display(platform)
-    overall_icon = get_status_icon(staging_result)
+    overall_icon = get_status_icon(overall_result)
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
     lines = [
-        f"{overall_icon} Bitkit {platform_display} E2E staging: {staging_result}",
+        f"{overall_icon} Bitkit {platform_display} E2E {kind}: {overall_result}",
         f"Time: {timestamp}",
         f"Run attempt: {run_attempt}",
     ]
@@ -95,11 +108,33 @@ def render_e2e_staging_message() -> str:
 
     lines.append("")
     lines.append("Jobs:")
-    lines.append(f"  build-staging: {format_status(build_result)}")
+    lines.append(f"  {build_job}: {format_status(build_result)}")
     lines.append(f"  e2e-branch: {format_status(e2e_branch_result)}")
-    lines.append(f"  e2e-tests-staging: {format_status(e2e_tests_result)}")
+    if prepare_wallets_result:
+        lines.append(f"  prepare-wallets: {format_status(prepare_wallets_result)}")
+    lines.append(f"  {tests_job}: {format_status(e2e_tests_result)}")
 
     return "\n".join(lines)
+
+
+def render_e2e_staging_message() -> str:
+    """Render the E2E staging summary message from environment variables."""
+    return _render_message(
+        kind="staging",
+        overall_result=os.environ.get("STAGING_RESULT", "unknown"),
+        build_job="build-staging",
+        tests_job="e2e-tests-staging",
+    )
+
+
+def render_e2e_migration_message() -> str:
+    """Render the E2E migration summary message from environment variables."""
+    return _render_message(
+        kind="migration",
+        overall_result=os.environ.get("MIGRATION_RESULT", "unknown"),
+        build_job="build",
+        tests_job="e2e-tests",
+    )
 
 
 def post_to_slack(text: str) -> bool:
@@ -123,12 +158,18 @@ def post_to_slack(text: str) -> bool:
 
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
+            body = resp.read().decode("utf-8", errors="replace")
             if resp.status == 200:
                 print("Slack message posted successfully")
                 return True
-            else:
-                print(f"Slack webhook returned status {resp.status}", file=sys.stderr)
-                return False
+            print(f"Slack webhook returned status {resp.status}", file=sys.stderr)
+            print(f"Slack response body: {body}", file=sys.stderr)
+            return False
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        print(f"Failed to post to Slack: {e}", file=sys.stderr)
+        print(f"Slack response body: {body}", file=sys.stderr)
+        return False
     except urllib.error.URLError as e:
         print(f"Failed to post to Slack: {e}", file=sys.stderr)
         return False
@@ -137,22 +178,24 @@ def post_to_slack(text: str) -> bool:
 def main() -> int:
     if len(sys.argv) != 2:
         print(f"Usage: {sys.argv[0]} <mode>", file=sys.stderr)
-        print("Available modes: e2e-staging", file=sys.stderr)
+        print(f"Available modes: {', '.join(MODES)}", file=sys.stderr)
         return 1
 
     mode = sys.argv[1]
 
     if mode == "e2e-staging":
         message = render_e2e_staging_message()
-        print("--- Message Preview ---")
-        print(message)
-        print("--- End Preview ---")
-        post_to_slack(message)
-        return 0
+    elif mode == "e2e-migration":
+        message = render_e2e_migration_message()
     else:
         print(f"Unknown mode: {mode}", file=sys.stderr)
-        print("Available modes: e2e-staging", file=sys.stderr)
+        print(f"Available modes: {', '.join(MODES)}", file=sys.stderr)
         return 1
+
+    print("--- Message Preview ---")
+    print(message)
+    print("--- End Preview ---")
+    return 0 if post_to_slack(message) else 1
 
 
 if __name__ == "__main__":
