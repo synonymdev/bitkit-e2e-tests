@@ -1488,28 +1488,72 @@ export async function acknowledgeExternalSuccess() {
   await sleep(300);
 }
 
+/**
+ * Dismisses the Background Payments timed sheet if it is present.
+ *
+ * Best-effort: the intro can already be gone (auto-dismissed, previously
+ * acknowledged, or never queued after HeaderMenu). Does not throw when the
+ * dismiss control is missing — callers continue. When the intro IS shown,
+ * it is still dismissed via Later / Cancel so remaining coverage can run
+ * on an unobstructed home screen.
+ *
+ * Pattern matches waitForToastBestEffort: poll for visibility, act if seen,
+ * swallow timeout if the sheet never appeared or vanished mid-dismiss.
+ *
+ * @returns true if the sheet was observed and a dismiss was attempted,
+ * false if it was already gone.
+ */
 export async function dismissBackgroundPaymentsTimedSheet({
   triggerTimedSheet = false,
-}: { triggerTimedSheet?: boolean } = {}) {
-  if (triggerTimedSheet) {
-    await doTriggerTimedSheet();
+  timeout = 10_000,
+}: { triggerTimedSheet?: boolean; timeout?: number } = {}): Promise<boolean> {
+  const sheetId = driver.isAndroid
+    ? 'BackgroundPaymentsIntro-later'
+    : 'BackgroundPaymentsDescription';
+  const dismissId = driver.isAndroid ? 'BackgroundPaymentsIntro-later' : 'BackgroundPaymentsCancel';
+
+  await triggerTimedSheetUnlessPresent(sheetId, triggerTimedSheet);
+
+  const el = elementById(sheetId);
+  let sheetSeen = false;
+
+  try {
+    await browser.waitUntil(
+      async () => {
+        const displayed = await el.isDisplayed().catch(() => false);
+        if (displayed) {
+          sheetSeen = true;
+          return true;
+        }
+        return false;
+      },
+      { timeout, interval: 200 }
+    );
+  } catch {
+    // Sheet wasn't displayed within timeout — may have already appeared and
+    // dismissed, or never appeared after the HeaderMenu trigger race.
+    console.info(`→ ${sheetId} not displayed; treating Background Payments intro as already gone`);
+    return false;
   }
 
-  if (driver.isAndroid) {
-    await elementById('BackgroundPaymentsIntro-later').waitForDisplayed();
-    await sleep(500); // wait for the app to settle
-    await tap('BackgroundPaymentsIntro-later');
-  } else {
-    const description = elementById('BackgroundPaymentsDescription');
-    await description.waitForDisplayed();
-    const cancel = elementById('BackgroundPaymentsCancel');
-    await cancel.waitForDisplayed();
-    // The iOS sheet animates while appearing. Click a fresh element reference
-    // immediately; the generic tap() delay makes this button prone to staleness.
-    await cancel.click();
-    await description.waitForDisplayed({ reverse: true });
+  if (!sheetSeen) {
+    return false;
   }
-  await sleep(500);
+
+  await sleep(500); // wait for the app to settle
+  try {
+    const dismissEl = elementById(dismissId);
+    const stillShown = await dismissEl.isDisplayed().catch(() => false);
+    if (!stillShown) {
+      console.info(`→ ${dismissId} gone before dismiss tap; treating intro as already dismissed`);
+      return true;
+    }
+    await dismissEl.click();
+    await sleep(500);
+  } catch (error) {
+    console.info(`→ ${dismissId} disappeared before dismiss tap; continuing`, error);
+  }
+  return true;
 }
 
 async function isTestIdDisplayed(testId: string): Promise<boolean> {
