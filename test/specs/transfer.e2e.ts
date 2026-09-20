@@ -23,8 +23,10 @@ import {
   expectNoTextWithin,
   enterAmount,
   expectSavingsBalance,
+  getAccessibleText,
   getSpendingBalance,
   getAmountUnder,
+  getTextUnder,
   tryDismissBackgroundPaymentsIfVisible,
   tryDismissQuickPayIntroIfVisible,
 } from '../helpers/actions';
@@ -63,11 +65,24 @@ async function dismissHomeSheetsIfPresent() {
 }
 
 async function openTransferToSpending() {
-  await dismissHomeSheetsIfPresent();
-  await tap('ActivitySavings');
   await browser.waitUntil(
     async () => {
       await dismissHomeSheetsIfPresent();
+      if (await isDisplayed('TransferToSpending')) {
+        return true;
+      }
+      // Only tap from Home. A delayed Background Payments sheet can cover
+      // ActivitySavings after waitForHome; keep dismissing and retry.
+      const onHome =
+        (await isDisplayed('ActivitySavings')) && (await isDisplayed('ActivitySpending'));
+      if (!onHome) {
+        return false;
+      }
+      try {
+        await tap('ActivitySavings', { timeout: 5_000 });
+      } catch {
+        return false;
+      }
       return isDisplayed('TransferToSpending');
     },
     {
@@ -150,22 +165,6 @@ async function waitForHome(timeout = 60_000) {
   );
 }
 
-async function returnHomeFromSavings() {
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    await dismissHomeSheetsIfPresent();
-    await tap('NavigationBack');
-    try {
-      await waitForHome(5_000);
-      return;
-    } catch (error) {
-      if (attempt === 3) {
-        throw error;
-      }
-      console.info(`→ Savings back navigation did not land on Home (attempt ${attempt})`);
-    }
-  }
-}
-
 async function isProcessingPaymentDisplayed(): Promise<boolean> {
   return elementByText('Processing payment', 'exact')
     .isDisplayed()
@@ -187,19 +186,59 @@ async function expectProcessingOrUsableChannel() {
   await elementById('IsUsableYes').waitForDisplayed();
 }
 
+async function activityShortShowsTransfer(shortId: string): Promise<boolean> {
+  const row = elementById(shortId);
+  if (!(await row.isDisplayed().catch(() => false))) {
+    return false;
+  }
+
+  const snippets: string[] = [];
+  if (driver.isIOS) {
+    for (const attribute of ['label', 'value'] as const) {
+      const value = await row.getAttribute(attribute).catch(() => '');
+      if (typeof value === 'string' && value.length > 0) {
+        snippets.push(value);
+      }
+    }
+  } else {
+    snippets.push(await getAccessibleText(row));
+    try {
+      snippets.push(await getTextUnder(shortId, 'first'), await getTextUnder(shortId, 'last'));
+    } catch {
+      // Row descendants can still be attaching.
+    }
+  }
+
+  const haystack = snippets.join(' ');
+  return haystack.includes('Transfer') && haystack.includes('-');
+}
+
 /**
- * Activity-1 starts as the on-chain receive until Transfer is inserted above it
- * (same race as @transfer_max ActivityShort-0/1). Wait for Transfer labels at
- * 60s instead of assuming Activity-2/3 exist at the default 30s.
+ * After each Blocktank buy, Home ActivityShort inserts a Transfer row at the top.
+ * Do not open Savings to read Activity-*: a delayed Background Payments sheet can
+ * cover ActivitySavings, and dismissing that sheet leaves Home — where the
+ * transfers are already visible as ActivityShort-*.
  */
-async function expectSavingsTransferRows(transferCount: 1 | 2) {
-  const requiredRows =
-    transferCount === 1 ? ['Activity-1', 'Activity-2'] : ['Activity-1', 'Activity-2', 'Activity-3'];
+async function expectHomeTransferRows(transferCount: 1 | 2) {
+  let transferRowIds: readonly string[];
+  switch (transferCount) {
+    case 1:
+      transferRowIds = ['ActivityShort-0'];
+      break;
+    case 2:
+      transferRowIds = ['ActivityShort-0', 'ActivityShort-1'];
+      break;
+    default: {
+      const _exhaustive: never = transferCount;
+      throw new Error(`Unexpected transferCount: ${_exhaustive}`);
+    }
+  }
+
   await browser.waitUntil(
     async () => {
       await dismissHomeSheetsIfPresent();
-      for (const rowId of requiredRows) {
-        if (!(await isDisplayed(rowId))) {
+      for (const rowId of transferRowIds) {
+        if (!(await activityShortShowsTransfer(rowId))) {
           return false;
         }
       }
@@ -208,26 +247,9 @@ async function expectSavingsTransferRows(transferCount: 1 | 2) {
     {
       timeout: 60_000,
       interval: 1_000,
-      timeoutMsg: `Savings did not show ${transferCount} transfer row(s)`,
+      timeoutMsg: `Home did not show ${transferCount} transfer row(s)`,
     }
   );
-
-  switch (transferCount) {
-    case 1:
-      await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
-      await expectTextWithin('Activity-1', '-');
-      return;
-    case 2:
-      await expectTextWithin('Activity-1', 'Transfer', { timeout: 60_000 });
-      await expectTextWithin('Activity-1', '-');
-      await expectTextWithin('Activity-2', 'Transfer', { timeout: 60_000 });
-      await expectTextWithin('Activity-2', '-');
-      return;
-    default: {
-      const _exhaustive: never = transferCount;
-      throw new Error(`Unexpected transferCount: ${_exhaustive}`);
-    }
-  }
 }
 
 async function confirmSpendingTransfer() {
@@ -370,10 +392,7 @@ describe('@transfer - Transfer', () => {
       await expectText('200 000', { strategy: 'contains' });
       await tap('LiquidityContinue');
       await confirmSpendingTransfer();
-
-      await tap('ActivitySavings');
-      await expectSavingsTransferRows(1);
-      await returnHomeFromSavings();
+      await expectHomeTransferRows(1);
 
       await settleAndExpectSpendingBalance(200000, async () => electrum?.waitForSync());
 
@@ -389,10 +408,7 @@ describe('@transfer - Transfer', () => {
       await expectTextWithin('SpendingConfirmChannel', '100 000');
       await expectTextWithin('SpendingConfirmChannel', '150 000');
       await confirmSpendingTransfer();
-
-      await tap('ActivitySavings');
-      await expectSavingsTransferRows(2);
-      await returnHomeFromSavings();
+      await expectHomeTransferRows(2);
 
       // Both channel funding transactions must settle into usable spending balance.
       await settleAndExpectSpendingBalance(300000, async () => electrum?.waitForSync());
@@ -406,11 +422,8 @@ describe('@transfer - Transfer', () => {
       await expectProcessingOrUsableChannel();
       await doNavigationClose();
 
-      // Home shows both completed transfers.
-      await elementById('ActivityShort-0').waitForDisplayed();
-      await expectTextWithin('ActivityShort-0', 'Transfer');
-      await elementById('ActivityShort-1').waitForDisplayed();
-      await expectTextWithin('ActivityShort-1', 'Transfer');
+      // Home still shows both completed transfers after the channel inspection.
+      await expectHomeTransferRows(2);
     }
   );
 
