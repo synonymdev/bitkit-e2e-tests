@@ -177,19 +177,12 @@ describe('@boost - Boost', () => {
     await dragOnElement('GRAB', 'right', 0.95); // Swipe to confirm
     await waitForToast('BoostSuccessToast');
 
-    // check Activity
-    await elementById('BoostingIcon').waitForDisplayed();
-    await elementById('ActivityShort-0').waitForDisplayed();
-    await elementById('ActivityShort-1').waitForDisplayed();
-    await expect(elementById('ActivityShort-2')).not.toBeDisplayed();
-    await expectTextWithin('ActivityShort-0', '-');
-    await expectTextWithin('ActivityShort-1', '100 000');
-    await expectTextWithin('ActivityShort-1', '+');
+    // RBF keeps the pending replacement and the original removed-from-mempool send
+    await expectRbfHomeActivityAfterBoost();
 
-    // new tx
+    // pending replacement
     await tap('ActivityShort-0');
-    await elementById('BoostedButton').waitForDisplayed();
-    await elementById('StatusBoosting').waitForDisplayed();
+    await expectText('Confirming');
     await expectTextWithin('ActivityAmount', '10 000');
     const newFee = await (await elementByIdWithin('ActivityFee', 'MoneyText')).getText();
     console.info({ newFee });
@@ -198,7 +191,12 @@ describe('@boost - Boost', () => {
     console.info({ newTxId });
     await expect(Number(oldFee.replace(' ', '')) < Number(newFee.replace(' ', ''))).toBe(true);
     await expect(oldTxId !== newTxId).toBe(true);
-    await elementById('RBFBoosted').waitForDisplayed();
+    await doNavigationClose();
+
+    // original replaced tx
+    await tap('ActivityShort-1');
+    await elementById('StatusRemoved').waitForDisplayed();
+    await expectText('Removed from Mempool');
     await doNavigationClose();
 
     // wipe & restore
@@ -207,10 +205,10 @@ describe('@boost - Boost', () => {
     await restoreWallet(seed);
 
     // check activity after restore
-    (await elementByIdWithin('ActivityShort-0', 'BoostingIcon')).waitForDisplayed();
+    await expectRbfHomeActivityAfterBoost();
     await tap('ActivityShort-0');
-    await elementById('BoostedButton').waitForDisplayed();
-    await elementById('StatusBoosting').waitForDisplayed();
+    await expectText('Confirming');
+    await expectTextWithin('ActivityAmount', '10 000');
     await doNavigationClose();
 
     // mine new block
@@ -225,3 +223,18 @@ describe('@boost - Boost', () => {
     await doNavigationClose();
   });
 });
+
+async function expectRbfHomeActivityAfterBoost() {
+  await elementById('ActivityShort-0').waitForDisplayed();
+  await elementById('ActivityShort-1').waitForDisplayed();
+  await elementById('ActivityShort-2').waitForDisplayed();
+  await expectTextWithin('ActivityShort-0', 'Sent');
+  await expectTextWithin('ActivityShort-0', 'Confirms in');
+  await expectTextWithin('ActivityShort-0', '-');
+  await expectTextWithin('ActivityShort-1', 'Sent');
+  await expectTextWithin('ActivityShort-1', 'Removed from Mempool');
+  await expectTextWithin('ActivityShort-1', '-');
+  await expectTextWithin('ActivityShort-2', 'Received');
+  await expectTextWithin('ActivityShort-2', '100 000');
+  await expectTextWithin('ActivityShort-2', '+');
+}
