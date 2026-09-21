@@ -1462,23 +1462,6 @@ export async function acknowledgeReceivedPayment({ timeout = 30_000 }: { timeout
   await sleep(300);
 }
 
-/** Dismisses the received payment sheet when it shows, and does nothing when it does not.
- *
- * Use this where the sheet is platform- or build-dependent, such as a deposit the wallet first sees
- * already confirmed (synonymdev/bitkit-android#797), which Android notifies and iOS does not yet.
- */
-export async function dismissReceivedPaymentIfShown({
-  timeout = 20_000,
-}: { timeout?: number } = {}): Promise<boolean> {
-  try {
-    await acknowledgeReceivedPayment({ timeout });
-    return true;
-  } catch {
-    console.info('→ No received payment sheet shown, continuing.');
-    return false;
-  }
-}
-
 export async function acknowledgeReceivedPaymentIfPresent(): Promise<boolean> {
   if (getBackend() === 'local') {
     await acknowledgeReceivedPayment();

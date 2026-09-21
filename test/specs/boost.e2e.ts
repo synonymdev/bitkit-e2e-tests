@@ -15,7 +15,6 @@ import {
   restoreWallet,
   enterAddress,
   waitForToast,
-  dismissReceivedPaymentIfShown,
 } from '../helpers/actions';
 import initElectrum from '../helpers/electrum';
 import { reinstallApp } from '../helpers/setup';
@@ -112,11 +111,6 @@ describe('@boost - Boost', () => {
 
     // mine new block
     await mineBlocks(1);
-
-    // the restored wallet never saw the boosted tx in the mempool, so this confirmation is its
-    // first sight of the deposit and the received sheet opens over the screen
-    await dismissReceivedPaymentIfShown();
-
     await doNavigationClose();
     await sleep(500);
 
