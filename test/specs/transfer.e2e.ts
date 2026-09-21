@@ -23,10 +23,8 @@ import {
   expectNoTextWithin,
   enterAmount,
   expectSavingsBalance,
-  getAccessibleText,
   getSpendingBalance,
   getAmountUnder,
-  getTextUnder,
   tryDismissBackgroundPaymentsIfVisible,
   tryDismissQuickPayIntroIfVisible,
 } from '../helpers/actions';
@@ -186,38 +184,14 @@ async function expectProcessingOrUsableChannel() {
   await elementById('IsUsableYes').waitForDisplayed();
 }
 
-async function activityShortShowsTransfer(shortId: string): Promise<boolean> {
-  const row = elementById(shortId);
-  if (!(await row.isDisplayed().catch(() => false))) {
-    return false;
-  }
-
-  const snippets: string[] = [];
-  if (driver.isIOS) {
-    for (const attribute of ['label', 'value'] as const) {
-      const value = await row.getAttribute(attribute).catch(() => '');
-      if (typeof value === 'string' && value.length > 0) {
-        snippets.push(value);
-      }
-    }
-  } else {
-    snippets.push(await getAccessibleText(row));
-    try {
-      snippets.push(await getTextUnder(shortId, 'first'), await getTextUnder(shortId, 'last'));
-    } catch {
-      // Row descendants can still be attaching.
-    }
-  }
-
-  const haystack = snippets.join(' ');
-  return haystack.includes('Transfer') && haystack.includes('-');
-}
-
 /**
  * After each Blocktank buy, Home ActivityShort inserts a Transfer row at the top.
  * Do not open Savings to read Activity-*: a delayed Background Payments sheet can
  * cover ActivitySavings, and dismissing that sheet leaves Home — where the
  * transfers are already visible as ActivityShort-*.
+ *
+ * Use expectTextWithin (all descendants) — same pattern as @transfer_max.
+ * Android amount minus is a middle TextView; first/last probes miss it.
  */
 async function expectHomeTransferRows(transferCount: 1 | 2) {
   let transferRowIds: readonly string[];
@@ -234,11 +208,20 @@ async function expectHomeTransferRows(transferCount: 1 | 2) {
     }
   }
 
+  // ActivityShort-0 is often still the prior Received deposit row; poll until
+  // Transfer (and amount minus) show via all-descendant expectTextWithin —
+  // same probe @transfer_max uses. Do not waitForDisplayed alone first.
   await browser.waitUntil(
     async () => {
       await dismissHomeSheetsIfPresent();
       for (const rowId of transferRowIds) {
-        if (!(await activityShortShowsTransfer(rowId))) {
+        if (!(await elementById(rowId).isDisplayed().catch(() => false))) {
+          return false;
+        }
+        try {
+          await expectTextWithin(rowId, 'Transfer', { timeout: 1_500 });
+          await expectTextWithin(rowId, '-', { timeout: 1_500 });
+        } catch {
           return false;
         }
       }
