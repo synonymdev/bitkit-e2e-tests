@@ -1184,10 +1184,6 @@ export async function transferSpendingToSavings() {
   await elementById('TransferSuccess-button').waitForDisplayed();
   await tap('TransferSuccess-button');
 
-  if (driver.isAndroid) {
-    await doNavigationClose();
-  }
-
   await sleep(1000);
   await expectSavingsBalance(0, { condition: 'gt' });
   await expectSpendingBalance(0);
