@@ -6,6 +6,11 @@ description: "Re-validate the determined e2e branch immediately before checkout"
 # the companion may be deleted later, or "Re-run failed jobs" may reuse the
 # old determine output. Shard jobs (including macos) should call this right
 # before checking out synonymdev/bitkit-e2e-tests.
+#
+# git ls-remote --exit-code returns 2 when no ref matches. DNS, auth, and
+# other transport failures return a different status (typically 128) and must
+# fail this step. Treating them as "branch missing" would silently test the
+# fallback branch.
 
 inputs:
   selected:
@@ -51,18 +56,36 @@ runs:
         # 1. Empty or already the fallback — nothing to re-validate.
         if [[ -z "$SELECTED" || "$SELECTED" == "$FALLBACK" ]]; then
           REF="$FALLBACK"
-        # 2. Companion still exists — use it.
-        elif git ls-remote --exit-code https://github.com/$TEST_REPO.git "refs/heads/$SELECTED" >/dev/null 2>&1; then
-          REF="$SELECTED"
-          echo "✅ Found selected branch: $REF"
-        # 3. Explicit custom branch is gone — fail hard (do not silently switch).
-        elif [[ -n "$E2E_BRANCH_INPUT" && "$E2E_BRANCH_INPUT" != "main" && "$E2E_BRANCH_INPUT" != "default-feature-branch" ]]; then
-          echo "::error title=Invalid e2e_branch::Branch '$SELECTED' not found in $TEST_REPO"
-          exit 1
-        # 4. Default companion path — soft-fallback (deleted after determine, or stale re-run).
         else
-          echo "::warning title=Missing e2e companion::Branch '$SELECTED' not found in $TEST_REPO, using '$FALLBACK'."
-          REF="$FALLBACK"
+          # stdout is the matching SHA; keep stderr for the failure reason.
+          # --exit-code: 0 = ref exists, 2 = no matching ref. Anything else
+          # (DNS, auth, missing repo) must not take the missing-branch path.
+          err_file="$(mktemp)"
+          ls_status=0
+          git ls-remote --exit-code "https://github.com/${TEST_REPO}.git" "refs/heads/${SELECTED}" >/dev/null 2>"$err_file" || ls_status=$?
+
+          if [[ "$ls_status" -eq 0 ]]; then
+            REF="$SELECTED"
+            echo "✅ Found selected branch: $REF"
+          elif [[ "$ls_status" -ne 2 ]]; then
+            if [[ -s "$err_file" ]]; then
+              echo "git ls-remote stderr:"
+              cat "$err_file"
+            fi
+            echo "::error title=E2E ref lookup failed::git ls-remote exited ${ls_status} looking up '${SELECTED}' in ${TEST_REPO}. Refusing to fall back to '${FALLBACK}'."
+            rm -f "$err_file"
+            exit 1
+          # Explicit custom branch is gone — fail hard (do not silently switch).
+          elif [[ -n "$E2E_BRANCH_INPUT" && "$E2E_BRANCH_INPUT" != "main" && "$E2E_BRANCH_INPUT" != "default-feature-branch" ]]; then
+            echo "::error title=Invalid e2e_branch::Branch '$SELECTED' not found in $TEST_REPO"
+            rm -f "$err_file"
+            exit 1
+          # Default companion path — soft-fallback (deleted after determine, or stale re-run).
+          else
+            echo "::warning title=Missing e2e companion::Branch '$SELECTED' not found in $TEST_REPO, using '$FALLBACK'."
+            REF="$FALLBACK"
+          fi
+          rm -f "$err_file"
         fi
 
         echo "🧭 Effective ref: $REF"

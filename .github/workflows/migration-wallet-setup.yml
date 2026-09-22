@@ -1,12 +1,21 @@
 name: Migration Wallet Setup
 
+# Checkout re-validates e2e_branch in this job. A caller-side resolve that
+# already succeeded is skipped on "Re-run failed jobs", so a companion deleted
+# after that resolve would otherwise be reused until checkout fails again.
+
 on:
   workflow_call:
     inputs:
       e2e_branch:
-        description: "Branch of synonymdev/bitkit-e2e-tests to use"
+        description: "Candidate bitkit-e2e-tests branch to re-validate immediately before checkout. Pass determine-e2e-branch's output, or a previously resolved ref."
         required: true
         type: string
+      e2e_branch_input:
+        description: "How the candidate was chosen (main | default-feature-branch | custom branch name). A missing companion soft-falls back to main. An explicit custom name hard-fails. Defaults to default-feature-branch so callers that only pass e2e_branch keep that soft-fallback. Pass the same dispatch value when it is a custom branch."
+        required: false
+        type: string
+        default: "default-feature-branch"
       rn_version:
         description: "Legacy RN app version to use for setup (e.g., v1.1.6)"
         required: false
@@ -30,12 +39,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Resolve E2E tests ref
+        id: e2e-ref
+        uses: synonymdev/bitkit-e2e-tests/.github/actions/resolve-e2e-ref@main
+        with:
+          selected: ${{ inputs.e2e_branch }}
+          e2e_branch_input: ${{ inputs.e2e_branch_input }}
+
       - name: Clone E2E tests
         uses: actions/checkout@v4
         with:
           repository: synonymdev/bitkit-e2e-tests
           path: bitkit-e2e-tests
-          ref: ${{ inputs.e2e_branch }}
+          ref: ${{ steps.e2e-ref.outputs.ref }}
 
       - name: Enable KVM
         run: |
