@@ -40,7 +40,7 @@ jobs:
       # a companion that was deleted after that job finished.
       - name: Resolve E2E tests ref
         id: e2e-ref
-        uses: $/.github/actions/resolve-e2e-ref
+        uses: synonymdev/bitkit-e2e-tests/.github/actions/resolve-e2e-ref@main
         with:
           selected: ${{ inputs.e2e_branch }}
           e2e_branch_input: ${{ inputs.e2e_branch_input || github.event.inputs.e2e_branch || 'default-feature-branch' }}
