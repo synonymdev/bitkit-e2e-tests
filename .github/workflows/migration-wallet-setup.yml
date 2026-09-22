@@ -4,9 +4,14 @@ on:
   workflow_call:
     inputs:
       e2e_branch:
-        description: "Branch of synonymdev/bitkit-e2e-tests to use"
+        description: "Candidate branch of synonymdev/bitkit-e2e-tests. Re-validated immediately before checkout. Callers may pass an already-resolved ref; a missing default companion falls back to main."
         required: true
         type: string
+      e2e_branch_input:
+        description: "Resolution mode (main | default-feature-branch | custom branch name). Empty inherits the caller workflow_dispatch input e2e_branch, then default-feature-branch. A custom name hard-fails when the branch is missing."
+        required: false
+        type: string
+        default: ""
       rn_version:
         description: "Legacy RN app version to use for setup (e.g., v1.1.6)"
         required: false
@@ -30,12 +35,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Re-resolve in this job. "Re-run failed jobs" does not re-run a
+      # successful resolve job in the caller, so inputs.e2e_branch can name
+      # a companion that was deleted after that job finished.
+      - name: Resolve E2E tests ref
+        id: e2e-ref
+        uses: $/.github/actions/resolve-e2e-ref
+        with:
+          selected: ${{ inputs.e2e_branch }}
+          e2e_branch_input: ${{ inputs.e2e_branch_input || github.event.inputs.e2e_branch || 'default-feature-branch' }}
+
       - name: Clone E2E tests
         uses: actions/checkout@v4
         with:
           repository: synonymdev/bitkit-e2e-tests
           path: bitkit-e2e-tests
-          ref: ${{ inputs.e2e_branch }}
+          ref: ${{ steps.e2e-ref.outputs.ref }}
 
       - name: Enable KVM
         run: |
