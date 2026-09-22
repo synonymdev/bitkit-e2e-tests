@@ -741,13 +741,13 @@ export async function getSeed(): Promise<string> {
   await openSettings('security');
   await tap('BackupWallet');
 
-  // get seed from SeedContainer
+  await tap('TapToReveal');
+  await sleep(1000);
+
   const seedElement = await elementById('SeedContainer');
   const seed = await getAccessibleText(seedElement);
   console.info({ seed });
   if (!seed) throw new Error('Could not read seed from "SeedContainer"');
-
-  await tap('TapToReveal');
 
   // close the modal
   await swipeFullScreen('down');
