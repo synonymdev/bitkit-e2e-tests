@@ -136,6 +136,8 @@ Resolution rules (from `determine-e2e-branch.yml`):
 - `e2e_branch_input=main` -> use `main`.
 - `e2e_branch_input=default-feature-branch` -> use the same branch name as the app repo _if it exists_ in `bitkit-e2e-tests`, otherwise fall back to `main`.
 - `e2e_branch_input=<custom>` -> use that branch only if it exists; otherwise the workflow fails.
+- `git ls-remote --exit-code` status **2** means the ref is missing (soft-fallback or the custom hard-fail above). Any other nonzero status is a transport/lookup failure and fails the job; do not treat it as "branch missing".
+- `migration-wallet-setup.yml` runs `resolve-e2e-ref` immediately before checkout. `e2e_branch` is the candidate (callers may pass an already-resolved name). Optional `e2e_branch_input` selects the mode; when omitted, the caller dispatch input `e2e_branch` is used, otherwise `default-feature-branch`.
 
 Implication for feature work:
 

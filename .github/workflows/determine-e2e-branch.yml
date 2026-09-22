@@ -54,10 +54,34 @@ jobs:
           echo "🧭 Base branch: $BASE_BRANCH"
           echo "🧭 Checking repo: $TEST_REPO"
 
+          # --exit-code: 0 = ref exists, 2 = no matching ref.
+          # Any other status is a transport/lookup failure. Falling back on
+          # that would run CI against the base branch after a bad lookup.
+          ref_status() {
+            local ref_name="$1"
+            local err_file
+            local status=0
+            err_file="$(mktemp)"
+            git ls-remote --exit-code "https://github.com/${TEST_REPO}.git" "refs/heads/${ref_name}" >/dev/null 2>"$err_file" || status=$?
+            if [[ "$status" -ne 0 && -s "$err_file" ]]; then
+              echo "git ls-remote stderr:"
+              cat "$err_file"
+            fi
+            rm -f "$err_file"
+            if [[ "$status" -eq 0 ]]; then
+              return 0
+            fi
+            if [[ "$status" -eq 2 ]]; then
+              return 2
+            fi
+            echo "::error title=E2E ref lookup failed::git ls-remote exited ${status} while checking '${ref_name}' in ${TEST_REPO}. Refusing to treat this as a missing branch."
+            exit 1
+          }
+
           if [[ "$INPUT_BRANCH" == "main" ]]; then
             BRANCH="main"
           elif [[ "$INPUT_BRANCH" == "default-feature-branch" ]]; then
-            if git ls-remote --exit-code https://github.com/$TEST_REPO.git "refs/heads/$APP_BRANCH" >/dev/null 2>&1; then
+            if ref_status "$APP_BRANCH"; then
               BRANCH="$APP_BRANCH"
               echo "✅ Found matching branch: $BRANCH"
             else
@@ -65,7 +89,7 @@ jobs:
               echo "⚠️ No '$APP_BRANCH' branch in $TEST_REPO, using '$BASE_BRANCH'."
             fi
           else
-            if git ls-remote --exit-code https://github.com/$TEST_REPO.git "refs/heads/$INPUT_BRANCH" >/dev/null 2>&1; then
+            if ref_status "$INPUT_BRANCH"; then
               BRANCH="$INPUT_BRANCH"
             else
               echo "::error title=Invalid e2e_branch::Branch '$INPUT_BRANCH' not found in $TEST_REPO"
