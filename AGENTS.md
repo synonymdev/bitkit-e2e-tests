@@ -2,6 +2,12 @@
 
 This file provides guidance to AI agents (Codex/Claude/Cursor/WARP) working in this repository.
 
+## Agent Commands
+
+Durable shared agent command specs live in `.agents/commands/`. `.claude/commands` is a compatibility symlink to the same files; Cursor entries under `.cursor/commands/` resolve there too.
+
+- `/archive-release` — After a Bitkit release is staging/migration-green, tag this repo at the e2e SHA that passed and attach `BACKEND=regtest` Android APK + iOS sim builds to that tag (see `.agents/commands/archive-release.md`)
+
 ## Purpose
 
 Bitkit E2E tests for:
