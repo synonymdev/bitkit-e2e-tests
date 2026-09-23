@@ -249,14 +249,14 @@ describe('@settings - Settings', () => {
       await tap('BackupWallet');
       await sleep(1000); // animation
 
-      // get the seed from SeedContainer
+      await tap('TapToReveal');
+      await sleep(1000); // animation
+
       const seedElement = await elementById('SeedContainer');
       const seed = await getAccessibleText(seedElement);
       console.info({ seed });
       if (!seed) throw new Error('Could not read seed from "SeedContainer"');
 
-      await tap('TapToReveal');
-      await sleep(1000); // animation
       await tap('ContinueShowMnemonic');
 
       // enter the seed
