@@ -350,9 +350,9 @@ export async function verifyMyProfileDetails(expected: ProfileDetails) {
 }
 
 /**
- * Asserts Profile screen shows the given name (display is uppercase), notes, links by index,
- * and tag chips (`Tag-<tag>`). Link row labels use uppercase on Android (`Text13Up`); both sides
- * are compared uppercase so expectations can use plain casing (e.g. `Website`).
+ * Asserts the profile name (display is uppercase) and notes.
+ * Own-profile links and tags are on Edit Profile. Contact links and tags stay on the contact screen.
+ * Link row labels use uppercase on Android; both sides are compared in that casing.
  */
 export async function verifyProfileDetails(
   expected: ProfileDetails,
@@ -374,6 +374,31 @@ export async function verifyProfileDetails(
     await expect((await getAccessibleText(notesEl)).trim()).toBe(notesTrimmed);
   }
 
+  if (idPrefix === 'ProfileView') {
+    // Own profile no longer lists links or tags. Both stay on Edit Profile.
+    await expect(await elementById('ProfileLinkLabel_0').isExisting()).toBe(false);
+    await expect(await elementById('ProfileAddTag').isExisting()).toBe(false);
+    if (expected.links.length > 0 || expected.tags.length > 0) {
+      await tap('ProfileEdit');
+      await elementById('ProfileEditName').waitForDisplayed();
+      await swipeFullScreen('up');
+      for (let i = 0; i < expected.links.length; i++) {
+        const link = expected.links[i];
+        const labelQuery = driver.isAndroid ? link.label.toUpperCase() : link.label;
+        await elementByText(labelQuery, 'contains').waitForDisplayed();
+        const valueEl = await elementById(`ProfileEditLink_${i}`);
+        await valueEl.waitForDisplayed();
+        await expect((await getAccessibleText(valueEl)).trim()).toBe(link.url.trim());
+      }
+      for (const tag of expected.tags) {
+        await elementById(`Tag-${tag}`).waitForDisplayed();
+      }
+      await tap('ProfileEditCancel');
+      await elementById('ProfileCopy').waitForDisplayed();
+    }
+    return;
+  }
+
   for (let i = 0; i < expected.links.length; i++) {
     const link = expected.links[i];
     const labelEl = await elementById(`ProfileLinkLabel_${i}`);
@@ -384,23 +409,6 @@ export async function verifyProfileDetails(
       normalizeProfileDisplayName(link.label)
     );
     await expect((await getAccessibleText(valueEl)).trim()).toBe(link.url.trim());
-  }
-
-  if (idPrefix === 'ProfileView') {
-    // Own profile no longer lists tags. They stay on Edit Profile.
-    const addTag = await elementById('ProfileAddTag');
-    await expect(await addTag.isExisting()).toBe(false);
-    if (expected.tags.length > 0) {
-      await tap('ProfileEdit');
-      await elementById('ProfileEditName').waitForDisplayed();
-      await swipeFullScreen('up');
-      for (const tag of expected.tags) {
-        await elementById(`Tag-${tag}`).waitForDisplayed();
-      }
-      await tap('ProfileEditCancel');
-      await elementById('ProfileCopy').waitForDisplayed();
-    }
-    return;
   }
 
   for (const tag of expected.tags) {
