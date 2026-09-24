@@ -382,6 +382,23 @@ export async function verifyProfileDetails(
     await expect((await getAccessibleText(valueEl)).trim()).toBe(link.url.trim());
   }
 
+  if (idPrefix === 'ProfileView') {
+    // Own profile no longer lists tags. They stay on Edit Profile.
+    const addTag = await elementById('ProfileAddTag');
+    await expect(await addTag.isExisting()).toBe(false);
+    if (expected.tags.length > 0) {
+      await tap('ProfileEdit');
+      await elementById('ProfileEditName').waitForDisplayed();
+      await swipeFullScreen('up');
+      for (const tag of expected.tags) {
+        await elementById(`Tag-${tag}`).waitForDisplayed();
+      }
+      await tap('ProfileEditCancel');
+      await elementById('ProfileCopy').waitForDisplayed();
+    }
+    return;
+  }
+
   for (const tag of expected.tags) {
     const tagEl = await elementById(`Tag-${tag}`);
     await tagEl.waitForDisplayed();
