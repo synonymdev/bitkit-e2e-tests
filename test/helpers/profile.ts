@@ -410,10 +410,22 @@ export async function createProfile({
   await openPubkyChoice();
   await tap('PubkyChoiceCreate');
 
-  // Save is disabled with an empty name; enabled once a name is entered.
-  await expect(elementById('CreateProfileSave')).toBeDisabled();
+  // Create Profile focuses the name field and keeps Continue behind the keyboard,
+  // so CreateProfileSave is not displayed until the keyboard is dismissed.
   await elementById('CreateProfileUsername').waitForDisplayed();
   await typeText('CreateProfileUsername', name);
+  await confirmInputOnKeyboard();
+
+  const save = await elementById('CreateProfileSave');
+  if (!(await save.isDisplayed().catch(() => false))) {
+    try {
+      await driver.hideKeyboard();
+    } catch {
+      // Keyboard is already hidden, or this driver cannot hide it.
+    }
+  }
+  await save.waitForDisplayed({ timeout: 15_000 });
+  await expect(save).toBeEnabled();
   await tap('CreateProfileSave');
 
   // Pay Contacts onboarding is shown once after successful signup.
