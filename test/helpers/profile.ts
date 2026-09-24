@@ -316,6 +316,10 @@ export async function updateProfileDetails(details: ProfileDetails) {
     await sleep(400);
   }
 
+  // Cancel/Save sit over Add Tag until the form is scrolled.
+  if (details.tags.length > 0) {
+    await swipeFullScreen('up', { upStartYPercent: 0.35 });
+  }
   for (const tag of details.tags) {
     await tap('ProfileEditAddTag');
     await elementById('AddTagInput').waitForDisplayed();
