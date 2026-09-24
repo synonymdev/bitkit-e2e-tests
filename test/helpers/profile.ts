@@ -384,8 +384,7 @@ export async function verifyProfileDetails(
       await swipeFullScreen('up');
       for (let i = 0; i < expected.links.length; i++) {
         const link = expected.links[i];
-        const labelQuery = driver.isAndroid ? link.label.toUpperCase() : link.label;
-        await elementByText(labelQuery, 'contains').waitForDisplayed();
+        await elementByText(link.label.toUpperCase(), 'contains').waitForDisplayed();
         const valueEl = await elementById(`ProfileEditLink_${i}`);
         await valueEl.waitForDisplayed();
         await expect((await getAccessibleText(valueEl)).trim()).toBe(link.url.trim());
