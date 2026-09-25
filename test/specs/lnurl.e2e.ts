@@ -74,7 +74,7 @@ function msatsToCeilSatsString(msats: number): string {
   return Math.ceil(msats / 1000).toString();
 }
 
-describe('@lnurl - LNURL', () => {
+describe('@lnurl @ios_gate - LNURL', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
   let lnurlServer: any;
   // LND tests only work with BACKEND=local

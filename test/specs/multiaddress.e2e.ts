@@ -71,7 +71,7 @@ describe('@multi_address - Multi address', () => {
     await electrum?.stop();
   });
 
-  ciIt('@multi_address_1 - Receive to each address type and send max combined', async () => {
+  ciIt('@multi_address_1 @ios_nightly - Receive to each address type and send max combined', async () => {
     const addressTypes: addressTypePreference[] = ['p2pkh', 'p2sh-p2wpkh', 'p2wpkh', 'p2tr'];
     const satsPerAddressType = 100_000;
     const { totalFundedSats } = await switchAndFundEachAddressType({
@@ -174,7 +174,7 @@ describe('@multi_address - Multi address', () => {
   );
 
   ciIt(
-    '@multi_address_3 - Receive to each type, send almost max, verify change to primary, then RBF',
+    '@multi_address_3 @ios_gate - Receive to each type, send almost max, verify change to primary, then RBF',
     async () => {
       const addressTypes: addressTypePreference[] = ['p2pkh', 'p2sh-p2wpkh', 'p2wpkh', 'p2tr'];
       const satsPerAddressType = 10_000;
@@ -248,7 +248,7 @@ describe('@multi_address - Multi address', () => {
   );
 
   ciIt(
-    '@multi_address_4 - Receive to each type, open external channel with max, keep Legacy untouched',
+    '@multi_address_4 @ios_gate - Receive to each type, open external channel with max, keep Legacy untouched',
     async () => {
       const rpc = getBitcoinRpc();
       const addressTypes: addressTypePreference[] = ['p2pkh', 'p2sh-p2wpkh', 'p2wpkh', 'p2tr'];
