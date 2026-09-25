@@ -4,25 +4,25 @@ on:
   workflow_call:
     inputs:
       e2e_branch:
-        description: "Candidate branch of synonymdev/bitkit-e2e-tests. Re-validated immediately before checkout. Callers may pass an already-resolved ref; a missing default companion falls back to main."
+        description: 'Candidate branch of synonymdev/bitkit-e2e-tests. Re-validated immediately before checkout. Callers may pass an already-resolved ref; a missing default companion falls back to main.'
         required: true
         type: string
       e2e_branch_input:
-        description: "Resolution mode (main | default-feature-branch | custom branch name). Empty inherits the caller workflow_dispatch input e2e_branch, then default-feature-branch. A custom name hard-fails when the branch is missing."
+        description: 'Resolution mode (main | default-feature-branch | custom branch name). Empty inherits the caller workflow_dispatch input e2e_branch, then default-feature-branch. A custom name hard-fails when the branch is missing.'
         required: false
         type: string
-        default: ""
+        default: ''
       rn_version:
-        description: "Legacy RN app version to use for setup (e.g., v1.1.6)"
+        description: 'Legacy RN app version to use for setup (e.g., v1.1.6)'
         required: false
         type: string
-        default: "v1.1.6"
+        default: 'v1.1.6'
       setup_type:
-        description: "Wallet setup type (standard | passphrase | sweep)"
+        description: 'Wallet setup type (standard | passphrase | sweep)'
         required: true
         type: string
       scenario_name:
-        description: "Migration scenario name for artifact naming"
+        description: 'Migration scenario name for artifact naming'
         required: true
         type: string
 

@@ -2,10 +2,10 @@
 
 The routine migration suite has four cases per platform. Every case starts with savings and spending:
 
-| Source | Restore into a clean installation | Install current app on top |
-| --- | --- | --- |
-| React Native 1.1.6 | `@migration_rn_restore` | `@migration_rn_upgrade` |
-| Previous native release | `@migration_native_restore` | `@migration_native_upgrade` |
+| Source                  | Restore into a clean installation | Install current app on top  |
+| ----------------------- | --------------------------------- | --------------------------- |
+| React Native 1.1.6      | `@migration_rn_restore`           | `@migration_rn_upgrade`     |
+| Previous native release | `@migration_native_restore`       | `@migration_native_upgrade` |
 
 All apps and tests use remote **regtest**. The native baseline is pinned per platform in `config/migration-baselines.json` (currently 2.5.0), not selected from GitHub's latest release. The app workflows retain nightly, manual, and release-PR triggers. Manual `previous_native_version` overrides the pinned tag. Routine runs do not prepare or run passphrase/legacy-address wallets.
 

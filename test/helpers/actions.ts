@@ -962,9 +962,7 @@ export async function waitForTextToDisappear(texts: string[], timeout: number) {
  * @param retryTap - Optional callback to retry the address type tap if feedback missed
  * @returns true if toast was observed, false if best-effort fallback was used
  */
-async function assertAddressTypeSwitchFeedback(
-  retryTap?: () => Promise<void>
-): Promise<boolean> {
+async function assertAddressTypeSwitchFeedback(retryTap?: () => Promise<void>): Promise<boolean> {
   // First try: wait for Updated toast (the primary success signal)
   let toastSeen = await waitForToastBestEffort('AddressTypeSettingsUpdatedToast', {
     timeout: 12_000,
@@ -1437,10 +1435,7 @@ export async function waitForToast(
  */
 export async function waitForToastBestEffort(
   toastId: ToastId,
-  {
-    timeout = 10_000,
-    pollingInterval = 200,
-  }: { timeout?: number; pollingInterval?: number } = {}
+  { timeout = 10_000, pollingInterval = 200 }: { timeout?: number; pollingInterval?: number } = {}
 ): Promise<boolean> {
   const el = elementById(toastId);
   let toastSeen = false;
