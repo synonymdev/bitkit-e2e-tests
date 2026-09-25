@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def migration_plan(platform, override="", extended=False):
     version = override.strip() or json.loads((ROOT / "config/migration-baselines.json").read_text())[platform]
-    if not re.fullmatch(r"v?\d+\.\d+\.\d+(?:[-.][A-Za-z0-9]+)*", version):
+    if not re.fullmatch(r"\d+\.\d+\.\d+(?:[-.][A-Za-z0-9]+)*", version):
         raise ValueError(f"Invalid native release tag: {version!r}")
     rn = [
         {"name": "rn_restore", "source": "rn", "version": "v1.1.6", "setup_type": "standard", "grep": "@migration_rn_restore"},

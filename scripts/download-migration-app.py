@@ -16,10 +16,11 @@ RELEASES = "https://github.com/synonymdev/bitkit-e2e-tests/releases/download"
 
 
 def download(platform, source, version):
-    if not re.fullmatch(r"v?\d+\.\d+\.\d+(?:[-.][A-Za-z0-9]+)*", version):
-        raise ValueError(f"Invalid release tag: {version!r}")
-    if source == "rn" and version != "v1.1.6":
-        raise ValueError("Only React Native v1.1.6 is supported")
+    if source == "rn":
+        if version != "v1.1.6":
+            raise ValueError("Only React Native v1.1.6 is supported")
+    elif not re.fullmatch(r"\d+\.\d+\.\d+(?:[-.][A-Za-z0-9]+)*", version):
+        raise ValueError(f"Invalid native release tag: {version!r}")
     if source == "native":
         tag = version
         asset = {"android": "bitkit_e2e.apk", "ios": "Bitkit.app.zip"}[platform]

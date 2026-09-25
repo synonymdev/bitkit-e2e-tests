@@ -39,7 +39,7 @@ class MigrationPlanTests(unittest.TestCase):
         self.assertEqual([case["grep"] for case in plan["rn"]][2:], ["@migration_3", "@migration_4"])
 
     def test_invalid_tag_rejected(self):
-        for version in ("latest", "../2.5.0", "2.5.0\nEVIL=1", "2.5.0'; exit 1"):
+        for version in ("latest", "v2.5.0", "../2.5.0", "2.5.0\nEVIL=1", "2.5.0'; exit 1"):
             with self.assertRaises(ValueError):
                 matrix.migration_plan("android", version)
 
@@ -59,6 +59,10 @@ class DownloadTests(unittest.TestCase):
         archive = Path(args[args.index("--output") + 1])
         with zipfile.ZipFile(archive, "w") as apk:
             apk.writestr("AndroidManifest.xml", "test manifest")
+
+    def test_native_version_rejects_rn_prefix(self):
+        with self.assertRaisesRegex(ValueError, "Invalid native release tag"):
+            downloader.download("android", "native", "v2.5.0")
 
     def test_download_keeps_target_separate_and_records_provenance(self):
         target = self.root / "aut/bitkit_e2e.apk"
