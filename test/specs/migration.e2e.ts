@@ -4,6 +4,7 @@ import {
   acknowledgeReceivedPayment,
   confirmInputOnKeyboard,
   dismissBackupTimedSheet,
+  dismissBackgroundPaymentsTimedSheet,
   doNavigationClose,
   dragOnElement,
   elementById,
@@ -12,7 +13,6 @@ import {
   expectTextWithin,
   getAccessibleText,
   getReceiveAddress,
-  getUriFromQRCode,
   handleAndroidAlert,
   pasteIOSText,
   restoreWallet,
@@ -22,6 +22,12 @@ import {
   typeText,
   waitForSetupWalletScreenFinish,
 } from '../helpers/actions';
+import {
+  expectMigrationBalances,
+  installNativeMigrationTarget,
+  prepareNativeMigrationWallet,
+  verifyNativeMigration,
+} from '../helpers/native-migration';
 import { ciIt } from '../helpers/suite';
 import {
   getNativeAppPath,
@@ -32,13 +38,7 @@ import {
 } from '../helpers/setup';
 import { getAppId } from '../helpers/constants';
 import initElectrum, { ElectrumClient } from '../helpers/electrum';
-import {
-  deposit,
-  ensureLocalFunds,
-  getExternalAddress,
-  mineBlocks,
-  payInvoice,
-} from '../helpers/regtest';
+import { deposit, ensureLocalFunds, getExternalAddress, mineBlocks } from '../helpers/regtest';
 
 // Module-level electrum client (set in before hook)
 let electrumClient: ElectrumClient;
@@ -73,7 +73,7 @@ const IOS_RN_BALANCE = process.env.RN_BALANCE
 // TEST SUITE
 // ============================================================================
 
-describe('@migration - Migration from legacy RN app to native app', () => {
+describe('Wallet migration', () => {
   before(async () => {
     await ensureLocalFunds();
     electrumClient = await initElectrum();
@@ -83,97 +83,106 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     await electrumClient?.stop();
   });
 
+  for (const method of ['restore', 'upgrade'] as const) {
+    ciIt(
+      `@migration_native_${method} - Native ${process.env.PREVIOUS_NATIVE_VERSION ?? 'source'} ${method}`,
+      async () => {
+        const wallet = await prepareNativeMigrationWallet(electrumClient, method);
+        await installNativeMigrationTarget(method, wallet.seed);
+        await verifyNativeMigration(wallet.balances, method);
+      }
+    );
+  }
+
   // --------------------------------------------------------------------------
   // Migration Setup: Prepare legacy RN wallets on Android for iOS runs
   // --------------------------------------------------------------------------
-  ciIt('@migration_setup_standard - Prepare legacy RN wallet (Android only)', async () => {
-    if (driver.isIOS) {
-      throw new Error('Migration setup should run on Android only.');
-    }
+  if (process.env.MIGRATION_SETUP_WALLET) {
+    ciIt(
+      `@migration_setup_standard - Prepare legacy RN wallet ${process.env.MIGRATION_SETUP_WALLET ?? '1'} (Android only)`,
+      async () => {
+        if (driver.isIOS) {
+          throw new Error('Migration setup should run on Android only.');
+        }
 
-    const { mnemonic, balance } = await setupLegacyWallet({ returnSeed: true });
-    writeMigrationEnvFile({
-      fileName: 'migration_setup_standard.env',
-      mnemonicVar: 'RN_MNEMONIC',
-      balanceVar: 'RN_BALANCE',
-      mnemonic,
-      balance,
-    });
-    // Wait for backup propagation (tags, activity metadata) before env artifact upload
-    console.info('→ Waiting 40 seconds to ensure backups (incl. tags)...');
-    await sleep(40_000);
-  });
-
-  ciIt(
-    '@migration_setup_passphrase - Prepare legacy wallet with passphrase (Android only)',
-    async () => {
-      if (driver.isIOS) {
-        throw new Error('Migration setup should run on Android only.');
+        const { mnemonic, balance } = await setupLegacyWallet({ returnSeed: true });
+        writeMigrationEnvFile({
+          fileName: 'migration_setup_standard.env',
+          mnemonicVar: 'RN_MNEMONIC',
+          balanceVar: 'RN_BALANCE',
+          mnemonic,
+          balance,
+        });
       }
+    );
 
-      const { mnemonic, balance } = await setupLegacyWallet({
-        returnSeed: true,
-        passphrase: TEST_PASSPHRASE,
-      });
-      writeMigrationEnvFile({
-        fileName: 'migration_setup_passphrase.env',
-        mnemonicVar: 'RN_MNEMONIC',
-        balanceVar: 'RN_BALANCE',
-        mnemonic,
-        balance,
-      });
-      // Wait for backup propagation (tags, activity metadata) before env artifact upload
-      console.info('→ Waiting 40 seconds to ensure backups (incl. tags)...');
-      await sleep(40_000);
-    }
-  );
+    ciIt(
+      `@migration_setup_passphrase - Prepare legacy wallet ${process.env.MIGRATION_SETUP_WALLET ?? '1'} with passphrase (Android only)`,
+      async () => {
+        if (driver.isIOS) {
+          throw new Error('Migration setup should run on Android only.');
+        }
 
-  ciIt('@migration_setup_sweep - Prepare legacy sweep wallet (Android only)', async () => {
-    if (driver.isIOS) {
-      throw new Error('Migration setup should run on Android only.');
-    }
+        const { mnemonic, balance } = await setupLegacyWallet({
+          returnSeed: true,
+          passphrase: TEST_PASSPHRASE,
+        });
+        writeMigrationEnvFile({
+          fileName: 'migration_setup_passphrase.env',
+          mnemonicVar: 'RN_MNEMONIC',
+          balanceVar: 'RN_BALANCE',
+          mnemonic,
+          balance,
+        });
+      }
+    );
 
-    const { mnemonic, balance } = await setupWalletWithLegacyFunds({ returnSeed: true });
-    writeMigrationEnvFile({
-      fileName: 'migration_setup_sweep.env',
-      mnemonicVar: 'RN_MNEMONIC',
-      balanceVar: 'RN_BALANCE',
-      mnemonic,
-      balance,
-    });
-    // Wait for backup propagation before env artifact upload
-    console.info('→ Waiting 40 seconds to ensure backups...');
-    await sleep(40_000);
-  });
+    ciIt(
+      `@migration_setup_sweep - Prepare legacy sweep wallet ${process.env.MIGRATION_SETUP_WALLET ?? '1'} (Android only)`,
+      async () => {
+        if (driver.isIOS) {
+          throw new Error('Migration setup should run on Android only.');
+        }
 
-  ciIt('@migration_ios - setupLegacyWallet on iOS', async () => {
-    // Setup wallet in RN app
-    const { mnemonic, balance } = await setupLegacyWallet({ returnSeed: true });
-    console.info(`→ MNEMONIC: ${mnemonic}`);
-    console.info(`→ BALANCE: ${balance}`);
-  });
+        const { mnemonic, balance } = await setupWalletWithLegacyFunds({ returnSeed: true });
+        writeMigrationEnvFile({
+          fileName: 'migration_setup_sweep.env',
+          mnemonicVar: 'RN_MNEMONIC',
+          balanceVar: 'RN_BALANCE',
+          mnemonic,
+          balance,
+        });
+      }
+    );
+  }
 
   // --------------------------------------------------------------------------
   // Migration Scenario 1: Uninstall RN, install Native, restore mnemonic
   // --------------------------------------------------------------------------
-  ciIt('@migration_1 - Uninstall RN, install Native, restore mnemonic', async () => {
+  ciIt('@migration_rn_restore - Uninstall RN, install Native, restore mnemonic', async () => {
     let mnemonic: string | undefined;
     let balance: number;
     if (driver.isIOS) {
-      mnemonic = IOS_RN_MNEMONIC!;
+      if (
+        !IOS_RN_MNEMONIC ||
+        ![12, 24].includes(IOS_RN_MNEMONIC.trim().split(/\s+/).length) ||
+        !Number.isFinite(IOS_RN_BALANCE) ||
+        IOS_RN_BALANCE! <= 0
+      ) {
+        throw new Error(
+          'iOS RN restore requires a 12/24-word RN_MNEMONIC and positive RN_BALANCE from a fresh Android setup wallet.'
+        );
+      }
+      mnemonic = IOS_RN_MNEMONIC;
       balance = IOS_RN_BALANCE!;
     } else {
       ({ mnemonic, balance } = await setupLegacyWallet({ returnSeed: true }));
-      // Tags/activity metadata are written AFTER getRnMnemonic()'s backup wait.
-      // Give remote backup time before wipe — otherwise migration_1 Tag-* asserts flake.
-      console.info('→ Waiting for RN metadata backup before uninstall...');
-      await sleep(30_000);
     }
 
     // Uninstall RN app
     console.info('→ Removing legacy RN app...');
     await driver.removeApp(getAppId());
-    resetBootedIOSKeychain();
+    resetBootedIOSKeychain({ strict: true });
 
     // Install native app
     console.info(`→ Installing native app from: ${getNativeAppPath()}`);
@@ -193,19 +202,25 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     console.info('→ Waiting briefly for metadata restore before tag checks...');
     await sleep(15_000);
 
-    // Verify migration
+    // Verify migration and state persisted by the target.
+    await verifyMigration(balance);
+    await driver.terminateApp(getAppId());
+    await driver.activateApp(getAppId());
+    // RN migration can schedule this intro for the next launch.
+    await dismissBackgroundPaymentsTimedSheet();
     await verifyMigration(balance);
   });
 
   // --------------------------------------------------------------------------
   // Migration Scenario 2: Install native on top of RN (upgrade)
   // --------------------------------------------------------------------------
-  ciIt('@migration_2 - Install native on top of RN (upgrade)', async () => {
+  ciIt('@migration_rn_upgrade - Install native on top of RN (upgrade)', async () => {
     // Setup wallet in RN app
     const { balance } = await setupLegacyWallet();
 
     // Install native app ON TOP of RN (upgrade)
     console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
+    await driver.terminateApp(getAppId());
     await driver.installApp(getNativeAppPath());
     grantIOSCameraPermission();
     await driver.activateApp(getAppId());
@@ -213,51 +228,61 @@ describe('@migration - Migration from legacy RN app to native app', () => {
     // Handle migration flow
     await handleMigrationFlow({ withSweep: false });
 
-    // Verify migration
+    // Verify migration and state persisted by the target.
+    await verifyMigration(balance);
+    await driver.terminateApp(getAppId());
+    await driver.activateApp(getAppId());
+    // RN migration can schedule this intro for the next launch.
+    await dismissBackgroundPaymentsTimedSheet();
     await verifyMigration(balance);
   });
 
   // --------------------------------------------------------------------------
   // Migration Scenario 3: Install native on top of RN with passphrase (upgrade)
   // --------------------------------------------------------------------------
-  ciIt('@migration_3 - Install native on top of RN with passphrase (upgrade)', async () => {
-    // Setup wallet in RN app WITH passphrase
-    const { balance } = await setupLegacyWallet({ passphrase: TEST_PASSPHRASE });
+  if (process.env.MIGRATION_EXTENDED === 'true') {
+    ciIt('@migration_3 - Install native on top of RN with passphrase (upgrade)', async () => {
+      // Setup wallet in RN app WITH passphrase
+      const { balance } = await setupLegacyWallet({ passphrase: TEST_PASSPHRASE });
 
-    // Install native app ON TOP of RN (upgrade)
-    console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
-    await driver.installApp(getNativeAppPath());
-    grantIOSCameraPermission();
-    await driver.activateApp(getAppId());
+      // Install native app ON TOP of RN (upgrade)
+      console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
+      await driver.installApp(getNativeAppPath());
+      grantIOSCameraPermission();
+      await driver.activateApp(getAppId());
 
-    // Handle migration flow
-    await handleMigrationFlow({ withSweep: false });
+      // Handle migration flow
+      await handleMigrationFlow({ withSweep: false });
 
-    // Verify migration
-    await verifyMigration(balance);
-  });
+      // Verify migration and state persisted by the target.
+      await verifyMigration(balance);
+      await driver.terminateApp(getAppId());
+      await driver.activateApp(getAppId());
+      await verifyMigration(balance);
+    });
 
-  // --------------------------------------------------------------------------
-  // Migration Scenario 4: Migration with sweep (legacy p2pkh addresses)
-  // This scenario tests migration when wallet has funds on legacy addresses,
-  // which triggers a sweep flow during migration.
-  // --------------------------------------------------------------------------
-  ciIt('@migration_4 - Migration (legacy p2pkh addresses)', async () => {
-    // Setup wallet with funds on legacy addresses (triggers sweep on migration)
-    const { balance } = await setupWalletWithLegacyFunds();
+    // --------------------------------------------------------------------------
+    // Migration Scenario 4: Migration with sweep (legacy p2pkh addresses)
+    // This scenario tests migration when wallet has funds on legacy addresses,
+    // which triggers a sweep flow during migration.
+    // --------------------------------------------------------------------------
+    ciIt('@migration_4 - Migration (legacy p2pkh addresses)', async () => {
+      // Setup wallet with funds on legacy addresses (triggers sweep on migration)
+      const { balance } = await setupWalletWithLegacyFunds();
 
-    // Install native app ON TOP of RN (upgrade)
-    console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
-    await driver.installApp(getNativeAppPath());
-    grantIOSCameraPermission();
-    await driver.activateApp(getAppId());
+      // Install native app ON TOP of RN (upgrade)
+      console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
+      await driver.installApp(getNativeAppPath());
+      grantIOSCameraPermission();
+      await driver.activateApp(getAppId());
 
-    // Handle migration flow
-    await handleMigrationFlow({ withSweep: false });
+      // Handle migration flow
+      await handleMigrationFlow({ withSweep: false });
 
-    // Verify migration completed (balance should be preserved after sweep, minus fees)
-    await verifyMigrationWithSweep(balance);
-  });
+      // Verify migration completed (balance should be preserved after sweep, minus fees)
+      await verifyMigrationWithSweep(balance);
+    });
+  }
 });
 
 // ============================================================================
@@ -319,7 +344,6 @@ async function setupLegacyWallet(
     console.info(
       `=== iOS: Restoring RN wallet from mnemonic (prepared by Android)${passphrase ? ' with passphrase' : ''} ===`
     );
-    console.info(`→ Mnemonic: ${IOS_RN_MNEMONIC}`);
     console.info(`→ Expected balance: ${IOS_RN_BALANCE} sats`);
 
     // Install RN app and restore wallet
@@ -347,7 +371,6 @@ async function setupLegacyWallet(
   let mnemonic: string | undefined;
   if (returnSeed) {
     mnemonic = await getRnMnemonic();
-    console.info(`→ Legacy RN wallet mnemonic: ${mnemonic}`);
   }
 
   // Set legacy address type if requested (before funding)
@@ -377,10 +400,10 @@ async function setupLegacyWallet(
   // Get final balance before migration
   const balance = await getRnTotalBalance();
 
+  await waitForRnBackup();
   console.info('=== Legacy wallet setup complete ===');
 
   // Output for iOS CI to capture
-  console.info(`\nexport RN_MNEMONIC="${mnemonic}"`);
   console.info(`export RN_BALANCE="${balance}"\n`);
 
   return { mnemonic, balance };
@@ -412,7 +435,6 @@ function writeMigrationEnvFile({
   fs.writeFileSync(filePath, contents, 'utf8');
 
   console.info(`→ Wrote migration env file: ${filePath}`);
-  console.info(`\nexport ${mnemonicVar}="${mnemonic}"`);
   console.info(`export ${balanceVar}="${balance}"\n`);
 }
 
@@ -444,7 +466,6 @@ async function setupWalletWithLegacyFunds(
       );
     }
     console.info('=== iOS: Restoring RN sweep wallet from mnemonic (prepared by Android) ===');
-    console.info(`→ Mnemonic: ${IOS_RN_MNEMONIC}`);
     console.info(`→ Expected balance: ${IOS_RN_BALANCE} sats`);
 
     await installLegacyRnApp();
@@ -464,7 +485,6 @@ async function setupWalletWithLegacyFunds(
   let mnemonic: string | undefined;
   if (returnSeed) {
     mnemonic = await getRnMnemonic();
-    console.info(`→ Legacy RN sweep wallet mnemonic: ${mnemonic}`);
   }
 
   // 1. Fund wallet on native segwit (works with Blocktank)
@@ -482,6 +502,7 @@ async function setupWalletWithLegacyFunds(
   // Get final balance before migration
   const balance = await getRnTotalBalance();
 
+  await waitForRnBackup(false);
   console.info('=== Legacy funds setup complete ===');
 
   return { balance, mnemonic };
@@ -598,7 +619,7 @@ async function verifyMigrationWithSweep(expectedBalance: number): Promise<void> 
 
 async function installLegacyRnApp(): Promise<void> {
   console.info(`→ Installing legacy RN app from: ${getRnAppPath()}`);
-  await reinstallAppFromPath(getRnAppPath());
+  await reinstallAppFromPath(getRnAppPath(), getAppId(), { strictKeychainReset: true });
 }
 
 async function createLegacyRnWallet(options: { passphrase?: string } = {}): Promise<void> {
@@ -893,42 +914,6 @@ async function transferToSpendingRN(sats: number, existingBalance = 0): Promise<
   console.info(`→ Created spending balance with ${sats} sats`);
 }
 
-// @ts-expect-error - Kept for future use
-async function createCJIT(sats: number): Promise<void> {
-  await tap('Receive');
-  await tap('ReceiveInstantlySwitch');
-
-  // Enter amount
-  await sleep(500);
-  const satsStr = String(sats);
-  for (const digit of satsStr) {
-    await tap(`N${digit}`);
-  }
-  await tap('ReceiveAmountContinue');
-  await sleep(1000);
-  await tap('ReceiveConnectContinue');
-  await sleep(2000);
-  const address = await getUriFromQRCode();
-  await sleep(5000);
-  const tx = await payInvoice(address);
-  console.info(`→ Created CJIT invoice and paid: ${tx}`);
-  await sleep(2000);
-  await swipeFullScreenRN('down');
-  // Mine blocks periodically to progress the channel opening
-  console.info('→ Mining blocks to confirm channel...');
-  for (let i = 0; i < 10; i++) {
-    await mineBlocks(1);
-    // Check if spending balance shows the transferred amount (transfer complete)
-    try {
-      await elementById('TransferSuccess-button').waitForDisplayed();
-      await sleep(1000);
-      break;
-    } catch {
-      console.info('→ Transfer successful screen did not appear, waiting...');
-    }
-  }
-}
-
 /**
  * Tag the latest (most recent) transaction in the activity list.
  *
@@ -1060,13 +1045,55 @@ async function assertRnSpendingBalanceVisible(expectedSats: number): Promise<voi
         console.info(`→ Spending balance confirmed: ${text}`);
         return;
       }
-      console.info(`→ Spending balance check (attempt ${attempt}/10): "${text}" vs "${expectedText}"`);
+      console.info(
+        `→ Spending balance check (attempt ${attempt}/10): "${text}" vs "${expectedText}"`
+      );
     } catch {
       console.info(`→ ActivitySpending not visible yet (attempt ${attempt}/10)`);
     }
     await sleep(2_000);
   }
-  console.warn(`→ Could not confirm spending balance ${expectedSats}, proceeding anyway`);
+  throw new Error(`RN source spending balance did not reach ${expectedSats} sats`);
+}
+
+/** Verify the final metadata and channel backups before exporting or migrating a source wallet. */
+async function waitForRnBackup(requireConnections = true): Promise<void> {
+  await tap('HeaderMenu');
+  await tap('DrawerSettings');
+  await tap('BackupSettings');
+  const categories = [
+    ...(requireConnections ? ['Connections'] : []),
+    'Connection Receipts',
+    'Transaction Log',
+    'Boosts & Transfers',
+    'Settings',
+    'Widgets',
+    'Tags',
+    'Contacts',
+  ];
+  const statuses: Record<string, string> = {};
+  // RN release builds omit the E2E-only AllSynced badge. Each visible row uses
+  // Latest Backup only when it is not running and synced >= required.
+  try {
+    await driver.waitUntil(
+      async () => {
+        for (const category of categories) {
+          const status = $(
+            `//android.widget.TextView[@text="${category}"]/following-sibling::android.widget.TextView[1]`
+          );
+          statuses[category] = (await status.isExisting()) ? await status.getText() : 'missing';
+        }
+        return categories.every((category) => statuses[category].startsWith('Latest Backup: '));
+      },
+      { timeout: 90_000, interval: 2_000, timeoutMsg: 'RN source backups did not finish syncing' }
+    );
+  } catch (error) {
+    throw new Error(`RN backup statuses: ${JSON.stringify(statuses)}`, { cause: error });
+  }
+  await driver.back();
+  await driver.back();
+  await elementById('TotalBalance').waitForDisplayed();
+  console.info('→ RN source backups confirmed:', statuses);
 }
 
 /**
@@ -1099,7 +1126,6 @@ async function getRnMnemonic(): Promise<string> {
   const seed = await getAccessibleText(seedElement);
 
   if (!seed) throw new Error('Could not read seed from "SeedContaider"');
-  console.info(`→ RN mnemonic retrieved: ${seed}`);
   // Close mnemonic sheet using back button - more reliable than swipe for RN
   await dismissSheetRN();
   // Wait for backup to be performed
@@ -1115,7 +1141,6 @@ async function getRnMnemonic(): Promise<string> {
   return seed;
 }
 
-
 /**
  * Open the activity tag filter and wait for a specific tag chip.
  * Retries because migration_1 mnemonic restore syncs balance before tag metadata.
@@ -1123,9 +1148,9 @@ async function getRnMnemonic(): Promise<string> {
 async function openTagFilter(tag: string): Promise<void> {
   const tagId = `Tag-${tag}`;
   for (let attempt = 1; attempt <= 5; attempt++) {
+    await tap('TagsPrompt');
+    await sleep(500);
     try {
-      await tap('TagsPrompt');
-      await sleep(500);
       await elementById(tagId).waitForDisplayed({ timeout: 12_000 });
       return;
     } catch (error) {
@@ -1133,17 +1158,25 @@ async function openTagFilter(tag: string): Promise<void> {
         `→ ${tagId} not ready in TagsPrompt (attempt ${attempt}/5); waiting for metadata sync...`,
         error
       );
-      try {
+      if (driver.isIOS) {
+        await swipeFullScreen('down');
+      } else {
         await driver.back();
-      } catch {
-        // sheet may already be closed
       }
-      await sleep(5_000);
+      const retryWaitStarted = Date.now();
+      await elementById('TagsPrompt').waitForDisplayed({
+        timeout: 5_000,
+        timeoutMsg: 'Tag selector did not close before metadata retry',
+      });
+      await sleep(Math.max(0, 5_000 - (Date.now() - retryWaitStarted)));
     }
   }
   await tap('TagsPrompt');
   await sleep(500);
-  await elementById(tagId).waitForDisplayed({ timeout: 30_000 });
+  await elementById(tagId).waitForDisplayed({
+    timeout: 30_000,
+    timeoutMsg: `Migrated tag ${tagId} did not restore after metadata retries`,
+  });
 }
 
 // ============================================================================
@@ -1157,17 +1190,11 @@ async function openTagFilter(tag: string): Promise<void> {
 async function verifyMigration(expectedBalance: number): Promise<void> {
   console.info('=== Verifying migration ===');
 
-  // Verify we have balance (should match what we funded)
-  const totalBalanceEl = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
-  const balanceText = await totalBalanceEl.getText();
-  const actualBalance = parseInt(balanceText.replace(/\s/g, ''), 10);
-  console.info(`→ Total balance: ${actualBalance} sats (expected: ${expectedBalance})`);
-
-  // Verify balance matches
-  if (actualBalance !== expectedBalance) {
-    throw new Error(`Balance mismatch! Expected ${expectedBalance}, got ${actualBalance}`);
-  }
-  console.info('→ Balance migrated successfully');
+  await expectMigrationBalances({
+    total: expectedBalance,
+    spending: TRANSFER_TO_SPENDING_SATS,
+    savings: expectedBalance - TRANSFER_TO_SPENDING_SATS,
+  });
 
   // Go to activity list to verify transactions exist
   await tap('ActivityShowAll');

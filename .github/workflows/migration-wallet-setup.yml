@@ -59,12 +59,13 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: Download RN app for migration
+        working-directory: bitkit-e2e-tests
+        env:
+          RN_VERSION: ${{ inputs.rn_version }}
         run: |
-          mkdir -p bitkit-e2e-tests/aut
-          curl -L -o bitkit-e2e-tests/aut/bitkit_rn_regtest.apk \
-            https://github.com/synonymdev/bitkit-e2e-tests/releases/download/migration-rn-regtest/bitkit_rn_regtest_${{ inputs.rn_version }}.apk
-          # Symlink to bitkit_e2e.apk so wdio.conf.ts can initialize the Appium session
-          cd bitkit-e2e-tests/aut && ln -sf bitkit_rn_regtest.apk bitkit_e2e.apk
+          python3 scripts/download-migration-app.py android rn "$RN_VERSION"
+          # WDIO initializes its session using the RN source during preparation.
+          ln -sf bitkit_rn_regtest.apk aut/bitkit_e2e.apk
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -83,16 +84,7 @@ jobs:
         working-directory: bitkit-e2e-tests
         run: npm ci
 
-      - name: Clear previous migration env files
-        working-directory: bitkit-e2e-tests
-        run: |
-          rm -f artifacts/migration_setup_standard.env
-          rm -f artifacts/migration_setup_passphrase.env
-          rm -f artifacts/migration_setup_sweep.env
-
-      - name: Prepare migration wallet 1
-        continue-on-error: true
-        id: prepare1
+      - name: Prepare independent wallets for all consumer attempts
         uses: reactivecircus/android-emulator-runner@v2
         with:
           profile: pixel_6
@@ -101,48 +93,27 @@ jobs:
           avd-name: Pixel_6
           force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-front none
-          script: cd bitkit-e2e-tests && ./ci_run_android.sh --mochaOpts.grep "@migration_setup_${{ inputs.setup_type }}"
+          script: cd bitkit-e2e-tests && bash scripts/prepare-migration-wallets.sh "$SETUP_TYPE"
         env:
           BACKEND: regtest
+          SETUP_TYPE: ${{ inputs.setup_type }}
 
-      - name: Prepare migration wallet 2
-        continue-on-error: true
-        id: prepare2
-        if: steps.prepare1.outcome != 'success'
-        uses: reactivecircus/android-emulator-runner@v2
+      - name: Upload preparation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          profile: pixel_6
-          api-level: 33
-          arch: x86_64
-          avd-name: Pixel_6
-          force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-front none
-          script: cd bitkit-e2e-tests && ./ci_run_android.sh --mochaOpts.grep "@migration_setup_${{ inputs.setup_type }}"
-        env:
-          BACKEND: regtest
-
-      - name: Prepare migration wallet 3
-        id: prepare3
-        if: steps.prepare1.outcome != 'success' && steps.prepare2.outcome != 'success'
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          profile: pixel_6
-          api-level: 33
-          arch: x86_64
-          avd-name: Pixel_6
-          force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-front none
-          script: cd bitkit-e2e-tests && ./ci_run_android.sh --mochaOpts.grep "@migration_setup_${{ inputs.setup_type }}"
-        env:
-          BACKEND: regtest
-
-      - name: Verify migration env file
-        run: |
-          set -euo pipefail
-          test -f "bitkit-e2e-tests/artifacts/migration_setup_${{ inputs.setup_type }}.env"
+          name: migration-setup-logs_${{ inputs.scenario_name }}_${{ github.run_attempt }}
+          path: |
+            bitkit-e2e-tests/artifacts/attempt-*/
+            bitkit-e2e-tests/artifacts/migration-source.json
 
       - name: Upload migration env file
         uses: actions/upload-artifact@v4
         with:
-          name: migration-env_${{ inputs.rn_version }}_${{ inputs.scenario_name }}
-          path: bitkit-e2e-tests/artifacts/migration_setup_${{ inputs.setup_type }}.env
+          name: migration-env_${{ inputs.rn_version }}_${{ inputs.scenario_name }}_${{ github.run_attempt }}
+          path: |
+            bitkit-e2e-tests/artifacts/wallet-attempt-1/
+            bitkit-e2e-tests/artifacts/wallet-attempt-2/
+            bitkit-e2e-tests/artifacts/wallet-attempt-3/
+          if-no-files-found: error
+          retention-days: 1

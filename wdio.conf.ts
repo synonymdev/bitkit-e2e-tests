@@ -3,6 +3,7 @@ import fs from 'node:fs';
 
 import { grantIOSCameraPermission } from './test/helpers/setup';
 
+const appiumPort = Number(process.env.APPIUM_PORT ?? '4723');
 const isAndroid = process.env.PLATFORM === 'android';
 const androidUdid = process.env.ANDROID_UDID;
 const androidDeviceName = process.env.ANDROID_DEVICE_NAME || 'Pixel_6';
@@ -28,7 +29,7 @@ export const config: WebdriverIO.Config = {
   runner: 'local',
   tsConfigPath: './tsconfig.json',
 
-  port: 4723,
+  port: appiumPort,
   //
   // ==================
   // Specify Test Files
@@ -78,6 +79,9 @@ export const config: WebdriverIO.Config = {
       ? {
           platformName: 'Android',
           'appium:automationName': 'UiAutomator2',
+          ...(process.env.ANDROID_SYSTEM_PORT
+            ? { 'appium:systemPort': Number(process.env.ANDROID_SYSTEM_PORT) }
+            : {}),
           ...(androidUdid ? { 'appium:udid': androidUdid } : {}),
           'appium:deviceName': androidDeviceName,
           'appium:platformVersion': androidPlatformVersion,
@@ -90,6 +94,9 @@ export const config: WebdriverIO.Config = {
       : {
           platformName: 'iOS',
           'appium:automationName': 'XCUITest',
+          ...(process.env.IOS_WDA_LOCAL_PORT
+            ? { 'appium:wdaLocalPort': Number(process.env.IOS_WDA_LOCAL_PORT) }
+            : {}),
           'appium:udid': process.env.SIMULATOR_UDID || 'auto',
           'appium:deviceName': iosDeviceName,
           ...(iosPlatformVersion ? { 'appium:platformVersion': iosPlatformVersion } : {}),
@@ -163,7 +170,7 @@ export const config: WebdriverIO.Config = {
   // Services take over a specific job you don't want to take care of. They enhance
   // your test setup with almost no effort. Unlike plugins, they don't add new
   // commands. Instead, they hook themselves up into the test process.
-  services: ['appium'],
+  services: [['appium', { args: { port: appiumPort } }]],
 
   // Framework you want to run your specs with.
   // The following are supported: Mocha, Jasmine, and Cucumber
