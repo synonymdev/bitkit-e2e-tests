@@ -49,6 +49,7 @@ echo "Building Android APK (BACKEND=$BACKEND, E2E_BACKEND=$E2E_BACKEND, TREZOR_B
 pushd "$ANDROID_ROOT" >/dev/null
 E2E=true \
   E2E_BACKEND="$E2E_BACKEND" \
+  GEO=false \
   TREZOR_BRIDGE="$TREZOR_BRIDGE" \
   TREZOR_BRIDGE_URL="$TREZOR_BRIDGE_URL" \
   ./gradlew "$GRADLE_TASK" --no-daemon --stacktrace

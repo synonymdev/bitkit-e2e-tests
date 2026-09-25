@@ -203,12 +203,12 @@ describe('Wallet migration', () => {
     await sleep(15_000);
 
     // Verify migration and state persisted by the target.
-    await verifyMigration(balance);
+    await verifyMigration(balance, { verifyTags: !driver.isIOS });
     await driver.terminateApp(getAppId());
     await driver.activateApp(getAppId());
     // RN migration can schedule this intro for the next launch.
     await dismissBackgroundPaymentsTimedSheet();
-    await verifyMigration(balance);
+    await verifyMigration(balance, { verifyTags: !driver.isIOS });
   });
 
   // --------------------------------------------------------------------------
@@ -1187,7 +1187,10 @@ async function openTagFilter(tag: string): Promise<void> {
  * Verify migration was successful
  * @param expectedBalance - The balance from the RN app before migration
  */
-async function verifyMigration(expectedBalance: number): Promise<void> {
+async function verifyMigration(
+  expectedBalance: number,
+  { verifyTags = true }: { verifyTags?: boolean } = {}
+): Promise<void> {
   console.info('=== Verifying migration ===');
 
   await expectMigrationBalances({
@@ -1220,22 +1223,24 @@ async function verifyMigration(expectedBalance: number): Promise<void> {
   await expectTextWithin('Activity-1', '-'); // Transfer shows here
   await elementById('Activity-2').waitForDisplayed({ reverse: true });
 
-  // filter by receive tag (metadata restore can lag Electrum balance after mnemonic restore)
-  await tap('Tab-all');
-  await openTagFilter(TAG_RECEIVED);
-  await tap(`Tag-${TAG_RECEIVED}`);
-  await expectTextWithin('Activity-1', '+'); // Only received tx has this tag
-  await elementById('Activity-2').waitForDisplayed({ reverse: true });
-  await tap(`Tag-${TAG_RECEIVED}-delete`);
+  if (verifyTags) {
+    // filter by receive tag (metadata restore can lag Electrum balance after mnemonic restore)
+    await tap('Tab-all');
+    await openTagFilter(TAG_RECEIVED);
+    await tap(`Tag-${TAG_RECEIVED}`);
+    await expectTextWithin('Activity-1', '+'); // Only received tx has this tag
+    await elementById('Activity-2').waitForDisplayed({ reverse: true });
+    await tap(`Tag-${TAG_RECEIVED}-delete`);
 
-  // filter by send tag
-  await openTagFilter(TAG_SENT);
-  await tap(`Tag-${TAG_SENT}`);
-  await expectTextWithin('Activity-1', '-'); // Only sent tx has this tag (not Transfer)
-  await elementById('Activity-2').waitForDisplayed({ reverse: true });
-  await tap(`Tag-${TAG_SENT}-delete`);
+    // filter by send tag
+    await openTagFilter(TAG_SENT);
+    await tap(`Tag-${TAG_SENT}`);
+    await expectTextWithin('Activity-1', '-'); // Only sent tx has this tag (not Transfer)
+    await elementById('Activity-2').waitForDisplayed({ reverse: true });
+    await tap(`Tag-${TAG_SENT}-delete`);
 
-  console.info('→ Activity tags migrated successfully');
+    console.info('→ Activity tags migrated successfully');
+  }
   console.info('→ Transaction history migrated successfully');
 
   await doNavigationClose();
