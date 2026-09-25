@@ -9,6 +9,9 @@ for wallet in 1 2 3; do
   prepared=false
   for attempt in 1 2 3; do
     rm -f "$env_file"
+    # A failed RN gesture can leave Android's notification shade above the app.
+    # Collapse it before starting the next independent Appium session.
+    adb shell cmd statusbar collapse >/dev/null 2>&1 || true
     if MIGRATION_SETUP_WALLET="$wallet" ATTEMPT="wallet-${wallet}-try-${attempt}" \
       ./ci_run_android.sh --mochaOpts.grep "@migration_setup_${setup_type}"; then
       test -s "$env_file"

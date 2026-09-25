@@ -930,10 +930,12 @@ async function tagLatestTransaction(tag: string): Promise<void> {
   try {
     await elementById('TotalBalance').waitForDisplayed({ timeout: 10_000 });
   } catch {
-    console.info('→ TotalBalance not immediately visible, scrolling down to find it...');
-    await swipeFullScreenRN('down');
-    await swipeFullScreenRN('down');
-    await elementById('TotalBalance').waitForDisplayed({ timeout: 10_000 });
+    console.info('→ TotalBalance not immediately visible, reopening the RN home screen...');
+    // A downward full-screen gesture can open Android's notification shade and
+    // poison every subsequent retry. Relaunching returns the wallet to Home.
+    await driver.terminateApp(getAppId());
+    await driver.activateApp(getAppId());
+    await elementById('TotalBalance').waitForDisplayed({ timeout: 30_000 });
   }
 
   // Try to find ActivityShort-1, scroll if needed
