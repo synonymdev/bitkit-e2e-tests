@@ -316,6 +316,10 @@ export async function updateProfileDetails(details: ProfileDetails) {
     await sleep(400);
   }
 
+  // Cancel/Save sit over Add Tag until the form is scrolled.
+  if (details.tags.length > 0) {
+    await swipeFullScreen('up', { upStartYPercent: 0.35 });
+  }
   for (const tag of details.tags) {
     await tap('ProfileEditAddTag');
     await elementById('AddTagInput').waitForDisplayed();
@@ -346,9 +350,8 @@ export async function verifyMyProfileDetails(expected: ProfileDetails) {
 }
 
 /**
- * Asserts Profile screen shows the given name (display is uppercase), notes, links by index,
- * and tag chips (`Tag-<tag>`). Link row labels use uppercase on Android (`Text13Up`); both sides
- * are compared uppercase so expectations can use plain casing (e.g. `Website`).
+ * Asserts the profile name (display is uppercase), notes, links by index, and tag chips.
+ * Link labels are compared case-insensitively because Android uppercases them.
  */
 export async function verifyProfileDetails(
   expected: ProfileDetails,
@@ -410,10 +413,22 @@ export async function createProfile({
   await openPubkyChoice();
   await tap('PubkyChoiceCreate');
 
-  // Save is disabled with an empty name; enabled once a name is entered.
-  await expect(elementById('CreateProfileSave')).toBeDisabled();
+  // Create Profile focuses the name field and keeps Continue behind the keyboard,
+  // so CreateProfileSave is not displayed until the keyboard is dismissed.
   await elementById('CreateProfileUsername').waitForDisplayed();
   await typeText('CreateProfileUsername', name);
+  await confirmInputOnKeyboard();
+
+  const save = await elementById('CreateProfileSave');
+  if (!(await save.isDisplayed().catch(() => false))) {
+    try {
+      await driver.hideKeyboard();
+    } catch {
+      // Keyboard is already hidden, or this driver cannot hide it.
+    }
+  }
+  await save.waitForDisplayed({ timeout: 15_000 });
+  await expect(save).toBeEnabled();
   await tap('CreateProfileSave');
 
   // Pay Contacts onboarding is shown once after successful signup.
