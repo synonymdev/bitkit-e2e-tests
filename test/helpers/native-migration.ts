@@ -100,8 +100,7 @@ export async function prepareNativeMigrationWallet(
   await typeText('TagInput', DEPOSIT_TAG);
   await tap('ActivityTagsSubmit');
   if (driver.isAndroid) await confirmInputOnKeyboard();
-  await tap('NavigationBack');
-  await tap('NavigationBack');
+  await returnToWalletHome();
 
   await transferSavingsToSpending({
     amountSats: SPENDING_SATS,
@@ -136,6 +135,25 @@ export async function prepareNativeMigrationWallet(
   await waitForBackup();
   recordStage(method, 'source-backed-up', balances);
   return { seed, balances };
+}
+
+async function returnToWalletHome() {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const savingsVisible = await elementById('ActivitySavings')
+      .isDisplayed()
+      .catch(() => false);
+    const spendingVisible = await elementById('ActivitySpending')
+      .isDisplayed()
+      .catch(() => false);
+    if (savingsVisible && spendingVisible) return;
+
+    const back = elementById('NavigationBack');
+    if (!(await back.isDisplayed().catch(() => false))) break;
+    await back.click();
+    await driver.pause(500);
+  }
+
+  throw new Error('Could not return to the wallet home after tagging the migration deposit');
 }
 
 export async function installNativeMigrationTarget(method: 'restore' | 'upgrade', seed: string) {
