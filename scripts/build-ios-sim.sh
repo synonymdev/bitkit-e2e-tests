@@ -42,7 +42,9 @@ XCODE_EXTRA_ARGS+=(
   "E2E_NETWORK=$E2E_NETWORK"
   "TREZOR_BRIDGE=$TREZOR_BRIDGE"
   "TREZOR_BRIDGE_URL=$TREZOR_BRIDGE_URL"
-  "SWIFT_ACTIVE_COMPILATION_CONDITIONS=\$(inherited) E2E_BUILD"
+  # Archived E2E builds run on hosted US runners. Do not inherit the Debug
+  # configuration's CHECK_GEOBLOCK flag or spending setup is unavailable.
+  "SWIFT_ACTIVE_COMPILATION_CONDITIONS=DEBUG E2E_BUILD"
 )
 
 if [[ -n "$TREZOR_ELECTRUM_URL" ]]; then
