@@ -13,7 +13,7 @@ import {
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 
-describe('@receive @ios_gate - Receive', () => {
+describe('@receive @ios_nightly - Receive', () => {
   before(async () => {
     await reinstallApp();
     await completeOnboarding();

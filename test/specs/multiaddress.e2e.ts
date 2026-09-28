@@ -248,7 +248,7 @@ describe('@multi_address - Multi address', () => {
   );
 
   ciIt(
-    '@multi_address_4 @ios_gate - Receive to each type, open external channel with max, keep Legacy untouched',
+    '@multi_address_4 @ios_nightly - Receive to each type, open external channel with max, keep Legacy untouched',
     async () => {
       const rpc = getBitcoinRpc();
       const addressTypes: addressTypePreference[] = ['p2pkh', 'p2sh-p2wpkh', 'p2wpkh', 'p2tr'];
