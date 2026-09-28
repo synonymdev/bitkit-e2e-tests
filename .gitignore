@@ -6,6 +6,7 @@ docker/lnd
 docker/lnurl-server-data
 docker/lnurl-server/data
 docker/.trezor-user-env
+scripts/__pycache__
 artifacts
 results
 WARP.md
