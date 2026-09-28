@@ -15,7 +15,6 @@ import {
 } from '../helpers/actions';
 import { STAGING_TEST_CONTACTS } from '../helpers/fixtures';
 import { openContacts, openProfile } from '../helpers/navigation';
-import { enablePaykitUi } from '../helpers/paykit';
 import {
   addContact,
   ADD_CONTACT_INVALID_KEY_MESSAGE_SNIPPET,
@@ -48,7 +47,6 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
   beforeEach(async () => {
     await reinstallApp();
     await completeOnboarding();
-    await enablePaykitUi();
   });
 
   // Section A: with no profile, every entry point must funnel into the choice screen.
@@ -125,7 +123,7 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
           console.warn(error);
         }
         await restoreWallet(seed);
-        await enablePaykitUi();
+        await elementById('TotalBalance-primary').waitForDisplayed({ timeout: 60_000 });
         await verifyMyProfileDetails(details);
         const pubkyAfterRestore = await readPubkyFromProfileCopy();
         await expect(pubkyAfterRestore).toBe(pubky.trim());
@@ -235,7 +233,6 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
         );
         await reinstallApp();
         await completeOnboarding();
-        await enablePaykitUi();
         await createProfile({ name: 'Bob Wallet B' });
 
         await addContact({ pubky: pubkyA, firstContact: true });
@@ -256,7 +253,7 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
           'Wallet A: restore wallet A and verify wallet A profile is unchanged by wallet B contact edits.'
         );
         await restoreWallet(seedA);
-        await enablePaykitUi();
+        await elementById('TotalBalance-primary').waitForDisplayed({ timeout: 60_000 });
         await verifyMyProfileDetails(detailsA);
       }
     );
@@ -266,17 +263,20 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
   // (staging Homegate). Send/manual ignores pubkyauth:// — only the home scanner handles it.
   // Ring QR (`pubkyring://signup`) and Import-with-Ring stay manual (charter C).
   describe('Scanner signup (no Ring)', () => {
-    ciIt('@pubky_profile_5 - After profile, home scanner signup says already signed in', async () => {
-      const directSignupUrl =
-        'pubkyauth://direct_signup?hs=ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy';
+    ciIt(
+      '@pubky_profile_5 - After profile, home scanner signup says already signed in',
+      async () => {
+        const directSignupUrl =
+          'pubkyauth://direct_signup?hs=ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy';
 
-      await createProfile({ name: 'Signup Scanner' });
-      await doNavigationClose();
+        await createProfile({ name: 'Signup Scanner' });
+        await doNavigationClose();
 
-      await enterAddressViaScanPrompt(directSignupUrl, { acceptCameraPermission: true });
-      await elementByText('Already signed in', 'exact').waitForDisplayed({ timeout: 15_000 });
-      await expect(elementById('CreateProfileUsername')).not.toBeDisplayed();
-      await expect(elementById('PubkyAuthAuthorize')).not.toBeDisplayed();
-    });
+        await enterAddressViaScanPrompt(directSignupUrl, { acceptCameraPermission: true });
+        await elementByText('Already signed in', 'exact').waitForDisplayed({ timeout: 15_000 });
+        await expect(elementById('CreateProfileUsername')).not.toBeDisplayed();
+        await expect(elementById('PubkyAuthAuthorize')).not.toBeDisplayed();
+      }
+    );
   });
 });

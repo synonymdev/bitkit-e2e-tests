@@ -12,7 +12,6 @@ import {
 } from '../helpers/actions';
 import { STAGING_PAYKIT_CONTACTS } from '../helpers/fixtures';
 import { doNavigationClose, openContacts } from '../helpers/navigation';
-import { enablePaykitUi } from '../helpers/paykit';
 import { addContact, createProfile, verifyAddContactRoute } from '../helpers/profile';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
@@ -139,7 +138,6 @@ describe('@pubky @paykit @pubky_staging, @staging - Public payments', () => {
   beforeEach(async () => {
     await reinstallApp();
     await completeOnboarding();
-    await enablePaykitUi();
   });
 
   ciIt('@paykit_1 - Can pay saved contact via public on-chain endpoint', async () => {
