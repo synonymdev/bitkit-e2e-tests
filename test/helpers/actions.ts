@@ -685,6 +685,10 @@ export async function dragOnElement(
       break;
   }
 
+  // Appium may drop gestures whose endpoint is outside the viewport.
+  endX = Math.max(1, Math.min(width - 1, endX));
+  endY = Math.max(1, Math.min(height - 1, endY));
+
   await driver.performActions([
     {
       type: 'pointer',
@@ -737,16 +741,30 @@ export async function handleAndroidAlert(
   }
 }
 
-export async function getSeed(): Promise<string> {
+export async function getSeed({
+  readBeforeReveal = false,
+}: { readBeforeReveal?: boolean } = {}): Promise<string> {
   await openSettings('security');
   await tap('BackupWallet');
+
+  // Android 2.5.0 attaches the mnemonic to the reveal overlay, which disappears on reveal.
+  let seed = '';
+  if (readBeforeReveal) {
+    const seedElement = elementById('SeedContainer');
+    await seedElement.waitForDisplayed();
+    seed = await getAccessibleText(seedElement);
+    if (![12, 24].includes(seed.trim().split(/\s+/).length)) {
+      throw new Error('Expected a 12/24-word mnemonic on the legacy reveal overlay');
+    }
+  }
 
   await tap('TapToReveal');
   await sleep(1000);
 
-  const seedElement = await elementById('SeedContainer');
-  const seed = await getAccessibleText(seedElement);
-  console.info({ seed });
+  if (!readBeforeReveal) {
+    const seedElement = await elementById('SeedContainer');
+    seed = await getAccessibleText(seedElement);
+  }
   if (!seed) throw new Error('Could not read seed from "SeedContainer"');
 
   // close the modal
@@ -796,7 +814,7 @@ export async function restoreWallet(
     reinstall?: boolean;
   } = {}
 ) {
-  console.info('→ Restoring wallet with seed:', seed);
+  console.info('→ Restoring wallet from recovery phrase');
   // Let cloud state flush - carried over from Detox
   await sleep(5000);
 
@@ -944,9 +962,7 @@ export async function waitForTextToDisappear(texts: string[], timeout: number) {
  * @param retryTap - Optional callback to retry the address type tap if feedback missed
  * @returns true if toast was observed, false if best-effort fallback was used
  */
-async function assertAddressTypeSwitchFeedback(
-  retryTap?: () => Promise<void>
-): Promise<boolean> {
+async function assertAddressTypeSwitchFeedback(retryTap?: () => Promise<void>): Promise<boolean> {
   // First try: wait for Updated toast (the primary success signal)
   let toastSeen = await waitForToastBestEffort('AddressTypeSettingsUpdatedToast', {
     timeout: 12_000,
@@ -1098,9 +1114,11 @@ export async function switchAndFundEachAddressType({
 export async function transferSavingsToSpending({
   amountSats,
   waitForSync,
+  triggerBackgroundPaymentsIntro = false,
 }: {
   amountSats?: number;
   waitForSync?: () => Promise<void>;
+  triggerBackgroundPaymentsIntro?: boolean;
 } = {}) {
   try {
     await elementById('ActivitySavings').waitForDisplayed({ timeout: 5_000 });
@@ -1135,9 +1153,25 @@ export async function transferSavingsToSpending({
   await elementById('SpendingAmountContinue').waitForEnabled();
   await tap('SpendingAmountContinue');
   await sleep(1000);
-  await elementById('GRAB').waitForDisplayed();
-  await dragOnElement('GRAB', 'right', 0.95);
-  await sleep(1500);
+  const confirmHandle = elementById('GRAB');
+  await confirmHandle.waitForDisplayed();
+  const startPosition = await confirmHandle.getLocation();
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    await dragOnElement('GRAB', 'right', 0.95);
+    if (!(await confirmHandle.isDisplayed())) break;
+    const position = await confirmHandle.getLocation();
+    // A moved handle can mean the payment is processing: never submit it again.
+    if (position.x > startPosition.x + 5) break;
+    if (attempt < 3) {
+      console.info(`→ Transfer gesture did not move the handle; retrying (${attempt}/3)`);
+      await sleep(500);
+    }
+  }
+  await confirmHandle.waitForDisplayed({
+    reverse: true,
+    timeout: 60_000,
+    timeoutMsg: 'Transfer confirmation did not finish; no blocks mined',
+  });
 
   await mineBlocks(1);
   if (waitForSync) {
@@ -1163,7 +1197,7 @@ export async function transferSavingsToSpending({
     console.info('→ SpendingBalanceReadyToast not found, continuing...');
   }
 
-  await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: false });
+  await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: triggerBackgroundPaymentsIntro });
   await dismissQuickPayIntro({ triggerTimedSheet: true });
 
   await tap('ActivitySavings');
@@ -1401,10 +1435,7 @@ export async function waitForToast(
  */
 export async function waitForToastBestEffort(
   toastId: ToastId,
-  {
-    timeout = 10_000,
-    pollingInterval = 200,
-  }: { timeout?: number; pollingInterval?: number } = {}
+  { timeout = 10_000, pollingInterval = 200 }: { timeout?: number; pollingInterval?: number } = {}
 ): Promise<boolean> {
   const el = elementById(toastId);
   let toastSeen = false;
@@ -1648,9 +1679,8 @@ export async function dismissBackupTimedSheet({
 export async function dismissQuickPayIntro({
   triggerTimedSheet = false,
 }: { triggerTimedSheet?: boolean } = {}) {
-  if (triggerTimedSheet) {
-    await doTriggerTimedSheet();
-  }
+  const sheetId = driver.isAndroid ? 'QuickpayIntro-button' : 'QuickpayIntroDescription';
+  await triggerTimedSheetUnlessPresent(sheetId, triggerTimedSheet);
 
   if (driver.isAndroid) {
     // TODO: it's temp, change on Android to match iOS testID

@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { sleep } from './actions';
@@ -6,7 +6,7 @@ import { getAppId, getAppPath } from './constants';
 
 function getIosSimulatorUdidForSimctl(): string {
   try {
-    let udid =
+    const udid =
       (driver.capabilities as Record<string, unknown>)['appium:udid']?.toString() ??
       (driver.capabilities as Record<string, unknown>).udid?.toString() ??
       (driver.capabilities as Record<string, unknown>).deviceUDID?.toString() ??
@@ -30,6 +30,7 @@ export function grantIOSCameraPermission(appIdParam?: string) {
   if (typeof driver === 'undefined' || !driver.isIOS) return;
   const appId = appIdParam ?? getAppId();
   const udid = getIosSimulatorUdidForSimctl();
+
   if (!udid) {
     console.warn('⚠ grantIOSCameraPermission: could not resolve simulator UDID');
     return;
@@ -86,10 +87,14 @@ export function getNativeAppPath(): string {
   return appPath;
 }
 
-export async function reinstallAppFromPath(appPath: string, appId: string = getAppId()) {
+export async function reinstallAppFromPath(
+  appPath: string,
+  appId: string = getAppId(),
+  { strictKeychainReset = false }: { strictKeychainReset?: boolean } = {}
+) {
   console.info(`→ Reinstalling app from: ${appPath}`);
   await driver.removeApp(appId);
-  resetBootedIOSKeychain();
+  resetBootedIOSKeychain({ strict: strictKeychainReset });
   await driver.installApp(appPath);
   grantIOSCameraPermission(appId);
   await driver.activateApp(appId);
@@ -100,7 +105,7 @@ export async function reinstallAppFromPath(appPath: string, appId: string = getA
  * (Wallet data is stored in iOS Keychain and persists even after app uninstall
  *  unless the whole simulator is reset or keychain is reset specifically)
  */
-export function resetBootedIOSKeychain() {
+export function resetBootedIOSKeychain({ strict = false }: { strict?: boolean } = {}) {
   if (!driver.isIOS) return;
 
   let udid = '';
@@ -109,8 +114,24 @@ export function resetBootedIOSKeychain() {
       (driver.capabilities as Record<string, unknown>)['appium:udid']?.toString() ??
       (driver.capabilities as Record<string, unknown>).udid?.toString() ??
       (driver.capabilities as Record<string, unknown>).deviceUDID?.toString() ??
+      process.env.SIMULATOR_UDID ??
       '';
-  } catch {}
+  } catch {
+    // A strict reset below rejects an unresolved device.
+  }
+
+  if (udid === 'auto') udid = process.env.SIMULATOR_UDID ?? '';
+
+  if (strict) {
+    if (!/^[0-9a-f-]{36}$/i.test(udid)) {
+      throw new Error(
+        'Clean migration requires an explicit iOS simulator UDID to reset its keychain.'
+      );
+    }
+    execFileSync('xcrun', ['simctl', 'keychain', udid, 'reset'], { stdio: 'pipe' });
+    console.info(`→ Reset iOS simulator keychain for ${udid}`);
+    return;
+  }
 
   if (!udid) {
     console.warn(
