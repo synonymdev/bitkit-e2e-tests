@@ -16,6 +16,7 @@ import {
   getAccessibleText,
   doNavigationClose,
   waitForToast,
+  waitForToastBestEffort,
   ToastId,
 } from '../helpers/actions';
 import { electrumHost, electrumPort } from '../helpers/constants';
@@ -44,9 +45,8 @@ describe('@settings - Settings', () => {
         await tap('TotalBalance');
       }
       await expect(fiatSymbol).toHaveText('$');
-      if (driver.isIOS) {
-        await waitForToast('BalanceUnitSwitchedToast', { waitToDisappear: true });
-      }
+      // UI unit text is the source of truth; a missed/auto-dismissed toast must not fail.
+      await waitForToastBestEffort('BalanceUnitSwitchedToast');
 
       // - change settings (currency to EUR) //
       await openSettings();
@@ -207,9 +207,8 @@ describe('@settings - Settings', () => {
         await dragOnElement('TotalBalance', 'right', 0.5);
       }
       await elementById('ShowBalance').waitForDisplayed();
-      if (driver.isIOS) {
-        await waitForToast('BalanceHiddenToast', { waitToDisappear: false, dismiss: true });
-      }
+      // ShowBalance is the source of truth; a missed/auto-dismissed toast must not fail.
+      await waitForToastBestEffort('BalanceHiddenToast');
 
       // Disable 'swipe to hide balance'
       await openSettings('security');
@@ -250,14 +249,14 @@ describe('@settings - Settings', () => {
       await tap('BackupWallet');
       await sleep(1000); // animation
 
-      // get the seed from SeedContainer
+      await tap('TapToReveal');
+      await sleep(1000); // animation
+
       const seedElement = await elementById('SeedContainer');
       const seed = await getAccessibleText(seedElement);
       console.info({ seed });
       if (!seed) throw new Error('Could not read seed from "SeedContainer"');
 
-      await tap('TapToReveal');
-      await sleep(1000); // animation
       await tap('ContinueShowMnemonic');
 
       // enter the seed

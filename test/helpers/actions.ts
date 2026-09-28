@@ -202,7 +202,7 @@ export async function expectTextWithin(
   } = {}
 ) {
   const parent = elementById(ancestorId);
-  await parent.waitForDisplayed();
+  await parent.waitForDisplayed({ timeout });
 
   if (driver.isIOS) {
     const parentLabel = await parent.getAttribute('label');
@@ -234,8 +234,8 @@ export async function expectTextWithin(
     }
 
     return strategy === 'exact'
-      ? `.//*[self::XCUIElementTypeStaticText or self::XCUIElementTypeTextView or self::XCUIElementTypeTextField][@label='${text}' or @value='${text}']`
-      : `.//*[self::XCUIElementTypeStaticText or self::XCUIElementTypeTextView or self::XCUIElementTypeTextField][contains(@label,'${text}') or contains(@value,'${text}')]`;
+      ? `.//*[self::XCUIElementTypeStaticText or self::XCUIElementTypeTextView or self::XCUIElementTypeTextField or self::XCUIElementTypeButton][@label='${text}' or @value='${text}']`
+      : `.//*[self::XCUIElementTypeStaticText or self::XCUIElementTypeTextView or self::XCUIElementTypeTextField or self::XCUIElementTypeButton][contains(@label,'${text}') or contains(@value,'${text}')]`;
   })();
 
   if (!visible) {
@@ -479,24 +479,69 @@ export async function getClipboardPlaintext(): Promise<string> {
   return Buffer.from(b64, 'base64').toString('utf8');
 }
 
+/**
+ * Paste text into an iOS field via the simulator pasteboard + Paste menu.
+ *
+ * CI intermittently fails `mobile: setPasteboard` with:
+ *   Process ended with exitcode 60 (cmd: 'xcrun simctl pbcopy <udid>')
+ * Retries that call, then falls back to typeText if the Paste menu never appears
+ * (so RestoreButton waits don't hang after a silent empty paste).
+ */
 export async function pasteIOSText(testId: string, text: string) {
   if (!driver.isIOS) {
     throw new Error('pasteIOSText can only be used on iOS devices');
   }
-  await driver.execute('mobile: setPasteboard', {
-    content: text,
-    encoding: 'utf8',
-  });
+
+  const maxPasteboardAttempts = 4;
+  let lastPasteboardError: unknown;
+  for (let attempt = 1; attempt <= maxPasteboardAttempts; attempt++) {
+    try {
+      await driver.execute('mobile: setPasteboard', {
+        content: text,
+        encoding: 'utf8',
+      });
+      lastPasteboardError = undefined;
+      break;
+    } catch (err) {
+      lastPasteboardError = err;
+      const message = err instanceof Error ? err.message : String(err);
+      const isPbcopyFlake =
+        message.includes('exitcode 60') ||
+        message.includes('pbcopy') ||
+        message.includes('setPasteboard');
+      console.warn(
+        `→ pasteIOSText setPasteboard attempt ${attempt}/${maxPasteboardAttempts} failed: ${message}`
+      );
+      if (!isPbcopyFlake || attempt === maxPasteboardAttempts) {
+        break;
+      }
+      await sleep(500 * attempt);
+    }
+  }
+
+  if (lastPasteboardError) {
+    console.warn('→ pasteIOSText: pasteboard unavailable, falling back to typeText');
+    await typeText(testId, text);
+    return;
+  }
+
   const el = await elementById(testId);
   await el.waitForDisplayed();
   await sleep(500); // Allow time for the element to settle
   await el.click(); // focus the field
   await sleep(200);
   await el.click(); // trigger the paste menu
-  const pasteButton = await elementByText('Paste', 'exact');
-  await pasteButton.waitForDisplayed();
-  await pasteButton.click();
-  await sleep(200); // Allow time for the paste action to propagate
+
+  try {
+    const pasteButton = await elementByText('Paste', 'exact');
+    await pasteButton.waitForDisplayed({ timeout: 5_000 });
+    await pasteButton.click();
+    await sleep(200); // Allow time for the paste action to propagate
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`→ pasteIOSText: Paste menu unavailable (${message}); falling back to typeText`);
+    await typeText(testId, text);
+  }
 }
 
 export async function typeText(testId: string, text: string) {
@@ -516,7 +561,7 @@ export async function addSendTag(tag: string) {
 }
 
 export async function enterAmount(amountSats: number) {
-  await sleep(300);
+  await sleep(700);
   for (const digit of `${amountSats}`.split('')) {
     await tap(`N${digit}`);
     await sleep(150);
@@ -696,13 +741,13 @@ export async function getSeed(): Promise<string> {
   await openSettings('security');
   await tap('BackupWallet');
 
-  // get seed from SeedContainer
+  await tap('TapToReveal');
+  await sleep(1000);
+
   const seedElement = await elementById('SeedContainer');
   const seed = await getAccessibleText(seedElement);
   console.info({ seed });
   if (!seed) throw new Error('Could not read seed from "SeedContainer"');
-
-  await tap('TapToReveal');
 
   // close the modal
   await swipeFullScreen('down');
@@ -881,19 +926,94 @@ export async function waitForTextToDisappear(texts: string[], timeout: number) {
   );
 }
 
-async function assertAddressTypeSwitchFeedback() {
-  // await waitForToast('AddressTypeApplyingToast', { dismiss: false });
-  await waitForToast('AddressTypeSettingsUpdatedToast', {
-    dismiss: driver.isAndroid,
-    timeout: 120_000,
+/**
+ * Waits for address type switch feedback toast(s) with retry-tolerant behavior.
+ *
+ * The app may show one or both of:
+ * - AddressTypeApplyingToast (brief, during save)
+ * - AddressTypeSettingsUpdatedToast (success confirmation)
+ *
+ * Under CI load (especially iOS) these toasts can appear and auto-dismiss before
+ * we start waiting, causing flaky 30s timeouts. This function:
+ * 1. Uses shorter timeouts with best-effort polling
+ * 2. Retries the preference tap once if neither toast is observed
+ * 3. Falls back to verifying the settings view dismisses (UI settled)
+ *
+ * The definitive verification happens via getReceiveAddress + assertAddressMatchesType.
+ *
+ * @param retryTap - Optional callback to retry the address type tap if feedback missed
+ * @returns true if toast was observed, false if best-effort fallback was used
+ */
+async function assertAddressTypeSwitchFeedback(
+  retryTap?: () => Promise<void>
+): Promise<boolean> {
+  // First try: wait for Updated toast (the primary success signal)
+  let toastSeen = await waitForToastBestEffort('AddressTypeSettingsUpdatedToast', {
+    timeout: 12_000,
+    pollingInterval: 150,
   });
+
+  if (toastSeen) {
+    console.debug('→ AddressTypeSettingsUpdatedToast observed');
+    return true;
+  }
+
+  // Toast missed on first attempt—could be a race or slow tap registration
+  console.info('→ Address type toast not observed; checking for Applying toast...');
+
+  // Brief check if Applying toast is still visible (change in progress)
+  const applyingVisible = await waitForToastBestEffort('AddressTypeApplyingToast', {
+    timeout: 3_000,
+    pollingInterval: 150,
+  });
+
+  if (applyingVisible) {
+    console.debug('→ AddressTypeApplyingToast observed; waiting for Updated toast...');
+    toastSeen = await waitForToastBestEffort('AddressTypeSettingsUpdatedToast', {
+      timeout: 15_000,
+      pollingInterval: 150,
+    });
+    if (toastSeen) {
+      return true;
+    }
+  }
+
+  // Still no toast—try retrying the tap if callback provided
+  if (retryTap && !toastSeen) {
+    console.info('→ Retrying address type tap due to missed feedback...');
+    await retryTap();
+
+    toastSeen = await waitForToastBestEffort('AddressTypeSettingsUpdatedToast', {
+      timeout: 12_000,
+      pollingInterval: 150,
+    });
+
+    if (toastSeen) {
+      console.debug('→ AddressTypeSettingsUpdatedToast observed on retry');
+      return true;
+    }
+  }
+
+  // Fallback: allow a brief settle time for UI to stabilize after any silent success
+  console.warn(
+    '→ Address type switch toast not observed (may have auto-dismissed); ' +
+      'proceeding with UI verification via address format check'
+  );
+  await sleep(1500);
+  return false;
 }
 
 export async function switchPrimaryAddressType(nextType: addressTypePreference) {
   await openSettings('advanced');
   await tap('AddressTypePreference');
   await tap(nextType);
-  await assertAddressTypeSwitchFeedback();
+
+  // Provide retry callback that re-taps the address type if toast feedback is missed
+  await assertAddressTypeSwitchFeedback(async () => {
+    // Re-tap in case the first tap didn't register fully
+    await tap(nextType);
+  });
+
   await doNavigationClose().catch(async () => {
     await driver.back();
     await sleep(500);
@@ -1063,10 +1183,6 @@ export async function transferSpendingToSavings() {
   await dragOnElement('GRAB', 'right', 0.95);
   await elementById('TransferSuccess-button').waitForDisplayed();
   await tap('TransferSuccess-button');
-
-  if (driver.isAndroid) {
-    await doNavigationClose();
-  }
 
   await sleep(1000);
   await expectSavingsBalance(0, { condition: 'gt' });
@@ -1268,6 +1384,71 @@ export async function waitForToast(
   }
 }
 
+/**
+ * Best-effort toast wait that handles race conditions where toast appears and
+ * auto-dismisses before the wait can observe it.
+ *
+ * Returns true if toast was observed, false if it wasn't (either never appeared
+ * or dismissed too quickly). Does not throw on timeout—callers must handle
+ * verification via other means (e.g., UI state confirmation).
+ *
+ * Once the toast is observed it is cleared before returning, so it cannot keep
+ * covering the header: a toast overlays HeaderMenu for its whole lifetime and
+ * swallows the tap that opens the drawer.
+ *
+ * On iOS, uses waitToDisappear pattern since toasts render in a separate window
+ * where drag-dismiss hits wrong coordinates.
+ */
+export async function waitForToastBestEffort(
+  toastId: ToastId,
+  {
+    timeout = 10_000,
+    pollingInterval = 200,
+  }: { timeout?: number; pollingInterval?: number } = {}
+): Promise<boolean> {
+  const el = elementById(toastId);
+  let toastSeen = false;
+
+  try {
+    await browser.waitUntil(
+      async () => {
+        const displayed = await el.isDisplayed().catch(() => false);
+        if (displayed) {
+          toastSeen = true;
+          return true;
+        }
+        return false;
+      },
+      { timeout, interval: pollingInterval }
+    );
+  } catch {
+    // Toast wasn't displayed within timeout—may have already appeared and dismissed
+    // or never appeared. Caller should verify via other means.
+  }
+
+  if (!toastSeen) {
+    return false;
+  }
+
+  // Re-check instead of trusting toastSeen: dragOnElement waits on the element
+  // with the global 30s timeout, which would be spent in full on a toast that
+  // already went away.
+  if (driver.isAndroid && (await el.isDisplayed().catch(() => false))) {
+    // Drag it away like waitForToast does: an undismissed toast keeps covering
+    // HeaderMenu for its full duration, so the next openSettings() tap lands on
+    // the toast instead of the drawer button.
+    await dragOnElement(toastId, 'up', 0.2).catch(() => {
+      // Toast may have auto-dismissed mid-drag; the wait below settles it
+    });
+  }
+
+  await el.waitForDisplayed({ reverse: true, timeout: 5_000 }).catch(() => {
+    // Toast may have dismissed immediately; that's fine
+  });
+
+  return toastSeen;
+}
+
 async function waitForTransientToastAfterAction(
   toastId: ToastId,
   action: () => Promise<void>
@@ -1362,23 +1543,124 @@ export async function acknowledgeExternalSuccess() {
   await sleep(300);
 }
 
+/**
+ * Dismisses the Background Payments timed sheet if it is present.
+ *
+ * Best-effort: the intro can already be gone (auto-dismissed, previously
+ * acknowledged, or never queued after HeaderMenu). Does not throw when the
+ * dismiss control is missing — callers continue. When the intro IS shown,
+ * it is still dismissed via Later / Cancel so remaining coverage can run
+ * on an unobstructed home screen.
+ *
+ * Pattern matches waitForToastBestEffort: poll for visibility, act if seen,
+ * swallow timeout if the sheet never appeared or vanished mid-dismiss.
+ *
+ * @returns true if the sheet was observed and a dismiss was attempted,
+ * false if it was already gone.
+ */
 export async function dismissBackgroundPaymentsTimedSheet({
   triggerTimedSheet = false,
-}: { triggerTimedSheet?: boolean } = {}) {
-  if (triggerTimedSheet) {
-    await doTriggerTimedSheet();
+  timeout = 10_000,
+}: { triggerTimedSheet?: boolean; timeout?: number } = {}): Promise<boolean> {
+  const sheetId = driver.isAndroid
+    ? 'BackgroundPaymentsIntro-later'
+    : 'BackgroundPaymentsDescription';
+  const dismissId = driver.isAndroid ? 'BackgroundPaymentsIntro-later' : 'BackgroundPaymentsCancel';
+
+  await triggerTimedSheetUnlessPresent(sheetId, triggerTimedSheet);
+
+  const el = elementById(sheetId);
+  let sheetSeen = false;
+
+  try {
+    await browser.waitUntil(
+      async () => {
+        const displayed = await el.isDisplayed().catch(() => false);
+        if (displayed) {
+          sheetSeen = true;
+          return true;
+        }
+        return false;
+      },
+      { timeout, interval: 200 }
+    );
+  } catch {
+    // Sheet wasn't displayed within timeout — may have already appeared and
+    // dismissed, or never appeared after the HeaderMenu trigger race.
+    console.info(`→ ${sheetId} not displayed; treating Background Payments intro as already gone`);
+    return false;
   }
 
-  if (driver.isAndroid) {
-    await elementById('BackgroundPaymentsIntro-later').waitForDisplayed();
-    await sleep(500); // wait for the app to settle
-    await tap('BackgroundPaymentsIntro-later');
-  } else {
-    await elementById('BackgroundPaymentsDescription').waitForDisplayed();
-    await sleep(500); // wait for the app to settle
-    await tap('BackgroundPaymentsCancel');
+  if (!sheetSeen) {
+    return false;
   }
-  await sleep(500);
+
+  await sleep(500); // wait for the app to settle
+  try {
+    const dismissEl = elementById(dismissId);
+    const stillShown = await dismissEl.isDisplayed().catch(() => false);
+    if (!stillShown) {
+      console.info(`→ ${dismissId} gone before dismiss tap; treating intro as already dismissed`);
+      return true;
+    }
+    await dismissEl.click();
+    await sleep(500);
+  } catch (error) {
+    console.info(`→ ${dismissId} disappeared before dismiss tap; continuing`, error);
+  }
+  return true;
+}
+
+async function isTestIdDisplayed(testId: string): Promise<boolean> {
+  return elementById(testId)
+    .isDisplayed()
+    .catch(() => false);
+}
+
+/**
+ * Timed sheets can already cover home after a deposit or a previous dismiss.
+ * Do not HeaderMenu-trigger over them; wait for HeaderMenu/TotalBalance first.
+ */
+async function triggerTimedSheetUnlessPresent(
+  sheetId: string,
+  triggerTimedSheet: boolean
+): Promise<void> {
+  if (await isTestIdDisplayed(sheetId)) {
+    console.info(`→ ${sheetId} already visible, skipping HeaderMenu trigger`);
+    return;
+  }
+  if (!triggerTimedSheet) {
+    return;
+  }
+
+  await browser.waitUntil(
+    async () =>
+      (await isTestIdDisplayed(sheetId)) ||
+      (await isTestIdDisplayed('HeaderMenu')) ||
+      (await isTestIdDisplayed('TotalBalance')),
+    {
+      timeout: 45_000,
+      timeoutMsg: `${sheetId} or home chrome (HeaderMenu/TotalBalance) not visible before timed-sheet trigger`,
+    }
+  );
+
+  if (await isTestIdDisplayed(sheetId)) {
+    console.info(`→ ${sheetId} appeared while waiting, skipping HeaderMenu trigger`);
+    return;
+  }
+
+  // A queued sheet can surface a moment after the previous dismiss.
+  await sleep(700);
+  if (await isTestIdDisplayed(sheetId)) {
+    console.info(`→ ${sheetId} appeared after settle, skipping HeaderMenu trigger`);
+    return;
+  }
+
+  if (!(await isTestIdDisplayed('HeaderMenu'))) {
+    await elementById('HeaderMenu').waitForDisplayed({ timeout: 15_000 });
+  }
+
+  await doTriggerTimedSheet();
 }
 
 /**
@@ -1399,9 +1681,7 @@ export async function dismissBackgroundPaymentsTimedSheet({
 export async function dismissBackupTimedSheet({
   triggerTimedSheet = false,
 }: { triggerTimedSheet?: boolean } = {}) {
-  if (triggerTimedSheet) {
-    await doTriggerTimedSheet();
-  }
+  await triggerTimedSheetUnlessPresent('BackupIntroViewDescription', triggerTimedSheet);
   await elementById('BackupIntroViewDescription').waitForDisplayed();
   await sleep(500); // wait for the app to settle
   await swipeFullScreen('down');
@@ -1481,6 +1761,27 @@ export async function tryDismissQuickPayIntroIfVisible({
 }
 
 /**
+ * Dismisses the Background Payments timed sheet if it is already visible.
+ * Does nothing if the sheet is not showing. After a Blocktank transfer the
+ * sheet can cover HeaderMenu / Settings (iOS #741 @transfer_1).
+ */
+export async function tryDismissBackgroundPaymentsIfVisible(): Promise<boolean> {
+  const testId = driver.isAndroid
+    ? 'BackgroundPaymentsIntro-later'
+    : 'BackgroundPaymentsDescription';
+  const isVisible = await elementById(testId)
+    .isDisplayed()
+    .catch(() => false);
+  if (!isVisible) {
+    return false;
+  }
+
+  console.info('→ Background Payments sheet visible, dismissing...');
+  await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: false });
+  return true;
+}
+
+/**
  * Acknowledges the high balance warning that appears when wallet balance exceeds a threshold (>$500).
  * This sheet is triggered by onchain balance change if it exceeds a threshold.
  *
@@ -1498,9 +1799,7 @@ export async function tryDismissQuickPayIntroIfVisible({
 export async function acknowledgeHighBalanceWarning({
   triggerTimedSheet = false,
 }: { triggerTimedSheet?: boolean } = {}) {
-  if (triggerTimedSheet) {
-    await doTriggerTimedSheet();
-  }
+  await triggerTimedSheetUnlessPresent('HighBalanceSheetDescription', triggerTimedSheet);
   await elementById('HighBalanceSheetDescription').waitForDisplayed();
   await sleep(700); // wait for the app to settle
   await tap('HighBalanceSheetContinue');

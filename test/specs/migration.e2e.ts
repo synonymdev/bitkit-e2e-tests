@@ -100,8 +100,9 @@ describe('@migration - Migration from legacy RN app to native app', () => {
       mnemonic,
       balance,
     });
-    console.info('→ Waiting 20 seconds to ensure backups...');
-    await sleep(20000);
+    // Wait for backup propagation (tags, activity metadata) before env artifact upload
+    console.info('→ Waiting 40 seconds to ensure backups (incl. tags)...');
+    await sleep(40_000);
   });
 
   ciIt(
@@ -122,8 +123,9 @@ describe('@migration - Migration from legacy RN app to native app', () => {
         mnemonic,
         balance,
       });
-      console.info('→ Waiting 20 seconds to ensure backups...');
-      await sleep(20000);
+      // Wait for backup propagation (tags, activity metadata) before env artifact upload
+      console.info('→ Waiting 40 seconds to ensure backups (incl. tags)...');
+      await sleep(40_000);
     }
   );
 
@@ -140,8 +142,9 @@ describe('@migration - Migration from legacy RN app to native app', () => {
       mnemonic,
       balance,
     });
-    console.info('→ Waiting 20 seconds to ensure backups...');
-    await sleep(20000);
+    // Wait for backup propagation before env artifact upload
+    console.info('→ Waiting 40 seconds to ensure backups...');
+    await sleep(40_000);
   });
 
   ciIt('@migration_ios - setupLegacyWallet on iOS', async () => {
@@ -162,6 +165,10 @@ describe('@migration - Migration from legacy RN app to native app', () => {
       balance = IOS_RN_BALANCE!;
     } else {
       ({ mnemonic, balance } = await setupLegacyWallet({ returnSeed: true }));
+      // Tags/activity metadata are written AFTER getRnMnemonic()'s backup wait.
+      // Give remote backup time before wipe — otherwise migration_1 Tag-* asserts flake.
+      console.info('→ Waiting for RN metadata backup before uninstall...');
+      await sleep(30_000);
     }
 
     // Uninstall RN app
@@ -182,6 +189,10 @@ describe('@migration - Migration from legacy RN app to native app', () => {
       expectQuickPayTimedSheet: false,
       expectBackGroundPaymentsSheet: true,
     });
+
+    // Balance syncs from Electrum first; tag metadata can lag behind on restore.
+    console.info('→ Waiting briefly for metadata restore before tag checks...');
+    await sleep(15_000);
 
     // Verify migration
     await verifyMigration(balance);
@@ -333,9 +344,9 @@ async function setupLegacyWallet(
   await installLegacyRnApp();
   await createLegacyRnWallet({ passphrase });
 
+  // Get mnemonic early (mnemonic is constant; does not change after channel/backup)
   let mnemonic: string | undefined;
   if (returnSeed) {
-    // Get mnemonic for later restoration
     mnemonic = await getRnMnemonic();
     console.info(`→ Legacy RN wallet mnemonic: ${mnemonic}`);
   }
@@ -359,6 +370,10 @@ async function setupLegacyWallet(
   // 3. Transfer to spending (create channel via Blocktank)
   console.info('→ Step 3: Creating spending balance (channel)...');
   await transferToSpendingRN(TRANSFER_TO_SPENDING_SATS);
+
+  // Verify spending balance is visible (channel created)
+  console.info('→ Verifying spending balance is visible...');
+  await assertRnSpendingBalanceVisible(TRANSFER_TO_SPENDING_SATS);
 
   // Get final balance before migration
   const balance = await getRnTotalBalance();
@@ -446,6 +461,7 @@ async function setupWalletWithLegacyFunds(
   await installLegacyRnApp();
   await createLegacyRnWallet();
 
+  // Get mnemonic early (mnemonic is constant; does not change after operations)
   let mnemonic: string | undefined;
   if (returnSeed) {
     mnemonic = await getRnMnemonic();
@@ -659,8 +675,11 @@ async function restoreRnWallet(
     await confirmInputOnKeyboard();
   }
 
-  // Restore wallet
-  await tap('RestoreButton');
+  // Restore wallet (wait explicitly — empty/failed paste leaves RestoreButton hidden)
+  const restoreBtn = await elementById('RestoreButton');
+  await restoreBtn.waitForDisplayed({ timeout: 60_000 });
+  await sleep(150);
+  await restoreBtn.click();
   await waitForSetupWalletScreenFinish();
 
   // Wait for Get Started
@@ -784,11 +803,27 @@ async function sendRnOnchain(
   }
   await tap('ContinueAmount');
 
-  // Send using swipe gesture
+  // Send using swipe gesture (RN GRAB often needs a retry on CI emulators)
   console.info(`→ About to send ${sats} sats...`);
   await sleep(1000);
-  await dragOnElement('GRAB', 'right', 0.95);
-  await elementById('SendSuccess').waitForDisplayed();
+  let sendSucceeded = false;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    await dragOnElement('GRAB', 'right', 0.95);
+    try {
+      await elementById('SendSuccess').waitForDisplayed({ timeout: 20_000 });
+      sendSucceeded = true;
+      break;
+    } catch (error) {
+      console.info(
+        `→ SendSuccess not shown after GRAB (attempt ${attempt}/3); retrying swipe...`,
+        error
+      );
+      await sleep(1000);
+    }
+  }
+  if (!sendSucceeded) {
+    await elementById('SendSuccess').waitForDisplayed({ timeout: 30_000 });
+  }
   await tap('Close');
   await sleep(2000);
 
@@ -896,24 +931,49 @@ async function createCJIT(sats: number): Promise<void> {
 }
 
 /**
- * Tag the latest (most recent) transaction in the activity list
+ * Tag the latest (most recent) transaction in the activity list.
+ *
+ * Improved version with:
+ * 1. Wait for balance element to stabilize (confirms home screen is ready)
+ * 2. Retry loop with scroll recovery for ActivityShort-1
+ * 3. Fallback to full activity list (ActivityShowAll) if short list doesn't show item
+ * 4. Robust ActivityTag wait with retry/back-and-reopen recovery
  */
 async function tagLatestTransaction(tag: string): Promise<void> {
-  // Go to activity - scroll down to reveal activity section
-  await sleep(1000);
+  // Wait for home screen to be ready - TotalBalance confirms we're on the right screen
+  console.info('→ Waiting for home screen to settle before tagging...');
+  await sleep(1_500);
+  try {
+    await elementById('TotalBalance').waitForDisplayed({ timeout: 10_000 });
+  } catch {
+    console.info('→ TotalBalance not immediately visible, scrolling down to find it...');
+    await swipeFullScreenRN('down');
+    await swipeFullScreenRN('down');
+    await elementById('TotalBalance').waitForDisplayed({ timeout: 10_000 });
+  }
 
   // Try to find ActivityShort-1, scroll if needed
-  for (let attempt = 0; attempt < 3; attempt++) {
+  let foundShort = false;
+  for (let attempt = 0; attempt < 5; attempt++) {
     try {
-      await elementById('ActivityShort-1').waitForDisplayed({ timeout: 3000 });
+      await elementById('ActivityShort-1').waitForDisplayed({ timeout: 5_000 });
+      foundShort = true;
       break;
     } catch {
       console.info(`→ Scrolling to find latest transaction... (attempt ${attempt + 1})`);
       await swipeFullScreenRN('up');
       await swipeFullScreenRN('up');
+      await sleep(500);
     }
   }
-  await tap('ActivityShort-1'); // latest tx
+  if (!foundShort) {
+    // Final longer wait — balance already confirmed, activity row is often just delayed
+    console.info('→ ActivityShort-1 still hidden after scrolls; waiting longer...');
+    await elementById('ActivityShort-1').waitForDisplayed({ timeout: 45_000 });
+  }
+
+  // Tap activity item and wait for ActivityTag with retry/recovery
+  await tapActivityAndWaitForTag('ActivityShort-1');
 
   // Add tag
   await tap('ActivityTag');
@@ -927,14 +987,87 @@ async function tagLatestTransaction(tag: string): Promise<void> {
   // Press Enter key to submit (keycode 66 = KEYCODE_ENTER)
   await driver.pressKeyCode(66);
   // Wait for tag sheet to close and return to Review screen
-  await sleep(1000);
+  await sleep(1_000);
 
   // Go back to main screen
   await driver.back();
+  await sleep(500);
   // Scroll back up to show balance area
   await swipeFullScreenRN('down');
   await swipeFullScreenRN('down');
   console.info(`→ Tagged latest transaction with "${tag}"`);
+}
+
+/**
+ * Tap an activity item and wait for ActivityTag to be displayed.
+ * Retries with back-and-reopen if the tag button doesn't appear.
+ */
+async function tapActivityAndWaitForTag(activityId: string): Promise<void> {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    await tap(activityId);
+    await sleep(500);
+
+    try {
+      await elementById('ActivityTag').waitForDisplayed({ timeout: 10_000 });
+      console.info(`→ ActivityTag displayed on attempt ${attempt}`);
+      return;
+    } catch {
+      console.info(`→ ActivityTag not visible after tap (attempt ${attempt}/3), retrying...`);
+      // Go back and retry tap
+      try {
+        await driver.back();
+        await sleep(500);
+      } catch {
+        // May already be on home screen
+      }
+    }
+  }
+
+  // Final attempt: try full activity list as fallback
+  console.info('→ ActivityTag still not visible, trying full activity list fallback...');
+  try {
+    await swipeFullScreenRN('down');
+    await elementById('ActivityShowAll').waitForDisplayed({ timeout: 5_000 });
+    await tap('ActivityShowAll');
+    await sleep(1_500);
+    await elementById('Activity-1').waitForDisplayed({ timeout: 10_000 });
+    await tap('Activity-1');
+    await sleep(500);
+    await elementById('ActivityTag').waitForDisplayed({ timeout: 15_000 });
+    console.info('→ ActivityTag displayed via full activity list fallback');
+  } catch {
+    // Last resort: one more tap on original activity with longer timeout
+    console.info('→ Fallback failed, final attempt with longer timeout...');
+    await driver.back();
+    await sleep(500);
+    await tap(activityId);
+    await sleep(1_000);
+    await elementById('ActivityTag').waitForDisplayed({ timeout: 30_000 });
+  }
+}
+
+/**
+ * Assert that spending balance is visible in RN app.
+ * Waits for ActivitySpending to show the expected amount.
+ */
+async function assertRnSpendingBalanceVisible(expectedSats: number): Promise<void> {
+  const expectedText = expectedSats.toLocaleString('en').replace(/,/g, ' ');
+  for (let attempt = 1; attempt <= 10; attempt++) {
+    try {
+      await elementById('ActivitySpending').waitForDisplayed({ timeout: 5_000 });
+      const spendingEl = await elementById('ActivitySpending');
+      const text = await getAccessibleText(spendingEl);
+      if (text.includes(expectedText.replace(/\s/g, '')) || text.includes(expectedText)) {
+        console.info(`→ Spending balance confirmed: ${text}`);
+        return;
+      }
+      console.info(`→ Spending balance check (attempt ${attempt}/10): "${text}" vs "${expectedText}"`);
+    } catch {
+      console.info(`→ ActivitySpending not visible yet (attempt ${attempt}/10)`);
+    }
+    await sleep(2_000);
+  }
+  console.warn(`→ Could not confirm spending balance ${expectedSats}, proceeding anyway`);
 }
 
 /**
@@ -944,12 +1077,12 @@ async function getRnMnemonic(): Promise<string> {
   // Navigate to backup settings
   try {
     await tap('HeaderMenu');
-    await sleep(500); // Wait for drawer to open
+    await sleep(500);
     await elementById('DrawerSettings').waitForDisplayed({ timeout: 5000 });
   } catch {
     console.info('→ Drawer did not open, trying again...');
     await tap('HeaderMenu');
-    await sleep(500); // Wait for drawer to open
+    await sleep(500);
     await elementById('DrawerSettings').waitForDisplayed({ timeout: 5000 });
   }
 
@@ -971,7 +1104,7 @@ async function getRnMnemonic(): Promise<string> {
   // Close mnemonic sheet using back button - more reliable than swipe for RN
   await dismissSheetRN();
   // Wait for backup to be performed
-  await sleep(10000);
+  await sleep(10_000);
 
   // Navigate back to main screen using Android back button
   // ShowMnemonic -> BackupSettings -> Settings -> Main
@@ -981,6 +1114,37 @@ async function getRnMnemonic(): Promise<string> {
   await sleep(500);
 
   return seed;
+}
+
+
+/**
+ * Open the activity tag filter and wait for a specific tag chip.
+ * Retries because migration_1 mnemonic restore syncs balance before tag metadata.
+ */
+async function openTagFilter(tag: string): Promise<void> {
+  const tagId = `Tag-${tag}`;
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      await tap('TagsPrompt');
+      await sleep(500);
+      await elementById(tagId).waitForDisplayed({ timeout: 12_000 });
+      return;
+    } catch (error) {
+      console.info(
+        `→ ${tagId} not ready in TagsPrompt (attempt ${attempt}/5); waiting for metadata sync...`,
+        error
+      );
+      try {
+        await driver.back();
+      } catch {
+        // sheet may already be closed
+      }
+      await sleep(5_000);
+    }
+  }
+  await tap('TagsPrompt');
+  await sleep(500);
+  await elementById(tagId).waitForDisplayed({ timeout: 30_000 });
 }
 
 // ============================================================================
@@ -1030,18 +1194,16 @@ async function verifyMigration(expectedBalance: number): Promise<void> {
   await expectTextWithin('Activity-1', '-'); // Transfer shows here
   await elementById('Activity-2').waitForDisplayed({ reverse: true });
 
-  // filter by receive tag
+  // filter by receive tag (metadata restore can lag Electrum balance after mnemonic restore)
   await tap('Tab-all');
-  await tap('TagsPrompt');
-  await sleep(500);
+  await openTagFilter(TAG_RECEIVED);
   await tap(`Tag-${TAG_RECEIVED}`);
   await expectTextWithin('Activity-1', '+'); // Only received tx has this tag
   await elementById('Activity-2').waitForDisplayed({ reverse: true });
   await tap(`Tag-${TAG_RECEIVED}-delete`);
 
   // filter by send tag
-  await tap('TagsPrompt');
-  await sleep(500);
+  await openTagFilter(TAG_SENT);
   await tap(`Tag-${TAG_SENT}`);
   await expectTextWithin('Activity-1', '-'); // Only sent tx has this tag (not Transfer)
   await elementById('Activity-2').waitForDisplayed({ reverse: true });

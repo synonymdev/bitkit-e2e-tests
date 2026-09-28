@@ -2,6 +2,12 @@
 
 This file provides guidance to AI agents (Codex/Claude/Cursor/WARP) working in this repository.
 
+## Agent Commands
+
+Durable shared agent command specs live in `.agents/commands/`. `.claude/commands` is a compatibility symlink to the same files; Cursor entries under `.cursor/commands/` resolve there too.
+
+- `/archive-release` — After a Bitkit release is staging/migration-green, tag this repo at the e2e SHA that passed and attach `BACKEND=regtest` Android APK + iOS sim builds to that tag (see `.agents/commands/archive-release.md`)
+
 ## Purpose
 
 Bitkit E2E tests for:
@@ -28,6 +34,7 @@ Android (builds from `../bitkit-android`, copies APK to `./aut/bitkit_e2e.apk`):
 
 # backend selection (local is default)
 BACKEND=regtest ./scripts/build-android-apk.sh
+BACKEND=regtest TREZOR_BRIDGE=true ./scripts/build-android-apk.sh
 ```
 
 iOS (builds from `../bitkit-ios`, copies app to `./aut/Bitkit.app`):
@@ -37,12 +44,14 @@ iOS (builds from `../bitkit-ios`, copies app to `./aut/Bitkit.app`):
 
 # backend selection (local is default)
 BACKEND=regtest ./scripts/build-ios-sim.sh
+BACKEND=regtest TREZOR_BRIDGE=true ./scripts/build-ios-sim.sh
 ```
 
 Notes:
 
 - `BACKEND=local` uses local Electrum (default).
 - `BACKEND=regtest` sets network Electrum against regtest.
+- Override the sibling checkout with `ANDROID_ROOT` / `IOS_ROOT` (worktree) so a dirty or `release-*` tree is left alone.
 
 ### Test fixtures (images for profile avatar, etc.)
 
@@ -92,6 +101,15 @@ npm run e2e:android -- --mochaOpts.grep "@backup"
 BACKEND=regtest npm run e2e:android -- --mochaOpts.grep "@migration"
 ```
 
+QA device fixtures (not CI — `test/qa-fixtures/`, never the default spec glob):
+
+```bash
+BACKEND=regtest ./scripts/qa-fixture.sh android empty   # onboard only
+BACKEND=regtest ./scripts/qa-fixture.sh ios full        # funds + spending + profile
+```
+
+Kinds: `empty` | `onchain` | `spending` | `pubky` | `full`. Then overlay the PR build; do not uninstall.
+
 ## CI Helper Scripts
 
 These wrap the `npm run e2e:*` commands and capture logs/artifacts:
@@ -124,6 +142,8 @@ Resolution rules (from `determine-e2e-branch.yml`):
 - `e2e_branch_input=main` -> use `main`.
 - `e2e_branch_input=default-feature-branch` -> use the same branch name as the app repo _if it exists_ in `bitkit-e2e-tests`, otherwise fall back to `main`.
 - `e2e_branch_input=<custom>` -> use that branch only if it exists; otherwise the workflow fails.
+- `git ls-remote --exit-code` status **2** means the ref is missing (soft-fallback or the custom hard-fail above). Any other nonzero status is a transport/lookup failure and fails the job; do not treat it as "branch missing".
+- `migration-wallet-setup.yml` runs `resolve-e2e-ref` immediately before checkout. `e2e_branch` is the candidate (callers may pass an already-resolved name). Optional `e2e_branch_input` selects the mode; when omitted, the caller dispatch input `e2e_branch` is used, otherwise `default-feature-branch`.
 
 Implication for feature work:
 
@@ -143,3 +163,18 @@ Implication for feature work:
 - Use `ciIt()` in specs (not `it()`) to enable CI retry-skipping behavior.
 - Keep Android/iOS platform differences behind helpers in `test/helpers/`.
 - Prefer extracting shared flows into `test/helpers/` over copying logic between specs. Keep helpers small and reuse existing ones before adding new test code.
+
+## Local vs staging tags
+
+The app merge gate (`e2e.yml` / `e2e-tests.yml`) runs `BACKEND=local` (docker Electrum/LND). Staging (`e2e-staging.yml`) and migration (`e2e_migration.yml`) run `BACKEND=regtest` against stag0.
+
+| Tags                                    | Where                                                                                                                                                                                 |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@transfer_2`                           | Local only (LND channel, no Blocktank)                                                                                                                                                |
+| `@transfer_1`, `@transfer_max`          | Staging via `@transfer_staging` (keep `@transfer_1` / `@transfer_max` / `@transfer`). `@transfer_1` is not in app `e2e-staging.yml` yet — add the transfer shard once it is 3× green. |
+| `@multi_address_2`                      | Staging via `@multi_address_staging` (keep `@multi_address_2` for other greps). Staging workflow greps `@multi_address_staging` only.                                                 |
+| `@pubky` / `@paykit` / `@pubky_profile` | Staging pubky shard via `@pubky_staging` (public-payments + profile). Keep `@pubky` / `@paykit` / `@pubky_profile` for other greps.                                                   |
+| `@hardware_wallet`                      | iOS local (connect/receive/on-chain); Android full path on staging. Do **not** add `@hardware_wallet_staging` — local merge-gate still greps `@hardware_wallet`.                      |
+| `@migration_*`                          | Migration workflow (nightly, dispatch, `release-*` PRs)                                                                                                                               |
+
+Poke staging with `gh workflow run e2e-staging.yml` on the app repo (does not queue the iOS Mini). Optional Slack post to `#bitkit-staging-nightly` via dispatch `post_to_slack`.

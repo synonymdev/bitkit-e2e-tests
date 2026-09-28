@@ -3,7 +3,7 @@
 #
 # Inputs/roots:
 # - E2E root: this repo (bitkit-e2e-tests)
-# - iOS root: ../bitkit-ios (resolved relative to this script)
+# - iOS root: $IOS_ROOT, or ../bitkit-ios if unset
 #
 # Output:
 # - Copies Debug iphonesimulator build: Bitkit.app -> aut/Bitkit.app
@@ -18,7 +18,7 @@
 #   TREZOR_BRIDGE=true BACKEND=regtest ./scripts/build-ios-sim.sh
 set -euo pipefail
 E2E_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-IOS_ROOT="$(cd "$E2E_ROOT/../bitkit-ios" && pwd)"
+IOS_ROOT="${IOS_ROOT:-$(cd "$E2E_ROOT/../bitkit-ios" && pwd)}"
 
 BACKEND="${BACKEND:-local}"
 TREZOR_BRIDGE="${TREZOR_BRIDGE:-false}"
