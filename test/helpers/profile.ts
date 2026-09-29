@@ -49,16 +49,35 @@ export async function readPubkyFromProfileCopy(): Promise<string> {
 }
 
 /**
+ * The section caption and the delete button both expose `ProfileEditDelete` on iOS.
+ * `~ProfileEditDelete` is the caption (`DELETE`), so the click never opens the alert.
+ */
+function profileEditDeleteButton() {
+  if (driver.isIOS) {
+    return $(
+      '-ios predicate string:type == "XCUIElementTypeButton" AND name == "ProfileEditDelete"'
+    );
+  }
+  return elementById('ProfileEditDelete');
+}
+
+async function tapProfileEditDelete() {
+  const deleteControl = profileEditDeleteButton();
+  await deleteControl.waitForDisplayed();
+  await sleep(200);
+  await deleteControl.click();
+  await sleep(100);
+}
+
+/**
  * Taps Delete, then **Yes, Delete**.
  *
- * On iOS the edit form is still settling after the scroll, so the first delete tap can
- * land before the control accepts it and the alert never appears. The alert button can
- * also accept a click before it is hittable. Retry both steps on iOS only.
+ * On iOS the alert button can accept a click before it is hittable. Retry on iOS only.
  */
 async function confirmYesDelete() {
   const attempts = driver.isIOS ? 3 : 1;
   for (let attempt = 1; attempt <= attempts; attempt++) {
-    await tap('ProfileEditDelete');
+    await tapProfileEditDelete();
     const confirm = elementByText('Yes, Delete', 'exact');
     try {
       await confirm.waitForDisplayed({ timeout: driver.isIOS ? 5_000 : 30_000 });
