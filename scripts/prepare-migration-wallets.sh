@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# Each iOS consumer retry gets a different wallet; migrating can modify its backup.
+# Prepares three independent wallets (wallet-attempt-1/2/3) for mocha attempts
+# 1–3 in one consumer job. Migrating can modify a wallet's remote backup, so
+# each in-run retry uses a different seed. Across workflow re-runs the env
+# artifact name is stable (no github.run_attempt); see docs/migration-tests.md.
 set -euo pipefail
 setup_type="${1:?Expected standard, passphrase, or sweep}"
 case "$setup_type" in standard|passphrase|sweep) ;; *) echo "Unknown setup type: $setup_type" >&2; exit 1 ;; esac

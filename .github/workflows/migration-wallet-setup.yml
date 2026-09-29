@@ -110,7 +110,8 @@ jobs:
       - name: Upload migration env file
         uses: actions/upload-artifact@v4
         with:
-          name: migration-env_${{ inputs.rn_version }}_${{ inputs.scenario_name }}_${{ github.run_attempt }}
+          name: migration-env_${{ inputs.rn_version }}_${{ inputs.scenario_name }}
+          overwrite: true
           path: |
             bitkit-e2e-tests/artifacts/wallet-attempt-1/
             bitkit-e2e-tests/artifacts/wallet-attempt-2/
