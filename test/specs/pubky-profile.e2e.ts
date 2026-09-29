@@ -15,7 +15,6 @@ import {
 } from '../helpers/actions';
 import { STAGING_TEST_CONTACTS } from '../helpers/fixtures';
 import { openContacts, openProfile } from '../helpers/navigation';
-import { enablePaykitUi } from '../helpers/paykit';
 import {
   addContact,
   ADD_CONTACT_INVALID_KEY_MESSAGE_SNIPPET,
@@ -48,7 +47,6 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
   beforeEach(async () => {
     await reinstallApp();
     await completeOnboarding();
-    await enablePaykitUi();
   });
 
   // Section A: with no profile, every entry point must funnel into the choice screen.
@@ -123,7 +121,6 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
           console.warn(error);
         }
         await restoreWallet(seed);
-        await enablePaykitUi();
         await verifyMyProfileDetails(details);
         const pubkyAfterRestore = await readPubkyFromProfileCopy();
         await expect(pubkyAfterRestore).toBe(pubky.trim());
@@ -233,7 +230,6 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
         );
         await reinstallApp();
         await completeOnboarding();
-        await enablePaykitUi();
         await createProfile({ name: 'Bob Wallet B' });
 
         await addContact({ pubky: pubkyA, firstContact: true });
@@ -254,7 +250,6 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
           'Wallet A: restore wallet A and verify wallet A profile is unchanged by wallet B contact edits.'
         );
         await restoreWallet(seedA);
-        await enablePaykitUi();
         await verifyMyProfileDetails(detailsA);
       }
     );
