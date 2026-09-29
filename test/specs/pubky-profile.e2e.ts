@@ -59,7 +59,6 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
       await elementById('ProfileIntro').waitForDisplayed();
       await tap('ProfileIntro-button');
       await elementById('PubkyChoiceCreate').waitForDisplayed();
-      await elementById('PubkyChoiceImport').waitForDisplayed();
 
       await doNavigationClose();
 
@@ -76,7 +75,6 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
       // Drawer → Profile → straight into PubkyChoice
       await openProfile();
       await elementById('PubkyChoiceCreate').waitForDisplayed();
-      await elementById('PubkyChoiceImport').waitForDisplayed();
     });
   });
 
