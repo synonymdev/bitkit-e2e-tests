@@ -551,7 +551,7 @@ describe('@send - Send', () => {
     await elementById('Activity-2').waitForDisplayed();
   });
 
-  ciIt('@send_3 @ios_nightly - Can pay regular invoices with msat precision', async () => {
+  ciIt('@send_3 @ios_gate - Can pay regular invoices with msat precision', async () => {
     await receiveOnchainFunds();
 
     const rpc = getBitcoinRpc();

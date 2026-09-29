@@ -178,12 +178,12 @@ Capability tags (`@settings`, `@boost`, `@send`, …) stay on titles so Android 
 | `@multi_address_2` | no | no | `@multi_address_staging` only |
 | `@pubky` / `@paykit` / `@pubky_profile` | no | no | `@pubky_staging` (keep capability tags for other greps) |
 | `@boost`, `@multi_address_3` | yes | `@ios_gate` (needs exclusive miner) | no |
-| `@send_2`, `@lightning`, `@lnurl`, `@transfer_2` | yes | `@ios_gate` (local LND) | no |
+| `@send_2`, `@send_3`, `@lightning`, `@lnurl`, `@transfer_2`, `@multi_address_4` | yes | `@ios_gate` (local LND) | no |
 | `@hardware_wallet` | no (staging only) | `@ios_gate` | Android staging greps `@hardware_wallet`; do **not** add `@hardware_wallet_staging`. iOS Mini greps `@ios_gate` on this describe. No Trezor on GitHub mac. |
-| `@onboarding`, `@backup`, `@receive`, `@onchain_1`, `@onchain_2`, `@send_1`, `@send_3`, `@multi_address_1`, `@multi_address_4`, `@settings`, `@numberpad`, `@widgets`, `@security` | yes | `@ios_nightly` | iOS nightly shard |
+| `@onboarding`, `@backup`, `@receive`, `@onchain_1`, `@onchain_2`, `@send_1`, `@multi_address_1`, `@settings`, `@numberpad`, `@widgets`, `@security` | yes | `@ios_nightly` | iOS nightly shard |
 | `@onchain_3` | yes (`@onchain`) | no | no |
 | `@migration_*` | migration workflow (nightly, dispatch, `release-*` PRs) | same | no |
 
-Put `@ios_gate` / `@ios_nightly` on `describe` when the whole file is one iOS queue; on `ciIt` when siblings split (`@send_2` vs `@send_3`, `@multi_address_3` vs `_4`). Mini keeps only boost/RBF, local-LND money path, and hardware wallet.
+Put `@ios_gate` / `@ios_nightly` on `describe` when the whole file is one iOS queue; on `ciIt` when siblings split (`@send_1` vs `@send_2`/`_3`, `@multi_address_1` vs `_3`/`_4`). Local-LND specs (`@send_3`, `@multi_address_4`) stay `@ios_gate` — they cannot run on the regtest nightly shard. Mini keeps boost/RBF, local-LND money path, and hardware wallet.
 
 Poke staging with `gh workflow run e2e-staging.yml` on the app repo (does not queue the iOS Mini). Optional Slack post to `#bitkit-staging-nightly` via dispatch `post_to_slack`.
