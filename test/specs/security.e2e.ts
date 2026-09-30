@@ -18,7 +18,7 @@ import { ciIt } from '../helpers/suite';
 import { ensureLocalFunds, getExternalAddress } from '../helpers/regtest';
 import { openSettings } from '../helpers/navigation';
 
-describe('@security - Security And Privacy', () => {
+describe('@security @ios_nightly - Security And Privacy', () => {
   let electrum: { waitForSync: any; stop: any };
 
   before(async () => {

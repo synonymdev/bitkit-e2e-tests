@@ -21,7 +21,7 @@ import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 import { ensureLocalFunds, getExternalAddress, mineBlocks } from '../helpers/regtest';
 
-describe('@boost - Boost', () => {
+describe('@boost @ios_gate - Boost', () => {
   let electrum: { waitForSync: any; stop: any };
 
   before(async () => {
