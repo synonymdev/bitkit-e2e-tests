@@ -785,6 +785,9 @@ async function fundRnWallet(sats: number): Promise<void> {
   const expectedBalance = sats.toLocaleString('en').replace(/,/g, ' ');
   await expectText(expectedBalance, { strategy: 'contains' });
   console.info(`→ Received ${sats} sats`);
+
+  // The receive celebration stays up with E2E=true and covers ActivityShort-1.
+  await dismissSheetRN();
 }
 
 /**
