@@ -785,9 +785,6 @@ async function fundRnWallet(sats: number): Promise<void> {
   const expectedBalance = sats.toLocaleString('en').replace(/,/g, ' ');
   await expectText(expectedBalance, { strategy: 'contains' });
   console.info(`→ Received ${sats} sats`);
-
-  // Ensure we're back on main screen (dismiss any sheets/modals)
-  await dismissSheetRN();
 }
 
 /**
@@ -908,7 +905,6 @@ async function transferToSpendingRN(sats: number, existingBalance = 0): Promise<
   await tap('TransferSuccess-button');
   await electrumClient?.waitForSync();
   await sleep(3000);
-  await dismissSheetRN();
   const expectedBalance = (existingBalance + sats).toLocaleString('en').replace(/,/g, ' ');
   await expectText(expectedBalance);
   console.info(`→ Created spending balance with ${sats} sats`);
