@@ -5,6 +5,7 @@ import {
   confirmInputOnKeyboard,
   dismissBackupTimedSheet,
   dismissBackgroundPaymentsTimedSheet,
+  tryDismissQuickPayIntroIfVisible,
   doNavigationClose,
   dragOnElement,
   elementById,
@@ -208,6 +209,7 @@ describe('Wallet migration', () => {
     await driver.activateApp(getAppId());
     // RN migration can schedule this intro for the next launch.
     await dismissBackgroundPaymentsTimedSheet();
+    await tryDismissQuickPayIntroIfVisible();
     await verifyMigration(balance, { verifyTags: !driver.isIOS });
   });
 
