@@ -5,6 +5,7 @@ import {
   confirmInputOnKeyboard,
   dismissBackupTimedSheet,
   dismissBackgroundPaymentsTimedSheet,
+  tryDismissQuickPayIntroIfVisible,
   doNavigationClose,
   dragOnElement,
   elementById,
@@ -208,6 +209,7 @@ describe('Wallet migration', () => {
     await driver.activateApp(getAppId());
     // RN migration can schedule this intro for the next launch.
     await dismissBackgroundPaymentsTimedSheet();
+    await tryDismissQuickPayIntroIfVisible();
     await verifyMigration(balance, { verifyTags: !driver.isIOS });
   });
 
@@ -786,7 +788,7 @@ async function fundRnWallet(sats: number): Promise<void> {
   await expectText(expectedBalance, { strategy: 'contains' });
   console.info(`→ Received ${sats} sats`);
 
-  // Ensure we're back on main screen (dismiss any sheets/modals)
+  // The receive celebration stays up with E2E=true and covers ActivityShort-1.
   await dismissSheetRN();
 }
 
@@ -908,7 +910,6 @@ async function transferToSpendingRN(sats: number, existingBalance = 0): Promise<
   await tap('TransferSuccess-button');
   await electrumClient?.waitForSync();
   await sleep(3000);
-  await dismissSheetRN();
   const expectedBalance = (existingBalance + sats).toLocaleString('en').replace(/,/g, ' ');
   await expectText(expectedBalance);
   console.info(`→ Created spending balance with ${sats} sats`);
