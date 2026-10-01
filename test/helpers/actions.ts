@@ -1478,6 +1478,64 @@ export async function waitForToastBestEffort(
   return toastSeen;
 }
 
+async function waitForTransientToastAfterAction(
+  toastId: ToastId,
+  action: () => Promise<void>
+) {
+  if (driver.isAndroid) {
+    await action();
+    await waitForToast(toastId);
+    return;
+  }
+
+  // These feedback toasts live for 1.5 seconds. XCUITest's default all-match lookup can
+  // find one, then lose it while rebinding the accessibility snapshot. Scope the faster
+  // single-match lookup to this top-level element so normal nested lookups stay unchanged.
+  await driver.updateSettings({ useFirstMatch: true });
+  try {
+    await browser.waitUntil(
+      async () => {
+        await action();
+        try {
+          const toast = await elementById(toastId);
+          return Boolean(toast.elementId);
+        } catch {
+          return false;
+        }
+      },
+      {
+        timeout: 30_000,
+        interval: 250,
+        timeoutMsg: `Timed out waiting for transient toast: ${toastId}`,
+      }
+    );
+  } finally {
+    await driver.updateSettings({ useFirstMatch: false });
+  }
+}
+
+export async function exceedAmountInputCap(maxAmountSats: number) {
+  await enterAmount(maxAmountSats);
+  await verifyAmountToSend(maxAmountSats);
+  await waitForTransientToastAfterAction('SendAmountExceededToast', async () => {
+    await tap('N1');
+  });
+  await verifyAmountToSend(maxAmountSats);
+}
+
+export async function exceedAvailableAmountInputCap() {
+  // AvailableAmount exposes its value through a nested MoneyText rather than a
+  // plain static text, and tapping it raises a toast over the element.
+  const availableText = await (await elementByIdWithin('AvailableAmount', 'MoneyText')).getText();
+  const availableAmountSats = Number(availableText.replace(/[^\d]/g, ''));
+  await tap('AvailableAmount');
+  await verifyAmountToSend(availableAmountSats);
+  await waitForTransientToastAfterAction('SendAmountExceededToast', async () => {
+    await tap('N1');
+  });
+  await verifyAmountToSend(availableAmountSats);
+}
+
 /** Acknowledges the received payment notification by tapping the button.
  */
 export async function acknowledgeReceivedPayment({ timeout = 30_000 }: { timeout?: number } = {}) {

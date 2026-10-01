@@ -22,6 +22,7 @@ import {
 } from '../helpers/actions';
 import { payInvoice } from '../helpers/regtest';
 import { getAppId } from '../helpers/constants';
+import { activateAppWithEnv } from '../helpers/setup';
 
 const PAYMENT_COUNT = Number(process.env.PAYMENT_COUNT || '21');
 const PAYMENT_AMOUNT = Number(process.env.PAYMENT_AMOUNT || '10');
@@ -39,7 +40,7 @@ function extractLightningInvoice(uri: string): string {
 describe('Receive LN payments (utility)', () => {
   before(async () => {
     const appId = getAppId();
-    await driver.activateApp(appId);
+    await activateAppWithEnv(appId);
     await sleep(3000);
   });
 

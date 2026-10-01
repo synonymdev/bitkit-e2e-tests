@@ -46,6 +46,32 @@ compose() {
   docker compose -f "$COMPOSE_FILE" "$@"
 }
 
+# The container may live on another machine, with its controller websocket and
+# bridge reached over a port forward. The controller script only needs python3
+# with `websockets`, so it runs here instead of via `docker exec`.
+remote_mode() {
+  [[ "${TREZOR_REMOTE:-0}" == "1" ]]
+}
+
+# Callers fill CONTROLLER_ENVS with KEY=VALUE entries first. A global rather
+# than a nameref, which bash 3.2 on macOS does not have.
+CONTROLLER_ENVS=()
+
+run_controller_script() {
+  if remote_mode; then
+    env "${CONTROLLER_ENVS[@]}" "${TREZOR_LOCAL_PYTHON:-python3}" "$CONTROLLER_SCRIPT" "$@"
+    return
+  fi
+
+  local docker_envs=() kv
+  for kv in "${CONTROLLER_ENVS[@]}"; do
+    docker_envs+=(-e "$kv")
+  done
+  docker exec -i "${docker_envs[@]}" \
+    "$TREZOR_CONTAINER" "${TREZOR_CONTAINER_PYTHON:-/trezor-user-env/.venv/bin/python3}" - "$@" \
+    < "$CONTROLLER_SCRIPT"
+}
+
 compose_with_profile() {
   if [[ -n "${TREZOR_PROFILE:-}" ]]; then
     compose --profile "$TREZOR_PROFILE" "$@"
@@ -56,6 +82,8 @@ compose_with_profile() {
 
 resolve_container() {
   local compose_id
+
+  remote_mode && return 0
 
   if [[ -n "${TREZOR_CONTAINER:-}" ]] && docker inspect "$TREZOR_CONTAINER" >/dev/null 2>&1; then
     return 0
@@ -75,6 +103,7 @@ container_exists() {
 }
 
 container_running() {
+  remote_mode && return 0
   resolve_container || return 1
   [[ "$(docker inspect -f '{{.State.Running}}' "$TREZOR_CONTAINER" 2>/dev/null)" == "true" ]]
 }
@@ -106,11 +135,15 @@ prepare_dirs() {
 }
 
 random_mnemonic() {
-  docker exec -i "$TREZOR_CONTAINER" /trezor-user-env/.venv/bin/python3 - <<'PY'
-from mnemonic import Mnemonic
+  local py="${TREZOR_CONTAINER_PYTHON:-/trezor-user-env/.venv/bin/python3}"
+  local script='from mnemonic import Mnemonic
+print(Mnemonic("english").generate(strength=128))'
 
-print(Mnemonic("english").generate(strength=128))
-PY
+  if remote_mode; then
+    "${TREZOR_LOCAL_PYTHON:-python3}" -c "$script"
+  else
+    docker exec -i "$TREZOR_CONTAINER" "$py" -c "$script"
+  fi
 }
 
 resolve_mnemonic() {
@@ -141,28 +174,32 @@ controller() {
     echo "Using Trezor mnemonic: $mnemonic" >&2
   fi
 
-  docker exec -i \
-    -e TREZOR_CONTROLLER_WS="${TREZOR_CONTROLLER_WS:-ws://127.0.0.1:9001}" \
-    -e TREZOR_MODEL="${TREZOR_MODEL:-T2T1}" \
-    -e TREZOR_FIRMWARE="${TREZOR_FIRMWARE:-2-main}" \
-    -e TREZOR_BRIDGE_VERSION="${TREZOR_BRIDGE_VERSION:-node-bridge}" \
-    -e TREZOR_MNEMONIC="$mnemonic" \
-    -e TREZOR_PIN="${TREZOR_PIN:-}" \
-    -e TREZOR_PASSPHRASE_PROTECTION="${TREZOR_PASSPHRASE_PROTECTION:-false}" \
-    -e TREZOR_LABEL="${TREZOR_LABEL:-Bitkit Test Trezor}" \
-    -e TREZOR_NEEDS_BACKUP="${TREZOR_NEEDS_BACKUP:-false}" \
-    -e TREZOR_WIPE="${TREZOR_WIPE:-true}" \
-    "$TREZOR_CONTAINER" "$python_bin" - "$@" < "$CONTROLLER_SCRIPT"
+  local envs=(
+    TREZOR_CONTROLLER_WS="${TREZOR_CONTROLLER_WS:-ws://127.0.0.1:9001}"
+    TREZOR_MODEL="${TREZOR_MODEL:-T2T1}"
+    TREZOR_FIRMWARE="${TREZOR_FIRMWARE:-2-main}"
+    TREZOR_BRIDGE_VERSION="${TREZOR_BRIDGE_VERSION:-node-bridge}"
+    TREZOR_MNEMONIC="$mnemonic"
+    TREZOR_PIN="${TREZOR_PIN:-}"
+    TREZOR_PASSPHRASE_PROTECTION="${TREZOR_PASSPHRASE_PROTECTION:-false}"
+    TREZOR_LABEL="${TREZOR_LABEL:-Bitkit Test Trezor}"
+    TREZOR_NEEDS_BACKUP="${TREZOR_NEEDS_BACKUP:-false}"
+    TREZOR_WIPE="${TREZOR_WIPE:-true}"
+  )
+  CONTROLLER_ENVS=("${envs[@]}")
+  TREZOR_CONTAINER_PYTHON="$python_bin" run_controller_script "$@"
 }
 
 get_address() {
   local address_path="${TREZOR_ADDRESS_PATH:-m/84h/1h/0h/0/0}"
 
-  docker exec -i \
-    -e TREZOR_CONTROLLER_WS="${TREZOR_CONTROLLER_WS:-ws://127.0.0.1:9001}" \
-    -e TREZOR_ADDRESS_COIN="${TREZOR_ADDRESS_COIN:-Regtest}" \
-    -e TREZOR_ADDRESS_PATH="$address_path" \
-    "$TREZOR_CONTAINER" "${TREZOR_CONTAINER_PYTHON:-/trezor-user-env/.venv/bin/python3}" - get-address < "$CONTROLLER_SCRIPT"
+  local envs=(
+    TREZOR_CONTROLLER_WS="${TREZOR_CONTROLLER_WS:-ws://127.0.0.1:9001}"
+    TREZOR_ADDRESS_COIN="${TREZOR_ADDRESS_COIN:-Regtest}"
+    TREZOR_ADDRESS_PATH="$address_path"
+  )
+  CONTROLLER_ENVS=("${envs[@]}")
+  run_controller_script get-address
 }
 
 print_address() {
@@ -211,6 +248,11 @@ install_apple_silicon_sdl_packages() {
 }
 
 start_env() {
+  if remote_mode; then
+    wait_for_controller
+    return
+  fi
+
   prepare_dirs
 
   # Force recreate so a stopped container with a deleted compose network
@@ -370,6 +412,8 @@ stop() {
   if resolve_container && container_running; then
     controller stop || true
   fi
+
+  remote_mode && return 0
 
   compose_with_profile stop "$TREZOR_SERVICE"
 }
