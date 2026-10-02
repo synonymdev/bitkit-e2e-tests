@@ -217,11 +217,13 @@ async function getHardwareReceiveAddress(): Promise<string> {
     // Default tab may not have a QR yet (for example while lightning is still loading).
   }
 
-  await elementById('Tab-trezor').waitForDisplayed({ timeout: 30_000 });
+  // Android tags the tab by role, iOS by the vendor name it shows
+  const hardwareTab = driver.isAndroid ? 'Tab-hardware' : 'Tab-trezor';
+  await elementById(hardwareTab).waitForDisplayed({ timeout: 30_000 });
   await browser.waitUntil(
     async () => {
       try {
-        await tap('Tab-trezor');
+        await tap(hardwareTab);
         const address = await peekQrOnchainAddress();
         return Boolean(address && address !== defaultTabAddress);
       } catch {
