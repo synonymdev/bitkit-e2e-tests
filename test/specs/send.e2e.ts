@@ -66,7 +66,7 @@ describe('@send - Send', () => {
     electrum?.stop();
   });
 
-  ciIt('@send_1 @ios_nightly - Validates payment data in the manual input', async () => {
+  ciIt('@send_1 @ios_gate - Validates payment data in the manual input', async () => {
     await tap('Send');
     await sleep(1000);
     await handleAndroidAlert('permission_allow_foreground_only_button');
