@@ -38,6 +38,8 @@ import { deposit, getBackend, mineBlocks } from './regtest';
 const E2E_ROOT = path.resolve(__dirname, '..', '..');
 const ARTIFACTS_DIR = path.join(E2E_ROOT, 'artifacts');
 const TREZOR_FIXTURE_PATH = path.join(ARTIFACTS_DIR, 'trezor-emulator.json');
+/** Android tags the paired-device receive tab Tab-hardware; iOS still uses Tab-trezor from the Trezor label. */
+const HARDWARE_RECEIVE_TAB_IDS = ['Tab-hardware', 'Tab-trezor'] as const;
 
 export type TrezorEmulatorFixture = {
   dashboardUrl: string;
@@ -217,11 +219,19 @@ async function getHardwareReceiveAddress(): Promise<string> {
     // Default tab may not have a QR yet (for example while lightning is still loading).
   }
 
-  await elementById('Tab-trezor').waitForDisplayed({ timeout: 30_000 });
+  await browser.waitUntil(async () => Boolean(await displayedHardwareReceiveTabId()), {
+    timeout: 30_000,
+    interval: 500,
+    timeoutMsg: 'Timed out waiting for hardware receive tab (Tab-hardware or Tab-trezor)',
+  });
   await browser.waitUntil(
     async () => {
       try {
-        await tap('Tab-trezor');
+        const tabId = await displayedHardwareReceiveTabId();
+        if (!tabId) {
+          return false;
+        }
+        await tap(tabId);
         const address = await peekQrOnchainAddress();
         return Boolean(address && address !== defaultTabAddress);
       } catch {
@@ -428,6 +438,15 @@ function pressTrezorYes() {
   } catch {
     // The prompt may not be ready on every polling tick.
   }
+}
+
+async function displayedHardwareReceiveTabId(): Promise<string | undefined> {
+  for (const testId of HARDWARE_RECEIVE_TAB_IDS) {
+    if (await isDisplayed(testId)) {
+      return testId;
+    }
+  }
+  return undefined;
 }
 
 async function isAnyDisplayed(testIds: string[]): Promise<boolean> {
