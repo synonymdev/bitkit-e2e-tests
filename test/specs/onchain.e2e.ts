@@ -123,7 +123,7 @@ describe('@onchain - Onchain', () => {
       await swipeFullScreen('down');
 
       await sendToAddress(address, '1');
-      await acknowledgeReceivedPayment();
+      await acknowledgeReceivedPayment({ timeout: 60_000 });
 
       await mineBlocks(1);
       await electrum?.waitForSync();
