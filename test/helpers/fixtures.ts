@@ -12,12 +12,12 @@ export type PubkyContact = { name: string; pubky: string; ableToPay: boolean };
 export const STAGING_TEST_CONTACTS: readonly PubkyContact[] = [
   {
     name: 'Contact #1',
-    pubky: 'pubkyidufsk43b5hetzawksc639xpyc8ckkiq7dp7ye38jtpns1tyyjho',
+    pubky: 'pubkyyf17mquezwj5xocrn4fbtjskjoj4i7ny779y1oj93wdj1yrqe44y',
     ableToPay: false,
   },
   {
     name: 'Contact #2',
-    pubky: 'pubkybonj981epe4abdkx3kpixbz9abjgadii7dwhgw4r76jrm96obyiy',
+    pubky: 'pubkyfxt49f5rhuaqu7e8dcjiu5rb4anod9gtt7d789jni3d5brcq95uo',
     ableToPay: false,
   },
 ] as const;
@@ -26,12 +26,12 @@ export const STAGING_TEST_CONTACTS: readonly PubkyContact[] = [
 export const STAGING_PAYKIT_CONTACTS: readonly PubkyContact[] = [
   {
     name: 'Contact Paykit #1',
-    pubky: 'pubkybew8jjokby19s3tzqydughsu8saigmuonw8wtnqzidxc6qsw1jiy',
+    pubky: 'pubkydtdm734nnypwkrjsbeowwdikgws81ii8h1fq5hco393jhfck485o',
     ableToPay: true,
   },
   {
     name: 'Contact Paykit #2',
-    pubky: 'pubkyarh1sbi785dbt37cnia7bnzaba949yu54fxxugd3hp8hijyihmto',
+    pubky: 'pubky6i9n6aaichk8gbmdu4a6uq59o8bd6ozcsbb57js9k7cp9ibawp4y',
     ableToPay: true,
   },
 ] as const;
