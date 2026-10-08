@@ -33,6 +33,7 @@ import {
   verifyContactRowDisplayed,
   verifyContactRowNotDisplayed,
   verifyMyProfileDetails,
+  waitForAuthenticatedProfileReady,
   verifyPubkyString,
   verifyContactDetails,
   verifyAddContactRoute,
@@ -110,6 +111,7 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
         await verifyMyProfileDetails(details);
         const pubkyAfterRelaunch = await readPubkyFromProfileCopy();
         await expect(pubkyAfterRelaunch).toBe(pubky.trim());
+        await waitForAuthenticatedProfileReady('app restart');
         await verifyContactRowDisplayed(stagingContact.pubky);
 
         // restore wallet and verify profile, pubky, and contact
@@ -124,6 +126,7 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
         await verifyMyProfileDetails(details);
         const pubkyAfterRestore = await readPubkyFromProfileCopy();
         await expect(pubkyAfterRestore).toBe(pubky.trim());
+        await waitForAuthenticatedProfileReady('wallet restoration');
         await verifyContactRowDisplayed(stagingContact.pubky);
 
         // remove link and tag and update profile and verify profile details

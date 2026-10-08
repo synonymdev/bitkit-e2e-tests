@@ -433,6 +433,23 @@ export async function verifyMyProfileDetails(expected: ProfileDetails) {
   await verifyProfileDetails(expected, { idPrefix: 'ProfileView' });
 }
 
+/** The public profile can be readable before its private session is ready. */
+export async function waitForAuthenticatedProfileReady(
+  phase: 'app restart' | 'wallet restoration'
+) {
+  await browser.waitUntil(
+    async () => {
+      const edit = await elementById('ProfileEdit');
+      return (await edit.isDisplayed()) && (await edit.isEnabled());
+    },
+    {
+      timeout: 30_000,
+      interval: 500,
+      timeoutMsg: `Pubky restoration not ready after ${phase}: ProfileEdit did not become enabled within 30000ms`,
+    }
+  );
+}
+
 /**
  * Asserts the profile name (display is uppercase), notes, links by index, and tag chips.
  * Link labels are compared case-insensitively because Android uppercases them.
