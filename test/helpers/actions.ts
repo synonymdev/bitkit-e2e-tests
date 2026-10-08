@@ -1478,10 +1478,7 @@ export async function waitForToastBestEffort(
   return toastSeen;
 }
 
-async function waitForTransientToastAfterAction(
-  toastId: ToastId,
-  action: () => Promise<void>
-) {
+async function waitForTransientToastAfterAction(toastId: ToastId, action: () => Promise<void>) {
   if (driver.isAndroid) {
     await action();
     await waitForToast(toastId);
