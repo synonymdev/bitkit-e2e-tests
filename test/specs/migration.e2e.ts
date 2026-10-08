@@ -250,6 +250,7 @@ describe('Wallet migration', () => {
 
       // Install native app ON TOP of RN (upgrade)
       console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
+      await driver.terminateApp(getAppId());
       await driver.installApp(getNativeAppPath());
       grantIOSCameraPermission();
       await activateAppWithEnv(getAppId());
@@ -275,6 +276,7 @@ describe('Wallet migration', () => {
 
       // Install native app ON TOP of RN (upgrade)
       console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
+      await driver.terminateApp(getAppId());
       await driver.installApp(getNativeAppPath());
       grantIOSCameraPermission();
       await activateAppWithEnv(getAppId());
