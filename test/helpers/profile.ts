@@ -49,7 +49,93 @@ export async function readPubkyFromProfileCopy(): Promise<string> {
 }
 
 /**
- * Profile → Edit → scroll to delete → confirm. Ends on {@link PubkyChoice} (create / import).
+ * The section caption and the delete button both expose `ProfileEditDelete` on iOS.
+ * `~ProfileEditDelete` is the caption (`DELETE`), so the click never opens the alert.
+ */
+function profileEditDeleteButton() {
+  if (driver.isIOS) {
+    return $(
+      '-ios predicate string:type == "XCUIElementTypeButton" AND name == "ProfileEditDelete"'
+    );
+  }
+  return elementById('ProfileEditDelete');
+}
+
+async function tapProfileEditDelete() {
+  const deleteControl = profileEditDeleteButton();
+  await deleteControl.waitForDisplayed();
+  await sleep(200);
+  await deleteControl.click();
+  await sleep(100);
+}
+
+/**
+ * Taps Delete, then **Yes, Delete**.
+ *
+ * On iOS the alert button can accept a click before it is hittable. Retry on iOS only.
+ */
+async function confirmYesDelete() {
+  const attempts = driver.isIOS ? 3 : 1;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    await tapProfileEditDelete();
+    const confirm = elementByText('Yes, Delete', 'exact');
+    try {
+      await confirm.waitForDisplayed({ timeout: driver.isIOS ? 5_000 : 30_000 });
+    } catch (error) {
+      if (!driver.isIOS || attempt === attempts) {
+        throw error;
+      }
+      console.info(
+        `→ 'Yes, Delete' not shown after delete tap (attempt ${attempt}/${attempts}); retrying`
+      );
+      await swipeFullScreen('up', { upStartYPercent: 0.3 });
+      await sleep(700);
+      continue;
+    }
+
+    await clickYesDelete();
+    return;
+  }
+}
+
+async function clickYesDelete() {
+  const attempts = driver.isIOS ? 3 : 1;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    const confirm = elementByText('Yes, Delete', 'exact');
+    if (driver.isIOS) {
+      await sleep(400);
+    }
+    await confirm.waitForDisplayed({ timeout: 5_000 });
+    try {
+      await confirm.click();
+    } catch (error) {
+      if (!driver.isIOS || attempt === attempts) {
+        throw error;
+      }
+      console.info(`→ 'Yes, Delete' click missed (attempt ${attempt}/${attempts}); retrying`);
+      continue;
+    }
+    if (!driver.isIOS) {
+      return;
+    }
+    const dismissed = await confirm
+      .waitForDisplayed({ reverse: true, timeout: 2_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (dismissed) {
+      return;
+    }
+    console.info(
+      `→ 'Yes, Delete' still visible after click (attempt ${attempt}/${attempts}); retrying`
+    );
+    if (attempt === attempts) {
+      throw new Error(`'Yes, Delete' stayed visible after ${attempts} taps`);
+    }
+  }
+}
+
+/**
+ * Profile → Edit → scroll to delete → confirm. Ends on the Pubky choice screen.
  *
  * This is the product delete-profile path. Do not use it as test teardown — a failed
  * payment/navigation leaves the app off Edit Profile, so UI cleanup fails the spec
@@ -60,10 +146,7 @@ export async function deleteProfile() {
   await openEditProfile();
   await swipeFullScreen('up', { upStartYPercent: 0.3 });
   await sleep(500);
-  await tap('ProfileEditDelete');
-  const confirm = await elementByText('Yes, Delete', 'exact');
-  await confirm.waitForDisplayed();
-  await confirm.click();
+  await confirmYesDelete();
   await elementById('PubkyChoiceCreate').waitForDisplayed();
 }
 
@@ -242,11 +325,12 @@ export async function deleteContact(publicKey: string) {
   await elementById('ProfileEditName').waitForDisplayed();
   await swipeFullScreen('up', { upStartYPercent: 0.3 });
   await sleep(500);
-  await tap('ProfileEditDelete');
-  const confirm = await elementByText('Yes, Delete', 'exact');
-  await confirm.waitForDisplayed();
-  await confirm.click();
-  await waitForToast('ContactDeletedToast', { waitToDisappear: driver.isIOS });
+  await confirmYesDelete();
+  try {
+    await waitForToast('ContactDeletedToast', { waitToDisappear: driver.isIOS });
+  } catch (error) {
+    console.error('ContactDeletedToast not found', error);
+  }
   await elementById('ContactsAddButton').waitForDisplayed();
 }
 

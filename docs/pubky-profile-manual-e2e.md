@@ -29,9 +29,9 @@ Run the same checklist on **Android** and **iOS** where the feature exists (labe
 
 ## A. No profile — navigation & gating
 
-With no profile created yet, every entry point should funnel into the choice screen (Create / Import with Ring).
+With no profile created yet, every entry point should funnel into the choice screen. A fresh wallet with no Ring identities shows **Create** (`PubkyChoiceCreate`). The old `PubkyChoiceImport` control is gone.
 
-1. Fresh wallet, **no profile** — tap the header **profile button** (top-right) → `ProfileIntro` → Continue → `PubkyChoice` (Create + Import options).
+1. Fresh wallet, **no profile** — tap the header **profile button** (top-right) → `ProfileIntro` → Continue → `PubkyChoice` (Create).
 2. Drawer → **Contacts** → `ContactsIntro` → Continue → `PubkyChoice`.
    - If you have already dismissed `ProfileIntro` in this session, `ContactsIntro` should still be shown the first time.
 3. Drawer → **Profile** → goes straight to `PubkyChoice` (no intro once either intro has been seen).
@@ -129,35 +129,23 @@ With no profile created yet, every entry point should funnel into the choice scr
 
 ---
 
-## C. Import with Pubky Ring
+## C. Ring identities on the choice screen
 
-### C.1 Ring not installed
+`PubkyChoiceImport` is not on the choice screen. Do not tap **Import with Pubky Ring** from `PubkyChoice`.
 
-1. From `PubkyChoice` → **Import with Pubky Ring** → expect the download / App Store prompt.
-2. Cancel / back returns to a safe screen (choice or previous), no dangling state.
+A fresh wallet with no Ring identities shows only **Create** (`PubkyChoiceCreate`). When Ring identities are already on the device, the choice screen lists those identities (`PubkyChoiceIdentity` on Android, `PubkyChoiceRing_<pubky>` on iOS) and does not show Create. `@pubky_profile_1` covers only the fresh-wallet Create path.
 
-### C.2 Ring installed — happy path
+### C.1 No Ring identities
 
-1. Complete auth in Ring → return to Bitkit.
-2. Profile imported; Pay Contacts onboarding may be shown on first success (same as B.2).
-3. After import, contacts list reflects the Ring state (see C.3).
+1. Open `PubkyChoice` on a fresh wallet. Only Create is shown. This screen has no import control and no App Store prompt.
+2. Close or go back. You return to wallet home with no profile created.
 
-### C.3 Import contacts selection
+### C.2 Ring identities already on the device
 
-1. After auth, the **Import overview / select** screens appear (Android: `ContactImportOverviewScreen`, `ContactImportSelectScreen`).
-2. **Import all** → all remote contacts added locally.
-3. **Import subset** (if partial selection is supported) → only selected contacts appear locally; unselected ones are not added.
-4. **Skip** (if allowed) → profile imported, zero contacts; you can add manually later.
+1. `PubkyChoice` lists those identities and does not show Create.
+2. Leave without choosing one. You return to a safe screen with no partial profile.
 
-### C.4 PubkyAuth approval / cancel
-
-1. Approve in Ring → return with success; capabilities requested match what the app announced (`/pub/bitkit.to/:rw`, `/pub/staging.pubky.app/:r` for staging builds).
-2. **Cancel** in Ring → return to Bitkit choice screen; no crash, no partial profile, retry works.
-3. Kill Ring mid-auth / background Bitkit → on resume, state is consistent (either success or clean cancel).
-
-### C.5 Deep link / handoff
-
-1. Trigger `pubkyauth://` flow from a system share-sheet or deep link if exposed; verify it lands in Bitkit and continues the flow.
+Ring auth handoff, contact-import overview, and an import button on this screen are not the current choice UI.
 
 ---
 
@@ -233,7 +221,7 @@ Use the **same string** on Android and iOS so specs stay platform-agnostic (`ele
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Header / drawer        | `ProfileButton`, `DrawerContacts`, `DrawerProfile`, `DrawerWallet`, … (existing app IDs)                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Intros                 | `ProfileIntro`, `ProfileIntro-button`, `ContactsIntro`, `ContactsIntro-button`                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| Pubky choice           | `PubkyChoiceCreate`, `PubkyChoiceImport`                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Pubky choice           | `PubkyChoiceCreate`. Ring identities, when present, use `PubkyChoiceIdentity` (Android) or `PubkyChoiceRing_<pubky>` (iOS). `PubkyChoiceImport` was removed. |
 | Create profile         | `CreateProfileAvatar`, `CreateProfileUsername`, `CreateProfileSave`                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Pay contacts           | `PayContactsToggle`, `PayContactsContinue`                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Profile (view)         | `ProfileEdit`, `ProfileCopy`, `ProfileShare`; empty/error: `ProfileRetry`, `ProfileEmptySignOut` (iOS)                                                                                                                                                                                                                                                                                                                                                                                                                |
@@ -246,6 +234,6 @@ Use the **same string** on Android and iOS so specs stay platform-agnostic (`ele
 | Contact detail         | `ContactViewName`, `ContactViewNotes`, `ContactCopy`, `ContactShare`, `ContactEdit`, `ContactDelete`                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Toasts                 | `ProfilePubkyCopiedToast`, `ProfileUpdatedToast`, `ContactSavedToast`, `ContactUpdatedToast`, `ContactDeletedToast`                                                                                                                                                                                                                                                                                                                                                                                                    |
 
-Ring-only / iOS-only extras (when automating C.x): `PubkyChoiceCancelRing`, `PubkyRingAuthorize`, `PubkyRingCancelAuth`, `PubkyRingDownload`.
+Ring identity rows, when present: `PubkyChoiceIdentity` (Android), `PubkyChoiceRing_<pubky>` (iOS).
 
 Contacts intro note: after a profile exists, first opening **Contacts** shows `ContactsIntro`; its `ContactsIntro-button` now behaves as an add-contact entry point. `ContactsEmptyAddButton` appears only after the intro is gone and the user has zero contacts.

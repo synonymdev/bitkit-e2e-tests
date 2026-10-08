@@ -3,7 +3,6 @@ import path from 'node:path';
 
 import { completeOnboarding, receiveOnchainFunds, transferSavingsToSpending } from './actions';
 import { doNavigationClose } from './navigation';
-import { enablePaykitUi } from './paykit';
 import { createProfile } from './profile';
 import type { ElectrumClient } from './electrum';
 
@@ -89,7 +88,6 @@ export async function applyQaFixture(
   }
 
   if (needsProfile(kind)) {
-    await enablePaykitUi();
     result.profileName = profileName();
     const created = await createProfile({ name: result.profileName });
     result.pubky = created.pubky;

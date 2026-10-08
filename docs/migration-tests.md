@@ -47,9 +47,9 @@ Source preparation verifies backup completion after funding and metadata changes
 
 ## Retries and extended coverage
 
-Native and Android RN cases create new wallets inside every test attempt. iOS RN has two Android preparation jobs in routine runs, one for restore and one for upgrade. Each prepares **three independent wallets**, one per possible consumer attempt, with up to three setup attempts per wallet. This costs extra setup time but prevents a partial migration from modifying the backup used by its retry. Setup completion markers include the wallet number.
+Native and Android RN cases create new wallets inside every test attempt. iOS RN has two Android preparation jobs in routine runs, one for restore and one for upgrade. Each prepares **three independent wallets**, one per possible consumer attempt, with up to three setup attempts per wallet. This costs extra setup time but prevents a partial migration from modifying the backup used by its *in-run* mocha retry. Setup completion markers include the wallet number.
 
-Use **Re-run all jobs** when rerunning a failed iOS RN workflow. Wallet artifact names include the workflow run attempt: rerunning only consumer jobs intentionally fails to download old wallets, instead of reusing potentially modified backups. Each attempt loads only its own wallet environment. Wallet artifacts have one-day retention.
+The `migration-env_${version}_${scenario}` artifact name is stable across workflow run attempts (`overwrite: true` on upload). That lets **Re-run failed jobs** reuse wallets from a prepare job that already passed, instead of looking for a missing `_2` / `_3` suffix. Trade-off: a failed consumer may already have written those seeds back to the backup server, so a re-run can see leftover backup state. Prefer **Re-run all jobs** when you need freshly prepared wallets and a clean backup. Within one run, each mocha attempt still loads only its own `wallet-attempt-N` env. Wallet artifacts have one-day retention.
 
 Set manual dispatch input `extended_rn=true` to add RN 1.1.6 passphrase (`@migration_3`) and legacy-address (`@migration_4`) cases. Locally set `MIGRATION_EXTENDED=true` and select the corresponding tag. These are retained targeted coverage, excluded from the four routine cases.
 

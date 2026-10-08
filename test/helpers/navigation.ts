@@ -29,16 +29,6 @@ export async function openSupport() {
 }
 
 /**
- * Opens Dev Settings from the Advanced settings tab.
- */
-export async function openDevSettings() {
-  await openSettings('advanced');
-  await elementById('DevSettings').waitForDisplayed();
-  await tap('DevSettings');
-  await sleep(500);
-}
-
-/**
  * Opens the Contacts entry from the drawer menu.
  */
 export async function openContacts() {
