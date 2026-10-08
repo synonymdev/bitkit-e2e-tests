@@ -758,6 +758,7 @@ export async function getSeed({
     }
   }
 
+  await sleep(1000);
   await tap('TapToReveal');
   await sleep(1000);
 
