@@ -105,9 +105,11 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
 
         await addContact({ pubky: stagingContact.pubky, firstContact: true });
         await verifyContactRowDisplayed(stagingContact.pubky);
+        // Allow the saved contact to settle before terminating the app.
+        await sleep(5000);
 
         // restart app and verify profile, pubky, and contact
-        await launchFreshApp();
+        await launchFreshApp(5000);
         await verifyMyProfileDetails(details);
         const pubkyAfterRelaunch = await readPubkyFromProfileCopy();
         await expect(pubkyAfterRelaunch).toBe(pubky.trim());

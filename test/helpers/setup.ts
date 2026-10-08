@@ -43,12 +43,12 @@ export function grantIOSCameraPermission(appIdParam?: string) {
   }
 }
 
-export async function launchFreshApp() {
+export async function launchFreshApp(relaunchWaitMs = 3000) {
   const appId = getAppId();
 
   await driver.terminateApp(appId);
   await driver.activateApp(appId);
-  await sleep(3000);
+  await sleep(relaunchWaitMs);
 }
 
 /**
