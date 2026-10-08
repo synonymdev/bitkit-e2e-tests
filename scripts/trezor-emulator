@@ -47,8 +47,10 @@ compose() {
 }
 
 # The container may live on another machine, with its controller websocket and
-# bridge reached over a port forward. The controller script only needs python3
-# with `websockets`, so it runs here instead of via `docker exec`.
+# bridge reached over a port forward, so the controller runs here instead of via
+# `docker exec`. That moves its imports onto the host interpreter rather than the
+# container venv: websockets for the controller socket, mnemonic for a generated
+# mnemonic, trezorlib for get-address.
 remote_mode() {
   [[ "${TREZOR_REMOTE:-0}" == "1" ]]
 }
@@ -57,8 +59,25 @@ remote_mode() {
 # than a nameref, which bash 3.2 on macOS does not have.
 CONTROLLER_ENVS=()
 
+require_local_modules() {
+  local py="${TREZOR_LOCAL_PYTHON:-python3}" missing=() module
+  for module in "$@"; do
+    "$py" -c "import $module" >/dev/null 2>&1 || missing+=("$module")
+  done
+  if (( ${#missing[@]} > 0 )); then
+    echo "$py cannot import: ${missing[*]}" >&2
+    echo "TREZOR_REMOTE=1 runs the controller on this host; install them with" >&2
+    echo "  pip install websockets mnemonic trezor" >&2
+    exit 1
+  fi
+}
+
 run_controller_script() {
   if remote_mode; then
+    require_local_modules websockets
+    if [[ "${1:-}" == "get-address" ]]; then
+      require_local_modules trezorlib
+    fi
     env "${CONTROLLER_ENVS[@]}" "${TREZOR_LOCAL_PYTHON:-python3}" "$CONTROLLER_SCRIPT" "$@"
     return
   fi
@@ -119,6 +138,10 @@ container_project() {
 }
 
 container_logs() {
+  if remote_mode; then
+    echo "the Trezor container runs on the stack machine; read its logs there" >&2
+    return 0
+  fi
   if container_exists; then
     docker logs "$@" "$TREZOR_CONTAINER"
   else
@@ -140,6 +163,7 @@ random_mnemonic() {
 print(Mnemonic("english").generate(strength=128))'
 
   if remote_mode; then
+    require_local_modules mnemonic
     "${TREZOR_LOCAL_PYTHON:-python3}" -c "$script"
   else
     docker exec -i "$TREZOR_CONTAINER" "$py" -c "$script"

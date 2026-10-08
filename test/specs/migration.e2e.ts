@@ -206,7 +206,7 @@ describe('Wallet migration', () => {
     // Verify migration and state persisted by the target.
     await verifyMigration(balance, { verifyTags: !driver.isIOS });
     await driver.terminateApp(getAppId());
-    await driver.activateApp(getAppId());
+    await activateAppWithEnv(getAppId());
     // RN migration can schedule this intro for the next launch.
     await dismissBackgroundPaymentsTimedSheet();
     await verifyMigration(balance, { verifyTags: !driver.isIOS });
@@ -232,7 +232,7 @@ describe('Wallet migration', () => {
     // Verify migration and state persisted by the target.
     await verifyMigration(balance);
     await driver.terminateApp(getAppId());
-    await driver.activateApp(getAppId());
+    await activateAppWithEnv(getAppId());
     // RN migration can schedule this intro for the next launch.
     await dismissBackgroundPaymentsTimedSheet();
     await verifyMigration(balance);
@@ -258,7 +258,7 @@ describe('Wallet migration', () => {
       // Verify migration and state persisted by the target.
       await verifyMigration(balance);
       await driver.terminateApp(getAppId());
-      await driver.activateApp(getAppId());
+      await activateAppWithEnv(getAppId());
       await verifyMigration(balance);
     });
 
@@ -935,7 +935,7 @@ async function tagLatestTransaction(tag: string): Promise<void> {
     // A downward full-screen gesture can open Android's notification shade and
     // poison every subsequent retry. Relaunching returns the wallet to Home.
     await driver.terminateApp(getAppId());
-    await driver.activateApp(getAppId());
+    await activateAppWithEnv(getAppId());
     await elementById('TotalBalance').waitForDisplayed({ timeout: 30_000 });
   }
 
