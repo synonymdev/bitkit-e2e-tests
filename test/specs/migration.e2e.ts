@@ -36,6 +36,7 @@ import {
   grantIOSCameraPermission,
   reinstallAppFromPath,
   resetBootedIOSKeychain,
+  activateAppWithEnv,
 } from '../helpers/setup';
 import { getAppId } from '../helpers/constants';
 import initElectrum, { ElectrumClient } from '../helpers/electrum';
@@ -189,7 +190,7 @@ describe('Wallet migration', () => {
     console.info(`→ Installing native app from: ${getNativeAppPath()}`);
     await driver.installApp(getNativeAppPath());
     grantIOSCameraPermission();
-    await driver.activateApp(getAppId());
+    await activateAppWithEnv(getAppId());
 
     // Restore wallet with mnemonic (uses custom flow to handle backup sheet)
     await restoreWallet(mnemonic!, {
@@ -206,7 +207,7 @@ describe('Wallet migration', () => {
     // Verify migration and state persisted by the target.
     await verifyMigration(balance, { verifyTags: !driver.isIOS });
     await driver.terminateApp(getAppId());
-    await driver.activateApp(getAppId());
+    await activateAppWithEnv(getAppId());
     // RN migration can schedule this intro for the next launch.
     await dismissBackgroundPaymentsTimedSheet();
     await tryDismissQuickPayIntroIfVisible();
@@ -225,7 +226,7 @@ describe('Wallet migration', () => {
     await driver.terminateApp(getAppId());
     await driver.installApp(getNativeAppPath());
     grantIOSCameraPermission();
-    await driver.activateApp(getAppId());
+    await activateAppWithEnv(getAppId());
 
     // Handle migration flow
     await handleMigrationFlow({ withSweep: false });
@@ -233,7 +234,7 @@ describe('Wallet migration', () => {
     // Verify migration and state persisted by the target.
     await verifyMigration(balance);
     await driver.terminateApp(getAppId());
-    await driver.activateApp(getAppId());
+    await activateAppWithEnv(getAppId());
     // RN migration can schedule this intro for the next launch.
     await dismissBackgroundPaymentsTimedSheet();
     await verifyMigration(balance);
@@ -249,9 +250,10 @@ describe('Wallet migration', () => {
 
       // Install native app ON TOP of RN (upgrade)
       console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
+      await driver.terminateApp(getAppId());
       await driver.installApp(getNativeAppPath());
       grantIOSCameraPermission();
-      await driver.activateApp(getAppId());
+      await activateAppWithEnv(getAppId());
 
       // Handle migration flow
       await handleMigrationFlow({ withSweep: false });
@@ -259,7 +261,7 @@ describe('Wallet migration', () => {
       // Verify migration and state persisted by the target.
       await verifyMigration(balance);
       await driver.terminateApp(getAppId());
-      await driver.activateApp(getAppId());
+      await activateAppWithEnv(getAppId());
       await verifyMigration(balance);
     });
 
@@ -274,9 +276,10 @@ describe('Wallet migration', () => {
 
       // Install native app ON TOP of RN (upgrade)
       console.info(`→ Installing native app on top of RN: ${getNativeAppPath()}`);
+      await driver.terminateApp(getAppId());
       await driver.installApp(getNativeAppPath());
       grantIOSCameraPermission();
-      await driver.activateApp(getAppId());
+      await activateAppWithEnv(getAppId());
 
       // Handle migration flow
       await handleMigrationFlow({ withSweep: false });
@@ -935,7 +938,7 @@ async function tagLatestTransaction(tag: string): Promise<void> {
     // A downward full-screen gesture can open Android's notification shade and
     // poison every subsequent retry. Relaunching returns the wallet to Home.
     await driver.terminateApp(getAppId());
-    await driver.activateApp(getAppId());
+    await activateAppWithEnv(getAppId());
     await elementById('TotalBalance').waitForDisplayed({ timeout: 30_000 });
   }
 
