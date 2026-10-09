@@ -69,3 +69,35 @@ test('driver errors fail immediately rather than being mistaken for recovery del
   );
   assert.deepEqual(c.events, []);
 });
+
+test('a pending driver probe is interrupted at the observation deadline', async () => {
+  const events: string[] = [];
+  await assert.rejects(
+    observeRecovery({
+      probe: () => new Promise<boolean>(() => {}),
+      startedAt: performance.now(),
+      timeoutMs: 20,
+      record: (event) => events.push(event),
+    }),
+    /within 20ms/
+  );
+  assert.deepEqual(events, ['timeout']);
+});
+
+test('a ready probe crossing 30 seconds records the slow path before success', async () => {
+  const c = clock(Infinity);
+  assert.equal(
+    await observeRecovery({
+      ...c.options,
+      probe: async () => {
+        await c.options.pause(31_000);
+        return true;
+      },
+    }),
+    31_000
+  );
+  assert.deepEqual(c.events, [
+    { event: 'fast-path-missed', elapsedMs: 31_000 },
+    { event: 'ready', elapsedMs: 31_000 },
+  ]);
+});

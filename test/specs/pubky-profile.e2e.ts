@@ -119,13 +119,11 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
           evidence.mark('app-restart-start');
           const restartStartedAt = performance.now();
           await launchFreshApp(5000);
-          await verifyMyProfileDetails(details);
-          const pubkyAfterRelaunch = await readPubkyFromProfileCopy();
-          await expect(pubkyAfterRelaunch).toBe(pubky.trim());
           await waitForAuthenticatedProfileReady('app restart', {
             startedAt: restartStartedAt,
             record: evidence.mark,
           });
+          await verifyMyProfileDetails(details);
           await expect((await readPubkyFromProfileCopy()).trim()).toBe(pubky.trim());
           evidence.snapshot('after-restart');
           await verifyContactRowDisplayed(stagingContact.pubky);
@@ -142,13 +140,11 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
           evidence.mark('wallet-restoration-start');
           const restoreStartedAt = performance.now();
           await restoreWallet(seed);
-          await verifyMyProfileDetails(details);
-          const pubkyAfterRestore = await readPubkyFromProfileCopy();
-          await expect(pubkyAfterRestore).toBe(pubky.trim());
           await waitForAuthenticatedProfileReady('wallet restoration', {
             startedAt: restoreStartedAt,
             record: evidence.mark,
           });
+          await verifyMyProfileDetails(details);
           await expect((await readPubkyFromProfileCopy()).trim()).toBe(pubky.trim());
           evidence.snapshot('after-restore');
           await verifyContactRowDisplayed(stagingContact.pubky);

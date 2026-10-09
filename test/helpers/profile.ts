@@ -445,6 +445,7 @@ export async function waitForAuthenticatedProfileReady(
     record: (event: string, detail: Record<string, unknown>) => void;
   }
 ) {
+  await openProfile();
   await observeRecovery({
     startedAt,
     probe: async () => {
