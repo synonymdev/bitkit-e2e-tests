@@ -1,0 +1,15 @@
+# Resume after dismiss.py confirms keyboard: hidden and text_preserved: true.
+appId: to.bitkit
+---
+- tapOn:
+    id: AddContactAdd
+- extendedWaitUntil:
+    visible:
+      id: AddContactSave
+    timeout: 60000
+- tapOn:
+    id: AddContactSave
+- extendedWaitUntil:
+    visible:
+      id: ContactPay
+    timeout: 60000

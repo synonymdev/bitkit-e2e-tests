@@ -1,0 +1,20 @@
+# Setup only: ends with the entered contact key, before Add or Save.
+appId: to.bitkit
+---
+- tapOn:
+    id: HeaderMenu
+- tapOn:
+    id: DrawerContacts
+- tapOn:
+    id: ContactsIntro-button
+    optional: true
+- tapOn:
+    id: ContactsEmptyAddButton
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: AddContactPubkyField
+    timeout: 30000
+- tapOn:
+    id: AddContactPubkyField
+- inputText: ${CONTACT_KEY}
