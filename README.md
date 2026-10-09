@@ -333,6 +333,10 @@ For fixed-price Paykit requests that the app Request UI cannot create, use
 a separate issuer to either fixture and supports custom assets, amounts, and
 conversion rates without rebuilding the apps.
 
+For iOS setup blocked by Maestro's `hideKeyboard`, use
+[the simulator keyboard helper](tools/ios-keyboard/README.md). It verifies that
+the keyboard is hidden and the entered contact key is preserved before saving.
+
 iOS: the script pins `SIMULATOR_UDID` to the booted simulator (`SIMULATOR_NAME`, default iPhone 17). Appium `auto` can attach to a physical device; do not leave that unset.
 
 ---
