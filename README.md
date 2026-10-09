@@ -328,6 +328,10 @@ Optional: `QA_FIXTURE_ONCHAIN_SATS`, `QA_FIXTURE_SPENDING_SATS`, `QA_FIXTURE_PRO
 
 Writes `artifacts/qa-fixture.json` and, with a profile, `artifacts/qa-fixture.pubky`. After it finishes, overlay the PR build (`adb install -r` / sim install — do not uninstall) and start from `TotalBalance-primary`.
 
+For a rendered iOS app whose XcodeBuildMCP control tree disappears after
+relaunch, use [the simulator control helper](tools/ios-controls/README.md) to
+probe and drive the existing app through Maestro without relaunching or wiping it.
+
 For fixed-price Paykit requests that the app Request UI cannot create, use
 [the standalone fixture sender](tools/paykit-fixture-sender/README.md). It links
 a separate issuer to either fixture and supports custom assets, amounts, and
