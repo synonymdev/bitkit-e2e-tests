@@ -1,3 +1,4 @@
+import { observeRecovery } from './recovery-wait';
 import {
   confirmInputOnKeyboard,
   elementById,
@@ -11,7 +12,7 @@ import {
   typeText,
   waitForToast,
 } from './actions';
-import { openContacts, openProfile } from './navigation';
+import { doNavigationClose, openContacts, openProfile } from './navigation';
 
 /** One link row on the profile (label + URL). */
 export type PubkyProfileLink = { label: string; url: string };
@@ -435,19 +436,26 @@ export async function verifyMyProfileDetails(expected: ProfileDetails) {
 
 /** The public profile can be readable before its private session is ready. */
 export async function waitForAuthenticatedProfileReady(
-  phase: 'app restart' | 'wallet restoration'
+  phase: 'app restart' | 'wallet restoration',
+  {
+    startedAt,
+    record,
+  }: {
+    startedAt: number;
+    record: (event: string, detail: Record<string, unknown>) => void;
+  }
 ) {
-  await browser.waitUntil(
-    async () => {
+  await observeRecovery({
+    startedAt,
+    probe: async () => {
       const edit = await elementById('ProfileEdit');
       return (await edit.isDisplayed()) && (await edit.isEnabled());
     },
-    {
-      timeout: 30_000,
-      interval: 500,
-      timeoutMsg: `Pubky restoration not ready after ${phase}: ProfileEdit did not become enabled within 30000ms`,
-    }
-  );
+    record: (event, elapsedMs) => record(event, { recoveryPhase: phase, elapsedMs }),
+  });
+  // Enabled is only the admission signal; prove the real edit form is usable.
+  await openEditProfile();
+  await doNavigationClose();
 }
 
 /**

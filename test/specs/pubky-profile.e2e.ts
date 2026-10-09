@@ -1,3 +1,4 @@
+import { startPubkyRecoveryEvidence } from '../helpers/pubky-recovery-evidence';
 import {
   completeOnboarding,
   doNavigationClose,
@@ -81,73 +82,97 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
   // remove link+tag, delete profile, recreate.
   // @pubky_profile_2 — create → copy → update → add staging contact → relaunch/restore (profile + contact) →
   // remove link+tag → delete profile → create → same pubky.
-  describe('Profile - create, edit, delete', () => {
+  describe('Profile - create, edit, delete', function () {
+    // Two bounded seven-minute recovery observations plus the existing journey.
+    this.timeout(30 * 60_000);
     ciIt(
       '@pubky_profile_2 - Profile and contact persist; delete and recreate same pubky',
       async () => {
-        const [stagingContact] = STAGING_TEST_CONTACTS;
-
-        // create profile and verify pubky and details
-        const { pubky } = await createProfile({ name: 'Alice' });
-        await verifyPubkyString(pubky);
-        const copiedPubky = await readPubkyFromProfileCopy();
-        await expect(copiedPubky).toBe(pubky.trim());
-
-        // update profile and verify details
-        const details = {
-          name: 'Bob',
-          notes: 'Notes for E2E',
-          links: [{ label: 'Website', url: 'https://example.org' }],
-          tags: ['cypherpunk'],
-        };
-        await updateMyProfile(details);
-        await verifyMyProfileDetails(details);
-
-        await addContact({ pubky: stagingContact.pubky, firstContact: true });
-        await verifyContactRowDisplayed(stagingContact.pubky);
-        // Allow the saved contact to settle before terminating the app.
-        await sleep(5000);
-
-        // restart app and verify profile, pubky, and contact
-        await launchFreshApp(5000);
-        await verifyMyProfileDetails(details);
-        const pubkyAfterRelaunch = await readPubkyFromProfileCopy();
-        await expect(pubkyAfterRelaunch).toBe(pubky.trim());
-        await waitForAuthenticatedProfileReady('app restart');
-        await verifyContactRowDisplayed(stagingContact.pubky);
-
-        // restore wallet and verify profile, pubky, and contact
-        const seed = await getSeed();
+        const evidence = startPubkyRecoveryEvidence();
         try {
-          await waitForBackup();
-        } catch (error) {
-          console.warn('waitForBackup failed, continuing with restore...');
-          console.warn(error);
+          const [stagingContact] = STAGING_TEST_CONTACTS;
+
+          evidence.mark('profile-creation-start');
+          // create profile and verify pubky and details
+          const { pubky } = await createProfile({ name: 'Alice' });
+          await verifyPubkyString(pubky);
+          const copiedPubky = await readPubkyFromProfileCopy();
+          await expect(copiedPubky).toBe(pubky.trim());
+
+          // update profile and verify details
+          const details = {
+            name: 'Bob',
+            notes: 'Notes for E2E',
+            links: [{ label: 'Website', url: 'https://example.org' }],
+            tags: ['cypherpunk'],
+          };
+          await updateMyProfile(details);
+          await verifyMyProfileDetails(details);
+
+          await addContact({ pubky: stagingContact.pubky, firstContact: true });
+          await verifyContactRowDisplayed(stagingContact.pubky);
+          // Allow the saved contact to settle before terminating the app.
+          await sleep(5000);
+
+          // restart app and verify profile, pubky, and contact
+          evidence.snapshot('before-restart');
+          evidence.mark('app-restart-start');
+          const restartStartedAt = performance.now();
+          await launchFreshApp(5000);
+          await verifyMyProfileDetails(details);
+          const pubkyAfterRelaunch = await readPubkyFromProfileCopy();
+          await expect(pubkyAfterRelaunch).toBe(pubky.trim());
+          await waitForAuthenticatedProfileReady('app restart', {
+            startedAt: restartStartedAt,
+            record: evidence.mark,
+          });
+          await expect((await readPubkyFromProfileCopy()).trim()).toBe(pubky.trim());
+          evidence.snapshot('after-restart');
+          await verifyContactRowDisplayed(stagingContact.pubky);
+
+          // restore wallet and verify profile, pubky, and contact
+          const seed = await getSeed();
+          try {
+            await waitForBackup();
+          } catch (error) {
+            console.warn('waitForBackup failed, continuing with restore...');
+            console.warn(error);
+          }
+          evidence.snapshot('before-restore');
+          evidence.mark('wallet-restoration-start');
+          const restoreStartedAt = performance.now();
+          await restoreWallet(seed);
+          await verifyMyProfileDetails(details);
+          const pubkyAfterRestore = await readPubkyFromProfileCopy();
+          await expect(pubkyAfterRestore).toBe(pubky.trim());
+          await waitForAuthenticatedProfileReady('wallet restoration', {
+            startedAt: restoreStartedAt,
+            record: evidence.mark,
+          });
+          await expect((await readPubkyFromProfileCopy()).trim()).toBe(pubky.trim());
+          evidence.snapshot('after-restore');
+          await verifyContactRowDisplayed(stagingContact.pubky);
+
+          // remove link and tag and update profile and verify profile details
+          await openEditProfile();
+          await removeEditProfileLinkAt(0);
+          await removeEditProfileTag('cypherpunk');
+          await saveEditProfile();
+          const detailsAfterRemovals: ProfileDetails = {
+            name: 'Bob',
+            notes: 'Notes for E2E',
+            links: [],
+            tags: [],
+          };
+          await verifyMyProfileDetails(detailsAfterRemovals);
+
+          // delete profile and create new profile and verify pubky
+          await deleteProfile();
+          const { pubky: pubkyAfterRecreate } = await createProfile({ name: 'Alice2' });
+          await expect(pubkyAfterRecreate.trim()).toBe(pubky.trim());
+        } finally {
+          await evidence.finish();
         }
-        await restoreWallet(seed);
-        await verifyMyProfileDetails(details);
-        const pubkyAfterRestore = await readPubkyFromProfileCopy();
-        await expect(pubkyAfterRestore).toBe(pubky.trim());
-        await waitForAuthenticatedProfileReady('wallet restoration');
-        await verifyContactRowDisplayed(stagingContact.pubky);
-
-        // remove link and tag and update profile and verify profile details
-        await openEditProfile();
-        await removeEditProfileLinkAt(0);
-        await removeEditProfileTag('cypherpunk');
-        await saveEditProfile();
-        const detailsAfterRemovals: ProfileDetails = {
-          name: 'Bob',
-          notes: 'Notes for E2E',
-          links: [],
-          tags: [],
-        };
-        await verifyMyProfileDetails(detailsAfterRemovals);
-
-        // delete profile and create new profile and verify pubky
-        await deleteProfile();
-        const { pubky: pubkyAfterRecreate } = await createProfile({ name: 'Alice2' });
-        await expect(pubkyAfterRecreate.trim()).toBe(pubky.trim());
       }
     );
   });
@@ -264,17 +289,20 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
   // (staging Homegate). Send/manual ignores pubkyauth:// — only the home scanner handles it.
   // Ring QR (`pubkyring://signup`) and Import-with-Ring stay manual (charter C).
   describe('Scanner signup (no Ring)', () => {
-    ciIt('@pubky_profile_5 - After profile, home scanner signup says already signed in', async () => {
-      const directSignupUrl =
-        'pubkyauth://direct_signup?hs=ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy';
+    ciIt(
+      '@pubky_profile_5 - After profile, home scanner signup says already signed in',
+      async () => {
+        const directSignupUrl =
+          'pubkyauth://direct_signup?hs=ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy';
 
-      await createProfile({ name: 'Signup Scanner' });
-      await doNavigationClose();
+        await createProfile({ name: 'Signup Scanner' });
+        await doNavigationClose();
 
-      await enterAddressViaScanPrompt(directSignupUrl, { acceptCameraPermission: true });
-      await elementByText('Already signed in', 'exact').waitForDisplayed({ timeout: 15_000 });
-      await expect(elementById('CreateProfileUsername')).not.toBeDisplayed();
-      await expect(elementById('PubkyAuthAuthorize')).not.toBeDisplayed();
-    });
+        await enterAddressViaScanPrompt(directSignupUrl, { acceptCameraPermission: true });
+        await elementByText('Already signed in', 'exact').waitForDisplayed({ timeout: 15_000 });
+        await expect(elementById('CreateProfileUsername')).not.toBeDisplayed();
+        await expect(elementById('PubkyAuthAuthorize')).not.toBeDisplayed();
+      }
+    );
   });
 });
