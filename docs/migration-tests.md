@@ -45,6 +45,12 @@ Native verification checks separate savings and spending balances, recovered act
 
 Source preparation verifies backup completion after funding and metadata changes. Native builds expose `AllSynced`; RN release builds require successful `Latest Backup` statuses for every expected category, including Tags and Connections when spending exists. RN checks these before exporting a wallet or installing the target.
 
+For a same-platform RN iOS source whose receive celebration hides its controls,
+use the standalone [RN source preparation tool](../tools/rn-source-preparer/README.md).
+It preserves the installed source wallet, verifies a saved activity tag after
+relaunch, and checks category backup statuses without touching a native target.
+It does not change the Android-origin routine migration cases described above.
+
 ## Retries and extended coverage
 
 Native and Android RN cases create new wallets inside every test attempt. iOS RN has two Android preparation jobs in routine runs, one for restore and one for upgrade. Each prepares **three independent wallets**, one per possible consumer attempt, with up to three setup attempts per wallet. This costs extra setup time but prevents a partial migration from modifying the backup used by its *in-run* mocha retry. Setup completion markers include the wallet number.
