@@ -158,7 +158,7 @@ A quote file contains `billing_period` (`starts_at`, `ends_at`), `rates`
 (`asset`, `value`) and `expires_at`. A proof submission file contains
 `payment_app_id`, `payment_endpoint_identifier`, optional `billing_period` and
 `conversion_quote_id`, plus `proof`: the exact `erc20-transfer-eip712` object
-from `./usdt-fixture wallet proof ID BINDING_FILE`. Pay the matching recipient
+from `./usdt-fixture wallet proof ID /evidence/binding.json`. Pay the matching recipient
 with `wallet send` first; retain its payment ID and immutable request binding.
 Proof retries must reuse that payment, never run `send` again.
 
@@ -169,9 +169,16 @@ To verify a payment from Bitkit:
 ./sender evidence '<payer pubky>' '<request id>' > evidence.json
 jq '.proofs[0].binding' evidence.json > binding.json
 jq '.proofs[0].proof' evidence.json > proof.json
-# From bitkit-docker, with absolute file paths:
-USDT_WALLET_NAME=receiver ./usdt-fixture wallet verify /path/binding.json /path/proof.json
+# From bitkit-docker, copy the two files created above into the read-only input mount:
+mkdir -p .usdt/evidence
+cp /absolute/path/to/binding.json /absolute/path/to/proof.json .usdt/evidence/
+USDT_WALLET_NAME=receiver ./usdt-fixture wallet verify /evidence/binding.json /evidence/proof.json
 ```
+
+Wallet commands run inside Docker. Put proof and binding input files in the
+fixture checkout's `.usdt/evidence/` directory and pass `/evidence/...` paths.
+The E2E launcher's default checkout is `.cache/usdt-infra/`;
+`BITKIT_DOCKER_ROOT` selects another checkout.
 
 `evidence` derives payer/payee from the authenticated SDK record, not the proof's
 claimed identity. It exports evidence; it does not declare the request paid.

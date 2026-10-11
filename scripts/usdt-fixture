@@ -4,7 +4,7 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 INFRA=${BITKIT_DOCKER_ROOT:-$ROOT/.cache/usdt-infra}
 REV=$(tr -d '[:space:]' < "$ROOT/USDT_INFRA_REVISION")
 
-if [ "${1:-help}" = setup ]; then
+if [ "${1:-help}" = build ]; then
   if [ ! -d "$INFRA" ]; then
     mkdir -p "$INFRA"
     git -C "$INFRA" init
@@ -12,7 +12,7 @@ if [ "${1:-help}" = setup ]; then
   fi
   if [ -z "${BITKIT_DOCKER_ROOT:-}" ]; then
     if [ -n "$(git -C "$INFRA" status --porcelain)" ]; then
-      echo 'Infrastructure checkout has local edits; preserve them before setup.' >&2
+      echo 'Infrastructure checkout has local edits; preserve them before building.' >&2
       exit 1
     fi
     git -C "$INFRA" fetch --depth 1 origin "$REV"
@@ -20,7 +20,7 @@ if [ "${1:-help}" = setup ]; then
   fi
 fi
 if ! git -C "$INFRA" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  echo 'Run ./scripts/usdt-fixture setup first.' >&2
+  echo 'Run ./scripts/usdt-fixture build first.' >&2
   exit 1
 fi
 if [ "$(git -C "$INFRA" rev-parse HEAD)" != "$REV" ]; then

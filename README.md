@@ -115,9 +115,9 @@ controls plus a real Paykit SDK peer. Keep `BACKEND=regtest` for Paykit journeys
 VSS, Pubky, Bitcoin and rates retain their existing staging configuration.
 
 ```sh
-./scripts/usdt-fixture setup
-USDT_TEST_ENV_FILE=/absolute/path/to/private.env ./scripts/usdt-fixture run
-# Another terminal:
+./scripts/usdt-fixture build
+export USDT_TEST_ENV_FILE=/absolute/path/to/private.env
+./scripts/usdt-fixture up
 eval "$(./scripts/usdt-fixture env)"
 ./scripts/usdt-fixture smoke
 ```

@@ -7,12 +7,15 @@ Use the existing staging Bitcoin/Paykit build, with USDT execution on the isolat
 The launcher consumes the exact `bitkit-docker` commit in `USDT_INFRA_REVISION`. Its shared services and test controls live there; this repository owns the Appium journeys and SDK peer.
 
 ```bash
-./scripts/usdt-fixture setup
+./scripts/usdt-fixture build
 # Private env file with ARBITRUM_RPC_URL=https://... (archive access to the pinned fork block).
-USDT_TEST_ENV_FILE=/absolute/path/to/private.env ./scripts/usdt-fixture run
+export USDT_TEST_ENV_FILE=/absolute/path/to/private.env
+./scripts/usdt-fixture up
 ```
 
-Keep that process running. In another shell:
+Keep this Docker stack running through the journey. Build tools and services run inside containers; the host needs Docker Compose, Git access to the pinned Core/service repositories, jq and tar. Use `./scripts/usdt-fixture ps` or `logs` to inspect it, and `down` after testing to remove its containers and disposable wallet volume. CI must use a Docker-capable runner.
+
+In the same shell:
 
 ```bash
 eval "$(./scripts/usdt-fixture env)"

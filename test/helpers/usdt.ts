@@ -10,7 +10,7 @@ export interface UsdtFixtureStatus {
 
 export async function usdtFixture<T>(method: string, params: unknown[] = []): Promise<T> {
   const endpoint = process.env.USDT_FIXTURE_URL;
-  if (!endpoint) throw new Error('Start scripts/usdt-fixture run and load its env output first');
+  if (!endpoint) throw new Error('Start scripts/usdt-fixture up and load its env output first');
   const url = new URL(endpoint);
   if (url.protocol !== 'http:' || !['localhost', '127.0.0.1'].includes(url.hostname)) {
     throw new Error('USDT fixture controls must use localhost HTTP');
