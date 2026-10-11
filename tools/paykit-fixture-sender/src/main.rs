@@ -879,13 +879,15 @@ mod tests {
         };
         let (terms, json) = custom_terms(None, &options).unwrap();
         assert_eq!(terms.accepted_payment_endpoint_identifiers, [USDT_ENDPOINT]);
-        let payload: serde_json::Value = serde_json::from_str(
-            &terms.payment_endpoints.as_ref().unwrap()[USDT_ENDPOINT],
-        )
-        .unwrap();
+        let payload: serde_json::Value =
+            serde_json::from_str(&terms.payment_endpoints.as_ref().unwrap()[USDT_ENDPOINT])
+                .unwrap();
         assert_eq!(payload["value"], options.usdt_address.as_deref().unwrap());
         assert_eq!(payload["chain_id"], "42161");
-        assert_eq!(payload["token"], "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9");
+        assert_eq!(
+            payload["token"],
+            "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9"
+        );
         assert!(matches!(
             terms.payment_deadline,
             Some(FfiPaymentDeadline::At { .. })
