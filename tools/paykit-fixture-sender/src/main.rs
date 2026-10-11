@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use fs2::FileExt;
 use paykit::*;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::{
     collections::HashMap,
     fs,
@@ -15,9 +16,10 @@ use std::{
 
 const APP: &str = "paykit-server";
 const ENDPOINT: &str = "btc-regtest-p2wpkh";
+const USDT_ENDPOINT: &str = "usdt-arbitrum-address";
 
 #[derive(Parser)]
-#[command(about = "Real rc71 Paykit sender for Bitkit fixed-price journeys")]
+#[command(about = "Real Paykit peer for Bitkit payment journeys")]
 struct Args {
     #[arg(long, default_value = "state")]
     state: PathBuf,
@@ -49,6 +51,22 @@ enum Command {
         #[command(flatten)]
         options: RequestOptions,
     },
+    /// Accept a request received from Bitkit. Never sends funds.
+    Accept { peer: String, request: String },
+    /// Submit an existing method proof; file contains the SDK proof submission fields.
+    Proof {
+        peer: String,
+        request: String,
+        file: PathBuf,
+    },
+    /// Issue a recurring quote; file contains billing_period, rates and expires_at.
+    Quote {
+        peer: String,
+        request: String,
+        file: PathBuf,
+    },
+    /// Export received evidence and its authenticated binding for local Core verification.
+    Evidence { peer: String, request: String },
     /// Receive messages and retry delivery (including after a failed send).
     Poll {
         #[arg(long, default_value_t = 30)]
@@ -68,7 +86,19 @@ enum Command {
 #[derive(clap::Args)]
 struct RequestOptions {
     #[arg(long)]
-    address: String,
+    address: Option<String>,
+    /// Local-fork USDT receiving address; may be used alone or with --address.
+    #[arg(long)]
+    usdt_address: Option<String>,
+    /// Recurrence object in the Paykit wire format.
+    #[arg(long)]
+    recurrence: Option<String>,
+    /// Require a fresh quote for each recurring billing period.
+    #[arg(long, requires = "recurrence")]
+    per_period: bool,
+    /// One-time actual payment deadline, in seconds from now.
+    #[arg(long, conflicts_with = "recurrence")]
+    payment_in: Option<u32>,
     /// Requested denomination, e.g. btc, usd, usdt.
     #[arg(long)]
     asset: Option<String>,
@@ -175,7 +205,11 @@ fn terms(case: Preset, address: &str) -> Result<(FfiPaymentRequestTerms, serde_j
     custom_terms(
         Some(case),
         &RequestOptions {
-            address: address.into(),
+            address: Some(address.into()),
+            usdt_address: None,
+            recurrence: None,
+            per_period: false,
+            payment_in: None,
             asset: None,
             amount: None,
             rates: vec![],
@@ -189,15 +223,39 @@ fn custom_terms(
     case: Option<Preset>,
     options: &RequestOptions,
 ) -> Result<(FfiPaymentRequestTerms, serde_json::Value)> {
-    let address = &options.address;
-    let parsed: bitcoin::Address<bitcoin::address::NetworkUnchecked> =
-        address.parse().context("invalid Bitcoin address")?;
-    let parsed = parsed
-        .require_network(bitcoin::Network::Regtest)
-        .context("address must be regtest")?;
-    if parsed.address_type() != Some(bitcoin::AddressType::P2wpkh) {
-        bail!("use a regtest P2WPKH address (bcrt1q...)");
+    let mut endpoints = HashMap::new();
+    if let Some(address) = &options.address {
+        let parsed: bitcoin::Address<bitcoin::address::NetworkUnchecked> =
+            address.parse().context("invalid Bitcoin address")?;
+        let parsed = parsed
+            .require_network(bitcoin::Network::Regtest)
+            .context("address must be regtest")?;
+        if parsed.address_type() != Some(bitcoin::AddressType::P2wpkh) {
+            bail!("use a regtest P2WPKH address (bcrt1q...)");
+        }
+        endpoints.insert(
+            ENDPOINT.to_string(),
+            serde_json::json!({"value":address}).to_string(),
+        );
     }
+    if let Some(address) = &options.usdt_address {
+        if address.len() != 42
+            || !address.starts_with("0x")
+            || !address[2..].bytes().all(|b| b.is_ascii_hexdigit())
+            || address[2..].bytes().all(|b| b == b'0')
+        {
+            bail!("use a nonzero 20-byte USDT address");
+        }
+        endpoints.insert(
+            USDT_ENDPOINT.to_string(),
+            serde_json::json!({"value":address}).to_string(),
+        );
+    }
+    if endpoints.is_empty() {
+        bail!("provide --address and/or --usdt-address");
+    }
+    let mut accepted: Vec<String> = endpoints.keys().cloned().collect();
+    accepted.sort();
     let (default_value, default_asset, default_rates) = match case {
         Some(Preset::Usd) => ("10", "usd", vec![("btc", "0.000021")]),
         Some(Preset::Btc) => ("0.001", "btc", vec![("btc", "2"), ("btc-regtest", "0.5")]),
@@ -237,11 +295,44 @@ fn custom_terms(
     let reference = format!("fixture-{:032x}", rand::random::<u128>());
     let expiry = (chrono::Utc::now() + chrono::Duration::seconds(i64::from(options.expires_in)))
         .to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
-    let payload = serde_json::json!({"value":address}).to_string();
-    let mut json = serde_json::json!({"amount":{"value":value,"asset":asset},"conversion":{"type":"fixed","rates":rates.iter().map(|(a,v)|serde_json::json!({"asset":a,"value":v})).collect::<Vec<_>>()},"accepted_payment_endpoint_identifiers":[ENDPOINT],"payment_endpoints":{ENDPOINT:payload},"required_app_id":APP,"payment_reference":reference,"proposal_expires_at":expiry,"metadata":{"note":note},"expected_sats":sats});
-    if rates.is_empty() {
-        json.as_object_mut().unwrap().remove("conversion");
-    }
+    let recurrence = options
+        .recurrence
+        .as_deref()
+        .map(|text| -> Result<_> {
+            let value: serde_json::Value = serde_json::from_str(text)?;
+            Ok(FfiPaymentRequestRecurrence {
+                every: value["every"]
+                    .as_u64()
+                    .context("recurrence.every required")?
+                    .try_into()?,
+                unit: required_text(&value, "unit")?,
+                starts_at: required_text(&value, "starts_at")?,
+                anchor: required_text(&value, "anchor")?,
+                ends_at: value["ends_at"].as_str().map(String::from),
+            })
+        })
+        .transpose()?;
+    let conversion = if options.per_period {
+        if !rates.is_empty() {
+            bail!("per-period quotes cannot have fixed request rates");
+        }
+        Some(FfiPaymentConversion::PerPeriod)
+    } else {
+        (!rates.is_empty()).then(|| FfiPaymentConversion::Fixed {
+            rates: rates
+                .iter()
+                .map(|(a, v)| FfiConversionRate {
+                    asset: (*a).into(),
+                    value: (*v).into(),
+                })
+                .collect(),
+        })
+    };
+    let payment_deadline = options.payment_in.map(|seconds| FfiPaymentDeadline::At {
+        timestamp: (chrono::Utc::now() + chrono::Duration::seconds(i64::from(seconds)))
+            .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+    });
+    let json = serde_json::json!({"amount":{"value":value,"asset":asset},"accepted_payment_endpoint_identifiers":accepted,"payment_endpoints":endpoints,"required_app_id":APP,"payment_reference":reference,"proposal_expires_at":expiry,"metadata":{"note":note},"expected_sats":sats});
     let terms = FfiPaymentRequestTerms {
         amount: FfiPaymentRequestAmount {
             value: value.into(),
@@ -249,24 +340,41 @@ fn custom_terms(
         },
         payment_reference: Arc::new(FfiPaymentReference::new(reference)?),
         proposal_expires_at: Some(expiry),
-        recurrence: None,
-        accepted_payment_endpoint_identifiers: vec![ENDPOINT.into()],
-        payment_endpoints: Some(HashMap::from([(ENDPOINT.into(), payload)])),
+        recurrence,
+        accepted_payment_endpoint_identifiers: accepted,
+        payment_endpoints: Some(endpoints),
         required_app_id: Some(APP.into()),
-        conversion: (!rates.is_empty()).then(|| FfiPaymentConversion::Fixed {
-            rates: rates
-                .into_iter()
-                .map(|(a, v)| FfiConversionRate {
-                    asset: a.into(),
-                    value: v.into(),
-                })
-                .collect(),
-        }),
-        payment_deadline: None,
+        conversion,
+        payment_deadline,
         metadata: Arc::new(FfiPrivateJsonObject::new(json["metadata"].to_string())?),
     };
     let _: paykit_lib::PaymentRequestTerms = terms.clone().try_into()?;
+    let mut json = json;
+    if options.per_period {
+        json["conversion"] = json!({"type":"per_period"});
+    } else if !rates.is_empty() {
+        json["conversion"] = json!({"type":"fixed","rates": rates.iter().map(|(a,v)| json!({"asset":a,"value":v})).collect::<Vec<_>>()});
+    }
+    if let Some(value) = &options.recurrence {
+        json["recurrence"] = serde_json::from_str(value)?;
+    }
+    if let Some(FfiPaymentDeadline::At { timestamp }) = &terms.payment_deadline {
+        json["payment_deadline"] = json!({"type":"at", "timestamp":timestamp});
+    }
     Ok((terms, json))
+}
+
+fn required_text(value: &serde_json::Value, key: &str) -> Result<String> {
+    Ok(value[key]
+        .as_str()
+        .with_context(|| format!("{key} must be a string"))?
+        .into())
+}
+fn period(value: &serde_json::Value) -> Result<FfiBillingPeriod> {
+    Ok(FfiBillingPeriod {
+        starts_at: required_text(value, "starts_at")?,
+        ends_at: required_text(value, "ends_at")?,
+    })
 }
 
 // Optional preview estimate; never changes the SDK's exact decimal request terms.
@@ -403,7 +511,7 @@ async fn main() -> Result<()> {
                 private_payments: true,
                 payment_requests: true,
                 receipts: false,
-                outgoing_payments: false,
+                outgoing_payments: true,
             },
         )
         .await?;
@@ -426,7 +534,7 @@ async fn main() -> Result<()> {
     }
     let identity: Identity =
         serde_json::from_slice(&fs::read(&identity_path).context("run init first")?)?;
-    println!(
+    eprintln!(
         "Issuer: {}",
         identity.public_key.as_deref().unwrap_or("unknown")
     );
@@ -468,13 +576,12 @@ async fn main() -> Result<()> {
         Command::Send {
             peer,
             case: _,
-            options,
+            options: _,
         } => {
             let peer = normalize_pubky_public_key(peer)?;
             let (terms, json) = prepared
                 .take()
                 .expect("send terms validated before session setup");
-            let address = &options.address;
             if !sdk
                 .linked_peers()
                 .await?
@@ -483,13 +590,18 @@ async fn main() -> Result<()> {
             {
                 bail!("peer is not linked; run link first");
             }
-            sdk.sync_public_endpoints_with_receiving_details(vec![FfiPublicReceivingDetail {
-                identifier: ENDPOINT.into(),
-                payload: Arc::new(FfiPaymentPayload::new(
-                    serde_json::json!({"value":address}).to_string(),
-                )),
-            }])
-            .await?;
+            let details = terms
+                .payment_endpoints
+                .as_ref()
+                .context("fixture endpoints missing")?
+                .iter()
+                .map(|(identifier, payload)| FfiPublicReceivingDetail {
+                    identifier: identifier.clone(),
+                    payload: Arc::new(FfiPaymentPayload::new(payload.clone())),
+                })
+                .collect();
+            sdk.sync_public_endpoints_with_receiving_details(details)
+                .await?;
             let record = sdk.propose_payment_request(peer.clone(), terms).await?;
             let receipt = serde_json::json!({"payment_request_id":record.payment_request_id,"terms":json,"sdk_revision":"e4e58d3ee6c6aa19d6262d4cd96a58890a65b6fa"});
             atomic_write(
@@ -498,10 +610,10 @@ async fn main() -> Result<()> {
                     .join(format!("request-{}.json", record.payment_request_id)),
                 &serde_json::to_vec_pretty(&receipt)?,
             )?;
-            println!(
-                "Request: {}\nExpected: {} sats",
-                record.payment_request_id, json["expected_sats"]
-            );
+            println!("Request: {}", record.payment_request_id);
+            if let Some(sats) = json["expected_sats"].as_u64() {
+                println!("Expected: {sats} sats");
+            }
             let report = sdk.process_outbound_private_messages(peer.clone()).await?;
             println!("Delivery: {:?}", report);
             let persisted = sdk
@@ -515,6 +627,119 @@ async fn main() -> Result<()> {
                     "request is queued but not delivered; use poll to retry this request, not send"
                 );
             }
+        }
+        Command::Accept { peer, request } => {
+            let peer = normalize_pubky_public_key(peer)?;
+            let record = sdk
+                .claim_and_accept_payment_request(peer.clone(), request)
+                .await?;
+            println!("Acceptance: {:?}", record.state);
+            println!(
+                "Delivery: {:?}",
+                sdk.process_outbound_private_messages(peer).await?
+            );
+        }
+        Command::Proof {
+            peer,
+            request,
+            file,
+        } => {
+            let peer = normalize_pubky_public_key(peer)?;
+            let value: serde_json::Value = serde_json::from_slice(&fs::read(file)?)?;
+            let record = sdk
+                .submit_payment_proof(
+                    peer.clone(),
+                    request,
+                    FfiPaymentProofSubmission {
+                        billing_period: value
+                            .get("billing_period")
+                            .filter(|p| !p.is_null())
+                            .map(period)
+                            .transpose()?,
+                        payment_app_id: required_text(&value, "payment_app_id")?,
+                        payment_endpoint_identifier: required_text(
+                            &value,
+                            "payment_endpoint_identifier",
+                        )?,
+                        allowance_id: None,
+                        conversion_quote_id: value["conversion_quote_id"]
+                            .as_str()
+                            .map(String::from),
+                        proof: Arc::new(FfiPrivateJsonObject::new(value["proof"].to_string())?),
+                    },
+                )
+                .await?;
+            println!("Proof state: {:?}", record.state);
+            println!(
+                "Delivery: {:?}",
+                sdk.process_outbound_private_messages(peer).await?
+            );
+        }
+        Command::Quote {
+            peer,
+            request,
+            file,
+        } => {
+            let peer = normalize_pubky_public_key(peer)?;
+            let value: serde_json::Value = serde_json::from_slice(&fs::read(file)?)?;
+            let rates = value["rates"]
+                .as_array()
+                .context("rates must be an array")?
+                .iter()
+                .map(|r| {
+                    Ok(FfiConversionRate {
+                        asset: required_text(r, "asset")?,
+                        value: required_text(r, "value")?,
+                    })
+                })
+                .collect::<Result<_>>()?;
+            let record = sdk
+                .quote_payment_request(
+                    peer.clone(),
+                    request,
+                    period(&value["billing_period"])?,
+                    rates,
+                    required_text(&value, "expires_at")?,
+                )
+                .await?;
+            for quote in record.conversion_quotes {
+                println!("Quote: {:?}", quote);
+            }
+            println!(
+                "Delivery: {:?}",
+                sdk.process_outbound_private_messages(peer).await?
+            );
+        }
+        Command::Evidence { peer, request } => {
+            let peer = normalize_pubky_public_key(peer)?;
+            let record = sdk
+                .payment_requests_with(peer.clone())
+                .await?
+                .into_iter()
+                .find(|record| record.payment_request_id == request)
+                .context("request not found; poll first")?;
+            let local = identity.public_key.context("fixture identity missing")?;
+            let (payer, payee) = match record.local_role {
+                Some(FfiPaymentRequestLocalRole::Payer) => (local, peer),
+                Some(FfiPaymentRequestLocalRole::Payee) => (peer, local),
+                _ => bail!("request has no authenticated role"),
+            };
+            let proofs = record.payment_proofs.iter().map(|proof| -> Result<_> {
+                Ok(json!({"event_id":proof.event_id,"binding":{
+                    "payer":payer.strip_prefix("pubky").unwrap_or(&payer),"payee":payee.strip_prefix("pubky").unwrap_or(&payee),"payment_app_id":proof.payment_app_id,
+                    "payment_request_id":request,"payment_reference":proof.payment_reference.export_text(),
+                    "payment_endpoint_identifier":proof.payment_endpoint_identifier,
+                    "period_starts_at":proof.billing_period.as_ref().map(|p|p.starts_at.as_str()).unwrap_or(""),
+                    "period_ends_at":proof.billing_period.as_ref().map(|p|p.ends_at.as_str()).unwrap_or(""),
+                    "conversion_quote_id":proof.conversion_quote_id.as_deref().unwrap_or("")},
+                    "proof":serde_json::from_str::<serde_json::Value>(&proof.proof.export_text())?}))
+            }).collect::<Result<Vec<_>>>()?;
+            println!(
+                "{}",
+                serde_json::to_string_pretty(
+                    &json!({"state":format!("{:?}",record.state),"proofs":proofs})
+                )?
+            );
         }
         Command::Poll { seconds } => {
             let end = tokio::time::Instant::now() + Duration::from_secs(seconds);
@@ -598,7 +823,11 @@ mod tests {
     #[test]
     fn custom_rates_replace_presets_and_preserve_terms() {
         let mut options = RequestOptions {
-            address: address(),
+            address: Some(address()),
+            usdt_address: None,
+            recurrence: None,
+            per_period: false,
+            payment_in: None,
             asset: Some("usdt".into()),
             amount: Some("5.00".into()),
             rates: vec!["btc=0.00003".into()],
@@ -628,6 +857,54 @@ mod tests {
         assert!(terms.conversion.is_none());
         assert!(json.get("conversion").is_none());
         assert_eq!(json["expected_sats"], 10000);
+    }
+    #[test]
+    fn usdt_and_mixed_receiving_terms_validate_with_the_sdk() {
+        let mut options = RequestOptions {
+            address: None,
+            usdt_address: Some("0x1111111111111111111111111111111111111111".into()),
+            asset: Some("usd".into()),
+            amount: Some("2.50".into()),
+            rates: vec!["usdt=1".into()],
+            note: None,
+            expires_in: 3600,
+            recurrence: None,
+            per_period: false,
+            payment_in: Some(60),
+        };
+        let (terms, json) = custom_terms(None, &options).unwrap();
+        assert_eq!(terms.accepted_payment_endpoint_identifiers, [USDT_ENDPOINT]);
+        assert!(matches!(
+            terms.payment_deadline,
+            Some(FfiPaymentDeadline::At { .. })
+        ));
+        assert_eq!(json["conversion"]["rates"][0]["value"], "1");
+        options.address = Some(address());
+        options.rates.push("btc-regtest=0.00002".into());
+        let (terms, _) = custom_terms(None, &options).unwrap();
+        assert_eq!(
+            terms.accepted_payment_endpoint_identifiers,
+            [ENDPOINT, USDT_ENDPOINT]
+        );
+        options.usdt_address = Some("0x0".into());
+        assert!(custom_terms(None, &options).is_err());
+    }
+    #[test]
+    fn recurring_quotes_are_validated_as_distinct_from_fixed_request_rates() {
+        let mut options = RequestOptions {
+            address: None,
+            usdt_address: Some("0x1111111111111111111111111111111111111111".into()),
+            asset: Some("usd".into()), amount: Some("5".into()), rates: vec![],
+            note: None, expires_in: 3600, payment_in: None, per_period: true,
+            recurrence: Some(r#"{"every":1,"unit":"month","starts_at":"2026-10-01T00:00:00Z","anchor":"2026-10-01T00:00:00Z","ends_at":null}"#.into()),
+        };
+        let (terms, _) = custom_terms(None, &options).unwrap();
+        assert!(matches!(
+            terms.conversion,
+            Some(FfiPaymentConversion::PerPeriod)
+        ));
+        options.rates.push("usdt=1".into());
+        assert!(custom_terms(None, &options).is_err());
     }
     #[test]
     fn preview_estimate_rounds_up_and_handles_overflow() {

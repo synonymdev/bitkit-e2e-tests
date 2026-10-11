@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+INFRA=${BITKIT_DOCKER_ROOT:-$ROOT/.cache/usdt-infra}
+REV=$(tr -d '[:space:]' < "$ROOT/USDT_INFRA_REVISION")
+
+if [ "${1:-help}" = build ]; then
+  if [ ! -d "$INFRA" ]; then
+    mkdir -p "$INFRA"
+    git -C "$INFRA" init
+    git -C "$INFRA" remote add origin https://github.com/synonymdev/bitkit-docker.git
+  fi
+  if [ -z "${BITKIT_DOCKER_ROOT:-}" ]; then
+    if [ -n "$(git -C "$INFRA" status --porcelain)" ]; then
+      echo 'Infrastructure checkout has local edits; preserve them before building.' >&2
+      exit 1
+    fi
+    git -C "$INFRA" fetch --depth 1 origin "$REV"
+    git -C "$INFRA" checkout --detach "$REV"
+  fi
+fi
+if ! git -C "$INFRA" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo 'Run ./scripts/usdt-fixture build first.' >&2
+  exit 1
+fi
+if [ "$(git -C "$INFRA" rev-parse HEAD)" != "$REV" ]; then
+  echo "Use bitkit-docker revision $REV (see USDT_INFRA_REVISION)." >&2
+  exit 1
+fi
+exec "$INFRA/usdt-fixture" "$@"
