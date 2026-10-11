@@ -107,6 +107,21 @@ To build from a worktree instead of `../bitkit-android` / `../bitkit-ios` (dirty
 
 ---
 
+### USDT local execution
+
+[USDT E2E setup](docs/usdt-e2e.md) starts a pinned fixture from `bitkit-docker`,
+passes local USDT endpoints into both app builds, and supplies funding/pending
+controls plus a real Paykit SDK peer. Keep `BACKEND=regtest` for Paykit journeys;
+VSS, Pubky, Bitcoin and rates retain their existing staging configuration.
+
+```sh
+./scripts/usdt-fixture setup
+USDT_TEST_ENV_FILE=/absolute/path/to/private.env ./scripts/usdt-fixture run
+# Another terminal:
+eval "$(./scripts/usdt-fixture env)"
+./scripts/usdt-fixture smoke
+```
+
 ### 🔐 Manual Trezor Emulator Setup
 
 The local docker setup includes an opt-in Trezor User Env fixture for manual hardware-wallet checks. It starts the official Trezor emulator and Bridge, but it is not part of the default `docker compose up -d` stack.
