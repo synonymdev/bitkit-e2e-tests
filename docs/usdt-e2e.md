@@ -64,8 +64,8 @@ The infrastructure smoke suite verifies local execution and proof cryptography.
 It does not run the full mobile, VSS, Shop or bridge journeys. Those are the tests
 Piotr should add using the matrix above. The shared fixture docs record the
 Anvil/Alto validation limits and Shop container routing requirements. Bridge
-operator/relay scenario servers still need to be supplied by the bridge tests;
-the gateway's local-provider configuration is the seam for them.
+operator/relay fixtures run with the shared stack; their controls drive normal
+gateway/Core behavior without bypassing app verification.
 
 For an initial manual device check, reuse onboarding and open the USDT wallet:
 `UsdtBalance`, `UsdtReceiveDetails` and `UsdtReceiveAddress` identify the receive
@@ -73,3 +73,43 @@ view on both platforms. Fund that address through `fundUsdt`, then use the
 existing `UsdtAmount`, `UsdtReview`, `UsdtConfirm` and `UsdtSendSuccess` selectors.
 Assert the recipient's chain balance and recorded fee as well as the UI. Preserve
 the same fork and peer through app relaunch/VSS restore scenarios.
+
+
+## Bridge journeys
+
+The same fixture starts local Orchestra and LayerZero providers. Rebuild apps
+with its latest `env` output to enable the USDT0 network selector too. All
+provider traffic stays local; no real Orchestra API key is needed.
+
+- Incoming: open a bridge receive address in the app, then call
+  `createUsdtDeposit(owner, 'polygon', '3.5')`. Advance its returned ID with
+  `setUsdtBridgeStatus(id, 'processing')` and then `'completed'`. Completion
+  makes an actual token transfer to the app's Arbitrum address. Repeating it
+  does not credit funds twice.
+- Outgoing Orchestra: send to BSC/Base/Tron/Solana, or select the cheaper quote
+  on a shared network. Find the funded quote in `usdtBridgeScenarios()` by owner
+  and recipient, then advance its ID. Before funding, advancing is rejected.
+- Refunds: advance an outgoing quote to `'refunded'` to produce a real Arbitrum
+  refund receipt. For incoming deposits, request the refund through the app
+  before advancing it; its external-chain refund remains simulated.
+- USDT0: use `setUsdtBridgeFee('100')` before a small Polygon send so Orchestra
+  cannot supply that quote. The deployed USDT0 contracts execute on the fork.
+  Pass the resulting source transaction to `setLayerZeroStatus` to test
+  `BLOCKED`, `DELIVERED`, or terminal `APPLICATION_BURNED` states.
+- Errors: `setUsdtBridgeProvider` controls outages, throttling and invalid
+  responses separately for both providers. `setUsdtBridgeQuoteLifetime` sets
+  future Orchestra quote expiry; existing quotes stay immutable.
+
+Use `try/finally` to restore both provider modes to `healthy`, the fee to
+`0.01` and quote lifetime to `120` seconds. Keep the fixture running through
+app restart/reinstall. Core retains normal polling delays (30-60 seconds), so
+use polling assertions rather than fixed short sleeps. A completed/refunded
+Orchestra scenario cannot be switched to another outcome; create a fresh
+payment for each terminal case. Reset clears provider scenarios and the chain
+together, never just the app's funded payment.
+
+Run `./scripts/usdt-fixture bridge-smoke` to check the gateway/Core integration
+before UI work. External deposit observation, off-Arbitrum delivery/refunds and
+LayerZero relaying are simulated. Only actual local Arbitrum receipts establish
+Arbitrum balance changes; do not assert destination-chain balances from a
+simulated provider status.

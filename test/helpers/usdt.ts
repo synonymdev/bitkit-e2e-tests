@@ -68,3 +68,52 @@ export const setUsdtProvider = (
 
 export const setUsdtBundling = (mode: 'auto' | 'manual') => usdtFixture('bundling', [mode]);
 export const mineUsdtBlocks = (count = 3) => usdtFixture('mine', [count]);
+
+export type UsdtDepositNetwork = 'ethereum' | 'polygon' | 'base' | 'bsc' | 'tron' | 'solana';
+export type UsdtBridgeStatus =
+  | 'processing'
+  | 'needs_attention'
+  | 'failed'
+  | 'completed'
+  | 'refunding'
+  | 'refunded';
+export type LayerZeroStatus =
+  | 'INFLIGHT'
+  | 'CONFIRMING'
+  | 'DELIVERED'
+  | 'FAILED'
+  | 'BLOCKED'
+  | 'PAYLOAD_STORED'
+  | 'APPLICATION_BURNED'
+  | 'APPLICATION_SKIPPED';
+
+/** Simulate an external deposit after the app has registered its receiving address. */
+export const createUsdtDeposit = (owner: string, network: UsdtDepositNetwork, amount: string) =>
+  usdtFixture<{ id: string }>('orchestra', ['deposit', owner, network, amount]);
+
+/** Completion/refund creates real Arbitrum transfers where Arbitrum is the receiving chain. */
+export const setUsdtBridgeStatus = (id: string, status: UsdtBridgeStatus) =>
+  usdtFixture('orchestra', ['advance', id, status]);
+
+export const usdtBridgeScenarios = () =>
+  usdtFixture<{
+    quotes: Array<{ id: string; owner: string; recipientAddress: string; order: unknown }>;
+    deposits: Array<{ deposit: { id: string; status: string }; order: unknown }>;
+  }>('orchestra', ['list']);
+
+/** Only changes future quotes; already approved/funded quotes retain their terms. */
+export const setUsdtBridgeFee = (amount: string) => usdtFixture('orchestra', ['fee', amount]);
+export const setUsdtBridgeQuoteLifetime = (seconds: number) =>
+  usdtFixture('orchestra', ['quote-ttl', String(seconds)]);
+
+/** Requires a real USDT0 source receipt; never fabricates a GUID or source payment. */
+export const setLayerZeroStatus = (sourceTx: string, status: LayerZeroStatus) =>
+  usdtFixture('layerzero', [sourceTx, status]);
+
+export const setUsdtBridgeProvider = (
+  provider: 'orchestra' | 'layerzero',
+  mode: 'healthy' | 'unavailable' | 'rate-limited' | 'invalid-response'
+) =>
+  provider === 'orchestra'
+    ? usdtFixture('orchestra', ['mode', mode])
+    : usdtFixture('layerzero-mode', [mode]);

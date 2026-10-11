@@ -425,3 +425,12 @@ BACKEND=regtest ./ci_run_ios.sh
 - To debug, add `console.info()` or enable `wdio` debug logs.
 - Use `ciIt()` instead of `it()` on CI to skip already-passing tests in retries.
 - In app-repo CI, E2E typically runs in three attempts with `continue-on-error: true`. If attempt 3 fails, it implies the same tests failed in attempts 1 and 2 (only failures are re-run), so check step logs/artifacts even if the job is green.
+
+
+Bridge scenarios are included in the USDT fixture. Run
+`./scripts/usdt-fixture bridge-smoke` before authoring UI tests. After the app
+creates a deposit address, `./scripts/usdt-fixture orchestra deposit ADDRESS
+polygon 3.5` creates a held external deposit; `orchestra advance ID completed`
+credits the local Arbitrum wallet. Outgoing scenarios use the app's real source
+transaction. See [bridge controls](docs/usdt-e2e.md#bridge-journeys) for helpers,
+refunds, errors and the simulation boundary.
