@@ -15,6 +15,8 @@ export USDT_TEST_ENV_FILE=/absolute/path/to/private.env
 
 Keep this Docker stack running through the journey. Build tools and services run inside containers; the host needs Docker Compose, Git access to the pinned Core/service repositories, jq and tar. Use `./scripts/usdt-fixture ps` or `logs` to inspect it, and `down` after testing to remove its containers and disposable wallet volume. CI must use a Docker-capable runner.
 
+Alto and the deployed payment contracts execute locally. A local signer with fixed pricing replaces Pimlico's hosted quote/authorization API; Orchestra and LayerZero responses simulate external bridge delivery. Local fees are test values, not production estimates.
+
 In the same shell:
 
 ```bash
