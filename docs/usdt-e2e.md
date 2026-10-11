@@ -13,7 +13,9 @@ export USDT_TEST_ENV_FILE=/absolute/path/to/private.env
 ./scripts/usdt-fixture up
 ```
 
-Keep this Docker stack running through the journey. Build tools and services run inside containers; the host needs Docker Compose, Git access to the pinned Core/service repositories, jq and tar. Use `./scripts/usdt-fixture ps` or `logs` to inspect it, and `down` after testing to remove its containers and disposable wallet volume. CI must use a Docker-capable runner.
+Keep this Docker stack running through the journey. Build tools and services run inside containers; the host needs Docker Compose, Git access to the pinned Core/service repositories, jq and tar. Use `./scripts/usdt-fixture ps` or `logs` to inspect it, and `down` after testing to remove its containers, disposable wallets and fork-read cache. CI must use a Docker-capable runner.
+
+An Alchemy Free Arbitrum endpoint is sufficient within its monthly quota. The fixture paces and caches archive-state reads and skips mainnet logs from before the fork; it does not use paid Debug/Trace APIs. Local receives, sends, activity and seed recovery still use real logs created on this fork. Historical mainnet wallet recovery is outside this setup. Use `./scripts/usdt-fixture status` to inspect upstream read counts.
 
 Alto and the deployed payment contracts execute locally. A local signer with fixed pricing replaces Pimlico's hosted quote/authorization API; Orchestra and LayerZero responses simulate external bridge delivery. Local fees are test values, not production estimates.
 
@@ -65,7 +67,7 @@ exporting authenticated received evidence for Core verification. Build it with
 Use only dedicated peers connected to this fork; an unrelated staging wallet or
 server will query a different chain and cannot verify these payments.
 
-The infrastructure smoke suite verifies local execution and proof cryptography.
+The infrastructure smoke suite verifies local execution, proof cryptography, incoming history and recovery into an empty database.
 It does not run the full mobile, VSS, Shop or bridge journeys. Those are the tests
 Piotr should add using the matrix above. The shared fixture docs record the
 Anvil/Alto validation limits and Shop container routing requirements. Bridge
