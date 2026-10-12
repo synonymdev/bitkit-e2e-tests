@@ -148,7 +148,8 @@ export async function deleteProfile() {
   await swipeFullScreen('up', { upStartYPercent: 0.3 });
   await sleep(500);
   await confirmYesDelete();
-  await elementById('PubkyChoiceCreate').waitForDisplayed();
+  // Remote Paykit cleanup can outlast the default element wait.
+  await elementById('PubkyChoiceCreate').waitForDisplayed({ timeout: 5 * 60_000 });
 }
 
 /**
