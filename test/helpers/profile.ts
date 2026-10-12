@@ -1,3 +1,4 @@
+import { observeRecovery } from './recovery-wait';
 import {
   confirmInputOnKeyboard,
   elementById,
@@ -11,7 +12,7 @@ import {
   typeText,
   waitForToast,
 } from './actions';
-import { openContacts, openProfile } from './navigation';
+import { doNavigationClose, openContacts, openProfile } from './navigation';
 
 /** One link row on the profile (label + URL). */
 export type PubkyProfileLink = { label: string; url: string };
@@ -147,7 +148,8 @@ export async function deleteProfile() {
   await swipeFullScreen('up', { upStartYPercent: 0.3 });
   await sleep(500);
   await confirmYesDelete();
-  await elementById('PubkyChoiceCreate').waitForDisplayed();
+  // Remote Paykit cleanup can outlast the default element wait.
+  await elementById('PubkyChoiceCreate').waitForDisplayed({ timeout: 5 * 60_000 });
 }
 
 /**
@@ -431,6 +433,31 @@ export async function verifyMyProfileDetails(expected: ProfileDetails) {
   await openProfile();
   await elementById('ProfileCopy').waitForDisplayed();
   await verifyProfileDetails(expected, { idPrefix: 'ProfileView' });
+}
+
+/** The public profile can be readable before its private session is ready. */
+export async function waitForAuthenticatedProfileReady(
+  phase: 'app restart' | 'wallet restoration',
+  {
+    startedAt,
+    record,
+  }: {
+    startedAt: number;
+    record: (event: string, detail: Record<string, unknown>) => void;
+  }
+) {
+  await openProfile();
+  await observeRecovery({
+    startedAt,
+    probe: async () => {
+      const edit = await elementById('ProfileEdit');
+      return (await edit.isDisplayed()) && (await edit.isEnabled());
+    },
+    record: (event, elapsedMs) => record(event, { recoveryPhase: phase, elapsedMs }),
+  });
+  // Enabled is only the admission signal; prove the real edit form is usable.
+  await openEditProfile();
+  await doNavigationClose();
 }
 
 /**

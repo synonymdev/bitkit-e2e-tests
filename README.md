@@ -328,6 +328,11 @@ Optional: `QA_FIXTURE_ONCHAIN_SATS`, `QA_FIXTURE_SPENDING_SATS`, `QA_FIXTURE_PRO
 
 Writes `artifacts/qa-fixture.json` and, with a profile, `artifacts/qa-fixture.pubky`. After it finishes, overlay the PR build (`adb install -r` / sim install — do not uninstall) and start from `TotalBalance-primary`.
 
+For fixed-price Paykit requests that the app Request UI cannot create, use
+[the standalone fixture sender](tools/paykit-fixture-sender/README.md). It links
+a separate issuer to either fixture and supports custom assets, amounts, and
+conversion rates without rebuilding the apps.
+
 iOS: the script pins `SIMULATOR_UDID` to the booted simulator (`SIMULATOR_NAME`, default iPhone 17). Appium `auto` can attach to a physical device; do not leave that unset.
 
 ---

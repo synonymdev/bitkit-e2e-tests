@@ -57,12 +57,12 @@ export async function activateAppWithEnv(appId: string) {
   await driver.activateApp(appId);
 }
 
-export async function launchFreshApp() {
+export async function launchFreshApp(relaunchWaitMs = 3000) {
   const appId = getAppId();
 
   await driver.terminateApp(appId);
   await activateAppWithEnv(appId);
-  await sleep(3000);
+  await sleep(relaunchWaitMs);
 }
 
 /**

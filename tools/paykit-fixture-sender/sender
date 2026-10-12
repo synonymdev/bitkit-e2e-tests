@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+sender_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+cd "$sender_dir"
+target_dir=${CARGO_TARGET_DIR:-target}
+case "$target_dir" in
+  /*) ;;
+  *) target_dir="$sender_dir/$target_dir" ;;
+esac
+if [ ! -x "$target_dir/debug/paykit-fixture-sender" ]; then
+  cargo build --locked
+fi
+exec "$target_dir/debug/paykit-fixture-sender" "$@"

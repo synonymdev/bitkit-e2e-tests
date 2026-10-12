@@ -1,0 +1,24 @@
+[package]
+name = "paykit-fixture-sender"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+paykit = { package = "paykit-ffi", git = "https://github.com/pubky/paykit-rs", rev = "e4e58d3ee6c6aa19d6262d4cd96a58890a65b6fa" }
+paykit-lib = { git = "https://github.com/pubky/paykit-rs", rev = "e4e58d3ee6c6aa19d6262d4cd96a58890a65b6fa" }
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.13", features = ["json"] }
+chrono = "0.4"
+rand = "0.8"
+fs2 = "0.4"
+bitcoin = "0.32"
+
+[dev-dependencies]
+paykit-sdk = { git = "https://github.com/pubky/paykit-rs", rev = "e4e58d3ee6c6aa19d6262d4cd96a58890a65b6fa" }
+
+[profile.dev]
+debug = 0

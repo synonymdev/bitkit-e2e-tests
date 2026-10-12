@@ -237,3 +237,30 @@ Use the **same string** on Android and iOS so specs stay platform-agnostic (`ele
 Ring identity rows, when present: `PubkyChoiceIdentity` (Android), `PubkyChoiceRing_<pubky>` (iOS).
 
 Contacts intro note: after a profile exists, first opening **Contacts** shows `ContactsIntro`; its `ContactsIntro-button` now behaves as an add-contact entry point. `ContactsEmptyAddButton` appears only after the intro is gone and the user has zero contacts.
+
+### Restart/restore recovery evidence (`@pubky_profile_2`)
+
+This case observes private readiness for up to seven minutes from each restart or
+wallet-restoration trigger, without Retry, relaunch, disconnect, or another reinstall
+inside the observation. It records the first observed enabled Edit Profile time and
+whether the 30-second fast path was missed. The same Pubky identity is checked again
+after recovery, and the real Edit Profile form must open before the original profile
+and contact assertions continue. Only this case has a 30-minute Mocha budget for the
+two bounded recovery observations plus the existing journey.
+
+Artifacts are retained on success as well as failure in
+`artifacts/attempt-N/pubky-profile-2-<platform>-<timestamp>/` (without `attempt-N`
+for direct local runs): timestamped `events.jsonl`, `native.log`, application file-log
+snapshots before restart and before destructive wallet restore, after recovery, and
+at case exit, plus a final screenshot. Android uses the exact session serial and
+`run-as` to archive only `files/logs`; iOS resolves `group.bitkit` on the exact
+session simulator and copies only its `logs` directory. No wallet database or
+keychain is copied. Collection gaps are explicit events, not successful captures.
+These files use the existing staging artifact upload path and survive subsequent
+case reinstalls. Existing wrapper recording and console logging remain in place.
+
+A delayed pass establishes eventual recovery, not 30-second readiness, the identity
+of the remote lock holder, or proof of a pending write. Inspect native evidence for
+`shared_state_busy`, `pending_writes`, and `cooldown_seconds`; keep unexplained delays
+and the recovery UX tracked in Android #1453 / iOS #908. Unit coverage for the bounded
+observation can be run with `node --experimental-strip-types --test test/unit/recovery-wait.test.ts`.
