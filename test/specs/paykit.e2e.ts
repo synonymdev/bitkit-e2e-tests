@@ -9,6 +9,7 @@ import {
   receiveOnchainFunds,
   sleep,
   tap,
+  selectSendFundingSource,
 } from '../helpers/actions';
 import { STAGING_PAYKIT_CONTACTS } from '../helpers/fixtures';
 import { doNavigationClose, openContacts } from '../helpers/navigation';
@@ -106,8 +107,7 @@ async function switchToOnchainIfNeeded() {
   await waitForSendAmountSheet();
   const switchButton = elementById('AssetButton-switch');
   if (await switchButton.isDisplayed().catch(() => false)) {
-    await tap('AssetButton-switch');
-    await sleep(500);
+    await selectSendFundingSource('Savings');
   } else {
     await elementById('AssetButton-savings').waitForDisplayed();
   }

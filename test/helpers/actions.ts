@@ -412,6 +412,17 @@ export async function tapFirstByAccessibilityIdPrefix(
   await sleep(100);
 }
 
+export async function selectSendFundingSource(label: string) {
+  await tap('AssetButton-switch');
+  const menu = elementById('SendFundingSources');
+  await menu.waitForDisplayed();
+  const option = elementByText(label.toUpperCase(), 'exact');
+  await option.waitForDisplayed();
+  await option.click();
+  await menu.waitForDisplayed({ reverse: true });
+  await expectTextWithin('AssetButton-switch', label.toUpperCase());
+}
+
 export async function multiTap(testId: string, count: number) {
   await elementById(testId).waitForDisplayed();
   await sleep(300); // Allow time for the element to settle
