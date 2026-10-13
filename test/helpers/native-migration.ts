@@ -14,7 +14,6 @@ import {
   getSeed,
   getSpendingBalance,
   getTotalBalance,
-  handleUsdtIntro,
   receiveOnchainFunds,
   restoreWallet,
   swipeFullScreen,
@@ -22,6 +21,7 @@ import {
   transferSavingsToSpending,
   typeText,
   waitForBackup,
+  waitForWalletHome,
 } from './actions';
 import { getAppId, getBackend } from './constants';
 import type { ElectrumClient } from './electrum';
@@ -170,8 +170,7 @@ export async function installNativeMigrationTarget(method: 'restore' | 'upgrade'
     grantIOSCameraPermission();
     await driver.activateApp(getAppId());
     // Native upgrades need not display the RN-specific MIGRATING screen.
-    await elementById('TotalBalance-primary').waitForDisplayed({ timeout: 180_000 });
-    await handleUsdtIntro();
+    await waitForWalletHome({ timeout: 180_000 });
   }
 }
 

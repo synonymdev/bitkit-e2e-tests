@@ -806,9 +806,22 @@ export async function completeOnboarding({ enableUsdt = false }: { enableUsdt?: 
     await handleAndroidAlert();
   }
 
-  // Wait for wallet to be created
-  await elementById('TotalBalance-primary').waitForDisplayed({ timeout: 60_000 });
+  await waitForWalletHome({ enableUsdt });
+}
+
+export async function waitForWalletHome({
+  enableUsdt = false,
+  timeout = 60_000,
+}: { enableUsdt?: boolean; timeout?: number } = {}) {
+  // A timed introduction can hide the wallet from the accessibility tree.
+  await browser.waitUntil(
+    async () =>
+      (await elementById('UsdtIntroDecline').isDisplayed()) ||
+      (await elementById('TotalBalance-primary').isDisplayed()),
+    { timeout, interval: 250, timeoutMsg: 'Wallet home or USDT introduction did not appear' }
+  );
   await handleUsdtIntro({ enable: enableUsdt });
+  await elementById('TotalBalance-primary').waitForDisplayed({ timeout });
 }
 
 /** Ordinary BTC setup declines the optional intro; USDT journeys explicitly opt in. */
