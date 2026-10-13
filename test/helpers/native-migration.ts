@@ -14,6 +14,7 @@ import {
   getSeed,
   getSpendingBalance,
   getTotalBalance,
+  handleUsdtIntro,
   receiveOnchainFunds,
   restoreWallet,
   swipeFullScreen,
@@ -170,6 +171,7 @@ export async function installNativeMigrationTarget(method: 'restore' | 'upgrade'
     await driver.activateApp(getAppId());
     // Native upgrades need not display the RN-specific MIGRATING screen.
     await elementById('TotalBalance-primary').waitForDisplayed({ timeout: 180_000 });
+    await handleUsdtIntro();
   }
 }
 

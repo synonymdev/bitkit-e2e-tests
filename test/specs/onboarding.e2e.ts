@@ -4,6 +4,7 @@ import {
   elementByText,
   getReceiveAddress,
   getSeed,
+  handleUsdtIntro,
   restoreWallet,
   sleep,
   swipeFullScreen,
@@ -43,6 +44,7 @@ describe('@onboarding @ios_nightly - Onboarding', () => {
     await tap('NewWallet');
     await waitForSetupWalletScreenFinish();
 
+    await handleUsdtIntro();
     await elementByText('TO GET').waitForDisplayed();
   });
 
@@ -70,6 +72,7 @@ describe('@onboarding @ios_nightly - Onboarding', () => {
 
     // Wait for wallet to be created
     await elementById('TotalBalance').waitForDisplayed();
+    await handleUsdtIntro();
 
     const seed = await getSeed();
 

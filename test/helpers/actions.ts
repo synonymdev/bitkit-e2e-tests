@@ -792,7 +792,7 @@ export async function waitForSetupWalletScreenFinish(timeout: number = 150_000) 
   await settingUpWallet.waitForDisplayed({ reverse: true, timeout, interval: 100 });
 }
 
-export async function completeOnboarding() {
+export async function completeOnboarding({ enableUsdt = false }: { enableUsdt?: boolean } = {}) {
   // TOS and PP
   await elementById('Continue').waitForDisplayed();
   await sleep(1000); // Wait for the app to settle
@@ -808,6 +808,26 @@ export async function completeOnboarding() {
 
   // Wait for wallet to be created
   await elementById('TotalBalance-primary').waitForDisplayed({ timeout: 60_000 });
+  await handleUsdtIntro({ enable: enableUsdt });
+}
+
+/** Ordinary BTC setup declines the optional intro; USDT journeys explicitly opt in. */
+export async function handleUsdtIntro({
+  enable = false,
+}: { enable?: boolean } = {}): Promise<boolean> {
+  const button = elementById(enable ? 'UsdtIntroEnable' : 'UsdtIntroDecline');
+  if (enable) {
+    await button.waitForDisplayed({ timeout: 15_000 });
+  } else {
+    const visible = await button
+      .waitForDisplayed({ timeout: 5_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!visible) return false;
+  }
+  await button.click();
+  await button.waitForDisplayed({ reverse: true });
+  return true;
 }
 
 export async function restoreWallet(
@@ -884,6 +904,14 @@ export async function restoreWallet(
   await getStarted.waitForDisplayed({ timeout: 180000 });
   await tap('GetStartedButton');
   await sleep(1000);
+
+  const declinedUsdt = await handleUsdtIntro();
+  if (
+    declinedUsdt &&
+    (expectBackupSheet || expectQuickPayTimedSheet || expectBackGroundPaymentsSheet)
+  ) {
+    await doTriggerTimedSheet();
+  }
 
   if (expectBackupSheet) {
     await dismissBackupTimedSheet();
@@ -1612,6 +1640,7 @@ async function triggerTimedSheetUnlessPresent(
     console.info(`→ ${sheetId} already visible, skipping HeaderMenu trigger`);
     return;
   }
+  await dismissInterveningUsdtIntro();
   if (!triggerTimedSheet) {
     return;
   }
@@ -1619,6 +1648,7 @@ async function triggerTimedSheetUnlessPresent(
   await browser.waitUntil(
     async () =>
       (await isTestIdDisplayed(sheetId)) ||
+      (await isTestIdDisplayed('UsdtIntroDecline')) ||
       (await isTestIdDisplayed('HeaderMenu')) ||
       (await isTestIdDisplayed('TotalBalance')),
     {
@@ -1627,6 +1657,7 @@ async function triggerTimedSheetUnlessPresent(
     }
   );
 
+  await dismissInterveningUsdtIntro();
   if (await isTestIdDisplayed(sheetId)) {
     console.info(`→ ${sheetId} appeared while waiting, skipping HeaderMenu trigger`);
     return;
@@ -1634,6 +1665,7 @@ async function triggerTimedSheetUnlessPresent(
 
   // A queued sheet can surface a moment after the previous dismiss.
   await sleep(700);
+  await dismissInterveningUsdtIntro();
   if (await isTestIdDisplayed(sheetId)) {
     console.info(`→ ${sheetId} appeared after settle, skipping HeaderMenu trigger`);
     return;
@@ -1643,6 +1675,12 @@ async function triggerTimedSheetUnlessPresent(
     await elementById('HeaderMenu').waitForDisplayed({ timeout: 15_000 });
   }
 
+  await doTriggerTimedSheet();
+}
+
+async function dismissInterveningUsdtIntro(): Promise<void> {
+  if (!(await isTestIdDisplayed('UsdtIntroDecline'))) return;
+  await handleUsdtIntro();
   await doTriggerTimedSheet();
 }
 
