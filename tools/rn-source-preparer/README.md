@@ -4,13 +4,9 @@ Prepare a funded React Native **1.1.6 iOS** wallet for a native restore test.
 This tool only drives the source app. It does not install, restore, or assert
 anything about a native target.
 
-**Draft: source recovery is proven; tagging and remote backup preparation are
-not ready.** A real RN 1.1.6 simulator smoke cleared the inaccessible receive
-celebration. Two tagging attempts stopped at a hidden input and then an unsaved
-tag after keyboard dismissal. The driver now handles both and refuses to leave
-an unsubmitted tag sheet, but that final change has only offline checks. Do not
-treat this draft as a prepared backup until a new source smoke proves tag
-persistence and all remote backup statuses.
+A real RN 1.1.6 simulator (iOS 26.5) run of `prepare` cleared the inaccessible
+receive celebration, saved the tag in exact case, read it back after a relaunch,
+and read `Latest Backup: ...` for every backup category.
 
 RN receive sheets can hide all of their controls from the accessibility tree.
 `ReceivedTransactionButton` is not a reliable selector for the archived RN iOS

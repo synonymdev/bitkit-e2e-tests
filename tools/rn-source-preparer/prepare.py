@@ -42,6 +42,20 @@ def is_home(screen):
                    for line in screen["lines"]) for label in ("Send", "Receive"))
 
 
+def typed_tag(screen, tag):
+    """The exact tag, case included, in the input below the sheet's NEW TAG label."""
+    labels = text_matches(screen, "NEW TAG")
+    return len(labels) == 1 and any(
+        line["confidence"] >= 0.8 and line["text"].strip() == tag and line["top"] > labels[0]["top"]
+        for line in screen["lines"])
+
+
+def saved_tag(screen, tag):
+    """The exact tag chip; OCR can join the chip's remove icon ("tag X")."""
+    return any(line["confidence"] >= 0.8 and re.fullmatch(re.escape(tag) + r"(\s+\S)?", line["text"].strip())
+               for line in screen["lines"])
+
+
 def backup_statuses(screen):
     """Associate statuses with their own row, never with an adjacent category."""
     result = {}
@@ -184,23 +198,32 @@ class Appium:
             if len(placeholders) != 1:
                 raise RuntimeError("RN tag input is not uniquely visible")
             self.point(placeholders[0]["x"], placeholders[0]["y"])
-            self.mobile("keys", {"keys": list(tag)})
+            # W3C key actions type text as given; `mobile: keys` presses keys,
+            # and the keyboard's automatic shift capitalized the first letter.
+            keys = [{"type": kind, "value": char} for char in tag for kind in ("keyDown", "keyUp")]
+            self.command("POST", "/actions", {"actions": [{"type": "key", "id": "keyboard", "actions": keys}]})
+            time.sleep(0.7)
         else:
             raise RuntimeError("RN tag input is not unique")
+        if not typed_tag(self.screen(), tag):
+            raise RuntimeError("RN tag input does not show the exact tag; not submitting")
         self.submit_tag()
         time.sleep(1)
         # Prove the tag was saved, rather than accepting text in an open input.
         self.home()
         self.activity(activity_label)
-        if not text_matches(self.screen(), tag):
+        if not saved_tag(self.screen(), tag):
             raise RuntimeError("RN tag did not persist after relaunch")
 
     def submit_tag(self):
         # The first tap can dismiss the keyboard and move the RN sheet without
         # submitting it. Re-read the screenshot before a second bounded tap.
+        # RN 1.1.6 keeps the sheet open after a submit and clears the input, so
+        # its placeholder returning also means the tag was submitted.
         for _ in range(2):
             self.tap("ActivityTagsSubmit", "Add")
-            if not text_matches(self.screen(), "NEW TAG"):
+            screen = self.screen()
+            if not text_matches(screen, "NEW TAG") or text_matches(screen, "Enter a new tag"):
                 return
         raise RuntimeError("RN tag sheet did not submit; source input was left intact")
 

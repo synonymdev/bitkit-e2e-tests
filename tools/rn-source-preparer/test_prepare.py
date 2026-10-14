@@ -23,6 +23,13 @@ class Screens(unittest.TestCase):
             client.submit_tag()
         self.assertEqual(tap.call_count, 2)
 
+    def test_cleared_input_in_open_sheet_is_submitted(self):
+        client = prepare.Appium("http://localhost", "explicit-source")
+        with patch.object(client, "tap") as tap, patch.object(client, "screen", return_value={"lines": [
+                line("NEW TAG"), line("Enter a new tag"), line("saved-tag")]}):
+            client.submit_tag()
+        self.assertEqual(tap.call_count, 1)
+
     def test_unsubmitted_sheet_is_left_intact(self):
         client = prepare.Appium("http://localhost", "explicit-source")
         with patch.object(client, "tap") as tap, patch.object(client, "screen", return_value={"lines": [line("NEW TAG")]}), \
@@ -31,6 +38,14 @@ class Screens(unittest.TestCase):
                 client.submit_tag()
         self.assertEqual(tap.call_count, 2)
         home.assert_not_called()
+
+    def test_tag_checks_are_exact(self):
+        self.assertTrue(prepare.saved_tag({"lines": [line("qa-rn-late-tags X")]}, "qa-rn-late-tags"))
+        self.assertFalse(prepare.saved_tag({"lines": [line("Qa-rn-late-tags X")]}, "qa-rn-late-tags"))
+        sheet = [line("NEW TAG", 0.4), line("qa-rn-late-tags", 0.2)]
+        self.assertFalse(prepare.typed_tag({"lines": sheet}, "qa-rn-late-tags"))
+        self.assertTrue(prepare.typed_tag({"lines": sheet + [line("qa-rn-late-tags", 0.45)]}, "qa-rn-late-tags"))
+        self.assertFalse(prepare.typed_tag({"lines": sheet + [line("Qa-rn-late-tags", 0.45)]}, "qa-rn-late-tags"))
 
     def test_celebration_is_not_wallet_home(self):
         self.assertFalse(prepare.is_home({"lines": [line("Received Bitcoin"), line("Sweet!")]}))
