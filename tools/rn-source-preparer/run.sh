@@ -35,6 +35,9 @@ source_server_pid=$!
 cleanup() {
   kill "$source_server_pid" 2>/dev/null || true
   wait "$source_server_pid" 2>/dev/null || true
+  # Appium leaves its WDA xcodebuild running, which keeps the WDA port taken
+  # and makes the next run refuse it. Stop only this tool's own WDA builds.
+  pkill -f -- "-derivedDataPath $TOOL/.wda/" 2>/dev/null || true
 }
 trap cleanup EXIT
 trap 'exit 130' INT
