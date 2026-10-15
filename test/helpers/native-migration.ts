@@ -25,7 +25,12 @@ import {
 import { getAppId, getBackend } from './constants';
 import type { ElectrumClient } from './electrum';
 import { payInvoice } from './regtest';
-import { getNativeAppPath, grantIOSCameraPermission, reinstallAppFromPath } from './setup';
+import {
+  activateAppWithEnv,
+  getNativeAppPath,
+  grantIOSCameraPermission,
+  reinstallAppFromPath,
+} from './setup';
 
 const FUNDING_SATS = 200_000;
 const SPENDING_SATS = 50_000;
@@ -167,7 +172,7 @@ export async function installNativeMigrationTarget(method: 'restore' | 'upgrade'
   } else {
     await driver.installApp(getNativeAppPath());
     grantIOSCameraPermission();
-    await driver.activateApp(getAppId());
+    await activateAppWithEnv(getAppId());
     // Native upgrades need not display the RN-specific MIGRATING screen.
     await elementById('TotalBalance-primary').waitForDisplayed({ timeout: 180_000 });
   }
@@ -227,7 +232,7 @@ export async function verifyNativeMigration(
   recordStage(method, 'payment-received', await readMigrationBalances());
   await waitForBackup();
   await driver.terminateApp(getAppId());
-  await driver.activateApp(getAppId());
+  await activateAppWithEnv(getAppId());
   await expectMigrationBalances(afterPayment);
   recordStage(method, 'relaunch-verified', await readMigrationBalances());
   await verifyNativeHistory();
