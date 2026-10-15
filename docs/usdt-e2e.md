@@ -75,7 +75,13 @@ Anvil/Alto validation limits and Shop container routing requirements. Bridge
 operator/relay fixtures run with the shared stack; their controls drive normal
 gateway/Core behavior without bypassing app verification.
 
-For an initial manual device check, reuse onboarding and open the USDT wallet:
+USDT is opt-in. Start dedicated USDT journeys with
+`await completeOnboarding({ enableUsdt: true })`; this explicitly accepts the introductory
+sheet. Ordinary onboarding and restore helpers decline the intro when it appears,
+preserving existing Bitcoin-only tests and restored preferences. A USDT test restoring
+a wallet that was previously enabled should assert that its USDT account remains available.
+
+For an initial manual device check, enable USDT during onboarding and open the USDT wallet:
 `UsdtBalance`, `UsdtReceiveDetails` and `UsdtReceiveAddress` identify the receive
 view on both platforms. Fund that address through `fundUsdt`, then use the
 existing `UsdtAmount`, `UsdtReview`, `UsdtConfirm` and `UsdtSendSuccess` selectors.

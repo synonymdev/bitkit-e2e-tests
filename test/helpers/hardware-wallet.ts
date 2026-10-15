@@ -18,10 +18,10 @@ import {
   getAccessibleText,
   getAddressFromQRCode,
   getAmountUnder,
-  getTextUnder,
   sleep,
   swipeFullScreen,
   tap,
+  selectSendFundingSource,
   tapFirstByAccessibilityIdPrefix,
   typeText,
   handleAndroidAlert,
@@ -288,7 +288,7 @@ export async function sendOnchainFromHardwareWallet({
   await doNavigationClose();
   await enterAddress(address);
   await elementById('ContinueAmount').waitForDisplayed({ timeout: 60_000 });
-  await selectHardwareFundingSource(walletLabel);
+  await selectSendFundingSource(walletLabel);
   await enterAmount(amountSats);
   await elementById('ContinueAmount').waitForEnabled({ timeout: 60_000 });
   await tap('ContinueAmount');
@@ -303,36 +303,6 @@ export async function sendOnchainFromHardwareWallet({
   await approveTrezorPromptsUntil(['SendSuccess']);
   await elementById('SendSuccess').waitForDisplayed();
   await tap('Close');
-}
-
-async function selectHardwareFundingSource(walletLabel: string) {
-  const switchButton = elementById('AssetButton-switch');
-  await switchButton.waitForDisplayed({ timeout: 30_000 });
-
-  const wanted = walletLabel.toLowerCase();
-  const started = Date.now();
-  const timeout = 60_000;
-  while (Date.now() - started < timeout) {
-    const label = await fundingSourceLabel();
-    if (label.toLowerCase().includes(wanted)) {
-      return;
-    }
-    await tap('AssetButton-switch');
-    await sleep(500);
-  }
-
-  throw new Error(`Timed out selecting hardware funding source '${walletLabel}'`);
-}
-
-async function fundingSourceLabel(): Promise<string> {
-  if (driver.isAndroid) {
-    try {
-      return (await getTextUnder('AssetButton-switch', 'first')).trim();
-    } catch {
-      return '';
-    }
-  }
-  return getAccessibleText(elementById('AssetButton-switch'));
 }
 
 export async function transferHardwareWalletToSpending({

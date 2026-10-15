@@ -10,6 +10,7 @@ import {
   tap,
   typeText,
   waitForSetupWalletScreenFinish,
+  waitForWalletHome,
 } from '../helpers/actions';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
@@ -43,6 +44,7 @@ describe('@onboarding @ios_nightly - Onboarding', () => {
     await tap('NewWallet');
     await waitForSetupWalletScreenFinish();
 
+    await waitForWalletHome();
     await elementByText('TO GET').waitForDisplayed();
   });
 
@@ -68,8 +70,7 @@ describe('@onboarding @ios_nightly - Onboarding', () => {
     await tap('CreateNewWallet');
     await waitForSetupWalletScreenFinish();
 
-    // Wait for wallet to be created
-    await elementById('TotalBalance').waitForDisplayed();
+    await waitForWalletHome();
 
     const seed = await getSeed();
 

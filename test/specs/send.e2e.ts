@@ -25,6 +25,7 @@ import {
   editRecipientAddress,
   typeRecipientInput,
   tap,
+  selectSendFundingSource,
   enterAmount,
   verifyAmountToSend,
 } from '../helpers/actions';
@@ -413,10 +414,10 @@ describe('@send - Send', () => {
     // Android shows raw `maxSendLightningSats` (7k - 1k reserve = 6k).
     // iOS subtracts an estimated routing fee which includes a hardcoded 2 sat buffer (see SendAmountView.calculateRoutingFee()).
     await expectText('5 998', { strategy: 'contains' });
-    await tap('AssetButton-switch');
+    await selectSendFundingSource('Savings');
     // max amount (onchain)
     await expectText('5 998', { visible: false, strategy: 'contains' });
-    await tap('AssetButton-switch');
+    await selectSendFundingSource('Spending');
     await tap('N1');
     await multiTap('N0', 3);
     await tap('ContinueAmount');
@@ -447,8 +448,7 @@ describe('@send - Send', () => {
     await sleep(4000);
     await tap('NavigationBack');
     // max amount (onchain)
-    await tap('AssetButton-switch');
-    await sleep(500);
+    await selectSendFundingSource('Savings');
     await tap('AvailableAmount');
     if (driver.isIOS) {
       // iOS runs an autopilot coin selection step on Continue; when the amount is the true "max"
