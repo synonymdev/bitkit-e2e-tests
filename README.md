@@ -119,7 +119,10 @@ VSS, Pubky, Bitcoin and rates retain their existing staging configuration.
 export USDT_TEST_ENV_FILE=/absolute/path/to/private.env
 ./scripts/usdt-fixture up
 eval "$(./scripts/usdt-fixture env)"
+./scripts/usdt-fixture check
 ./scripts/usdt-fixture smoke
+./scripts/usdt-fixture max-smoke
+./scripts/usdt-fixture bridge-smoke
 ```
 
 ### 🔐 Manual Trezor Emulator Setup
