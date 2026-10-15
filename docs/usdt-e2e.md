@@ -48,7 +48,7 @@ Record passing journeys with `RECORD_VIDEO=true SAVE_DIAGNOSTICS=true`. USDT spe
 
 ## Coverage handoff
 
-1. Direct receive/send: zero-ETH first operation, subsequent sends, exact recipient/fee deltas, activity and details.
+1. Direct receive/send: zero-ETH first operation, subsequent sends, MAX, exact recipient/fee deltas, activity and details. Reuse an unchanged, unexpired quote on review; edits or expiry must obtain a fresh quote.
 2. Contact payments and requests: USDT-only/mixed endpoints, quoted BTC/USD conversion, endpoint restrictions, same-asset and rail rates, underpayment and late payment display.
 3. Subscriptions: Bitkit's single-currency-family creation and external billing-period proofs.
 4. Failure/recovery: quote expiry, invalid signatures, held inclusion, lost response, restart and VSS restore without double payment.
@@ -67,7 +67,8 @@ exporting authenticated received evidence for Core verification. Build it with
 Use only dedicated peers connected to this fork; an unrelated staging wallet or
 server will query a different chain and cannot verify these payments.
 
-The infrastructure smoke suite verifies local execution, proof cryptography, incoming history and recovery into an empty database.
+The infrastructure smoke suite verifies local execution, MAX quote submission and fees, proof cryptography, incoming history and recovery into an empty database.
+The local gateway relaxes total and preparation rate limits for shared automated runs. Production limits are tested separately by the service.
 It does not run the full mobile, VSS, Shop or bridge journeys. Those are the tests
 Piotr should add using the matrix above. The shared fixture docs record the
 Anvil/Alto validation limits and Shop container routing requirements. Bridge
