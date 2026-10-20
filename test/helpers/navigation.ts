@@ -1,4 +1,5 @@
 import { elementById, tap, sleep } from './actions';
+import { CONTACTS_SCREEN_IDS, isContactsScreenOpen } from './pubky-screen';
 
 export type SettingsTab = 'general' | 'security' | 'advanced';
 
@@ -30,8 +31,23 @@ export async function openSupport() {
 
 /**
  * Opens the Contacts entry from the drawer menu.
+ * If the contacts list or its intro is already showing, the drawer has no DrawerContacts
+ * row to tap, so the list is left as-is on both platforms.
  */
 export async function openContacts() {
+  const visibleIds: string[] = [];
+  for (const id of CONTACTS_SCREEN_IDS) {
+    if (
+      await elementById(id)
+        .isDisplayed()
+        .catch(() => false)
+    ) {
+      visibleIds.push(id);
+    }
+  }
+  if (isContactsScreenOpen(visibleIds)) {
+    return;
+  }
   await tap('HeaderMenu');
   await tap('DrawerContacts');
   await sleep(500);

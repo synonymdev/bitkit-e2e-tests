@@ -13,6 +13,11 @@ import {
   waitForToast,
 } from './actions';
 import { doNavigationClose, openContacts, openProfile } from './navigation';
+import {
+  CONTACT_SAVE_TIMEOUT_MS,
+  PROFILE_AFTER_PAY_CONTACTS_TIMEOUT_MS,
+  shouldRetryContactSave,
+} from './pubky-screen';
 
 /** One link row on the profile (label + URL). */
 export type PubkyProfileLink = { label: string; url: string };
@@ -266,8 +271,37 @@ export async function addContact({
   await tap('AddContactAdd');
   await elementById('AddContactSave').waitForDisplayed();
   await tap('AddContactSave');
-  // Landing on contact details screen
-  await elementById('ContactViewName').waitForDisplayed();
+  await waitForSavedContact();
+}
+
+/**
+ * Contact details follow a successful save. A Pubky transport error leaves Add Contact
+ * open with Save enabled; one retry covers that. A save still in progress disables Save,
+ * so it is not tapped again. Both platforms use these same ids.
+ */
+async function waitForSavedContact(): Promise<void> {
+  try {
+    await elementById('ContactViewName').waitForDisplayed({ timeout: CONTACT_SAVE_TIMEOUT_MS });
+  } catch (error) {
+    const save = elementById('AddContactSave');
+    const saveDisplayed = await save.isDisplayed().catch(() => false);
+    const saveEnabled = saveDisplayed && (await save.isEnabled().catch(() => false));
+    if (
+      !shouldRetryContactSave({
+        detailsVisible: false,
+        saveDisplayed,
+        saveEnabled,
+        alreadyRetried: false,
+      })
+    ) {
+      throw error;
+    }
+    console.info(
+      '→ Add contact Save stayed enabled without opening contact details; retrying once'
+    );
+    await tap('AddContactSave');
+    await elementById('ContactViewName').waitForDisplayed({ timeout: CONTACT_SAVE_TIMEOUT_MS });
+  }
   await elementById('ContactPay').waitForDisplayed();
   await elementById('ContactActivity').waitForDisplayed();
   await elementById('ContactCopy').waitForDisplayed();
@@ -553,7 +587,10 @@ export async function createProfile({
 
   // Landed on the user's Profile screen. Both platforms uppercase the name
   // in CenteredProfileHeader (iOS: Text(name.uppercased()); Android: Display→uppercase()).
-  await elementById('ProfileEdit').waitForDisplayed();
+  // Enabling contact payments can outlast the 30s default while Continue is still spinning.
+  await elementById('ProfileEdit').waitForDisplayed({
+    timeout: PROFILE_AFTER_PAY_CONTACTS_TIMEOUT_MS,
+  });
   await elementById('ProfileCopy').waitForDisplayed();
   await elementById('ProfileShare').waitForDisplayed();
   await elementByText(name.toUpperCase()).waitForDisplayed();
