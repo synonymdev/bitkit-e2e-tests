@@ -1,0 +1,6 @@
+recognize
+__pycache__/
+*.json
+.wda/
+.appium/
+*.log
