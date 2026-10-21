@@ -30,7 +30,7 @@ class MigrationPlanTests(unittest.TestCase):
                 "@migration_native_restore", "@migration_native_upgrade",
             ])
             self.assertEqual({case["version"] for case in plan["rn"]}, {"v1.1.6"})
-            self.assertEqual(plan["version"], "2.5.0")
+            self.assertEqual(plan["version"], "3.0.1")
 
     def test_override_and_extended_are_explicit(self):
         plan = matrix.migration_plan("ios", "2.4.0", True)
