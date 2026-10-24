@@ -25,15 +25,11 @@ import {
   tapFirstByAccessibilityIdPrefix,
   typeText,
   handleAndroidAlert,
-  waitForToast,
   type BalanceCondition,
-  dismissBackupTimedSheet,
-  dismissBackgroundPaymentsTimedSheet,
-  dismissQuickPayIntro,
   confirmInputOnKeyboard,
 } from './actions';
 import { openHomeWidgets, openSettings } from './navigation';
-import { deposit, getBackend, mineBlocks } from './regtest';
+import { deposit, mineBlocks } from './regtest';
 
 const E2E_ROOT = path.resolve(__dirname, '..', '..');
 const ARTIFACTS_DIR = path.join(E2E_ROOT, 'artifacts');
@@ -305,69 +301,12 @@ export async function sendOnchainFromHardwareWallet({
   await tap('Close');
 }
 
-export async function transferHardwareWalletToSpending({
-  amountSats,
-  waitForSync,
-}: {
-  amountSats: number;
-  waitForSync?: () => Promise<void>;
-}) {
+export async function openHardwareTransferUnavailableSheet() {
   await doNavigationClose();
   await tap('ActivityHardware');
   await elementById('HardwareWalletScreen').waitForDisplayed();
   await tap('HardwareTransferToSpending');
-
-  const hasSpendingIntro = await elementById('SpendingIntro-button')
-    .isDisplayed()
-    .catch(() => false);
-  if (hasSpendingIntro) {
-    await tap('SpendingIntro-button');
-    await sleep(800);
-  }
-
-  await elementById('HardwareTransferAmount').waitForDisplayed({ timeout: 60_000 });
-  await elementById('HardwareTransferAmountContinue').waitForEnabled({ timeout: 60_000 });
-  await sleep(1000);
-  await enterAmount(amountSats);
-  await elementById('HardwareTransferAmountContinue').waitForEnabled({ timeout: 60_000 });
-  await tap('HardwareTransferAmountContinue');
-  await elementById('HardwareTransferSign').waitForDisplayed({ timeout: 120_000 });
-  await tap('HardwareTransferOpenTrezorConnect');
-  await approveTrezorPromptsUntil([
-    'HardwareTransferSigned',
-    'LightningSettingUp',
-    'TransferSuccess',
-  ]);
-  await waitForHardwareTransferProgress();
-  if (getBackend() === 'local') {
-    // Local backend does not have Blocktank,
-    // so we don't wait for the transfer success screen.
-    await tap('TransferSuccess-button');
-    await dismissBackupTimedSheet({ triggerTimedSheet: false });
-  } else {
-    await mineBlocks(1);
-    if (waitForSync) {
-      await waitForSync();
-    }
-    for (let i = 0; i < 10; i++) {
-      try {
-        await elementById('TransferSuccess').waitForDisplayed({ timeout: 5_000 });
-        break;
-      } catch {
-        console.info('→ Hardware transfer success not found, mining another block...');
-        await mineBlocks(1);
-        if (waitForSync) {
-          await waitForSync();
-        }
-      }
-    }
-    await elementById('TransferSuccess').waitForDisplayed();
-    await tap('TransferSuccess-button');
-    await dismissSpendingBalanceToastIfShown();
-    await dismissBackupTimedSheet({ triggerTimedSheet: false });
-    await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });
-    await dismissQuickPayIntro({ triggerTimedSheet: true });
-  }
+  await elementById('ChannelsUnavailableSheet').waitForDisplayed();
 }
 
 export async function removeHardwareWalletFromSettings(label: string) {
@@ -392,14 +331,6 @@ async function approveTrezorPromptsUntil(testIds: string[]) {
   }
 
   throw new Error(`Timed out waiting for Trezor approval (${testIds.join(', ')})`);
-}
-
-async function waitForHardwareTransferProgress() {
-  await browser.waitUntil(async () => isAnyDisplayed(['LightningSettingUp', 'TransferSuccess']), {
-    timeout: 60_000,
-    interval: 500,
-    timeoutMsg: 'Timed out waiting for hardware transfer progress',
-  });
 }
 
 function pressTrezorYes() {
@@ -433,13 +364,5 @@ async function isDisplayed(testId: string): Promise<boolean> {
     return await elementById(testId).isDisplayed();
   } catch {
     return false;
-  }
-}
-
-async function dismissSpendingBalanceToastIfShown() {
-  try {
-    await waitForToast('SpendingBalanceReadyToast', { timeout: 30_000 });
-  } catch {
-    console.info('→ SpendingBalanceReadyToast not shown after hardware transfer.');
   }
 }

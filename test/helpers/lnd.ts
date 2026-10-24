@@ -1,15 +1,20 @@
 import BitcoinJsonRpc from 'bitcoin-json-rpc';
 import {
+  acknowledgeExternalSuccess,
   confirmInputOnKeyboard,
   doNavigationClose,
+  dragOnElement,
   elementById,
   expectTextWithin,
   sleep,
   swipeFullScreen,
   tap,
+  tryDismissBackgroundPaymentsIfVisible,
+  tryDismissQuickPayIntroIfVisible,
   typeText,
 } from './actions';
-import { LndConfig, lndHost } from './constants';
+import { LndConfig, lndConfig, lndHost } from './constants';
+import { getBitcoinRpc, mineBlocks } from './regtest';
 import { openSettings } from './navigation';
 import createLndRpc, { LnRpc, WalletUnlockerRpc } from '@radar/lnrpc';
 
@@ -130,4 +135,34 @@ export async function checkChannelStatus({ size = '100 000' } = {}) {
   await elementById('IsUsableYes').waitForDisplayed();
   await doNavigationClose();
   await sleep(500);
+}
+
+/**
+ * Opens a channel from savings to the local LND node through manual setup, the way the app funds spending
+ * now that it no longer buys Blocktank channels. Spends the whole savings balance (ExternalAmountMax).
+ */
+export async function openChannelToLndFromSavings({
+  waitForSync,
+}: {
+  waitForSync?: () => Promise<void>;
+} = {}) {
+  const { lnd, lndNodeID } = await setupLND(getBitcoinRpc(), lndConfig);
+  if (waitForSync) await waitForSync();
+
+  const ldkNodeId = await getLDKNodeID();
+  await connectToLND(lndNodeID, { navigationClose: false });
+  await waitForPeerConnection(lnd, ldkNodeId);
+
+  await tap('ExternalAmountMax');
+  await tap('ExternalAmountContinue');
+  await sleep(500);
+  await dragOnElement('GRAB', 'right', 0.95);
+  await sleep(1000);
+  await acknowledgeExternalSuccess();
+
+  await mineBlocks(6);
+  if (waitForSync) await waitForSync();
+  await waitForActiveChannel(lnd, ldkNodeId);
+  await tryDismissBackgroundPaymentsIfVisible();
+  await tryDismissQuickPayIntroIfVisible();
 }
