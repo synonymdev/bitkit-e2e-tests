@@ -19,7 +19,6 @@ import {
   switchAndFundEachAddressType,
   swipeFullScreen,
   tap,
-  transferSavingsToSpending,
   transferSpendingToSavings,
   type addressTypePreference,
   getSpendingBalance,
@@ -41,6 +40,7 @@ import {
   checkChannelStatus,
   connectToLND,
   getLDKNodeID,
+  openChannelToLndFromSavings,
   setupLND,
   waitForPeerConnection,
 } from '../helpers/lnd';
@@ -71,49 +71,52 @@ describe('@multi_address - Multi address', () => {
     await electrum?.stop();
   });
 
-  ciIt('@multi_address_1 @ios_nightly - Receive to each address type and send max combined', async () => {
-    const addressTypes: addressTypePreference[] = ['p2pkh', 'p2sh-p2wpkh', 'p2wpkh', 'p2tr'];
-    const satsPerAddressType = 100_000;
-    const { totalFundedSats } = await switchAndFundEachAddressType({
-      addressTypes,
-      satsPerAddressType,
-      waitForSync: async () => {
-        await electrum?.waitForSync();
-      },
-    });
+  ciIt(
+    '@multi_address_1 @ios_nightly - Receive to each address type and send max combined',
+    async () => {
+      const addressTypes: addressTypePreference[] = ['p2pkh', 'p2sh-p2wpkh', 'p2wpkh', 'p2tr'];
+      const satsPerAddressType = 100_000;
+      const { totalFundedSats } = await switchAndFundEachAddressType({
+        addressTypes,
+        satsPerAddressType,
+        waitForSync: async () => {
+          await electrum?.waitForSync();
+        },
+      });
 
-    const totalBalance = await getTotalBalance();
-    const savingsBalance = await getSavingsBalance();
-    const spendingBalance = await getSpendingBalance();
-    await expect(savingsBalance).toEqual(totalFundedSats);
-    await expect(spendingBalance).toEqual(0);
-    await expect(totalBalance).toEqual(totalFundedSats);
+      const totalBalance = await getTotalBalance();
+      const savingsBalance = await getSavingsBalance();
+      const spendingBalance = await getSpendingBalance();
+      await expect(savingsBalance).toEqual(totalFundedSats);
+      await expect(spendingBalance).toEqual(0);
+      await expect(totalBalance).toEqual(totalFundedSats);
 
-    const coreAddress = await getExternalAddress();
-    await enterAddress(coreAddress);
-    await tap('AvailableAmount');
-    await tap('ContinueAmount');
-    await dragOnElement('GRAB', 'right', 0.95);
-    await handleOver50PercentAlert();
-    await elementById('SendSuccess').waitForDisplayed();
-    await tap('Close');
-    await mineBlocks(1);
-    await electrum?.waitForSync();
+      const coreAddress = await getExternalAddress();
+      await enterAddress(coreAddress);
+      await tap('AvailableAmount');
+      await tap('ContinueAmount');
+      await dragOnElement('GRAB', 'right', 0.95);
+      await handleOver50PercentAlert();
+      await elementById('SendSuccess').waitForDisplayed();
+      await tap('Close');
+      await mineBlocks(1);
+      await electrum?.waitForSync();
 
-    await expectTotalBalance(0);
-    await expectSavingsBalance(0);
-    await expectSpendingBalance(0);
+      await expectTotalBalance(0);
+      await expectSavingsBalance(0);
+      await expectSpendingBalance(0);
 
-    const totalBalanceAfter = await getTotalBalance();
-    const savingsBalanceAfter = await getSavingsBalance();
-    const spendingBalanceAfter = await getSpendingBalance();
-    await expect(totalBalanceAfter).toEqual(0);
-    await expect(savingsBalanceAfter).toEqual(0);
-    await expect(spendingBalanceAfter).toEqual(0);
-  });
+      const totalBalanceAfter = await getTotalBalance();
+      const savingsBalanceAfter = await getSavingsBalance();
+      const spendingBalanceAfter = await getSpendingBalance();
+      await expect(totalBalanceAfter).toEqual(0);
+      await expect(savingsBalanceAfter).toEqual(0);
+      await expect(spendingBalanceAfter).toEqual(0);
+    }
+  );
 
   ciIt(
-    '@multi_address_2, @multi_address_staging, @staging - Receive to each address type, transfer all to spending, close channel to taproot',
+    '@multi_address_2 - Receive to each address type, open a channel with all savings, close channel to taproot',
     async () => {
       const addressTypes: addressTypePreference[] = ['p2pkh', 'p2sh-p2wpkh', 'p2wpkh', 'p2tr'];
       // const addressTypes: addressTypePreference[] = ['p2tr'];
@@ -135,13 +138,12 @@ describe('@multi_address - Multi address', () => {
       await mineBlocks(1);
       await electrum?.waitForSync();
 
-      await transferSavingsToSpending({
+      await openChannelToLndFromSavings({
         waitForSync: async () => {
           await electrum?.waitForSync();
         },
       });
       await expectSpendingBalance(0, { condition: 'gt' });
-      await expectSavingsBalance(0);
 
       if (driver.isAndroid) {
         // pull to refresh due to:

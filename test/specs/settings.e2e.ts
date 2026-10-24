@@ -458,9 +458,9 @@ describe('@settings @ios_nightly - Settings', () => {
       await swipeFullScreen('up');
       await elementById('SuggestionsWidget').waitForDisplayed();
 
-      // hide lightningTodo suggestion card
-      await (await elementByIdWithin('Suggestion-lightning', 'SuggestionDismiss')).click();
-      await elementById('Suggestion-lightning').waitForDisplayed({ reverse: true });
+      // hide the hardware wallet suggestion card
+      await (await elementByIdWithin('Suggestion-hardware', 'SuggestionDismiss')).click();
+      await elementById('Suggestion-hardware').waitForDisplayed({ reverse: true });
 
       // reset suggestions (now in Widgets settings)
       await openSettings();
@@ -468,9 +468,9 @@ describe('@settings @ios_nightly - Settings', () => {
       await tap('ResetSuggestions');
       await tap('DialogConfirm');
 
-      // lightning should be visible again
+      // the hardware wallet card should be visible again
       await sleep(1000);
-      await elementById('Suggestion-lightning').waitForDisplayed();
+      await elementById('Suggestion-hardware').waitForDisplayed();
     });
   });
 

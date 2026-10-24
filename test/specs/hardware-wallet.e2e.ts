@@ -1,10 +1,12 @@
 import {
   completeOnboarding,
   doNavigationClose,
+  elementById,
   expectSavingsBalance,
   expectSpendingBalance,
   expectTotalBalance,
   receiveOnchainFunds,
+  tap,
 } from '../helpers/actions';
 import initElectrum from '../helpers/electrum';
 import {
@@ -24,9 +26,9 @@ import {
   sendOnchainFromHardwareWallet,
   startHardwareWalletFlowFromSuggestion,
   stopTrezorEmulator,
-  transferHardwareWalletToSpending,
+  openHardwareTransferUnavailableSheet,
 } from '../helpers/hardware-wallet';
-import { ensureLocalFunds, getBackend, getExternalAddress } from '../helpers/regtest';
+import { ensureLocalFunds, getExternalAddress } from '../helpers/regtest';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 
@@ -90,26 +92,22 @@ describe('@hardware_wallet @ios_gate - Hardware Wallet', () => {
     await expectSpendingBalance(0);
   });
 
-  ciIt('@hardware_wallet_3 - Can transfer hardware wallet funds to spending', async () => {
-    const fundingSats = 100_000;
-    const transferSats = 20_000;
+  ciIt(
+    '@hardware_wallet_3 - Hardware wallet transfer to spending explains it is unavailable',
+    async () => {
+      const fundingSats = 100_000;
 
-    await connectHardwareWalletFromSettings(walletLabel);
-    await fundHardwareWalletAndAcknowledge({ sats: fundingSats });
-    await expectHardwareWalletBalance(fundingSats);
-    await transferHardwareWalletToSpending({
-      amountSats: transferSats,
-      waitForSync: async () => {
-        await electrum?.waitForSync();
-      },
-    });
-    await doNavigationClose();
-    await expectHardwareWalletBalance(fundingSats, { condition: 'lt' });
-    if (getBackend() === 'regtest') {
-      // We only check balance on staging regtest backend, local does not have Blocktank.
-      await expectSpendingBalance(0, { condition: 'gt', timeout: 60_000 });
+      await connectHardwareWalletFromSettings(walletLabel);
+      await fundHardwareWalletAndAcknowledge({ sats: fundingSats });
+      await expectHardwareWalletBalance(fundingSats);
+      await openHardwareTransferUnavailableSheet();
+      await tap('ChannelsUnavailableSheetCancel');
+      await elementById('ChannelsUnavailableSheet').waitForDisplayed({ reverse: true });
+      await elementById('HardwareWalletScreen').waitForDisplayed();
+      await doNavigationClose();
+      await expectHardwareWalletBalance(fundingSats);
     }
-  });
+  );
 
   ciIt('@hardware_wallet_4 - Can send onchain from hardware wallet', async () => {
     const fundingSats = 100_000;

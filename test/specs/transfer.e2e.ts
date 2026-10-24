@@ -5,7 +5,6 @@ import {
   receiveOnchainFunds,
   tap,
   expectText,
-  elementByText,
   elementsById,
   elementById,
   multiTap,
@@ -15,18 +14,11 @@ import {
   elementByIdWithin,
   enterAddress,
   dismissQuickPayIntro,
-  doNavigationClose,
   waitForToast,
-  waitForToastBestEffort,
   acknowledgeExternalSuccess,
   dismissBackgroundPaymentsTimedSheet,
   expectNoTextWithin,
   enterAmount,
-  expectSavingsBalance,
-  getSpendingBalance,
-  getAmountUnder,
-  tryDismissBackgroundPaymentsIfVisible,
-  tryDismissQuickPayIntroIfVisible,
 } from '../helpers/actions';
 import {
   checkChannelStatus,
@@ -43,147 +35,11 @@ import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 import { openSettings } from '../helpers/navigation';
 
-async function isDisplayed(testId: string): Promise<boolean> {
-  return elementById(testId)
-    .isDisplayed()
-    .catch(() => false);
-}
-
-/** Timed sheets can be queued behind one another, so dismiss until Home is clear. */
-async function dismissHomeSheetsIfPresent() {
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    if (await tryDismissBackgroundPaymentsIfVisible()) {
-      continue;
-    }
-    if (await tryDismissQuickPayIntroIfVisible()) {
-      continue;
-    }
-    return;
-  }
-}
-
-async function openTransferToSpending() {
-  await browser.waitUntil(
-    async () => {
-      await dismissHomeSheetsIfPresent();
-      if (await isDisplayed('TransferToSpending')) {
-        return true;
-      }
-      // Only tap from Home. A delayed Background Payments sheet can cover
-      // ActivitySavings after waitForHome; keep dismissing and retry.
-      const onHome =
-        (await isDisplayed('ActivitySavings')) && (await isDisplayed('ActivitySpending'));
-      if (!onHome) {
-        return false;
-      }
-      try {
-        await tap('ActivitySavings', { timeout: 5_000 });
-      } catch {
-        return false;
-      }
-      return isDisplayed('TransferToSpending');
-    },
-    {
-      timeout: 60_000,
-      interval: 1_000,
-      timeoutMsg: 'Savings did not become interactive',
-    }
-  );
-  await tap('TransferToSpending');
-  await browser.waitUntil(
-    async () => {
-      if (await isDisplayed('SpendingAmountAvailable')) {
-        return true;
-      }
-      if (await isDisplayed('SpendingIntro-button')) {
-        await tap('SpendingIntro-button');
-      }
-      return false;
-    },
-    {
-      timeout: 60_000,
-      interval: 1_000,
-      timeoutMsg: 'Transfer amount screen did not open after the intro',
-    }
-  );
-  await elementById('SpendingAmountContinue').waitForEnabled({ timeout: 60_000 });
-}
-
-/** Tap Continue again only if the amount screen is still visible. */
-async function continueFromAmount() {
-  await browser.waitUntil(
-    async () => {
-      if (await isDisplayed('SpendingConfirmMore')) {
-        return true;
-      }
-      if (await isDisplayed('SpendingAmountContinue')) {
-        await tap('SpendingAmountContinue');
-      }
-      return false;
-    },
-    {
-      timeout: 90_000,
-      interval: 1_000,
-      timeoutMsg: 'Spending confirmation did not open from the amount screen',
-    }
-  );
-}
-
-async function continueFromAdvanced() {
-  await expectText('—', { visible: false, timeout: 60_000 });
-  await browser.waitUntil(
-    async () => {
-      if (await isDisplayed('SpendingConfirmDefault')) {
-        return true;
-      }
-      if (await isDisplayed('SpendingAdvancedContinue')) {
-        await tap('SpendingAdvancedContinue');
-      }
-      return false;
-    },
-    {
-      timeout: 90_000,
-      interval: 1_000,
-      timeoutMsg: 'Spending confirmation did not open from the advanced screen',
-    }
-  );
-}
-
-async function waitForHome(timeout = 60_000) {
-  await browser.waitUntil(
-    async () => {
-      await dismissHomeSheetsIfPresent();
-      return (await isDisplayed('ActivitySavings')) && (await isDisplayed('ActivitySpending'));
-    },
-    {
-      timeout,
-      interval: 2_000,
-      timeoutMsg: 'Wallet Home did not become visible',
-    }
-  );
-}
-
-async function isProcessingPaymentDisplayed(): Promise<boolean> {
-  return elementByText('Processing payment', 'exact')
-    .isDisplayed()
-    .catch(() => false);
-}
-
 /**
  * Channel detail after a Blocktank buy: "Processing payment" is transient.
  * Fast settle can skip it by the time Settings → Channels opens; then the
  * same usable flag as checkChannelStatus (IsUsableYes after swipe up).
  */
-async function expectProcessingOrUsableChannel() {
-  if (await isProcessingPaymentDisplayed()) {
-    console.info('→ Channel still shows Processing payment');
-    return;
-  }
-  console.info('→ Processing payment not visible; asserting IsUsableYes after swipe');
-  await swipeFullScreen('up');
-  await elementById('IsUsableYes').waitForDisplayed();
-}
-
 /**
  * After each Blocktank buy, Home ActivityShort inserts a Transfer row at the top.
  * Do not open Savings to read Activity-*: a delayed Background Payments sheet can
@@ -193,55 +49,6 @@ async function expectProcessingOrUsableChannel() {
  * Use expectTextWithin (all descendants) — same pattern as @transfer_max.
  * Android amount minus is a middle TextView; first/last probes miss it.
  */
-async function expectHomeTransferRows(transferCount: 1 | 2) {
-  let transferRowIds: readonly string[];
-  switch (transferCount) {
-    case 1:
-      transferRowIds = ['ActivityShort-0'];
-      break;
-    case 2:
-      transferRowIds = ['ActivityShort-0', 'ActivityShort-1'];
-      break;
-    default: {
-      const _exhaustive: never = transferCount;
-      throw new Error(`Unexpected transferCount: ${_exhaustive}`);
-    }
-  }
-
-  // ActivityShort-0 is often still the prior Received deposit row; poll until
-  // Transfer (and amount minus) show via all-descendant expectTextWithin —
-  // same probe @transfer_max uses. Do not waitForDisplayed alone first.
-  await browser.waitUntil(
-    async () => {
-      await dismissHomeSheetsIfPresent();
-      for (const rowId of transferRowIds) {
-        if (!(await elementById(rowId).isDisplayed().catch(() => false))) {
-          return false;
-        }
-        try {
-          await expectTextWithin(rowId, 'Transfer', { timeout: 1_500 });
-          await expectTextWithin(rowId, '-', { timeout: 1_500 });
-        } catch {
-          return false;
-        }
-      }
-      return true;
-    },
-    {
-      timeout: 60_000,
-      interval: 1_000,
-      timeoutMsg: `Home did not show ${transferCount} transfer row(s)`,
-    }
-  );
-}
-
-async function confirmSpendingTransfer() {
-  await dragOnElement('GRAB', 'right', 0.95);
-  await elementById('LightningSettingUp').waitForDisplayed({ timeout: 90_000 });
-  await tap('TransferSuccess-button');
-  await waitForHome();
-}
-
 /**
  * A successful Blocktank order is not the end of the transfer: the funding
  * transaction still needs confirmations before the spending balance is usable.
@@ -249,100 +56,6 @@ async function confirmSpendingTransfer() {
  * single-block retries. The balance itself is the definitive end-to-end
  * assertion because the readiness toast can be missed.
  */
-async function settleAndExpectSpendingBalance(
-  expected: number,
-  waitForSync: () => Promise<unknown>
-) {
-  let lastBalance = -1;
-  const waitForExpectedBalance = async (timeout: number): Promise<boolean> => {
-    try {
-      await browser.waitUntil(
-        async () => {
-          await dismissHomeSheetsIfPresent();
-          lastBalance = await getSpendingBalance().catch(() => -1);
-          return lastBalance === expected;
-        },
-        { timeout, interval: 2_000 }
-      );
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  console.info(`→ Waiting for spending balance ${expected}`);
-  if (await waitForExpectedBalance(30_000)) {
-    return;
-  }
-
-  // Blocktank can broadcast a later channel while the first one is already
-  // usable. Confirm the current chain once, then add at most one block per
-  // round so a late broadcast is picked up without an uncontrolled mine loop.
-  const confirmationBatches = [6, 1, 1, 1, 1, 1];
-  for (const blocks of confirmationBatches) {
-    console.info(
-      `→ Spending is ${lastBalance}; mining ${blocks} block(s) before the next settlement check`
-    );
-    await mineBlocks(blocks);
-    await waitForSync();
-    await waitForToastBestEffort('SpendingBalanceReadyToast', { timeout: 5_000 });
-    if (await waitForExpectedBalance(45_000)) {
-      return;
-    }
-  }
-
-  throw new Error(
-    `Spending balance did not settle to ${expected}; last readable balance was ${lastBalance}`
-  );
-}
-
-async function elementContainsAmount(testId: string, expected: number): Promise<boolean> {
-  if (driver.isAndroid) {
-    return (await getAmountUnder(testId).catch(() => -1)) === expected;
-  }
-
-  const element = elementById(testId);
-  const candidates = await Promise.all([
-    element.getText().catch(() => ''),
-    element.getAttribute('label').catch(() => ''),
-    element.getAttribute('value').catch(() => ''),
-  ]);
-  const expectedDigits = String(expected);
-  return candidates.some((candidate) =>
-    String(candidate).replace(/\D/g, '').includes(expectedDigits)
-  );
-}
-
-async function openChannelWithTotalSize(expected: number) {
-  const channelCount = await (await elementsById('Channel')).length;
-  for (let index = 0; index < channelCount; index += 1) {
-    const channels = await elementsById('Channel');
-    await channels[index].click();
-    await elementById('TotalSize').waitForDisplayed();
-    if (await elementContainsAmount('TotalSize', expected)) {
-      return;
-    }
-    await tap('NavigationBack');
-    await elementById('Channel').waitForDisplayed();
-  }
-  throw new Error(`No channel with total size ${expected} was found`);
-}
-
-async function openAdvancedSettings() {
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    await dismissHomeSheetsIfPresent();
-    try {
-      await openSettings('advanced');
-      return;
-    } catch (error) {
-      lastError = error;
-      console.info(`→ Settings drawer did not open (attempt ${attempt})`);
-    }
-  }
-  throw lastError;
-}
-
 describe('@transfer - Transfer', () => {
   let electrum: { waitForSync: () => any; stop: () => void };
 
@@ -362,77 +75,28 @@ describe('@transfer - Transfer', () => {
   });
 
   ciIt(
-    '@transfer_1, @transfer_staging, @staging - Can buy a channel from Blocktank with default and custom receive capacity',
-    async () => {
-      await receiveOnchainFunds({ sats: 1000_000, expectHighBalanceWarning: true });
-
-      // First channel: a 200k spending balance with the default receive capacity.
-      await openTransferToSpending();
-      await enterAmount(200000);
-      await expectText('200 000', { strategy: 'contains' });
-      await continueFromAmount();
-      await tap('SpendingConfirmMore');
-      await expectText('200 000', { strategy: 'contains' });
-      await tap('LiquidityContinue');
-      await confirmSpendingTransfer();
-      await expectHomeTransferRows(1);
-
-      await settleAndExpectSpendingBalance(200000, async () => electrum?.waitForSync());
-
-      // Second channel: a 100k spending balance with 150k custom receive capacity.
-      await openTransferToSpending();
-      await enterAmount(100000);
-      await expectText('100 000', { strategy: 'contains' });
-      await continueFromAmount();
-      await tap('SpendingConfirmAdvanced');
-      await elementById('SpendingAdvancedNumberField').waitForDisplayed({ timeout: 60_000 });
-      await enterAmount(150000);
-      await continueFromAdvanced();
-      await expectTextWithin('SpendingConfirmChannel', '100 000');
-      await expectTextWithin('SpendingConfirmChannel', '150 000');
-      await confirmSpendingTransfer();
-      await expectHomeTransferRows(2);
-
-      // Both channel funding transactions must settle into usable spending balance.
-      await settleAndExpectSpendingBalance(300000, async () => electrum?.waitForSync());
-
-      // Find the custom channel by value; channel ordering differs by platform.
-      await openAdvancedSettings();
-      await tap('Channels');
-      await elementById('Channel').waitForDisplayed();
-      await openChannelWithTotalSize(250000);
-      await expect(await elementContainsAmount('TotalSize', 250000)).toBe(true);
-      await expectProcessingOrUsableChannel();
-      await doNavigationClose();
-
-      // Home still shows both completed transfers after the channel inspection.
-      await expectHomeTransferRows(2);
-    }
-  );
-
-  ciIt(
-    '@transfer_max, @transfer_staging, @staging - Can fund a Blocktank channel at the settled maximum',
+    '@transfer_1, @transfer_staging, @staging - Transfer to spending explains that automatic transfers are unavailable',
     async () => {
       await receiveOnchainFunds({ sats: 100_000 });
-      await openTransferToSpending();
-      await elementById('SpendingAmountMax').waitForEnabled();
-      await tap('SpendingAmountMax');
-      const expectedSpendingBalance = await getAmountUnder('SpendingAmountNumberField');
-      await expect(expectedSpendingBalance).toBeGreaterThan(0);
-      await continueFromAmount();
-      await dragOnElement('GRAB', 'right', 0.95);
-      await elementById('LightningSettingUp').waitForDisplayed({ timeout: 90_000 });
-      await tap('TransferSuccess-button');
-      await waitForHome();
-      await settleAndExpectSpendingBalance(expectedSpendingBalance, async () =>
-        electrum?.waitForSync()
-      );
-      await expectSavingsBalance(0);
 
-      await elementById('ActivityShort-0').waitForDisplayed();
-      await elementById('ActivityShort-1').waitForDisplayed();
-      await expectTextWithin('ActivityShort-0', 'Transfer');
-      await expectTextWithin('ActivityShort-1', 'Received');
+      // Blocktank channel purchases are gone: the button opens the Transfer Unavailable sheet
+      await tap('ActivitySavings');
+      await tap('TransferToSpending');
+      await elementById('ChannelsUnavailableSheet').waitForDisplayed();
+      await elementById('ChannelsUnavailableSheetTitle').waitForDisplayed();
+      await tap('ChannelsUnavailableSheetCancel');
+      await elementById('ChannelsUnavailableSheet').waitForDisplayed({ reverse: true });
+
+      // Continue leads to the third-party provider list and the manual channel setup
+      await tap('TransferToSpending');
+      await tap('ChannelsUnavailableSheetContinue');
+      await elementById('ChooseLspScan').waitForDisplayed();
+      const providers = await elementsById('ChooseLspProvider');
+      await expect(providers).toBeElementsArrayOfSize(4);
+      await tap('ChooseLspManual');
+      await elementById('NodeIdInput').waitForDisplayed();
+      await elementById('HostInput').waitForDisplayed();
+      await elementById('PortInput').waitForDisplayed();
     }
   );
 
