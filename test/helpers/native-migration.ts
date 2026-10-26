@@ -1,36 +1,27 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  acknowledgeReceivedPayment,
   completeOnboarding,
   confirmInputOnKeyboard,
   doNavigationClose,
   elementById,
   expectTextWithin,
-  expectSavingsBalance,
-  expectSpendingBalance,
-  getReceiveAddress,
   getSavingsBalance,
   getSeed,
   getSpendingBalance,
   getTotalBalance,
   receiveOnchainFunds,
   restoreWallet,
-  swipeFullScreen,
   tap,
-  transferSavingsToSpending,
   typeText,
   waitForBackup,
   waitForWalletHome,
 } from './actions';
 import { getAppId, getBackend } from './constants';
 import type { ElectrumClient } from './electrum';
-import { payInvoice } from './regtest';
 import { getNativeAppPath, grantIOSCameraPermission, reinstallAppFromPath } from './setup';
 
 const FUNDING_SATS = 200_000;
-const SPENDING_SATS = 50_000;
-const PAYMENT_SATS = 1_000;
 const DEPOSIT_TAG = 'e2e';
 
 export type MigrationBalances = { savings: number; spending: number; total: number };
@@ -94,7 +85,7 @@ export async function prepareNativeMigrationWallet(
   await receiveOnchainFunds({ sats: FUNDING_SATS, verifyBalances: true });
   await electrum.waitForSync();
 
-  // Tag the sole deposit before creating the transfer; row order is unambiguous here.
+  // Tag the sole deposit; row order is unambiguous here.
   await tap('ActivitySavings');
   await tap('Activity-1');
   await tap('ActivityTag');
@@ -103,22 +94,16 @@ export async function prepareNativeMigrationWallet(
   if (driver.isAndroid) await confirmInputOnKeyboard();
   await returnToWalletHome();
 
-  await transferSavingsToSpending({
-    amountSats: SPENDING_SATS,
-    waitForSync: electrum.waitForSync,
-    triggerBackgroundPaymentsIntro: true,
-  });
-  await expectSpendingBalance(SPENDING_SATS, { timeout: 180_000 });
-  await expectSavingsBalance(0, { condition: 'gt' });
+  // No spending balance: Blocktank staging no longer creates orders (synonymdev/blocktank-lsp-http#168).
   let balances = await readMigrationBalances();
   try {
     await driver.waitUntil(
       async () => {
         balances = await readMigrationBalances();
         return (
-          balances.savings > 0 &&
-          balances.spending === SPENDING_SATS &&
-          balances.total === balances.savings + balances.spending
+          balances.savings === FUNDING_SATS &&
+          balances.spending === 0 &&
+          balances.total === FUNDING_SATS
         );
       },
       { timeout: 30_000, interval: 1_000, timeoutMsg: 'Source balances did not settle' }
@@ -200,8 +185,6 @@ async function verifyNativeHistory() {
   await expectTextWithin('Activity-1', '+');
   await elementById('Activity-2').waitForDisplayed({ reverse: true });
   await tap(`Tag-${DEPOSIT_TAG}-delete`);
-  await tap('Tab-other');
-  await expectTextWithin('Activity-1', '-');
   await doNavigationClose();
 }
 
@@ -213,31 +196,12 @@ export async function verifyNativeMigration(
   recordStage(method, 'target-recovered', await readMigrationBalances());
   await verifyNativeHistory();
 
-  // A live payment checks channel usability, beyond a cached spending balance.
-  // The regtest helper pays into the wallet; outbound payment is covered separately.
-  const invoice = await getReceiveAddress('lightning');
-  await swipeFullScreen('down');
-  await payInvoice(invoice, PAYMENT_SATS);
-  await acknowledgeReceivedPayment();
-  const afterPayment = {
-    savings: balances.savings,
-    spending: balances.spending + PAYMENT_SATS,
-    total: balances.total + PAYMENT_SATS,
-  };
-  await expectMigrationBalances(afterPayment);
-  recordStage(method, 'payment-received', await readMigrationBalances());
   await waitForBackup();
   await driver.terminateApp(getAppId());
   await driver.activateApp(getAppId());
-  await expectMigrationBalances(afterPayment);
+  await expectMigrationBalances(balances);
   recordStage(method, 'relaunch-verified', await readMigrationBalances());
   await verifyNativeHistory();
-  await tap('ActivityShowAll');
-  await tap('Tab-received');
-  // The only new received transaction is the live Lightning payment.
-  await expectTextWithin('Activity-1', '1 000');
-  await expectTextWithin('Activity-1', '+');
-  await doNavigationClose();
 }
 
 function recordStage(method: string, stage: string, balances?: MigrationBalances) {

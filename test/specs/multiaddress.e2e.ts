@@ -112,7 +112,8 @@ describe('@multi_address - Multi address', () => {
     await expect(spendingBalanceAfter).toEqual(0);
   });
 
-  ciIt(
+  // Blocktank staging no longer creates orders (synonymdev/blocktank-lsp-http#168)
+  ciIt.skip(
     '@multi_address_2, @multi_address_staging, @staging - Receive to each address type, transfer all to spending, close channel to taproot',
     async () => {
       const addressTypes: addressTypePreference[] = ['p2pkh', 'p2sh-p2wpkh', 'p2wpkh', 'p2tr'];

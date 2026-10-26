@@ -361,7 +361,8 @@ describe('@transfer - Transfer', () => {
     electrum?.stop();
   });
 
-  ciIt(
+  // Blocktank staging no longer creates orders (synonymdev/blocktank-lsp-http#168)
+  ciIt.skip(
     '@transfer_1, @transfer_staging, @staging - Can buy a channel from Blocktank with default and custom receive capacity',
     async () => {
       await receiveOnchainFunds({ sats: 1000_000, expectHighBalanceWarning: true });
@@ -410,7 +411,8 @@ describe('@transfer - Transfer', () => {
     }
   );
 
-  ciIt(
+  // Blocktank staging no longer creates orders (synonymdev/blocktank-lsp-http#168)
+  ciIt.skip(
     '@transfer_max, @transfer_staging, @staging - Can fund a Blocktank channel at the settled maximum',
     async () => {
       await receiveOnchainFunds({ sats: 100_000 });
