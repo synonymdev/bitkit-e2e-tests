@@ -7,7 +7,9 @@ The routine migration suite has four cases per platform. Every case starts with 
 | React Native 1.1.6      | `@migration_rn_restore`           | `@migration_rn_upgrade`     |
 | Previous native release | `@migration_native_restore`       | `@migration_native_upgrade` |
 
-All apps and tests use remote **regtest**. The native baseline is pinned per platform in `config/migration-baselines.json` (currently 2.5.0), not selected from GitHub's latest release. The app workflows retain nightly, manual, and release-PR triggers. Manual `previous_native_version` overrides the pinned tag. Routine runs do not prepare or run passphrase/legacy-address wallets.
+All apps and tests use remote **regtest**. The native baseline is pinned per platform in `config/migration-baselines.json` (currently 3.0.1), not selected from GitHub's latest release. The app workflows retain nightly, manual, and release-PR triggers. Manual `previous_native_version` overrides the pinned tag. Routine runs do not prepare or run passphrase/legacy-address wallets.
+
+Archived 2.5.0 and 3.0.0 remain available as explicit `previous_native_version` overrides; advancing the default does not remove their artifacts or recorded checksums. Run different source versions sequentially on the same target branch to avoid workflow concurrency cancellation.
 
 ## Run locally
 
