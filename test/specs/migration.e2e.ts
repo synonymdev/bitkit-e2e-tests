@@ -56,7 +56,6 @@ const TAG_SENT = 'sent';
 const INITIAL_FUND_SATS = 500_000; // 500k sats initial funding
 const ONCHAIN_SEND_SATS = 50_000; // 50k sats for on-chain send test
 // const CJIT_INVOICE_SATS = 3000; // Unused - Blocktank regtest doesn't support CJIT
-const TRANSFER_TO_SPENDING_SATS = 100_000; // 100k for creating a channel
 
 // Passphrase for passphrase-protected wallet tests
 const TEST_PASSPHRASE = 'supersecret';
@@ -317,7 +316,8 @@ async function getRnTotalBalance(): Promise<number> {
  * 1. Create new wallet (optionally with passphrase)
  * 2. Fund with on-chain tx (add tag to latest tx)
  * 3. Send on-chain tx (add tag to latest tx)
- * 4. Transfer to spending balance (create channel via Blocktank)
+ *
+ * No spending balance: Blocktank staging no longer creates orders (synonymdev/blocktank-lsp-http#168).
  *
  * On iOS: RN app has poor Appium support for wallet creation, so we restore
  * from mnemonic/balance provided via env vars (RN_MNEMONIC, RN_BALANCE).
@@ -391,18 +391,10 @@ async function setupLegacyWallet(
   await sendRnOnchain(ONCHAIN_SEND_SATS);
   await tagLatestTransaction(TAG_SENT);
 
-  // 3. Transfer to spending (create channel via Blocktank)
-  console.info('→ Step 3: Creating spending balance (channel)...');
-  await transferToSpendingRN(TRANSFER_TO_SPENDING_SATS);
-
-  // Verify spending balance is visible (channel created)
-  console.info('→ Verifying spending balance is visible...');
-  await assertRnSpendingBalanceVisible(TRANSFER_TO_SPENDING_SATS);
-
   // Get final balance before migration
   const balance = await getRnTotalBalance();
 
-  await waitForRnBackup();
+  await waitForRnBackup(false);
   console.info('=== Legacy wallet setup complete ===');
 
   // Output for iOS CI to capture
@@ -858,64 +850,6 @@ async function sendRnOnchain(
 }
 
 /**
- * Transfer savings to spending balance (create channel via Blocktank)
- */
-async function transferToSpendingRN(sats: number, existingBalance = 0): Promise<void> {
-  // Navigate via ActivitySavings -> TransferToSpending
-  // ActivitySavings should be visible near the top of the wallet screen
-  try {
-    await elementById('ActivitySavings').waitForDisplayed({ timeout: 5000 });
-  } catch {
-    console.info('→ Scrolling to find ActivitySavings...');
-    // Scroll down to reveal ActivitySavings if hidden
-    await swipeFullScreenRN('down');
-  }
-  await tap('ActivitySavings');
-  await elementById('TransferToSpending').waitForDisplayed();
-  await tap('TransferToSpending');
-
-  // Handle intro screen if shown
-  await sleep(1000);
-  await tap('SpendingIntro-button'); // "Get Started"
-  await sleep(1000); // let animation finish
-
-  // Enter amount
-  const satsStr = String(sats);
-  for (const digit of satsStr) {
-    await tap(`N${digit}`);
-  }
-  await tap('SpendingAmountContinue');
-
-  // Confirm screen - swipe to transfer (no intermediate button needed)
-  await sleep(1000);
-  await dragOnElement('GRAB', 'right', 0.95);
-  await sleep(5000);
-  await handleAndroidAlert();
-
-  // Mine blocks periodically to progress the channel opening
-  console.info('→ Mining blocks to confirm channel...');
-  for (let i = 0; i < 10; i++) {
-    await mineBlocks(1);
-    // Check if spending balance shows the transferred amount (transfer complete)
-    try {
-      await elementById('TransferSuccess-button').waitForDisplayed();
-      await sleep(1000);
-      break;
-    } catch {
-      console.info('→ Transfer successful screen did not appear, waiting...');
-    }
-  }
-
-  await sleep(3000);
-  await tap('TransferSuccess-button');
-  await electrumClient?.waitForSync();
-  await sleep(3000);
-  const expectedBalance = (existingBalance + sats).toLocaleString('en').replace(/,/g, ' ');
-  await expectText(expectedBalance);
-  console.info(`→ Created spending balance with ${sats} sats`);
-}
-
-/**
  * Tag the latest (most recent) transaction in the activity list.
  *
  * Improved version with:
@@ -1031,32 +965,6 @@ async function tapActivityAndWaitForTag(activityId: string): Promise<void> {
     await sleep(1_000);
     await elementById('ActivityTag').waitForDisplayed({ timeout: 30_000 });
   }
-}
-
-/**
- * Assert that spending balance is visible in RN app.
- * Waits for ActivitySpending to show the expected amount.
- */
-async function assertRnSpendingBalanceVisible(expectedSats: number): Promise<void> {
-  const expectedText = expectedSats.toLocaleString('en').replace(/,/g, ' ');
-  for (let attempt = 1; attempt <= 10; attempt++) {
-    try {
-      await elementById('ActivitySpending').waitForDisplayed({ timeout: 5_000 });
-      const spendingEl = await elementById('ActivitySpending');
-      const text = await getAccessibleText(spendingEl);
-      if (text.includes(expectedText.replace(/\s/g, '')) || text.includes(expectedText)) {
-        console.info(`→ Spending balance confirmed: ${text}`);
-        return;
-      }
-      console.info(
-        `→ Spending balance check (attempt ${attempt}/10): "${text}" vs "${expectedText}"`
-      );
-    } catch {
-      console.info(`→ ActivitySpending not visible yet (attempt ${attempt}/10)`);
-    }
-    await sleep(2_000);
-  }
-  throw new Error(`RN source spending balance did not reach ${expectedSats} sats`);
 }
 
 /** Verify the final metadata and channel backups before exporting or migrating a source wallet. */
@@ -1198,19 +1106,19 @@ async function verifyMigration(
 
   await expectMigrationBalances({
     total: expectedBalance,
-    spending: TRANSFER_TO_SPENDING_SATS,
-    savings: expectedBalance - TRANSFER_TO_SPENDING_SATS,
+    spending: 0,
+    savings: expectedBalance,
   });
 
   // Go to activity list to verify transactions exist
   await tap('ActivityShowAll');
 
-  // All transactions (Transfer, Sent, Received = 3 items)
-  await expectTextWithin('Activity-1', '-'); // Transfer (spending)
-  await expectTextWithin('Activity-2', '-'); // Sent
-  await expectTextWithin('Activity-3', '+'); // Received
+  // All transactions (Sent, Received = 2 items)
+  await expectTextWithin('Activity-1', '-'); // Sent
+  await expectTextWithin('Activity-2', '+'); // Received
+  await elementById('Activity-3').waitForDisplayed({ reverse: true });
 
-  // Sent tab: should show Sent tx only (not Transfer)
+  // Sent tab: should show Sent tx only
   await tap('Tab-sent');
   await expectTextWithin('Activity-1', '-');
   await elementById('Activity-2').waitForDisplayed({ reverse: true });
@@ -1220,11 +1128,9 @@ async function verifyMigration(
   await expectTextWithin('Activity-1', '+');
   await elementById('Activity-2').waitForDisplayed({ reverse: true });
 
-  // Other tab: should show Transfer (spending) tx
+  // Other tab: no transfers without a spending balance
   await tap('Tab-other');
-  await elementById('Activity-1').waitForDisplayed();
-  await expectTextWithin('Activity-1', '-'); // Transfer shows here
-  await elementById('Activity-2').waitForDisplayed({ reverse: true });
+  await elementById('Activity-1').waitForDisplayed({ reverse: true });
 
   if (verifyTags) {
     // filter by receive tag (metadata restore can lag Electrum balance after mnemonic restore)
@@ -1238,7 +1144,7 @@ async function verifyMigration(
     // filter by send tag
     await openTagFilter(TAG_SENT);
     await tap(`Tag-${TAG_SENT}`);
-    await expectTextWithin('Activity-1', '-'); // Only sent tx has this tag (not Transfer)
+    await expectTextWithin('Activity-1', '-'); // Only sent tx has this tag
     await elementById('Activity-2').waitForDisplayed({ reverse: true });
     await tap(`Tag-${TAG_SENT}-delete`);
 

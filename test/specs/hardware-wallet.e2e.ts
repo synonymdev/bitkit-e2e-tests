@@ -90,7 +90,8 @@ describe('@hardware_wallet @ios_gate - Hardware Wallet', () => {
     await expectSpendingBalance(0);
   });
 
-  ciIt('@hardware_wallet_3 - Can transfer hardware wallet funds to spending', async () => {
+  // Blocktank staging no longer creates orders (synonymdev/blocktank-lsp-http#168)
+  ciIt.skip('@hardware_wallet_3 - Can transfer hardware wallet funds to spending', async () => {
     const fundingSats = 100_000;
     const transferSats = 20_000;
 
