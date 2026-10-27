@@ -45,7 +45,7 @@ To execute native E2E tests from an external orchestrator:
 
 Coverage:
 
-- Settings → Lightning Connections → add connection: automatic funding is disabled, Manual Setup opens with node/host/port fields, and the wallet remains accessible.
+- Settings → Lightning Connections → add connection: automatic funding remains unavailable, Manual Setup opens with node/host/port fields, and the wallet remains accessible. In `legacy` mode, tapping Transfer from Savings in an empty wallet must show the existing No Available Funds dialog, which is cancelled; in `manual` mode the same tap must be inert. The overlapping Android nodes share `FundTransfer`, so their `enabled` accessibility flag is not used as a transfer-availability assertion.
 - Receive → Spending → Receive Lightning funds: the unavailable screen appears instead of a CJIT quote, can be dismissed/reopened, and leads to Manual Setup.
 - Receive on-chain: a mainnet native SegWit address remains available without a Lightning channel.
 

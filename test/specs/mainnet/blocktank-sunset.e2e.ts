@@ -27,7 +27,7 @@ async function expectManualSetup(): Promise<void> {
   }
 }
 
-async function expectTransferTapToBeInert(): Promise<void> {
+async function expectTransferTapToRemainUnavailable(): Promise<void> {
   const transfer = elementById('FundTransfer');
   const [location, size] = await Promise.all([transfer.getLocation(), transfer.getSize()]);
   // A physical tap reaches the empty-wallet overlay as well as the disabled button beneath it.
@@ -50,7 +50,14 @@ async function expectTransferTapToBeInert(): Promise<void> {
     },
   ]);
   await driver.releaseActions();
-  await sleep(1000);
+  if (sunsetUi === 'legacy') {
+    // v3.0.1 intentionally intercepts an empty wallet's tap with a no-funds dialog,
+    // even while geoblocked. Its overlay shares FundTransfer and reports enabled.
+    await expectText('No Available Funds');
+    await tap('DialogCancel');
+  } else {
+    await sleep(1000);
+  }
   await expectText('No Available Funds', { visible: false });
   await elementById('SpendingAmountContinue').waitForDisplayed({ reverse: true });
   await elementById('ReceiveScreen').waitForDisplayed({ reverse: true });
@@ -93,13 +100,13 @@ describe('@blocktank_sunset_mainnet - Blocktank sunset', () => {
       await tap('Channels');
       await tap('add_connection_button');
       await expectText(sunsetUi === 'legacy' ? blockedText : manualSetupText);
-      // FundTransfer's first Android node is the disabled button; a second node is its empty-wallet overlay.
-      await expect(elementById('FundTransfer')).not.toBeEnabled();
+      // Duplicate FundTransfer tags do not guarantee which semantics node is returned.
+      // Check the physical tap's result rather than assuming isEnabled means a transfer is available.
+      await expectTransferTapToRemainUnavailable();
       await expect(elementById('FundReceive')).not.toBeEnabled();
       if (sunsetUi === 'manual') {
         await expect(elementById('FundHardware')).not.toBeEnabled();
         await elementById('FundLearnMore').waitForDisplayed();
-        await expectTransferTapToBeInert();
       }
       await expect(elementById('FundManual')).toBeEnabled();
       await tap('FundManual');
