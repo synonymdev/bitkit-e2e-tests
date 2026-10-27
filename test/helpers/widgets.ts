@@ -191,7 +191,7 @@ export async function expectWidgetSavedInEditList(
 export async function deleteWidget(widget: WidgetId) {
   await scrollHomeToWidgets();
   await tap('WidgetsEdit');
-  await tap(widgetActionId(widget, 'Delete'));
+  await tapWidgetDelete(widget);
   await elementByText('Yes, Delete').waitForDisplayed();
   await elementByText('Yes, Delete').click();
   await elementById(widgetActionId(widget, 'Delete')).waitForDisplayed({
@@ -207,7 +207,7 @@ export async function deleteWidgets(widgets: WidgetId[]) {
   await scrollHomeToWidgets();
   await tap('WidgetsEdit');
   for (const widget of widgets) {
-    if (!(await tapIfDisplayed(widgetActionId(widget, 'Delete')))) {
+    if (!(await tapWidgetDelete(widget, true))) {
       continue;
     }
     await elementByText('Yes, Delete').waitForDisplayed();
@@ -220,6 +220,45 @@ export async function deleteWidgets(widgets: WidgetId[]) {
     await sleep(500);
   }
   await tap('WidgetsEdit');
+}
+
+async function tapWidgetDelete(widget: WidgetId, optional = false): Promise<boolean> {
+  const testId = widgetActionId(widget, 'Delete');
+  try {
+    await elementById(testId).waitForDisplayed(optional ? { timeout: 2_000 } : {});
+  } catch (error) {
+    if (optional) return false;
+    throw error;
+  }
+
+  if (driver.isAndroid) {
+    // Android reports scrolled controls beneath the fixed Home header as displayed.
+    for (let attempt = 0; ; attempt++) {
+      const target = await elementById(testId);
+      const header = await elementById('WidgetsEdit');
+      const [position, size, headerPosition, headerSize, window] = await Promise.all([
+        target.getLocation(),
+        target.getSize(),
+        header.getLocation(),
+        header.getSize(),
+        driver.getWindowSize(),
+      ]);
+      const coveredByHeader = position.y < headerPosition.y + headerSize.height;
+      const belowViewport = position.y + size.height > window.height * 0.9;
+      if (!coveredByHeader && !belowViewport) break;
+      if (attempt === 5) throw new Error(`Widget delete control remains obscured: ${testId}`);
+      await swipeFullScreen(coveredByHeader ? 'down' : 'up', {
+        downStartYPercent: 0.4,
+        downEndYPercent: 0.7,
+        upStartYPercent: 0.7,
+        upEndYPercent: 0.4,
+      });
+    }
+  }
+
+  await elementById(testId).click();
+  await sleep(300);
+  return true;
 }
 
 export async function deleteAllDefaultWidgets() {
