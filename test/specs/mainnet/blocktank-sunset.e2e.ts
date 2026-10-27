@@ -5,6 +5,7 @@ import {
   elementByText,
   expectText,
   getReceiveAddress,
+  sleep,
   swipeFullScreen,
   tap,
 } from '../../helpers/actions';
@@ -24,6 +25,36 @@ async function expectManualSetup(): Promise<void> {
   for (const id of ['NodeIdInput', 'HostInput', 'PortInput']) {
     await elementById(id).waitForDisplayed();
   }
+}
+
+async function expectTransferTapToBeInert(): Promise<void> {
+  const transfer = elementById('FundTransfer');
+  const [location, size] = await Promise.all([transfer.getLocation(), transfer.getSize()]);
+  // A physical tap reaches the empty-wallet overlay as well as the disabled button beneath it.
+  // The inert overlay has no disabled semantics, so isEnabled alone cannot detect its regression.
+  await driver.performActions([
+    {
+      type: 'pointer',
+      id: 'sunset-finger',
+      parameters: { pointerType: 'touch' },
+      actions: [
+        {
+          type: 'pointerMove',
+          duration: 0,
+          x: Math.round(location.x + size.width / 2),
+          y: Math.round(location.y + size.height / 2),
+        },
+        { type: 'pointerDown', button: 0 },
+        { type: 'pointerUp', button: 0 },
+      ],
+    },
+  ]);
+  await driver.releaseActions();
+  await sleep(1000);
+  await expectText('No Available Funds', { visible: false });
+  await elementById('SpendingAmountContinue').waitForDisplayed({ reverse: true });
+  await elementById('ReceiveScreen').waitForDisplayed({ reverse: true });
+  await elementById('FundManual').waitForDisplayed();
 }
 
 async function expectUnavailable(): Promise<void> {
@@ -68,6 +99,7 @@ describe('@blocktank_sunset_mainnet - Blocktank sunset', () => {
       if (sunsetUi === 'manual') {
         await expect(elementById('FundHardware')).not.toBeEnabled();
         await elementById('FundLearnMore').waitForDisplayed();
+        await expectTransferTapToBeInert();
       }
       await expect(elementById('FundManual')).toBeEnabled();
       await tap('FundManual');
