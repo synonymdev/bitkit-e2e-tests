@@ -201,32 +201,15 @@ export async function expectTextWithin(
     strategy?: RetrieveStrategy;
   } = {}
 ) {
-  const parent = elementById(ancestorId);
-  await parent.waitForDisplayed({ timeout });
-
-  if (driver.isIOS) {
-    const parentLabel = await parent.getAttribute('label');
-    const parentValue = await parent.getAttribute('value');
-    const matchesParent = (() => {
-      if (strategy === 'exact') {
-        return (
-          (typeof parentLabel === 'string' && parentLabel === text) ||
-          (typeof parentValue === 'string' && parentValue === text)
-        );
-      }
-      return (
-        (typeof parentLabel === 'string' && parentLabel.includes(text)) ||
-        (typeof parentValue === 'string' && parentValue.includes(text))
-      );
-    })();
-
-    if (matchesParent) {
-      if (!visible) {
-        await parent.waitForDisplayed({ reverse: true, timeout });
-      }
-      return;
-    }
-  }
+  const matchesParent = async (parent: ChainablePromiseElement) => {
+    if (!driver.isIOS) return false;
+    const label = await parent.getAttribute('label');
+    const value = await parent.getAttribute('value');
+    return [label, value].some(
+      (value) =>
+        typeof value === 'string' && (strategy === 'exact' ? value === text : value.includes(text))
+    );
+  };
 
   const needle = (() => {
     if (driver.isAndroid) {
@@ -238,10 +221,28 @@ export async function expectTextWithin(
       : `.//*[self::XCUIElementTypeStaticText or self::XCUIElementTypeTextView or self::XCUIElementTypeTextField or self::XCUIElementTypeButton][contains(@label,'${text}') or contains(@value,'${text}')]`;
   })();
 
-  if (!visible) {
-    await parent.$(needle).waitForDisplayed({ reverse: true, timeout });
+  const parent = elementById(ancestorId);
+  await parent.waitForDisplayed({ timeout });
+
+  if (visible) {
+    await browser.waitUntil(
+      async () => {
+        // A list-position identifier can move to another element while its contents load.
+        const currentParent = elementById(ancestorId);
+        if (!(await currentParent.isDisplayed())) return false;
+        return (
+          (await matchesParent(currentParent)) || (await currentParent.$(needle).isDisplayed())
+        );
+      },
+      { timeout, timeoutMsg: `Expected "${text}" within "${ancestorId}"` }
+    );
+    return;
+  }
+
+  if (await matchesParent(parent)) {
+    await parent.waitForDisplayed({ reverse: true, timeout });
   } else {
-    await parent.$(needle).waitForDisplayed({ timeout });
+    await parent.$(needle).waitForDisplayed({ reverse: true, timeout });
   }
 }
 
