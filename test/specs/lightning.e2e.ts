@@ -279,9 +279,7 @@ describe('@lightning @ios_gate - Lightning', () => {
     await mineBlocks(6);
     await electrum?.waitForSync();
     await elementById('Channel').waitForDisplayed({ reverse: true });
-    if (driver.isAndroid) {
-      await tap('NavigationBack');
-    }
+    await tap('NavigationBack');
     await doNavigationClose();
 
     await expectTextWithin('ActivityShort-0', '9 000');
