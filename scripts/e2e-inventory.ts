@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { assertExecutionIdentity, executionIdentity } from '../test/reporting/identity.ts';
 import { parseArgs } from 'node:util';
 import {
   loadInventory,
@@ -39,16 +39,7 @@ try {
         throw new Error('Plan already exists; use a fresh run directory');
       const plan = createPlan(
         inventory.cases,
-        {
-          runId: process.env.E2E_RUN_ID!,
-          platform: values.platform as Platform,
-          backend: values.backend as Backend,
-          appSha: process.env.E2E_APP_SHA!,
-          e2eSha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
-          artifactDigest: process.env.E2E_ARTIFACT_DIGEST!,
-          backendRevision: process.env.E2E_BACKEND_REVISION!,
-          variant: process.env.E2E_VARIANT || 'default',
-        },
+        executionIdentity(values.platform as Platform, values.backend as Backend),
         digest(fs.readFileSync('test/inventory.json', 'utf8')),
         values.pack!,
         Number(process.env.E2E_MAX_ATTEMPTS || '1')
@@ -60,6 +51,7 @@ try {
     }
   } else if (command === 'report') {
     const plan: Plan = JSON.parse(fs.readFileSync(values.plan!, 'utf8'));
+    assertExecutionIdentity(plan);
     const directory = path.join(path.dirname(values.plan!), 'workers');
     const reports: WorkerReport[] = fs.existsSync(directory)
       ? fs

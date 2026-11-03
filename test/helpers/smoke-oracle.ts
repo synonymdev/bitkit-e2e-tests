@@ -1,8 +1,9 @@
 import crypto from 'node:crypto';
 import net from 'node:net';
+import tls from 'node:tls';
 import { address, networks, payments, Transaction } from 'bitcoinjs-lib';
 
-export type Endpoint = { host: string; port: number };
+export type Endpoint = { host: string; port: number; protocol: 'tls' | 'tcp' };
 export type PaymentEvidence = {
   txid: string;
   address: string;
@@ -35,7 +36,14 @@ export function electrumRequest(
   timeoutMs = 10_000
 ): Promise<unknown> {
   return new Promise((resolve, reject) => {
-    const socket = net.createConnection(endpoint);
+    const socket =
+      endpoint.protocol === 'tls'
+        ? tls.connect({
+            host: endpoint.host,
+            port: endpoint.port,
+            servername: net.isIP(endpoint.host) ? undefined : endpoint.host,
+          })
+        : net.createConnection({ host: endpoint.host, port: endpoint.port });
     let buffer = '';
     let settled = false;
     const finish = (error?: Error, result?: unknown) => {
@@ -51,7 +59,7 @@ export function electrumRequest(
       timeoutMs
     );
     socket.setEncoding('utf8');
-    socket.on('connect', () =>
+    socket.on(endpoint.protocol === 'tls' ? 'secureConnect' : 'connect', () =>
       socket.write(JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) + '\n')
     );
     socket.on('error', (error) => finish(new Error(`Smoke backend unavailable: ${error.message}`)));
@@ -160,4 +168,13 @@ export async function regtestOperation(
   if (!response.ok)
     throw new Error(`Smoke regtest ${operation} unavailable: HTTP ${response.status}`);
   return (await response.text()).trim();
+}
+
+/** Parse BIP21 decimal BTC exactly; never round fractional satoshis into a pass. */
+export function bitcoinAmountToSats(value: string): number {
+  const match = /^(0|[1-9][0-9]*)(?:\.([0-9]{1,8}))?$/.exec(value);
+  if (!match) throw new Error('Invalid BIP21 amount');
+  const sats = BigInt(match[1]) * 100_000_000n + BigInt((match[2] || '').padEnd(8, '0'));
+  if (sats > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('BIP21 amount exceeds safe range');
+  return Number(sats);
 }

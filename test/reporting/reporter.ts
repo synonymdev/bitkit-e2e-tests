@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import WDIOReporter, { type HookStats, type RunnerStats, type TestStats } from '@wdio/reporter';
+import { assertExecutionIdentity } from './identity.ts';
 import { caseId } from './inventory.ts';
 import { digest, validatePlan, writeJson, type Plan, type WorkerReport } from './report.ts';
 
@@ -13,6 +14,7 @@ export default class InventoryReporter extends WDIOReporter {
     super({ ...options, stdout: false });
     this.plan = JSON.parse(fs.readFileSync(process.env.E2E_PLAN!, 'utf8'));
     validatePlan(this.plan);
+    assertExecutionIdentity(this.plan);
     if (
       this.plan.identity.platform !== process.env.PLATFORM ||
       this.plan.identity.backend !== (process.env.BACKEND || 'local') ||

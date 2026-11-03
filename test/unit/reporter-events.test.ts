@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { executionIdentity } from '../reporting/identity.ts';
 import InventoryReporter from '../reporting/reporter.ts';
 import { loadInventory } from '../reporting/inventory.ts';
 import {
@@ -20,6 +21,11 @@ function fixture(t: test.TestContext) {
     PLATFORM: process.env.PLATFORM,
     BACKEND: process.env.BACKEND,
     ATTEMPT: process.env.ATTEMPT,
+    E2E_RUN_ID: process.env.E2E_RUN_ID,
+    E2E_APP_SHA: process.env.E2E_APP_SHA,
+    E2E_ARTIFACT_DIGEST: process.env.E2E_ARTIFACT_DIGEST,
+    E2E_BACKEND_REVISION: process.env.E2E_BACKEND_REVISION,
+    E2E_VARIANT: process.env.E2E_VARIANT,
   };
   t.after(() => {
     for (const [key, value] of Object.entries(previous)) {
@@ -28,18 +34,16 @@ function fixture(t: test.TestContext) {
     }
     fs.rmSync(directory, { recursive: true, force: true });
   });
+  Object.assign(process.env, {
+    E2E_RUN_ID: 'reporter-integration',
+    E2E_APP_SHA: 'a'.repeat(40),
+    E2E_ARTIFACT_DIGEST: 'c'.repeat(64),
+    E2E_BACKEND_REVISION: 'stag0',
+    E2E_VARIANT: 'default',
+  });
   const plan = createPlan(
     loadInventory(process.cwd()).cases,
-    {
-      runId: 'reporter-integration',
-      platform: 'ios',
-      backend: 'regtest',
-      appSha: 'a'.repeat(40),
-      e2eSha: 'b'.repeat(40),
-      artifactDigest: 'c'.repeat(64),
-      backendRevision: 'stag0',
-      variant: 'default',
-    },
+    executionIdentity('ios', 'regtest'),
     digest(fs.readFileSync('test/inventory.json', 'utf8')),
     'smoke'
   );
@@ -115,4 +119,39 @@ test('framework retries cannot silently turn one-attempt smoke green', (t) => {
   f.passAll();
   f.reporter.emit('runner:end', { failures: 0 });
   assert.equal(reconcile(f.plan, [f.receipt()]).status, 'incomplete');
+});
+
+test('old plans reject changed current run, app, artifact, backend, platform or variant inputs', (t) => {
+  fixture(t);
+  for (const key of [
+    'E2E_RUN_ID',
+    'E2E_APP_SHA',
+    'E2E_ARTIFACT_DIGEST',
+    'E2E_BACKEND_REVISION',
+    'E2E_VARIANT',
+    'BACKEND',
+    'PLATFORM',
+  ]) {
+    const value = process.env[key];
+    process.env[key] = 'changed';
+    assert.throws(
+      () => new InventoryReporter({ writeStream: { write: () => true } }),
+      /Run plan does not match executing/
+    );
+    process.env[key] = value;
+  }
+});
+test('old plan rejects changed actual E2E source revision even with unchanged inventory', (t) => {
+  const f = fixture(t);
+  const stale = createPlan(
+    f.plan.cases,
+    { ...f.plan.identity, e2eSha: 'f'.repeat(40) },
+    f.plan.inventoryDigest,
+    f.plan.pack
+  );
+  writeJson(process.env.E2E_PLAN!, stale);
+  assert.throws(
+    () => new InventoryReporter({ writeStream: { write: () => true } }),
+    /executing e2eSha/
+  );
 });

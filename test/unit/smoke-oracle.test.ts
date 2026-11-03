@@ -3,6 +3,7 @@ import net from 'node:net';
 import test from 'node:test';
 import { address, networks, Transaction } from 'bitcoinjs-lib';
 import {
+  bitcoinAmountToSats,
   electrumRequest,
   freshRegtestRecipient,
   history,
@@ -36,7 +37,11 @@ async function server(
     for (const s of sockets) s.destroy();
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
-  return { host: '127.0.0.1', port: (server.address() as net.AddressInfo).port };
+  return {
+    host: '127.0.0.1',
+    port: (server.address() as net.AddressInfo).port,
+    protocol: 'tcp' as const,
+  };
 }
 test('fresh recipients are distinct valid regtest addresses', () => {
   const one = freshRegtestRecipient(),
@@ -115,4 +120,35 @@ test('end-to-end oracle reads history then independently decodes the payment', a
   );
   const result = await waitForPayment(endpoint, recipient, 10_000, { spendsTxid: 'ab'.repeat(32) });
   assert.equal(result.txid, tx.getId());
+});
+
+test('BIP21 amounts compare exact satoshis without floating-point rounding', () => {
+  assert.equal(bitcoinAmountToSats('0.00000123'), 123);
+  assert.equal(bitcoinAmountToSats('0.00000001'), 1);
+  assert.equal(bitcoinAmountToSats('1.1'), 110_000_000);
+  assert.notEqual(bitcoinAmountToSats('0.00000124'), 123);
+  for (const value of ['1e-8', '-0.1', '0.000000001', 'NaN', '', '1.2x', '999999999999999']) {
+    assert.throws(() => bitcoinAmountToSats(value), /BIP21/);
+  }
+});
+test('TLS endpoints send a TLS handshake instead of plaintext RPC', async (t) => {
+  let firstByte: number | undefined;
+  const listener = net.createServer((socket) =>
+    socket.once('data', (data) => {
+      firstByte = data[0];
+      socket.destroy();
+    })
+  );
+  await new Promise<void>((resolve) => listener.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise<void>((resolve) => listener.close(() => resolve())));
+  await assert.rejects(
+    electrumRequest(
+      { host: '127.0.0.1', port: (listener.address() as net.AddressInfo).port, protocol: 'tls' },
+      'server.version',
+      [],
+      1000
+    ),
+    /Smoke backend/
+  );
+  assert.equal(firstByte, 0x16, 'First record must be TLS handshake, not plaintext JSON');
 });

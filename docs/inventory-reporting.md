@@ -29,6 +29,8 @@ is enabled only when `E2E_PLAN` points to a prepared plan. Use a fresh directory
 each run; plans and worker files cannot overwrite an earlier run. For example:
 
 ```sh
+export PLATFORM=ios
+export BACKEND=regtest
 export E2E_RUN_ID="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-ios-smoke"
 export E2E_APP_SHA='<tested 40-character app commit>'
 export E2E_ARTIFACT_DIGEST='<SHA-256 of the matching app archive>'

@@ -19,6 +19,7 @@ import { blocktankURL, electrumHost, electrumPort, getBackend } from '../helpers
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 import {
+  bitcoinAmountToSats,
   freshRegtestRecipient,
   history,
   regtestOperation,
@@ -28,7 +29,7 @@ import {
 import { writeJson } from '../reporting/report';
 
 describe('@ios_smoke - Focused wallet smoke (shadow)', () => {
-  const endpoint = { host: electrumHost, port: electrumPort };
+  const endpoint = { host: electrumHost, port: electrumPort, protocol: 'tls' as const };
   before(() => {
     if (getBackend() !== 'regtest')
       throw new Error('Smoke requires a matching regtest app build and BACKEND=regtest');
@@ -63,7 +64,7 @@ describe('@ios_smoke - Focused wallet smoke (shadow)', () => {
     assert.equal(encodedAddress, recipient);
     const amount = new URLSearchParams(query).get('amount');
     assert.ok(amount, 'Receive QR must encode the specified amount');
-    assert.equal(Number(amount) * 100_000_000, 123);
+    assert.equal(bitcoinAmountToSats(amount), 123);
   });
 
   ciIt('@smoke_onchain_1 - Receive and send with independent transaction evidence', async () => {
