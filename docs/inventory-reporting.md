@@ -10,9 +10,11 @@ Every iOS app-code PR starts with these existing cases, unchanged:
 
 - `send_1`, `send_2`, `lightning_1`, `transfer_2`, `boost_2`.
 
-`scripts/ci-selection.cjs` adds cases by changed path. Hardware adds active hardware tests; LNURL adds its case; address/coin-selection adds multi-address, on-chain and boost tests; fees add boost/on-chain/send; onboarding/backup/recovery adds its tests and migration; security adds security and payment checks; Pubky/Paykit/profile/contact changes add the staging pack; receive/send/lightning/settings/widgets add the corresponding cases. Rules are additive and IDs are deduplicated.
+The iOS repo owns `.github/e2e-policy.json`, its selector and policy tests. Its tested app checkout supplies the policy; this repository supplies only the case inventory and execution/reporting. Change iOS paths and their policy together in the same PR. See [iOS policy documentation](https://github.com/synonymdev/bitkit-ios/blob/master/Docs/e2e-ci.md).
 
-Shared services, repositories, models, dependencies, build/CI configuration, USDT changes and unclassified code paths select all applicable local, staging and migration packs. Both sides of renamed files are considered. Documentation-only changes skip device jobs. The selection artifact records the tested app SHA, E2E SHA, cases, reasons, lanes and explicit coverage gaps.
+Feature directories and explicit service/model/helper files add only their relevant existing cases. For example, widget services add widget cases, Paykit services add staging, and backup services add recovery/migration. Only named shared wallet/lifecycle dependencies and build/orchestration configuration select every lane. There is no blanket Services/Models/Managers/Utilities rule.
+
+Cheap iOS validation checks all tracked paths, stale policy entries and referenced case IDs. Unknown paths fail with an actionable policy-update error before paid builds. Old and new rename paths contribute coverage from the base and tested policies, so a refactor cannot silently drop coverage. Documentation/native-test/policy-only changes skip device jobs. Selection records cases, reasons, app/E2E/policy identity and explicit gaps. USDT-specific paths retain the Bitcoin base gate and report the lack of existing USDT E2E coverage; unrelated Bitcoin tests do not establish USDT correctness.
 
 PRs stacked on another branch retain the existing automatic exclusion. Manual dispatch with `pr` checks the PR's current merge against its actual base/head, including stacked PRs. The workflow source is the branch selected for dispatch. `selection=auto` uses the PR diff; `base` runs the five cases; `full` runs all applicable lanes. Automatic PRs cannot narrow selection with a manual input.
 

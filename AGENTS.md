@@ -171,7 +171,7 @@ Implication for feature work:
 
 ## iOS CI selection
 
-The iOS consumer selects cases from `test/inventory.json` using `scripts/ci-selection.cjs`, not the historical `@ios_gate` and `@ios_nightly` tags. Its base cases are `send_1`, `send_2`, `lightning_1`, `transfer_2`, `boost_2`; automatic risk selection expands coverage. Nightly runs all applicable local/staging/migration cases. See [inventory and reporting](docs/inventory-reporting.md).
+The iOS consumer owns its path policy in `bitkit-ios/.github/e2e-policy.json` and selector in `.github/scripts/e2e-selection.cjs`. It reads this repo's `test/inventory.json`; iOS paths and selection policy do not belong in this shared repo. Historical `@ios_gate` and `@ios_nightly` tags do not control that consumer. Its base cases are `send_1`, `send_2`, `lightning_1`, `transfer_2`, `boost_2`; automatic risk selection expands coverage. Nightly runs all applicable local/staging/migration cases. See [inventory and reporting](docs/inventory-reporting.md).
 
 Keep capability tags for Android's existing selectors and manual execution. Android workflows and selections are unchanged. Do not rename tags merely to match the iOS policy.
 
