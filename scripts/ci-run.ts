@@ -11,6 +11,7 @@ import {
 import { executionIdentity, assertExecutionIdentity } from '../test/reporting/identity.ts';
 import {
   createPlan,
+  validatePlan,
   digest,
   writeJson,
   reconcile,
@@ -21,7 +22,13 @@ import {
   type AttemptReceipt,
 } from '../test/reporting/report.ts';
 
-async function runProcess(runner: string, args: string[], env: NodeJS.ProcessEnv, log: string) {
+async function runProcess(
+  runner: string,
+  args: string[],
+  env: NodeJS.ProcessEnv,
+  log: string,
+  timeoutMinutes: number
+) {
   const output = fs.createWriteStream(log);
   const child = spawn(runner, args, { env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
   let cancelled = false;
@@ -49,9 +56,12 @@ async function runProcess(runner: string, args: string[], env: NodeJS.ProcessEnv
   const timer = setTimeout(
     () => {
       timedOut = true;
+      console.error(
+        `Runner attempt exceeded ${timeoutMinutes} minutes; terminating its process group`
+      );
       stop();
     },
-    40 * 60 * 1000
+    timeoutMinutes * 60 * 1000
   );
   child.stdout?.on('data', (data) => {
     process.stdout.write(data);
@@ -116,7 +126,7 @@ function summary(plan: Plan) {
   writeJson(path.join(directory, 'summary.json'), result);
   const markdown =
     markdownReport(result) +
-    `\nAttempts: ${result.attemptsUsed}/${result.maxAttempts}.\n\n` +
+    `\nAttempts: ${result.attemptsUsed}/${result.maxAttempts}. Limit per attempt: ${plan.attemptTimeoutMinutes ?? 40} minutes.\n\n` +
     result.attempts
       .map(
         (a) =>
@@ -174,7 +184,8 @@ async function main() {
         executionIdentity(platform, backend),
         digest(fs.readFileSync('test/inventory.json', 'utf8')),
         'selected',
-        3
+        3,
+        Number(process.env.E2E_ATTEMPT_TIMEOUT_MINUTES ?? '40')
       );
       writeJson(planFile, plan);
       fs.writeFileSync(
@@ -183,6 +194,7 @@ async function main() {
       );
     } else {
       const plan: Plan = JSON.parse(fs.readFileSync(planFile, 'utf8'));
+      validatePlan(plan);
       assertExecutionIdentity(plan);
       if (command === 'run' || command === 'attempt') {
         const currentAttempt = command === 'attempt' ? Number(process.env.ATTEMPT) : 1;
@@ -210,11 +222,15 @@ async function main() {
           const file = path.join(directory, `attempt-${attempt}.json`);
           writeJson(file, receipt);
           const args = ['--mochaOpts.grep', grep];
+          console.info(
+            `Attempt ${attempt}/${plan.maxAttempts}: limit ${plan.attemptTimeoutMinutes ?? 40} minutes`
+          );
           const child = await runProcess(
             runner,
             args,
             { ...process.env, ATTEMPT: String(attempt), E2E_PLAN: planFile },
-            path.join(directory, `attempt-${attempt}-runner.log`)
+            path.join(directory, `attempt-${attempt}-runner.log`),
+            plan.attemptTimeoutMinutes ?? 40
           );
           receipt.finishedAt = new Date().toISOString();
           receipt.exitCode = child.status ?? 1;

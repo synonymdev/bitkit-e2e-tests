@@ -5,6 +5,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import {
   createPlan,
+  validatePlan,
   reconcileAttempts,
   type Identity,
   type WorkerReport,
@@ -93,7 +94,7 @@ for (const [name, reports, attempts] of [
     assert.equal(reconcileAttempts(plan, reports, attempts).status, 'incomplete')
   );
 
-for (const failures of [0, 1, 2, 3])
+for (const failures of [0, 1, 2, 3, 'timeout'] as const)
   test(`actual CI wrapper stops correctly after ${failures} initial failures`, (t) => {
     fs.mkdirSync('artifacts', { recursive: true });
     const root = fs.mkdtempSync(path.resolve('artifacts/retry-fixture-'));
@@ -120,12 +121,13 @@ for (const failures of [0, 1, 2, 3])
     );
     fs.writeFileSync(
       path.join(root, 'stub.cjs'),
-      `const fs=require('fs');const p=JSON.parse(fs.readFileSync(process.env.E2E_PLAN,'utf8'));const a=Number(process.env.ATTEMPT);const failed=a<=${failures};fs.mkdirSync('artifacts/reporting/workers',{recursive:true});fs.mkdirSync('artifacts/attempt-'+a,{recursive:true});fs.writeFileSync('artifacts/attempt-'+a+'/evidence.txt',failed?'first failure':'pass');fs.writeFileSync('artifacts/reporting/workers/attempt-'+a+'.json',JSON.stringify({schemaVersion:1,planId:p.id,attempt:a,cid:'0-0',startedAt:new Date().toISOString(),finishedAt:new Date().toISOString(),failures:failed?1:0,errors:[],events:p.expected.map(id=>({id,status:failed?'failed':'passed',durationMs:1}))}));process.exitCode=failed?1:0;`
+      `const fs=require('fs');const p=JSON.parse(fs.readFileSync(process.env.E2E_PLAN,'utf8'));const a=Number(process.env.ATTEMPT);const failed=a<=${typeof failures === 'number' ? failures : 0};fs.mkdirSync('artifacts/reporting/workers',{recursive:true});fs.mkdirSync('artifacts/attempt-'+a,{recursive:true});fs.writeFileSync('artifacts/attempt-'+a+'/evidence.txt',failed?'first failure':'pass');fs.writeFileSync('artifacts/reporting/workers/attempt-'+a+'.json',JSON.stringify({schemaVersion:1,planId:p.id,attempt:a,cid:'0-0',startedAt:new Date().toISOString(),finishedAt:new Date().toISOString(),failures:failed?1:0,errors:[],events:p.expected.map(id=>({id,status:failed?'failed':'passed',durationMs:1}))}));process.exitCode=failed?1:0;${failures === 'timeout' ? 'setInterval(()=>{},1000);' : ''}`
     );
     const env = {
       ...process.env,
       PLATFORM: 'ios',
       BACKEND: 'local',
+      E2E_ATTEMPT_TIMEOUT_MINUTES: '90',
       E2E_APP_SHA: identity.appSha,
       E2E_RUN_ID: 'wrapper-fixture',
       E2E_BACKEND_REVISION: 'local',
@@ -134,10 +136,21 @@ for (const failures of [0, 1, 2, 3])
       GITHUB_ENV: path.join(root, 'env'),
       GITHUB_STEP_SUMMARY: path.join(root, 'summary.md'),
     };
+    const clock = path.join(root, 'fast-clock.cjs');
+    // Exercise the real timeout/kill/retry path without waiting 90 minutes.
+    fs.writeFileSync(
+      clock,
+      `const real=global.setTimeout;global.setTimeout=(fn,ms,...args)=>real(fn,ms===5400000?2000:ms,...args);`
+    );
     const invoke = (cmd: string) =>
       spawnSync(
         process.execPath,
-        ['--experimental-strip-types', path.resolve('scripts/ci-run.ts'), cmd],
+        [
+          ...(failures === 'timeout' ? ['--require', clock] : []),
+          '--experimental-strip-types',
+          path.resolve('scripts/ci-run.ts'),
+          cmd,
+        ],
         { cwd: root, env, encoding: 'utf8' }
       );
     const prep = invoke('prepare');
@@ -152,15 +165,28 @@ for (const failures of [0, 1, 2, 3])
           .map((line) => line.split('='))
       )
     );
+    const prepared = JSON.parse(fs.readFileSync(path.join(root, env.E2E_PLAN), 'utf8'));
+    assert.equal(prepared.attemptTimeoutMinutes, 90);
+    env.E2E_ATTEMPT_TIMEOUT_MINUTES = '1'; // Run uses the sealed plan, not a mutable environment.
     const run = invoke('run');
-    assert.equal(run.status, failures === 3 ? 1 : 0, run.stderr);
+    assert.equal(run.status, failures === 3 || failures === 'timeout' ? 1 : 0, run.stderr);
+    if (failures === 'timeout') assert.match(run.stderr, /exceeded 90 minutes/);
     const s = JSON.parse(
       fs.readFileSync(path.join(root, 'artifacts/reporting/summary.json'), 'utf8')
     );
-    assert.equal(s.attemptsUsed, Math.min(failures + 1, 3));
-    assert.equal(s.firstFailure, failures > 0);
+    assert.equal(s.attemptsUsed, failures === 'timeout' ? 3 : Math.min(failures + 1, 3));
+    assert.equal(s.firstFailure, failures === 'timeout' || failures > 0);
     assert.equal(
       fs.readFileSync(path.join(root, 'artifacts/attempt-1/evidence.txt'), 'utf8'),
-      failures ? 'first failure' : 'pass'
+      typeof failures === 'number' && failures ? 'first failure' : 'pass'
     );
   });
+
+test('attempt budget is bounded, sealed and backwards compatible', () => {
+  validatePlan(plan); // Existing plans retain their default 40-minute budget.
+  const p = createPlan(cases, identity, 'd'.repeat(64), 'selected', 3, 90);
+  validatePlan(p);
+  assert.throws(() => validatePlan({ ...p, attemptTimeoutMinutes: 40 }), /Run plan changed/);
+  for (const n of [0, -1, 91, Infinity, NaN, 1.5])
+    assert.throws(() => createPlan(cases, identity, 'd'.repeat(64), 'selected', 3, n), /Invalid/);
+});

@@ -20,6 +20,7 @@ export type Plan = {
   inventoryDigest: string;
   pack: string;
   maxAttempts: number;
+  attemptTimeoutMinutes?: number;
   cases: InventoryCase[];
   expected: string[];
 };
@@ -56,7 +57,8 @@ export function createPlan(
   identity: Identity,
   inventoryDigest: string,
   pack: string,
-  maxAttempts = 1
+  maxAttempts = 1,
+  attemptTimeoutMinutes?: number
 ): Plan {
   if (
     !['ios', 'android'].includes(identity.platform) ||
@@ -68,7 +70,11 @@ export function createPlan(
     !/^[a-f0-9]{64}$/.test(inventoryDigest) ||
     !Number.isInteger(maxAttempts) ||
     maxAttempts < 1 ||
-    maxAttempts > 3
+    maxAttempts > 3 ||
+    (attemptTimeoutMinutes !== undefined &&
+      (!Number.isInteger(attemptTimeoutMinutes) ||
+        attemptTimeoutMinutes < 1 ||
+        attemptTimeoutMinutes > 90))
   ) {
     throw new Error('Invalid or incomplete run identity/attempt policy');
   }
@@ -92,6 +98,7 @@ export function createPlan(
     inventoryDigest,
     pack,
     maxAttempts,
+    ...(attemptTimeoutMinutes === undefined ? {} : { attemptTimeoutMinutes }),
     cases: selected,
     expected,
   };
@@ -104,7 +111,8 @@ export function validatePlan(plan: Plan): void {
     plan.identity,
     plan.inventoryDigest,
     plan.pack,
-    plan.maxAttempts
+    plan.maxAttempts,
+    plan.attemptTimeoutMinutes
   );
   if (
     rebuilt.id !== plan.id ||
