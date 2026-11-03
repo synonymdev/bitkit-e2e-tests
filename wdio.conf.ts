@@ -3,6 +3,7 @@ import fs from 'node:fs';
 
 import { grantIOSCameraPermission } from './test/helpers/setup';
 import InventoryReporter from './test/reporting/reporter';
+import { selectedSpecs } from './test/reporting/specs';
 
 const appiumPort = Number(process.env.APPIUM_PORT ?? '4723');
 const isAndroid = process.env.PLATFORM === 'android';
@@ -48,7 +49,7 @@ export const config: WebdriverIO.Config = {
   //
   // Spec in [] will be run in a separate worker process.
   // Running all specs sequentially for now.
-  specs: [['./test/specs/**/*.ts']],
+  specs: process.env.E2E_PLAN ? [selectedSpecs(process.env.E2E_PLAN)] : [['./test/specs/**/*.ts']],
   // Patterns to exclude.
   exclude: [
     // 'path/to/excluded/files'
@@ -69,7 +70,7 @@ export const config: WebdriverIO.Config = {
   // and 30 processes will get spawned. The property handles how many capabilities
   // from the same test should run tests.
   //
-  maxInstances: 10,
+  maxInstances: process.env.E2E_PLAN ? 1 : 10,
   //
   // If you have trouble getting all important capabilities together, check out the
   // Sauce Labs platform configurator - a great tool to configure your capabilities:

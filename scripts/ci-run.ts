@@ -129,114 +129,118 @@ function summary(plan: Plan) {
   if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, markdown);
   return result;
 }
-try {
-  if (command === 'prepare') {
-    if (fs.existsSync(planFile)) throw Error('Plan exists: use a fresh run directory');
-    const inventory = loadInventory(process.cwd());
-    validateInventory(process.cwd(), inventory);
-    const platform = process.env.PLATFORM as Platform,
-      backend = (process.env.BACKEND || 'local') as Backend;
-    const ids: string[] = process.env.E2E_CASE_TAG
-      ? [process.env.E2E_CASE_TAG.replace(/^@/, '')]
-      : JSON.parse(process.env.E2E_CASE_IDS || '[]');
-    if (!Array.isArray(ids) || !ids.length || new Set(ids).size !== ids.length)
-      throw Error('Empty or duplicate case selection');
-    const cases = inventory.cases.filter((c) => ids.includes(c.id));
-    if (
-      cases.length !== ids.length ||
-      cases.some(
-        (c) =>
-          c.kind !== 'test' ||
-          c.platforms[platform]?.disposition !== 'required' ||
-          c.platforms[platform]?.backend !== backend
-      )
-    )
-      throw Error('Selection contains unknown, unavailable or wrong-backend cases');
-    const metadata = JSON.parse(fs.readFileSync('aut/e2e-build.json', 'utf8'));
-    if (
-      metadata.appSha !== process.env.E2E_APP_SHA ||
-      metadata.backend !== backend ||
-      metadata.platform !== platform
-    )
-      throw Error('Downloaded build does not match selected app/platform/backend');
-    const artifact = artifactHash(
-      path.join(
-        'aut',
-        process.env.AUT_FILENAME || (platform === 'ios' ? 'bitkit.app' : 'bitkit_e2e.apk')
-      )
-    );
-    process.env.E2E_ARTIFACT_DIGEST = artifact;
-    if (process.env.GITHUB_ENV)
-      fs.appendFileSync(process.env.GITHUB_ENV, `E2E_ARTIFACT_DIGEST=${artifact}\n`);
-    const plan = createPlan(
-      cases,
-      executionIdentity(platform, backend),
-      digest(fs.readFileSync('test/inventory.json', 'utf8')),
-      'selected',
-      3
-    );
-    writeJson(planFile, plan);
-    fs.writeFileSync(
-      path.join(directory, 'grep.txt'),
-      `(?:^| )@(?:${plan.expected.join('|')})(?=[ ,]|$)\n`
-    );
-    // Only load selected spec files, avoiding unrelated fixture hooks and environment requirements.
-    writeJson(path.join(directory, 'specs.json'), [...new Set(cases.map((c) => c.file))]);
-  } else {
-    const plan: Plan = JSON.parse(fs.readFileSync(planFile, 'utf8'));
-    assertExecutionIdentity(plan);
-    if (command === 'run' || command === 'attempt') {
-      const currentAttempt = command === 'attempt' ? Number(process.env.ATTEMPT) : 1;
+async function main() {
+  try {
+    if (command === 'prepare') {
+      if (fs.existsSync(planFile)) throw Error('Plan exists: use a fresh run directory');
+      const inventory = loadInventory(process.cwd());
+      validateInventory(process.cwd(), inventory);
+      const platform = process.env.PLATFORM as Platform,
+        backend = (process.env.BACKEND || 'local') as Backend;
+      const ids: string[] = process.env.E2E_CASE_TAG
+        ? [process.env.E2E_CASE_TAG.replace(/^@/, '')]
+        : JSON.parse(process.env.E2E_CASE_IDS || '[]');
+      if (!Array.isArray(ids) || !ids.length || new Set(ids).size !== ids.length)
+        throw Error('Empty or duplicate case selection');
+      const cases = inventory.cases.filter((c) => ids.includes(c.id));
       if (
-        !Number.isInteger(currentAttempt) ||
-        currentAttempt < 1 ||
-        currentAttempt > plan.maxAttempts
+        cases.length !== ids.length ||
+        cases.some(
+          (c) =>
+            c.kind !== 'test' ||
+            c.platforms[platform]?.disposition !== 'required' ||
+            c.platforms[platform]?.backend !== backend
+        )
       )
-        throw Error('Invalid attempt');
-      if (receipts().length !== currentAttempt - 1)
-        throw Error('Unexpected attempt receipts; refusing to reuse another execution');
-      if (currentAttempt > 1 && reconcileAttempts(plan, workers(), receipts()).status === 'passed')
-        throw Error('Previous attempt already passed');
-      const specs: string[] = JSON.parse(
-        fs.readFileSync(path.join(directory, 'specs.json'), 'utf8')
+        throw Error('Selection contains unknown, unavailable or wrong-backend cases');
+      const metadata = JSON.parse(fs.readFileSync('aut/e2e-build.json', 'utf8'));
+      if (
+        metadata.appSha !== process.env.E2E_APP_SHA ||
+        metadata.backend !== backend ||
+        metadata.platform !== platform
+      )
+        throw Error('Downloaded build does not match selected app/platform/backend');
+      const artifact = artifactHash(
+        path.join(
+          'aut',
+          process.env.AUT_FILENAME || (platform === 'ios' ? 'bitkit.app' : 'bitkit_e2e.apk')
+        )
       );
-      const grep = fs.readFileSync(path.join(directory, 'grep.txt'), 'utf8').trim();
-      const runner = plan.identity.platform === 'ios' ? './ci_run_ios.sh' : './ci_run_android.sh';
-      for (
-        let attempt = currentAttempt;
-        attempt <= (command === 'attempt' ? currentAttempt : plan.maxAttempts);
-        attempt++
-      ) {
-        const receipt: AttemptReceipt = { attempt, startedAt: new Date().toISOString() };
-        const file = path.join(directory, `attempt-${attempt}.json`);
-        writeJson(file, receipt);
-        const args = specs.flatMap((spec) => ['--spec', spec]).concat(['--mochaOpts.grep', grep]);
-        const child = await runProcess(
-          runner,
-          args,
-          { ...process.env, ATTEMPT: String(attempt), E2E_PLAN: planFile },
-          path.join(directory, `attempt-${attempt}-runner.log`)
-        );
-        receipt.finishedAt = new Date().toISOString();
-        receipt.exitCode = child.status ?? 1;
-        writeJson(file, receipt);
-        const result = reconcile(
-          plan,
-          workers().filter((w) => w.attempt === attempt)
-        );
-        writeJson(path.join(directory, `attempt-${attempt}-summary.json`), {
-          ...result,
-          runnerExit: receipt.exitCode,
-        });
-        if (child.cancelled || (receipt.exitCode === 0 && result.status === 'passed')) break;
-        console.error(
-          `Attempt ${attempt} failed; evidence retained in ${directory} and artifacts/attempt-${attempt}`
-        );
-      }
-    } else if (command !== 'report') throw Error('Usage: ci-run.ts prepare|run|attempt|report');
-    if (summary(plan).status !== 'passed') process.exitCode = 1;
+      process.env.E2E_ARTIFACT_DIGEST = artifact;
+      if (process.env.GITHUB_ENV)
+        fs.appendFileSync(process.env.GITHUB_ENV, `E2E_ARTIFACT_DIGEST=${artifact}\n`);
+      const plan = createPlan(
+        cases,
+        executionIdentity(platform, backend),
+        digest(fs.readFileSync('test/inventory.json', 'utf8')),
+        'selected',
+        3
+      );
+      writeJson(planFile, plan);
+      fs.writeFileSync(
+        path.join(directory, 'grep.txt'),
+        `(?:^| )@(?:${plan.expected.join('|')})(?=[ ,]|$)\n`
+      );
+    } else {
+      const plan: Plan = JSON.parse(fs.readFileSync(planFile, 'utf8'));
+      assertExecutionIdentity(plan);
+      if (command === 'run' || command === 'attempt') {
+        const currentAttempt = command === 'attempt' ? Number(process.env.ATTEMPT) : 1;
+        if (
+          !Number.isInteger(currentAttempt) ||
+          currentAttempt < 1 ||
+          currentAttempt > plan.maxAttempts
+        )
+          throw Error('Invalid attempt');
+        if (receipts().length !== currentAttempt - 1)
+          throw Error('Unexpected attempt receipts; refusing to reuse another execution');
+        if (
+          currentAttempt > 1 &&
+          reconcileAttempts(plan, workers(), receipts()).status === 'passed'
+        )
+          throw Error('Previous attempt already passed');
+        const grep = fs.readFileSync(path.join(directory, 'grep.txt'), 'utf8').trim();
+        const runner = plan.identity.platform === 'ios' ? './ci_run_ios.sh' : './ci_run_android.sh';
+        for (
+          let attempt = currentAttempt;
+          attempt <= (command === 'attempt' ? currentAttempt : plan.maxAttempts);
+          attempt++
+        ) {
+          const receipt: AttemptReceipt = { attempt, startedAt: new Date().toISOString() };
+          const file = path.join(directory, `attempt-${attempt}.json`);
+          writeJson(file, receipt);
+          const args = ['--mochaOpts.grep', grep];
+          const child = await runProcess(
+            runner,
+            args,
+            { ...process.env, ATTEMPT: String(attempt), E2E_PLAN: planFile },
+            path.join(directory, `attempt-${attempt}-runner.log`)
+          );
+          receipt.finishedAt = new Date().toISOString();
+          receipt.exitCode = child.status ?? 1;
+          writeJson(file, receipt);
+          const result = reconcile(
+            plan,
+            workers().filter((w) => w.attempt === attempt)
+          );
+          writeJson(path.join(directory, `attempt-${attempt}-summary.json`), {
+            ...result,
+            runnerExit: receipt.exitCode,
+          });
+          if (child.cancelled || (receipt.exitCode === 0 && result.status === 'passed')) break;
+          console.error(
+            `Attempt ${attempt} failed; evidence retained in ${directory} and artifacts/attempt-${attempt}`
+          );
+        }
+      } else if (command !== 'report') throw Error('Usage: ci-run.ts prepare|run|attempt|report');
+      if (summary(plan).status !== 'passed') process.exitCode = 1;
+    }
+  } catch (error) {
+    console.error(error);
+    process.exitCode = 1;
   }
-} catch (error) {
+}
+void main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
-}
+});
