@@ -43,13 +43,13 @@ function fixture(t: test.TestContext) {
   });
   const plan = createPlan(
     loadInventory(process.cwd()).cases,
-    executionIdentity('ios', 'regtest'),
+    executionIdentity('ios', 'local'),
     digest(fs.readFileSync('test/inventory.json', 'utf8')),
-    'smoke'
+    'local-money'
   );
   process.env.E2E_PLAN = path.join(directory, 'plan.json');
   process.env.PLATFORM = 'ios';
-  process.env.BACKEND = 'regtest';
+  process.env.BACKEND = 'local';
   process.env.ATTEMPT = '1';
   writeJson(process.env.E2E_PLAN, plan);
   const reporter = new InventoryReporter({ writeStream: { write: () => true } });
@@ -57,7 +57,7 @@ function fixture(t: test.TestContext) {
     cid: '0-0',
     capabilities: { platformName: 'iOS' },
     config: {},
-    specs: ['test/specs/smoke.e2e.ts'],
+    specs: ['test/specs/send.e2e.ts'],
   });
   const receipt = () =>
     JSON.parse(
@@ -65,7 +65,7 @@ function fixture(t: test.TestContext) {
     ) as WorkerReport;
   const passAll = () => {
     for (const id of plan.expected) {
-      const e = { uid: id, cid: '0-0', title: `@${id} - test`, fullTitle: `smoke @${id} - test` };
+      const e = { uid: id, cid: '0-0', title: `@${id} - test`, fullTitle: `fixture @${id} - test` };
       reporter.emit('test:start', e);
       reporter.emit('test:pass', e);
       reporter.emit('test:end', e);
@@ -107,10 +107,10 @@ test('hook failure is recorded even if runner failure count is zero', (t) => {
 test('interruption retains incremental case evidence without a successful finish', (t) => {
   const f = fixture(t);
   f.passAll();
-  assert.equal(f.receipt().events.length, 3);
+  assert.equal(f.receipt().events.length, f.plan.expected.length);
   assert.equal(reconcile(f.plan, [f.receipt()]).status, 'incomplete');
 });
-test('framework retries cannot silently turn one-attempt smoke green', (t) => {
+test('framework retries cannot silently turn one-attempt fixture green', (t) => {
   const f = fixture(t);
   const id = f.plan.expected[0];
   const event = { uid: id, cid: '0-0', title: `@${id} - retry` };

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "inventory:check": "node --experimental-strip-types scripts/e2e-inventory.ts check",
-    "test:reporting": "node --experimental-strip-types --test test/unit/inventory.test.ts test/unit/reporting.test.ts test/unit/reporting-cli.test.ts test/unit/reporter-events.test.ts test/unit/smoke-oracle.test.ts",
+    "test:reporting": "node --experimental-strip-types --test test/unit/inventory.test.ts test/unit/reporting.test.ts test/unit/reporting-cli.test.ts test/unit/reporter-events.test.ts test/unit/ci-selection.test.cjs test/unit/ci-retry.test.ts",
     "e2e:android": "PLATFORM=android wdio run ./wdio.conf.ts",
     "e2e:ios": "PLATFORM=ios wdio run ./wdio.conf.ts",
     "lint": "eslint './**/*.{ts,js}'",

@@ -7,7 +7,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -634,7 +634,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -716,7 +716,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -735,7 +735,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -754,7 +754,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -773,7 +773,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -792,7 +792,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -811,7 +811,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -830,7 +830,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -849,7 +849,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -1086,7 +1086,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -1105,7 +1105,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -1124,7 +1124,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -1181,7 +1181,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -1200,7 +1200,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -1219,7 +1219,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -1238,7 +1238,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -1257,7 +1257,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -1276,7 +1276,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -1295,7 +1295,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -1314,7 +1314,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "gap",
           "fixtures": ["fresh-wallet"],
@@ -1339,7 +1339,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -1377,7 +1377,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -1396,7 +1396,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -1415,7 +1415,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -1434,7 +1434,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -1522,7 +1522,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -1541,7 +1541,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -1560,7 +1560,7 @@
       "kind": "test",
       "platforms": {
         "ios": {
-          "backend": "regtest",
+          "backend": "local",
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
@@ -1570,63 +1570,6 @@
           "pack": "core-ui",
           "disposition": "required",
           "fixtures": ["fresh-wallet"]
-        }
-      }
-    },
-    {
-      "id": "smoke_wallet_1",
-      "file": "test/specs/smoke.e2e.ts",
-      "kind": "test",
-      "platforms": {
-        "ios": {
-          "backend": "regtest",
-          "pack": "smoke",
-          "disposition": "required",
-          "fixtures": ["fresh-wallet", "regtest-funding-api", "independent-electrum-oracle"]
-        },
-        "android": {
-          "backend": "regtest",
-          "pack": "smoke",
-          "disposition": "required",
-          "fixtures": ["fresh-wallet", "regtest-funding-api", "independent-electrum-oracle"]
-        }
-      }
-    },
-    {
-      "id": "smoke_receive_1",
-      "file": "test/specs/smoke.e2e.ts",
-      "kind": "test",
-      "platforms": {
-        "ios": {
-          "backend": "regtest",
-          "pack": "smoke",
-          "disposition": "required",
-          "fixtures": ["fresh-wallet", "regtest-funding-api", "independent-electrum-oracle"]
-        },
-        "android": {
-          "backend": "regtest",
-          "pack": "smoke",
-          "disposition": "required",
-          "fixtures": ["fresh-wallet", "regtest-funding-api", "independent-electrum-oracle"]
-        }
-      }
-    },
-    {
-      "id": "smoke_onchain_1",
-      "file": "test/specs/smoke.e2e.ts",
-      "kind": "test",
-      "platforms": {
-        "ios": {
-          "backend": "regtest",
-          "pack": "smoke",
-          "disposition": "required",
-          "fixtures": ["fresh-wallet", "regtest-funding-api", "independent-electrum-oracle"]
-        },
-        "android": {
-          "backend": "regtest",
-          "pack": "smoke",
-          "disposition": "required",
-          "fixtures": ["fresh-wallet", "regtest-funding-api", "independent-electrum-oracle"]
         }
       }
     }

@@ -15,7 +15,7 @@ import type { InventoryCase } from '../reporting/inventory.ts';
 
 const assignment = {
   backend: 'regtest' as const,
-  pack: 'smoke',
+  pack: 'fixture',
   disposition: 'required' as const,
   fixtures: [],
 };
@@ -36,7 +36,7 @@ const identity: Identity = {
   variant: 'default',
 };
 function plan() {
-  return createPlan(cases, identity, 'd'.repeat(64), 'smoke', 3);
+  return createPlan(cases, identity, 'd'.repeat(64), 'fixture', 3);
 }
 function report(
   events: WorkerReport['events'],
@@ -68,7 +68,7 @@ test('same inputs on the following night require fresh receipts', () => {
     cases,
     { ...identity, runId: 'night-2026-11-04' },
     'd'.repeat(64),
-    'smoke',
+    'fixture',
     3
   );
   assert.notEqual(next.id, plan().id);
@@ -86,7 +86,7 @@ for (const change of [
       cases,
       { ...identity, ...change } as Identity,
       'd'.repeat(64),
-      'smoke',
+      'fixture',
       3
     );
     assert.equal(reconcile(next, [report(passes)]).status, 'incomplete');
@@ -95,7 +95,7 @@ for (const change of [
 test('unknown/empty packs and incomplete build identity cannot create a green plan', () => {
   assert.throws(() => createPlan(cases, identity, 'd'.repeat(64), 'typo'), /No expected cases/);
   assert.throws(
-    () => createPlan(cases, { ...identity, appSha: '' }, 'd'.repeat(64), 'smoke'),
+    () => createPlan(cases, { ...identity, appSha: '' }, 'd'.repeat(64), 'fixture'),
     /identity/
   );
 });
@@ -141,8 +141,8 @@ test('an old pass cannot mask a later failure', () => {
     'incomplete'
   );
 });
-test('single-attempt smoke rejects retry receipts', () => {
-  const single = createPlan(cases, identity, 'd'.repeat(64), 'smoke');
+test('single-attempt fixture rejects retry receipts', () => {
+  const single = createPlan(cases, identity, 'd'.repeat(64), 'fixture');
   assert.equal(
     reconcile(single, [report(passes, { planId: single.id, attempt: 2 })]).status,
     'incomplete'
@@ -156,7 +156,7 @@ test('known coverage gaps remain visible even if a case happened to pass', () =>
     reason: 'missing fixture validation',
     reference: '#264',
   };
-  const p = createPlan(data, identity, 'd'.repeat(64), 'smoke');
+  const p = createPlan(data, identity, 'd'.repeat(64), 'fixture');
   const result = reconcile(p, [report(passes, { planId: p.id })]);
   assert.equal(result.status, 'incomplete');
   assert.match(result.problems.join(' '), /Unresolved coverage gap/);

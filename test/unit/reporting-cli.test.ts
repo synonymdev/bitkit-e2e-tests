@@ -13,7 +13,7 @@ test('real CLI rejects a retained successful plan under a replacement execution'
   const env = {
     ...process.env,
     PLATFORM: 'ios',
-    BACKEND: 'regtest',
+    BACKEND: 'local',
     E2E_RUN_ID: 'cli-original',
     E2E_APP_SHA: 'a'.repeat(40),
     E2E_ARTIFACT_DIGEST: 'b'.repeat(64),
@@ -32,9 +32,9 @@ test('real CLI rejects a retained successful plan under a replacement execution'
     '--platform',
     'ios',
     '--backend',
-    'regtest',
+    'local',
     '--pack',
-    'smoke',
+    'local-money',
   ]);
   assert.equal(preparation.status, 0, preparation.stderr);
   const plan = JSON.parse(fs.readFileSync(planPath, 'utf8'));

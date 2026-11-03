@@ -1,99 +1,55 @@
-# Inventory and reporting rollout (#264)
+# iOS E2E selection and reporting
 
-The versioned `test/inventory.json` accounts for each source case on iOS and Android,
-including setup utilities, conditionally registered migrations, currently skipped
-cases and unsupported automation. It describes intended coverage, not proof that all
-nightly jobs currently exist. A `gap` remains incomplete coverage; an inventory check
-passing means the inventory is consistent with source, not that the tests passed.
+Issue: https://github.com/synonymdev/bitkit-e2e-tests/issues/264
 
-Run `npm run inventory:check` with Node 22.18+ or Node 24. Discovery reads TypeScript
-syntax without importing specs or executing hooks, and is independent of CI greps.
-Case titles start with one stable `@case_id`. Literal templates can interpolate
-finite loop values or literal factory arguments in that ID. Unknown dynamic IDs,
-untagged cases, duplicate IDs and focused tests fail validation. Keep each new/renamed
-case and its two platform assignments in the same change. Cases must be declared
-with `ciIt`/`it` rather than aliases or computed registration functions.
+The iOS `e2e-tests.yml` entry point owns PR selection, manual validation and the nightly schedule. Existing staging and migration workflows are reusable execution lanes. There is no shadow gate. Android workflow triggers, test selection, backend assignments and legacy retry behavior remain unchanged.
 
-The initial destinations retain iOS remote-regtest UI, local money/mining and
-hardware jobs, Android local UI/money and staging hardware, staging Pubky/Paykit,
-migration variants and private mainnet orchestration. `settings_10` and `onchain_3`
-need local execution on both platforms. Mainnet iOS support and currently skipped
-cases are explicit gaps linked to #264, not invented platform exemptions.
-Fixture flags in the manifest are requirements, not secrets or actual fixture values.
-Migration source/target versions must be supplied in each run's `E2E_VARIANT`.
+## PR selection
 
-## Opt-in execution
+Every iOS app-code PR starts with these existing cases, unchanged:
 
-Existing invocations and gates keep their current selectors and verdicts. Reporting
-is enabled only when `E2E_PLAN` points to a prepared plan. Use a fresh directory for
-each run; plans and worker files cannot overwrite an earlier run. For example:
+- `send_1`, `send_2`, `lightning_1`, `transfer_2`, `boost_2`.
+
+`scripts/ci-selection.cjs` adds cases by changed path. Hardware adds active hardware tests; LNURL adds its case; address/coin-selection adds multi-address, on-chain and boost tests; fees add boost/on-chain/send; onboarding/backup/recovery adds its tests and migration; security adds security and payment checks; Pubky/Paykit/profile/contact changes add the staging pack; receive/send/lightning/settings/widgets add the corresponding cases. Rules are additive and IDs are deduplicated.
+
+Shared services, repositories, models, dependencies, build/CI configuration, USDT changes and unclassified code paths select all applicable local, staging and migration packs. Both sides of renamed files are considered. Documentation-only changes skip device jobs. The selection artifact records the tested app SHA, E2E SHA, cases, reasons, lanes and explicit coverage gaps.
+
+PRs stacked on another branch retain the existing automatic exclusion. Manual dispatch with `pr` checks the PR's current merge against its actual base/head, including stacked PRs. The workflow source is the branch selected for dispatch. `selection=auto` uses the PR diff; `base` runs the five cases; `full` runs all applicable lanes. Automatic PRs cannot narrow selection with a manual input.
+
+## Nightly
+
+The main iOS workflow runs nightly at 03:00 UTC, without a changed-revision shortcut:
+
+| Lane | Active existing cases |
+| --- | --- |
+| Local | 42: all core UI, local money, on-chain, multi-address and active hardware cases |
+| Staging | 6: `pubky_profile_1` through `pubky_profile_5`, `paykit_1` |
+| Migration | 6: native restore/upgrade, RN restore/upgrade, passphrase and legacy-address migration |
+
+The 54 cases use the appropriate local or remote-regtest build and fixtures. Migration setup entries are fixtures, not extra regression passes. Five existing skipped cases and six unsupported iOS mainnet cases remain explicit gaps; the interactive Lightning payment utility remains manual. This does not invent missing USDT, allowance or subscription automation.
+
+## Attempts and evidence
+
+`scripts/ci-run.ts` prepares a plan tied to the actual E2E checkout, selected app SHA, downloaded artifact digest, platform, backend, variant and run identity. Selection rejects unknown, skipped or wrong-backend cases. Only selected spec files load.
+
+A run permits up to three attempts and stops after the first runner exit-zero with exact complete case coverage. Each attempt retains worker events, process outcome and timing. The local/staging wrapper owns retries; migration keeps its existing per-attempt prepared-wallet setup and invokes the same wrapper one attempt at a time. An inventory-enabled attempt reruns the complete selected pack, avoiding dependence on the machine's legacy `/tmp/lock`. Android's non-inventory execution retains its existing retry locks.
+
+A recovered failure is reported as a recovery, with the first failed/missing case results and earlier errors retained. Missing reports, setup/teardown errors, incomplete workers, unexpected skips, stale identities or a nonzero final runner cannot produce a pass. The parent `e2e-status` requires every selected local/staging/migration job and build to succeed.
+
+## Cost controls and manual validation
+
+Automatic runs use one local shard. Only manual dispatch can request two, partitioned by spec so a spec's fixture lifecycle stays together. Namespace supplies a separate Mac and backend instance per shard; every shard destroys its backend in cleanup. The local app is built once and reused. Staging and migration share one remote-regtest app build in the combined run. Builds have a 40-minute limit; execution jobs 135 minutes; individual runner attempts 40 minutes. Artifacts are retained for seven days and superseded runs cancel.
+
+Compare `selection=full, shards=1` and `selection=full, shards=2` on the same app and E2E revisions. Inspect elapsed/build/setup/test time, first-pass success and billed Mac plus backend usage. Two shards are an experiment, not an assumed cost saving or a new automatic default.
+
+Merge the E2E producer before the iOS consumer. Before merging, dispatch the existing iOS workflow from the development branch and explicitly select the E2E development branch. Validate base/full/automatic selection, failures/recovery and the optional shard experiment. The default branch's gate stays intact until the consumer is merged. No parallel shadow workflow is installed.
+
+## Local checks
 
 ```sh
-export PLATFORM=ios
-export BACKEND=regtest
-export E2E_RUN_ID="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-ios-smoke"
-export E2E_APP_SHA='<tested 40-character app commit>'
-export E2E_ARTIFACT_DIGEST='<SHA-256 of the matching app archive>'
-export E2E_BACKEND_REVISION='regtest:stag0'
-export E2E_VARIANT='default'
-export E2E_PLAN="$PWD/artifacts/reporting/plan.json"
-node --experimental-strip-types scripts/e2e-inventory.ts plan \
-  --platform ios --backend regtest --pack core-ui --plan "$E2E_PLAN"
-BACKEND=regtest ATTEMPT=1 ./ci_run_ios.sh \
-  --mochaOpts.grep "$(cat artifacts/reporting/grep.txt)"
-# Run even when the runner failed. The report command exits nonzero on incomplete coverage.
-node --experimental-strip-types scripts/e2e-inventory.ts report --plan "$E2E_PLAN"
+npm run inventory:check
+npm run test:reporting
+npx tsc --noEmit
 ```
 
-Retain the plan, worker JSON and summary files alongside failure diagnostics. The
-report checks exact case IDs, source/build/backend/run identity, missing workers or
-cases, unexpected skips, duplicate execution and interrupted runs. Runner failure
-after passing cases (including teardown failure) still fails the report. JSON keeps
-per-case timing and attempt history; Markdown can be appended to the Actions summary.
-These are test execution durations, not billed Mac/Linux usage.
-
-One attempt is the default. An explicit `E2E_MAX_ATTEMPTS` of 2 or 3 allows a bounded
-retry policy; recovered failures remain visible. Inventory-enabled runs bypass the
-legacy `/tmp/lock` mechanism and rerun selected cases. A receipt from another night,
-source, build, backend or migration variant cannot satisfy the current plan. Existing
-non-inventory invocations retain their legacy retry behavior.
-
-`--pack nightly` selects all applicable obligations for one platform/backend,
-including known gaps. It is a building block for the later full-nightly orchestration;
-it neither starts a schedule nor declares a platform's whole nightly complete. That
-orchestrator must reconcile every required backend/job/variant and detect a missing
-scheduled batch. It must run on both platforms every night even for unchanged inputs.
-An empty selection fails rather than becoming an empty green run.
-
-## Stages
-
-1. Land the inventory/reporting producer and its validation checks first.
-2. Add the iOS smoke workflow as manual-only validation using the producer's
-   companion branch or a revision containing these files. Keep the current required
-   gates and schedules; do not run both gates automatically on each PR.
-3. Measure real smoke duration, concurrent-run isolation and first-pass reliability
-   before proposing any required-check change. The iOS two-shard pilot, automatic PR
-   risk selection and full nightly orchestration remain separate stages.
-
-No ruleset change or existing check-name replacement is part of these first stages.
-
-## Shadow smoke producer
-
-The `smoke` pack contains three fresh-wallet regtest cases: `smoke_wallet_1`
-(Home), `smoke_receive_1` (receive QR address and exact entered amount), and
-`smoke_onchain_1` (fund and send). The payment oracle queries Electrum directly,
-recomputes transaction IDs from raw transactions, checks the exact recipient and
-amount, and requires the outgoing payment to spend this case's funding transaction.
-A fresh recipient prevents another concurrent run's payment from satisfying the
-assertion. The oracle uses bounded requests and stores raw transaction evidence.
-These cases do not match the existing `@ios_gate` or Android feature selectors.
-
-The iOS consumer is `.github/workflows/e2e-smoke-shadow.yml`. Land this producer
-before enabling that workflow; for paired branches, use the same branch name in
-both repositories. A missing producer fails visibly. Reporting remains opt-in:
-existing automatic gates and schedules continue unchanged. This stage does not
-activate full nightly coverage, risk packs or the two-shard experiment.
-
-The iOS smoke consumer has only a manual dispatch trigger during validation. After
-validation, switch the automatic PR gate in one change, without an automatic
-overlap period. The lightweight shared inventory check can continue automatically.
+The CLI workflow tests use controlled runner fixtures; they are not evidence that hosted Appium journeys passed. Actual hosted measurements and device results must name their revisions and environments.

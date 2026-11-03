@@ -75,7 +75,8 @@ export function createPlan(
   const selected = cases.filter((item) => {
     const assignment = item.platforms[identity.platform];
     return (
-      assignment.backend === identity.backend && (pack === 'nightly' || assignment.pack === pack)
+      assignment.backend === identity.backend &&
+      (pack === 'selected' || pack === 'nightly' || assignment.pack === pack)
     );
   });
   const expected = selected
@@ -183,7 +184,12 @@ export function reconcile(plan: Plan, reports: WorkerReport[]) {
       }
     }
     if (status !== 'passed') problems.push(`${id}: ${status}`);
-    return { id, status, firstAttempt: history[0]?.event.status ?? 'missing', history };
+    return {
+      id,
+      status,
+      firstAttempt: history.find((h) => h.attempt === 1)?.event.status ?? 'missing',
+      history,
+    };
   });
   const dispositions = plan.cases.filter(
     (item) => item.platforms[plan.identity.platform].disposition !== 'required'
@@ -231,4 +237,54 @@ export function markdownReport(result: ReturnType<typeof reconcile>): string {
     }),
     '',
   ].join('\n');
+}
+
+export type AttemptReceipt = {
+  attempt: number;
+  startedAt: string;
+  finishedAt?: string;
+  exitCode?: number;
+};
+
+export function reconcileAttempts(plan: Plan, reports: WorkerReport[], attempts: AttemptReceipt[]) {
+  validatePlan(plan);
+  const problems: string[] = [];
+  const perAttempt = attempts.map((attempt, index) => {
+    if (attempt.attempt !== index + 1 || attempt.attempt > plan.maxAttempts)
+      problems.push('Invalid, missing or out-of-order attempt receipt');
+    const coverage = reconcile(
+      plan,
+      reports.filter((r) => r.attempt === attempt.attempt)
+    );
+    const passed = attempt.exitCode === 0 && !!attempt.finishedAt && coverage.status === 'passed';
+    return { ...attempt, passed, problems: coverage.problems, coverage };
+  });
+  if (!perAttempt.length) problems.push('Runner never started');
+  if (perAttempt.slice(0, -1).some((a) => a.passed))
+    problems.push('Attempt executed after a successful attempt');
+  if (reports.some((r) => !attempts.some((a) => a.attempt === r.attempt)))
+    problems.push('Worker report without matching attempt receipt');
+  const last = perAttempt.at(-1);
+  if (!last?.passed)
+    problems.push('Final attempt did not complete successfully with exact coverage');
+  const fallback = reconcile(plan, []);
+  const result = last?.coverage ?? fallback;
+  return {
+    ...result,
+    status: problems.length ? 'incomplete' : 'passed',
+    firstFailure: perAttempt.length > 0 && !perAttempt[0].passed,
+    attemptsUsed: attempts.length,
+    maxAttempts: plan.maxAttempts,
+    attempts: perAttempt.map(({ coverage, ...receipt }) => receipt),
+    problems: [...problems, ...(last?.passed ? [] : result.problems)],
+    results: result.results.map((r) => ({
+      ...r,
+      firstAttempt:
+        perAttempt[0]?.coverage.results.find((first) => first.id === r.id)?.status ?? 'missing',
+      history: perAttempt.flatMap(
+        (a) => a.coverage.results.find((c) => c.id === r.id)?.history ?? []
+      ),
+    })),
+    durationMs: perAttempt.reduce((sum, a) => sum + a.coverage.durationMs, 0),
+  };
 }
