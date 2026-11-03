@@ -845,7 +845,9 @@ async function sendRnOnchain(
   await mineBlocks(1);
   await electrumClient?.waitForSync();
   await sleep(1000);
-  await dismissSheetRN();
+  // Close already dismissed SendSuccess. Another Android Back from Home
+  // backgrounds the RN app, leaving the sweep fixture unable to read its balance.
+  await elementById('TotalBalance').waitForDisplayed();
   console.info(`→ Sent ${sats} sats`);
 }
 
