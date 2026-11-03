@@ -2,6 +2,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 
 import { grantIOSCameraPermission } from './test/helpers/setup';
+import InventoryReporter from './test/reporting/reporter';
 
 const appiumPort = Number(process.env.APPIUM_PORT ?? '4723');
 const isAndroid = process.env.PLATFORM === 'android';
@@ -193,7 +194,7 @@ export const config: WebdriverIO.Config = {
   // Test reporter for stdout.
   // The only one supported by default is 'dot'
   // see also: https://webdriver.io/docs/dot-reporter
-  reporters: ['spec'],
+  reporters: process.env.E2E_PLAN ? ['spec', [InventoryReporter, {}]] : ['spec'],
 
   // Options to be passed to Mocha.
   // See the full list at http://mochajs.org/

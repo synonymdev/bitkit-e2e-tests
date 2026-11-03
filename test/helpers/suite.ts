@@ -42,10 +42,13 @@ ciIt.only = (name: string, fn?: () => Promise<void>) => {
 };
 
 export function checkComplete(name: string): boolean {
+  // Inventory runs use run-bound receipts, never shared or previous-night locks.
+  if (process.env.E2E_PLAN) return false;
   return ON_CI && fs.existsSync(lockFile(name));
 }
 
 export function markComplete(name: string) {
+  if (process.env.E2E_PLAN) return;
   if (!ON_CI) return;
   fs.mkdirSync(LOCK_PATH, { recursive: true });
   fs.writeFileSync(lockFile(name), '1');
