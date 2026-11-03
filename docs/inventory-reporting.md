@@ -68,8 +68,9 @@ An empty selection fails rather than becoming an empty green run.
 ## Stages
 
 1. Land the inventory/reporting producer and its validation checks first.
-2. Add the iOS smoke workflow in shadow using the producer's companion branch or a
-   revision containing these files. Keep the current required gates and schedules.
+2. Add the iOS smoke workflow as manual-only validation using the producer's
+   companion branch or a revision containing these files. Keep the current required
+   gates and schedules; do not run both gates automatically on each PR.
 3. Measure real smoke duration, concurrent-run isolation and first-pass reliability
    before proposing any required-check change. The iOS two-shard pilot, automatic PR
    risk selection and full nightly orchestration remain separate stages.
@@ -92,3 +93,7 @@ before enabling that workflow; for paired branches, use the same branch name in
 both repositories. A missing producer fails visibly. Reporting remains opt-in:
 existing automatic gates and schedules continue unchanged. This stage does not
 activate full nightly coverage, risk packs or the two-shard experiment.
+
+The iOS smoke consumer has only a manual dispatch trigger during validation. After
+validation, switch the automatic PR gate in one change, without an automatic
+overlap period. The lightweight shared inventory check can continue automatically.
