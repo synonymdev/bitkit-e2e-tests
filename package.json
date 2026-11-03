@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "inventory:check": "node --experimental-strip-types scripts/e2e-inventory.ts check",
-    "test:reporting": "node --experimental-strip-types --test test/unit/inventory.test.ts test/unit/reporting.test.ts",
+    "test:reporting": "node --experimental-strip-types --test test/unit/inventory.test.ts test/unit/reporting.test.ts test/unit/reporter-events.test.ts test/unit/smoke-oracle.test.ts",
     "e2e:android": "PLATFORM=android wdio run ./wdio.conf.ts",
     "e2e:ios": "PLATFORM=ios wdio run ./wdio.conf.ts",
     "lint": "eslint './**/*.{ts,js}'",
@@ -35,6 +35,7 @@
     "@radar/lnrpc": "^0.11.1-beta.1",
     "bip21": "^3.0.0",
     "bitcoin-json-rpc": "^1.4.1",
+    "bitcoinjs-lib": "6.1.7",
     "lnurl": "0.26.2",
     "rn-electrum-client": "^0.0.22"
   },

@@ -73,3 +73,20 @@ An empty selection fails rather than becoming an empty green run.
    risk selection and full nightly orchestration remain separate stages.
 
 No ruleset change or existing check-name replacement is part of these first stages.
+
+## Shadow smoke producer
+
+The `smoke` pack contains three fresh-wallet regtest cases: `smoke_wallet_1`
+(Home), `smoke_receive_1` (receive QR address and exact entered amount), and
+`smoke_onchain_1` (fund and send). The payment oracle queries Electrum directly,
+recomputes transaction IDs from raw transactions, checks the exact recipient and
+amount, and requires the outgoing payment to spend this case's funding transaction.
+A fresh recipient prevents another concurrent run's payment from satisfying the
+assertion. The oracle uses bounded requests and stores raw transaction evidence.
+These cases do not match the existing `@ios_gate` or Android feature selectors.
+
+The iOS consumer is `.github/workflows/e2e-smoke-shadow.yml`. Land this producer
+before enabling that workflow; for paired branches, use the same branch name in
+both repositories. A missing producer fails visibly. Reporting remains opt-in:
+existing automatic gates and schedules continue unchanged. This stage does not
+activate full nightly coverage, risk packs or the two-shard experiment.

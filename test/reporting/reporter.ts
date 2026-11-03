@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import WDIOReporter, { type RunnerStats, type TestStats } from '@wdio/reporter';
+import WDIOReporter, { type HookStats, type RunnerStats, type TestStats } from '@wdio/reporter';
 import { caseId } from './inventory.ts';
 import { digest, validatePlan, writeJson, type Plan, type WorkerReport } from './report.ts';
 
@@ -66,6 +66,22 @@ export default class InventoryReporter extends WDIOReporter {
   }
   onTestSkip(test: TestStats) {
     this.record(test, 'skipped');
+  }
+
+  onTestPending(test: TestStats) {
+    this.record(test, 'skipped');
+  }
+
+  onTestRetry(test: TestStats) {
+    this.report?.errors.push(`Undeclared framework retry: ${test.title}`);
+    this.flush();
+  }
+
+  onHookEnd(hook: HookStats) {
+    if (hook.error || hook.errors?.length || hook.state === 'failed') {
+      this.report?.errors.push(`Hook failed: ${hook.title}`);
+      this.flush();
+    }
   }
 
   onRunnerEnd(runner: RunnerStats) {

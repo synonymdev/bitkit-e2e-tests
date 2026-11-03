@@ -382,6 +382,20 @@ export const config: WebdriverIO.Config = {
     console.log(`🧪 Start: ${test.parent} - ${test.title}`);
   },
 
+  afterHook: async function (_test, _context, { error }) {
+    if (!process.env.E2E_PLAN || !error) return;
+    try {
+      const directory = path.join(path.dirname(process.env.E2E_PLAN), 'hook-failures');
+      fs.mkdirSync(directory, { recursive: true });
+      const screenshot = await driver.takeScreenshot();
+      fs.writeFileSync(path.join(directory, `${Date.now()}.png`), screenshot, 'base64');
+    } catch {
+      console.warn(
+        'Hook failed before a screenshot could be collected; retain runner and simulator logs.'
+      );
+    }
+  },
+
   afterTest: async function (test, _context, { error }) {
     const saveDiagnostics = Boolean(error) || process.env.SAVE_DIAGNOSTICS === 'true';
 
