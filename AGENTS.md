@@ -7,6 +7,11 @@ This file provides guidance to AI agents (Codex/Claude/Cursor/WARP) working in t
 Durable shared agent command specs live in `.agents/commands/`. `.claude/commands` is a compatibility symlink to the same files; Cursor entries under `.cursor/commands/` resolve there too.
 
 - `/archive-release` — After a Bitkit release is staging/migration-green, tag this repo at the e2e SHA that passed and attach `BACKEND=regtest` Android APK + iOS sim builds to that tag (see `.agents/commands/archive-release.md`)
+- `/release-sanity` — Derive a minimal pre-release sanity plan from the release diff and existing test/device evidence (see [.agents/commands/release-sanity.md](.agents/commands/release-sanity.md)).
+
+## Release QA planning
+
+For release sanity planning or remaining coverage gaps, use the shared [release-sanity skill](.agents/skills/release-sanity/SKILL.md) and canonical [release QA method](docs/release-qa.md). Keep recurring mainnet payment smoke plus justified release-specific checks; reuse applicable evidence and report skips/failures accurately. The [3.1.0 example](docs/release-qa/3.1.0-example.md) illustrates the method, not a standing checklist or approval. No personal skill or private spreadsheet is required.
 
 ## Purpose
 

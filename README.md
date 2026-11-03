@@ -2,6 +2,8 @@
 
 End-to-end tests for the [Bitkit-android](https://github.com/synonymdev/bitkit-android) and [Bitkit-ios](https://github.com/synonymdev/bitkit-ios) mobile app using [WebdriverIO](https://webdriver.io/) and [Appium](https://appium.io/). Supports both **Android** and **iOS** platforms.
 
+For pre-release sanity planning, use the shared [release QA method](docs/release-qa.md) or [/release-sanity](.agents/commands/release-sanity.md). See [3.1.0](docs/release-qa/3.1.0-example.md) for a worked example of reusing coverage and selecting remaining checks.
+
 ---
 
 ### 📦 Requirements
