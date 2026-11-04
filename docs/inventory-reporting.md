@@ -2,7 +2,7 @@
 
 Issue: https://github.com/synonymdev/bitkit-e2e-tests/issues/264
 
-The iOS `e2e-tests.yml` entry point owns PR selection, manual validation and the nightly schedule. Existing staging and migration workflows are reusable execution lanes. There is no shadow gate. Android workflow triggers, test selection, backend assignments and legacy retry behavior remain unchanged.
+The iOS `e2e-tests.yml` entry point owns PR selection, manual validation and the nightly schedule. Staging is reusable. The independent `e2e_migration.yml` workflow owns its schedule, release pushes, app build and result. There is no shadow gate. Android workflow triggers, test selection, backend assignments and legacy retry behavior remain unchanged.
 
 ## PR selection
 
@@ -16,17 +16,17 @@ Feature directories and explicit service/model/helper files add only their relev
 
 Cheap iOS validation checks all tracked paths, stale policy entries and referenced case IDs. Unknown paths fail with an actionable policy-update error before paid builds. Old and new rename paths contribute coverage from the base and tested policies, so a refactor cannot silently drop coverage. Documentation/native-test/policy-only changes skip device jobs. Selection records cases, reasons, app/E2E/policy identity and explicit gaps. USDT-specific paths retain the Bitcoin base gate and report the lack of existing USDT E2E coverage; unrelated Bitcoin tests do not establish USDT correctness.
 
-PRs stacked on another branch retain the existing automatic exclusion. Manual dispatch with `pr` checks the PR's current merge against its actual base/head, including stacked PRs. The workflow source is the branch selected for dispatch. `selection=auto` uses the PR diff; `base` runs the five cases; `full` runs all applicable local and staging cases. Migration runs nightly and after each push to an iOS `release-*` branch. An explicit branch dispatch with `selection=nightly` reproduces the nightly for validation. Automatic PRs cannot narrow selection with a manual input.
+PRs stacked on another branch retain the existing automatic exclusion. Manual dispatch with `pr` checks the PR's current merge against its actual base/head, including stacked PRs. The workflow source is the branch selected for dispatch. `selection=auto` uses the PR diff; `base` runs the five cases; `full` runs all applicable local and staging cases. Migration runs nightly and after each push to an iOS `release-*` branch. Manual E2E dispatches use local and staging cases. Automatic PRs cannot narrow selection with a manual input.
 
 ## Nightly
 
-The main iOS workflow runs nightly at 03:00 UTC, without a changed-revision shortcut:
+Two separate iOS workflows run each night at 03:00 UTC:
 
 | Lane | Active existing cases |
 | --- | --- |
 | Local | 42: all core UI, local money, on-chain, multi-address and active hardware cases |
 | Staging | 6: `pubky_profile_1` through `pubky_profile_5`, `paykit_1` |
-| Migration | 6: native restore/upgrade, RN restore/upgrade, passphrase and legacy-address migration |
+| Independent migration workflow | 6: native restore/upgrade, RN restore/upgrade, passphrase and legacy-address migration |
 
 The 54 cases use the appropriate local or remote-regtest build and fixtures. Migration setup entries are fixtures, not extra regression passes. Five existing skipped cases and six unsupported iOS mainnet cases remain explicit gaps; the interactive Lightning payment utility remains manual. This does not invent missing USDT, allowance or subscription automation.
 
@@ -36,11 +36,11 @@ The 54 cases use the appropriate local or remote-regtest build and fixtures. Mig
 
 A run permits up to three attempts and stops after the first runner exit-zero with exact complete case coverage. Each attempt retains worker events, process outcome and timing. The local/staging wrapper owns retries; migration keeps its existing per-attempt prepared-wallet setup and invokes the same wrapper one attempt at a time. An inventory-enabled attempt reruns the complete selected pack, avoiding dependence on the machine's legacy `/tmp/lock`. Android's non-inventory execution retains its existing retry locks.
 
-A recovered failure is reported as a recovery, with the first failed/missing case results and earlier errors retained. Missing reports, setup/teardown errors, incomplete workers, unexpected skips, stale identities or a nonzero final runner cannot produce a pass. The parent `e2e-status` requires every selected local/staging/migration job and build to succeed.
+A recovered failure is reported as a recovery, with the first failed/missing case results and earlier errors retained. Missing reports, setup/teardown errors, incomplete workers, unexpected skips, stale identities or a nonzero final runner cannot produce a pass. The parent `e2e-status` requires every selected local or staging job and build to succeed. The migration workflow reports its own result.
 
 ## Cost controls and manual validation
 
-Automatic runs use one local shard. Only manual dispatch can request two, partitioned by spec so a spec's fixture lifecycle stays together. Namespace supplies a separate Mac and backend instance per shard; every shard destroys its backend in cleanup. The local app is built once and reused. Staging and migration share one remote-regtest app build in the combined run. Builds have a 40-minute limit; execution limits depend on the selected pack as described below. iOS build and diagnostic artifacts, including migration preparation logs, are retained for seven days; prepared wallet environments expire after one day. The shared preparation workflow preserves repository-default diagnostic retention for consumers that omit its optional override. Superseded runs cancel.
+Automatic runs use one local shard. Only manual dispatch can request two, partitioned by spec so a spec's fixture lifecycle stays together. Namespace supplies a separate Mac and backend instance per shard; every shard destroys its backend in cleanup. The local app is built once and reused. Staging and the independent migration workflow each use their own network build. Builds have a 40-minute limit; execution limits depend on the selected pack as described below. iOS build and diagnostic artifacts, including migration preparation logs, are retained for seven days; prepared wallet environments expire after one day. The shared preparation workflow preserves repository-default diagnostic retention for consumers that omit its optional override. Superseded runs cancel.
 
 Compare `selection=full, shards=1` and `selection=full, shards=2` on the same app and E2E revisions. Inspect elapsed/build/setup/test time, first-pass success and billed Mac plus backend usage. Two shards are an experiment, not an assumed cost saving or a new automatic default.
 
