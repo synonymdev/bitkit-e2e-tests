@@ -161,7 +161,7 @@ test('known coverage gaps remain visible even if a case happened to pass', () =>
   assert.equal(result.status, 'incomplete');
   assert.match(result.problems.join(' '), /Unresolved coverage gap/);
 });
-test('inventory-enabled runs bypass legacy completion locks without changing legacy mode', (t) => {
+test('inventory retries reuse only current-plan locks; legacy paths stay unchanged', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'report-lock-test-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const helper = path.resolve('test/helpers/suite.ts');
@@ -170,9 +170,25 @@ test('inventory-enabled runs bypass legacy completion locks without changing leg
     [
       '--experimental-strip-types',
       '-e',
-      `const fs=require('node:fs'); fs.existsSync=()=>true; fs.mkdirSync=()=>{throw Error('must not touch legacy locks')}; fs.writeFileSync=()=>{throw Error('must not touch legacy locks')}; const s=require(${JSON.stringify(helper)}); if(s.checkComplete('case'))throw Error('stale pass'); s.markComplete('case'); delete process.env.E2E_PLAN; if(!s.checkComplete('case'))throw Error('legacy behavior changed'); console.log('ok');`,
+      `
+      const assert = require('node:assert/strict');
+      const s = require(${JSON.stringify(helper)});
+      const name = '@send_1 - sends coins';
+      assert.equal(s.checkComplete(name), false);
+      s.markComplete(name);
+      assert.equal(s.checkComplete(name), true);
+      assert.equal(s.checkComplete('@send_2 - another case'), false);
+      process.env.E2E_PLAN = ${JSON.stringify(path.join(root, 'next-run/plan.json'))};
+      assert.equal(s.checkComplete(name), false);
+      delete process.env.E2E_PLAN;
+      assert.equal(s.lockFile(name), '/tmp/lock/lock-_send_1_-_sends_coins');
+      console.log('ok');
+    `,
     ],
-    { env: { ...process.env, CI: '1', E2E_PLAN: path.join(root, 'plan.json') }, encoding: 'utf8' }
+    {
+      env: { ...process.env, CI: '1', E2E_PLAN: path.join(root, 'run/plan.json') },
+      encoding: 'utf8',
+    }
   );
   assert.match(output, /ok/);
 });

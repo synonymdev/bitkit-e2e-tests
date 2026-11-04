@@ -9,6 +9,7 @@ import {
   type Backend,
 } from '../test/reporting/inventory.ts';
 import { executionIdentity, assertExecutionIdentity } from '../test/reporting/identity.ts';
+import { lockFile } from '../test/helpers/suite.ts';
 import {
   createPlan,
   validatePlan,
@@ -196,59 +197,58 @@ async function main() {
       const plan: Plan = JSON.parse(fs.readFileSync(planFile, 'utf8'));
       validatePlan(plan);
       assertExecutionIdentity(plan);
-      if (command === 'run' || command === 'attempt') {
-        const currentAttempt = command === 'attempt' ? Number(process.env.ATTEMPT) : 1;
-        if (
-          !Number.isInteger(currentAttempt) ||
-          currentAttempt < 1 ||
-          currentAttempt > plan.maxAttempts
-        )
+      if (command === 'attempt') {
+        const attempt = Number(process.env.ATTEMPT);
+        if (!Number.isInteger(attempt) || attempt < 1 || attempt > plan.maxAttempts)
           throw Error('Invalid attempt');
-        if (receipts().length !== currentAttempt - 1)
+        const previousReceipts = receipts();
+        const previousWorkers = workers();
+        if (previousReceipts.length !== attempt - 1)
           throw Error('Unexpected attempt receipts; refusing to reuse another execution');
         if (
-          currentAttempt > 1 &&
-          reconcileAttempts(plan, workers(), receipts()).status === 'passed'
+          attempt > 1 &&
+          reconcileAttempts(plan, previousWorkers, previousReceipts).status === 'passed'
         )
           throw Error('Previous attempt already passed');
+
+        // Keep ciIt's established pass-lock behavior, isolated to this execution.
+        // Rebuild locks from verified results so an interrupted body/failed hook or
+        // a previous run can never supply a pass to the next attempt.
+        const completed = path.join(directory, 'completed');
+        fs.rmSync(completed, { recursive: true, force: true });
+        fs.mkdirSync(completed, { recursive: true });
+        for (const result of reconcile(plan, previousWorkers).results) {
+          if (result.status === 'passed')
+            fs.writeFileSync(lockFile(`@${result.id}`, planFile), '1');
+        }
         const grep = fs.readFileSync(path.join(directory, 'grep.txt'), 'utf8').trim();
         const runner = plan.identity.platform === 'ios' ? './ci_run_ios.sh' : './ci_run_android.sh';
-        for (
-          let attempt = currentAttempt;
-          attempt <= (command === 'attempt' ? currentAttempt : plan.maxAttempts);
-          attempt++
-        ) {
-          const receipt: AttemptReceipt = { attempt, startedAt: new Date().toISOString() };
-          const file = path.join(directory, `attempt-${attempt}.json`);
-          writeJson(file, receipt);
-          const args = ['--mochaOpts.grep', grep];
-          console.info(
-            `Attempt ${attempt}/${plan.maxAttempts}: limit ${plan.attemptTimeoutMinutes ?? 40} minutes`
-          );
-          const child = await runProcess(
-            runner,
-            args,
-            { ...process.env, ATTEMPT: String(attempt), E2E_PLAN: planFile },
-            path.join(directory, `attempt-${attempt}-runner.log`),
-            plan.attemptTimeoutMinutes ?? 40
-          );
-          receipt.finishedAt = new Date().toISOString();
-          receipt.exitCode = child.status ?? 1;
-          writeJson(file, receipt);
-          const result = reconcile(
-            plan,
-            workers().filter((w) => w.attempt === attempt)
-          );
-          writeJson(path.join(directory, `attempt-${attempt}-summary.json`), {
-            ...result,
-            runnerExit: receipt.exitCode,
-          });
-          if (child.cancelled || (receipt.exitCode === 0 && result.status === 'passed')) break;
+        const receipt: AttemptReceipt = { attempt, startedAt: new Date().toISOString() };
+        const file = path.join(directory, `attempt-${attempt}.json`);
+        writeJson(file, receipt);
+        console.info(
+          `Attempt ${attempt}/${plan.maxAttempts}: limit ${plan.attemptTimeoutMinutes ?? 40} minutes`
+        );
+        const child = await runProcess(
+          runner,
+          ['--mochaOpts.grep', grep],
+          { ...process.env, ATTEMPT: String(attempt), E2E_PLAN: planFile },
+          path.join(directory, `attempt-${attempt}-runner.log`),
+          plan.attemptTimeoutMinutes ?? 40
+        );
+        receipt.finishedAt = new Date().toISOString();
+        receipt.exitCode = child.status;
+        writeJson(file, receipt);
+        const result = reconcile(plan, workers());
+        writeJson(path.join(directory, `attempt-${attempt}-summary.json`), {
+          ...result,
+          runnerExit: receipt.exitCode,
+        });
+        if (receipt.exitCode !== 0 || result.status !== 'passed')
           console.error(
             `Attempt ${attempt} failed; evidence retained in ${directory} and artifacts/attempt-${attempt}`
           );
-        }
-      } else if (command !== 'report') throw Error('Usage: ci-run.ts prepare|run|attempt|report');
+      } else if (command !== 'report') throw Error('Usage: ci-run.ts prepare|attempt|report');
       if (summary(plan).status !== 'passed') process.exitCode = 1;
     }
   } catch (error) {

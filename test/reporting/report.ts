@@ -126,7 +126,7 @@ export function reconcile(plan: Plan, reports: WorkerReport[]) {
   validatePlan(plan);
   const problems: string[] = [];
   const expected = new Set(plan.expected);
-  const observations = new Map<string, { attempt: number; event: Event }[]>();
+  const observations = new Map<string, { attempt: number; event: Event; verified: boolean }[]>();
   const workers = new Set<string>();
   const executions = new Set<string>();
   let firstFailure = false;
@@ -152,7 +152,8 @@ export function reconcile(plan: Plan, reports: WorkerReport[]) {
     const worker = `${report.attempt}/${report.cid}`;
     if (workers.has(worker)) problems.push(`Duplicate worker report: ${worker}`);
     workers.add(worker);
-    if (!report.finishedAt) problems.push(`Interrupted worker: ${worker}`);
+    if (!report.finishedAt && report.attempt === finalAttempt)
+      problems.push(`Interrupted worker: ${worker}`);
     firstFailure ||= report.failures > 0 || report.errors.length > 0;
     if (report.attempt === finalAttempt && (report.failures || report.errors.length)) {
       problems.push(`Final attempt failed: ${worker} (${report.errors.join('; ')})`);
@@ -171,7 +172,14 @@ export function reconcile(plan: Plan, reports: WorkerReport[]) {
       if (executions.has(execution)) problems.push(`Duplicate case execution: ${execution}`);
       executions.add(execution);
       const history = observations.get(event.id) ?? [];
-      history.push({ attempt: report.attempt, event });
+      history.push({
+        attempt: report.attempt,
+        event,
+        verified:
+          !!report.finishedAt &&
+          report.errors.length === 0 &&
+          report.failures <= report.events.filter((e) => e.status === 'failed').length,
+      });
       observations.set(event.id, history);
     }
   }
@@ -179,7 +187,7 @@ export function reconcile(plan: Plan, reports: WorkerReport[]) {
     const history = (observations.get(id) ?? []).sort((a, b) => a.attempt - b.attempt);
     let status = 'missing';
     let previouslyPassed = false;
-    for (const { attempt, event } of history) {
+    for (const { attempt, event, verified } of history) {
       firstFailure ||= event.status === 'failed';
       if (event.status === 'skipped') {
         if (!previouslyPassed) {
@@ -187,8 +195,8 @@ export function reconcile(plan: Plan, reports: WorkerReport[]) {
           status = 'unexpected-skip';
         }
       } else {
-        status = event.status;
-        previouslyPassed = event.status === 'passed';
+        status = event.status === 'passed' && !verified ? 'unverified' : event.status;
+        previouslyPassed = status === 'passed';
       }
     }
     if (status !== 'passed') problems.push(`${id}: ${status}`);
@@ -196,7 +204,7 @@ export function reconcile(plan: Plan, reports: WorkerReport[]) {
       id,
       status,
       firstAttempt: history.find((h) => h.attempt === 1)?.event.status ?? 'missing',
-      history,
+      history: history.map(({ attempt, event }) => ({ attempt, event })),
     };
   });
   const dispositions = plan.cases.filter(
@@ -262,9 +270,13 @@ export function reconcileAttempts(plan: Plan, reports: WorkerReport[], attempts:
       problems.push('Invalid, missing or out-of-order attempt receipt');
     const coverage = reconcile(
       plan,
-      reports.filter((r) => r.attempt === attempt.attempt)
+      reports.filter((r) => r.attempt <= attempt.attempt)
     );
-    const passed = attempt.exitCode === 0 && !!attempt.finishedAt && coverage.status === 'passed';
+    const passed =
+      attempt.exitCode === 0 &&
+      !!attempt.finishedAt &&
+      reports.some((r) => r.attempt === attempt.attempt) &&
+      coverage.status === 'passed';
     return { ...attempt, passed, problems: coverage.problems, coverage };
   });
   if (!perAttempt.length) problems.push('Runner never started');
@@ -274,7 +286,7 @@ export function reconcileAttempts(plan: Plan, reports: WorkerReport[], attempts:
     problems.push('Worker report without matching attempt receipt');
   const last = perAttempt.at(-1);
   if (!last?.passed)
-    problems.push('Final attempt did not complete successfully with exact coverage');
+    problems.push('Final attempt did not complete successfully with all selected cases passed');
   const fallback = reconcile(plan, []);
   const result = last?.coverage ?? fallback;
   return {
@@ -285,14 +297,7 @@ export function reconcileAttempts(plan: Plan, reports: WorkerReport[], attempts:
     maxAttempts: plan.maxAttempts,
     attempts: perAttempt.map(({ coverage, ...receipt }) => receipt),
     problems: [...problems, ...(last?.passed ? [] : result.problems)],
-    results: result.results.map((r) => ({
-      ...r,
-      firstAttempt:
-        perAttempt[0]?.coverage.results.find((first) => first.id === r.id)?.status ?? 'missing',
-      history: perAttempt.flatMap(
-        (a) => a.coverage.results.find((c) => c.id === r.id)?.history ?? []
-      ),
-    })),
-    durationMs: perAttempt.reduce((sum, a) => sum + a.coverage.durationMs, 0),
+    results: result.results,
+    durationMs: result.durationMs,
   };
 }
