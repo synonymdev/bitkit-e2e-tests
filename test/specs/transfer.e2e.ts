@@ -469,29 +469,29 @@ describe('@transfer - Transfer', () => {
     // check transfer card
     // await elementById('Suggestion-lightning_setting_up').waitForDisplayed();
 
-    const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
-    const totalAmtAfterChannelOpen = await totalBalance.getText();
-    await expect(totalBalance).not.toHaveText('100 000');
-    await sleep(2500);
-
-    // check activity
-    let dismissedEarlyQuickPay = false;
-    if (driver.isIOS) {
-      // The first Lightning balance change can present QuickPay before the
-      // activity rows are accessible. It is shown once per wallet.
-      await browser.waitUntil(
-        async () => {
-          if (await tryDismissQuickPayIntroIfVisible()) dismissedEarlyQuickPay = true;
-          return isDisplayed('ActivityShort-0');
-        },
-        { timeout: 30_000, timeoutMsg: 'Channel-opening activity row did not appear' }
-      );
-    } else {
+    // QuickPay is shown once per wallet and can cover Home anywhere between
+    // channel opening and the last activity assertion.
+    let dismissedEarlyQuickPay = driver.isIOS && (await tryDismissQuickPayIntroIfVisible());
+    const readOpeningActivity = async () => {
+      const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
+      await expect(totalBalance).not.toHaveText('100 000');
+      const totalAmtAfterChannelOpen = await totalBalance.getText();
+      await sleep(2500);
       await elementById('ActivityShort-0').waitForDisplayed();
-    }
-    await expectTextWithin('ActivityShort-0', 'Transfer');
-    await elementById('ActivityShort-1').waitForDisplayed();
-    await expectTextWithin('ActivityShort-1', 'Received');
+      await expectTextWithin('ActivityShort-0', 'Transfer');
+      await elementById('ActivityShort-1').waitForDisplayed();
+      await expectTextWithin('ActivityShort-1', 'Received');
+      return { totalBalance, totalAmtAfterChannelOpen };
+    };
+    const { totalBalance, totalAmtAfterChannelOpen } = await readOpeningActivity().catch(
+      async (error) => {
+        if (!driver.isIOS || dismissedEarlyQuickPay || !(await tryDismissQuickPayIntroIfVisible())) {
+          throw error;
+        }
+        dismissedEarlyQuickPay = true;
+        return readOpeningActivity();
+      }
+    );
     await swipeFullScreen('down');
     await swipeFullScreen('down');
 
