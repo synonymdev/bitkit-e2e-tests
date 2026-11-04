@@ -167,13 +167,8 @@ describe('@send - Send', () => {
     const unified1ReviewAmt = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
     await unified1ReviewAmt.waitForDisplayed();
     await expect(unified1ReviewAmt).toHaveText('10 000');
+    // the scanned amount is fixed, so Back returns to the address screen
     await tap('NavigationBack');
-    if (driver.isAndroid) {
-      // Android replaces the review screen with Amount, so the amount can still be edited
-      await verifyAmountToSend(10_000);
-      await elementById('ContinueAmount').waitForEnabled();
-      await tap('NavigationBack');
-    }
 
     // check validation for unified invoice when balance is too low (200_000 sats)
     const unified2 = 'bitcoin:bcrt1q07x3wl76zdxvdsz3qzzkvxrjg3n6t4tz2vnsx8?amount=0.002';
