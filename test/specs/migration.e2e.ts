@@ -360,11 +360,21 @@ async function setupLegacyWallet(
     // Prove the source wallet is the funded fixture before installing the target.
     // A dropped character in RN's passphrase field otherwise looks like lost
     // funds after migration, even though the wrong wallet was restored first.
-    await browser.waitUntil(async () => (await getRnTotalBalance()) === IOS_RN_BALANCE, {
-      timeout: 180_000,
-      interval: 1_000,
-      timeoutMsg: 'Restored RN wallet balance does not match the prepared migration fixture',
-    });
+    // The iOS accessibility tree exposes the amount on the touchable parent.
+    // The nested MoneyText used by Android is hidden on RN iOS v1.1.6.
+    const rnBalance = elementById('TotalBalance');
+    await rnBalance.waitForDisplayed();
+    await browser.waitUntil(
+      async () => {
+        const label = await rnBalance.getAttribute('label');
+        return label.replace(/\s/g, '') === String(IOS_RN_BALANCE);
+      },
+      {
+        timeout: 180_000,
+        interval: 1_000,
+        timeoutMsg: 'Restored RN wallet balance does not match the prepared migration fixture',
+      }
+    );
 
     console.info('=== iOS: RN wallet restored ===');
     return { mnemonic: IOS_RN_MNEMONIC, balance: IOS_RN_BALANCE };
@@ -675,8 +685,22 @@ async function restoreRnWallet(
 
   // Terms of service
   await elementById('Continue').waitForDisplayed();
-  await tap('Check1');
-  await tap('Check2');
+  if (driver.isIOS) {
+    const next = elementById('Continue');
+    // Legacy RN labels Continue as enabled only when both boxes are selected.
+    // Alternating toggles visits all four combinations if an initial tap was missed.
+    for (const toggle of ['Check1', 'Check2', 'Check1', 'Check2', 'Check1', 'Check2']) {
+      if ((await next.getAttribute('label')) === 'enabled') break;
+      await tap(toggle);
+    }
+    await browser.waitUntil(async () => (await next.getAttribute('label')) === 'enabled', {
+      timeout: 5_000,
+      timeoutMsg: 'Both legacy RN consent boxes must be selected',
+    });
+  } else {
+    await tap('Check1');
+    await tap('Check2');
+  }
   await tap('Continue');
 
   // Skip intro and go to restore
