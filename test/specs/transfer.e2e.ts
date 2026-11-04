@@ -475,7 +475,20 @@ describe('@transfer - Transfer', () => {
     await sleep(2500);
 
     // check activity
-    await elementById('ActivityShort-0').waitForDisplayed();
+    let dismissedEarlyQuickPay = false;
+    if (driver.isIOS) {
+      // The first Lightning balance change can present QuickPay before the
+      // activity rows are accessible. It is shown once per wallet.
+      await browser.waitUntil(
+        async () => {
+          if (await tryDismissQuickPayIntroIfVisible()) dismissedEarlyQuickPay = true;
+          return isDisplayed('ActivityShort-0');
+        },
+        { timeout: 30_000, timeoutMsg: 'Channel-opening activity row did not appear' }
+      );
+    } else {
+      await elementById('ActivityShort-0').waitForDisplayed();
+    }
     await expectTextWithin('ActivityShort-0', 'Transfer');
     await elementById('ActivityShort-1').waitForDisplayed();
     await expectTextWithin('ActivityShort-1', 'Received');
@@ -488,7 +501,7 @@ describe('@transfer - Transfer', () => {
     await sleep(1000);
 
     await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });
-    await dismissQuickPayIntro({ triggerTimedSheet: true });
+    if (!dismissedEarlyQuickPay) await dismissQuickPayIntro({ triggerTimedSheet: true });
 
     await expectNoTextWithin('ActivitySpending', '0');
     await waitForActiveChannel(lnd, ldkNodeId);

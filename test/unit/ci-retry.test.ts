@@ -184,9 +184,9 @@ for (const failures of [0, 1, 2, 3, 'timeout'] as const)
 
 test('attempt budget is bounded, sealed and backwards compatible', () => {
   validatePlan(plan); // Existing plans retain their default 40-minute budget.
-  const p = createPlan(cases, identity, 'd'.repeat(64), 'selected', 3, 90);
+  const p = createPlan(cases, identity, 'd'.repeat(64), 'selected', 3, 110);
   validatePlan(p);
   assert.throws(() => validatePlan({ ...p, attemptTimeoutMinutes: 40 }), /Run plan changed/);
-  for (const n of [0, -1, 91, Infinity, NaN, 1.5])
+  for (const n of [0, -1, 111, Infinity, NaN, 1.5])
     assert.throws(() => createPlan(cases, identity, 'd'.repeat(64), 'selected', 3, n), /Invalid/);
 });

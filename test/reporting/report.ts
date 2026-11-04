@@ -74,7 +74,7 @@ export function createPlan(
     (attemptTimeoutMinutes !== undefined &&
       (!Number.isInteger(attemptTimeoutMinutes) ||
         attemptTimeoutMinutes < 1 ||
-        attemptTimeoutMinutes > 90))
+        attemptTimeoutMinutes > 110))
   ) {
     throw new Error('Invalid or incomplete run identity/attempt policy');
   }
