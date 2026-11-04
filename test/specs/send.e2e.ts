@@ -27,7 +27,6 @@ import {
   tap,
   selectSendFundingSource,
   enterAmount,
-  verifyAmountToSend,
 } from '../helpers/actions';
 import { lndConfig } from '../helpers/constants';
 import { reinstallApp } from '../helpers/setup';
