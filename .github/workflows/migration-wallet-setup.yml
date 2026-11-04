@@ -28,6 +28,10 @@ on:
         description: Optional immutable E2E commit. Checkout must match; never resolve or fall back as a branch.
         type: string
         default: ""
+      diagnostics_retention_days:
+        description: Preparation-log retention in days; zero preserves the repository default.
+        type: number
+        default: 0
 env:
   TERM: xterm-256color
   FORCE_COLOR: 1
@@ -104,6 +108,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: migration-setup-logs_${{ inputs.scenario_name }}_${{ github.run_attempt }}
+          retention-days: ${{ inputs.diagnostics_retention_days }}
           path: |
             bitkit-e2e-tests/artifacts/attempt-*/
             bitkit-e2e-tests/artifacts/migration-source.json

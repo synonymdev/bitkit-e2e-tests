@@ -8,6 +8,13 @@ const test = require('node:test'),
 test('migration fixture bypasses branch resolution only for explicit commit pins', () => {
   const w = Y.parse(fs.readFileSync('.github/workflows/migration-wallet-setup.yml', 'utf8'));
   const steps = w.jobs['prepare-wallets'].steps;
+  assert.equal(w.on.workflow_call.inputs.diagnostics_retention_days.type, 'number');
+  assert.equal(w.on.workflow_call.inputs.diagnostics_retention_days.default, 0);
+  assert.equal(
+    steps.find((s) => s.name === 'Upload preparation diagnostics').with['retention-days'],
+    '${{ inputs.diagnostics_retention_days }}'
+  );
+  assert.equal(steps.find((s) => s.name === 'Upload migration env file').with['retention-days'], 1);
   assert.equal(steps.find((s) => s.id === 'e2e-ref').if, "inputs.e2e_sha == ''");
   assert.equal(
     steps.find((s) => s.name === 'Clone E2E tests').with.ref,

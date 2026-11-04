@@ -40,7 +40,7 @@ A recovered failure is reported as a recovery, with the first failed/missing cas
 
 ## Cost controls and manual validation
 
-Automatic runs use one local shard. Only manual dispatch can request two, partitioned by spec so a spec's fixture lifecycle stays together. Namespace supplies a separate Mac and backend instance per shard; every shard destroys its backend in cleanup. The local app is built once and reused. Staging and migration share one remote-regtest app build in the combined run. Builds have a 40-minute limit; execution limits depend on the selected pack as described below. Artifacts are retained for seven days and superseded runs cancel.
+Automatic runs use one local shard. Only manual dispatch can request two, partitioned by spec so a spec's fixture lifecycle stays together. Namespace supplies a separate Mac and backend instance per shard; every shard destroys its backend in cleanup. The local app is built once and reused. Staging and migration share one remote-regtest app build in the combined run. Builds have a 40-minute limit; execution limits depend on the selected pack as described below. iOS build and diagnostic artifacts, including migration preparation logs, are retained for seven days; prepared wallet environments expire after one day. The shared preparation workflow preserves repository-default diagnostic retention for consumers that omit its optional override. Superseded runs cancel.
 
 Compare `selection=full, shards=1` and `selection=full, shards=2` on the same app and E2E revisions. Inspect elapsed/build/setup/test time, first-pass success and billed Mac plus backend usage. Two shards are an experiment, not an assumed cost saving or a new automatic default.
 
@@ -57,3 +57,5 @@ npx tsc --noEmit
 The CLI workflow tests use controlled runner fixtures; they are not evidence that hosted Appium journeys passed. Actual hosted measurements and device results must name their revisions and environments.
 
 Expanded local selections (more than five cases per shard) allow 90 minutes per attempt, up to three attempts, within a 285-minute job and five-hour backend expiry. Base-sized local selections retain 40-minute attempts and a 135-minute job; the six-case staging pack also uses 90-minute attempts within 285 minutes. Individual migration cases retain 40-minute attempts and 135-minute jobs. The iOS selector owns these budgets and the shared runner seals its attempt limit into the run plan. Limits are ceilings, not reservations: success stops retries and cleanup destroys the backend immediately.
+
+RN passphrase migration verifies the exact restored passphrase and the funded RN source balance before installing the native target. Native verification dismisses the optional USDT introduction before asserting balances, history, tags and persistence after relaunch. A malformed fixture or blocked screen remains a failure; neither is reported as a successful migration.

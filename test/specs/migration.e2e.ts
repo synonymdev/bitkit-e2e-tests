@@ -22,6 +22,7 @@ import {
   tap,
   typeText,
   waitForSetupWalletScreenFinish,
+  waitForWalletHome,
 } from '../helpers/actions';
 import {
   expectMigrationBalances,
@@ -356,6 +357,15 @@ async function setupLegacyWallet(
       await restoreRnWallet(IOS_RN_MNEMONIC);
     }
 
+    // Prove the source wallet is the funded fixture before installing the target.
+    // A dropped character in RN's passphrase field otherwise looks like lost
+    // funds after migration, even though the wrong wallet was restored first.
+    await browser.waitUntil(async () => (await getRnTotalBalance()) === IOS_RN_BALANCE, {
+      timeout: 180_000,
+      interval: 1_000,
+      timeoutMsg: 'Restored RN wallet balance does not match the prepared migration fixture',
+    });
+
     console.info('=== iOS: RN wallet restored ===');
     return { mnemonic: IOS_RN_MNEMONIC, balance: IOS_RN_BALANCE };
   }
@@ -685,7 +695,17 @@ async function restoreRnWallet(
   // Passphrase if provided
   if (passphrase) {
     await tap('AdvancedButton');
-    await typeText('PassphraseInput', passphrase);
+    if (driver.isIOS) {
+      // RN can drop characters from XCUITest's simulated typing. Paste the
+      // complete value, then verify it before deriving/restoring the wallet.
+      await pasteIOSText('PassphraseInput', passphrase);
+      const entered = await elementById('PassphraseInput').getAttribute('value');
+      if (entered !== passphrase) {
+        throw new Error('RN passphrase input does not match the migration fixture');
+      }
+    } else {
+      await typeText('PassphraseInput', passphrase);
+    }
     await confirmInputOnKeyboard();
   }
 
@@ -1105,6 +1125,8 @@ async function verifyMigration(
   { verifyTags = true }: { verifyTags?: boolean } = {}
 ): Promise<void> {
   console.info('=== Verifying migration ===');
+
+  if (driver.isIOS) await waitForWalletHome({ timeout: 180_000 });
 
   await expectMigrationBalances({
     total: expectedBalance,
