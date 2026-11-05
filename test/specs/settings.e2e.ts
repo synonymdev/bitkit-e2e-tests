@@ -439,15 +439,18 @@ describe('@settings @ios_nightly - Settings', () => {
         await elementById('ConnectToHost').waitForEnabled();
       }
       await tap('ConnectToHost');
-      await waitForToast('RgsUpdatedToast');
+      await waitForToast('RgsUpdatedToast', { waitToDisappear: driver.isIOS });
       const updatedUrl = await (await elementById('ConnectedUrl')).getText();
       await expect(updatedUrl).toBe(newUrl);
 
       // switch back to default
       await tap('ResetToDefault');
-      await sleep(2000);
-      await tap('ConnectToHost');
-      await waitForToast('RgsUpdatedToast', { waitToDisappear: false });
+      // iOS applies the default immediately; Android only updates the input.
+      if (driver.isAndroid) {
+        await sleep(2000);
+        await tap('ConnectToHost');
+      }
+      await waitForToast('RgsUpdatedToast', { waitToDisappear: driver.isIOS });
 
       const resetUrl = await (await elementById('ConnectedUrl')).getText();
       await expect(resetUrl).toBe(rgsUrl);
