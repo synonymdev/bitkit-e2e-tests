@@ -22,6 +22,7 @@ import {
   tap,
   typeText,
   waitForSetupWalletScreenFinish,
+  waitForWalletHome,
 } from '../helpers/actions';
 import {
   expectMigrationBalances,
@@ -1103,6 +1104,9 @@ async function verifyMigration(
   { verifyTags = true }: { verifyTags?: boolean } = {}
 ): Promise<void> {
   console.info('=== Verifying migration ===');
+
+  // The native app can show the USDT intro after migration or on the next launch.
+  await waitForWalletHome({ timeout: 180_000 });
 
   await expectMigrationBalances({
     total: expectedBalance,
