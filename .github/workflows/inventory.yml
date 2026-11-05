@@ -1,0 +1,46 @@
+name: E2E inventory and reporting
+
+on:
+  pull_request:
+    paths:
+      - 'test/**'
+      - 'scripts/e2e-inventory.ts'
+      - 'scripts/ci-*'
+      - 'scripts/verify-e2e-sha.sh'
+      - '.github/workflows/migration-wallet-setup.yml'
+      - 'wdio.conf.ts'
+      - 'package*.json'
+      - '.github/workflows/inventory.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'test/**'
+      - 'scripts/e2e-inventory.ts'
+      - 'scripts/ci-*'
+      - 'scripts/verify-e2e-sha.sh'
+      - '.github/workflows/migration-wallet-setup.yml'
+      - 'wdio.conf.ts'
+      - 'package*.json'
+      - '.github/workflows/inventory.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: inventory-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run inventory:check
+      - run: npm run test:reporting

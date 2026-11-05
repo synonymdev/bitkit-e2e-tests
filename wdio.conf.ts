@@ -2,6 +2,8 @@ import path from 'node:path';
 import fs from 'node:fs';
 
 import { grantIOSCameraPermission } from './test/helpers/setup';
+import InventoryReporter from './test/reporting/reporter';
+import { selectedSpecs } from './test/reporting/specs';
 
 const appiumPort = Number(process.env.APPIUM_PORT ?? '4723');
 const isAndroid = process.env.PLATFORM === 'android';
@@ -47,7 +49,7 @@ export const config: WebdriverIO.Config = {
   //
   // Spec in [] will be run in a separate worker process.
   // Running all specs sequentially for now.
-  specs: [['./test/specs/**/*.ts']],
+  specs: process.env.E2E_PLAN ? [selectedSpecs(process.env.E2E_PLAN)] : [['./test/specs/**/*.ts']],
   // Patterns to exclude.
   exclude: [
     // 'path/to/excluded/files'
@@ -68,7 +70,7 @@ export const config: WebdriverIO.Config = {
   // and 30 processes will get spawned. The property handles how many capabilities
   // from the same test should run tests.
   //
-  maxInstances: 10,
+  maxInstances: process.env.E2E_PLAN ? 1 : 10,
   //
   // If you have trouble getting all important capabilities together, check out the
   // Sauce Labs platform configurator - a great tool to configure your capabilities:
@@ -193,7 +195,7 @@ export const config: WebdriverIO.Config = {
   // Test reporter for stdout.
   // The only one supported by default is 'dot'
   // see also: https://webdriver.io/docs/dot-reporter
-  reporters: ['spec'],
+  reporters: process.env.E2E_PLAN ? ['spec', [InventoryReporter, {}]] : ['spec'],
 
   // Options to be passed to Mocha.
   // See the full list at http://mochajs.org/
@@ -379,6 +381,20 @@ export const config: WebdriverIO.Config = {
       await driver.startRecordingScreen(recordingOptions);
     }
     console.log(`🧪 Start: ${test.parent} - ${test.title}`);
+  },
+
+  afterHook: async function (_test, _context, { error }) {
+    if (!process.env.E2E_PLAN || !error) return;
+    try {
+      const directory = path.join(path.dirname(process.env.E2E_PLAN), 'hook-failures');
+      fs.mkdirSync(directory, { recursive: true });
+      const screenshot = await driver.takeScreenshot();
+      fs.writeFileSync(path.join(directory, `${Date.now()}.png`), screenshot, 'base64');
+    } catch {
+      console.warn(
+        'Hook failed before a screenshot could be collected; retain runner and simulator logs.'
+      );
+    }
   },
 
   afterTest: async function (test, _context, { error }) {

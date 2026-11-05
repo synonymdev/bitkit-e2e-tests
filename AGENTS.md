@@ -169,26 +169,10 @@ Implication for feature work:
 - Keep Android/iOS platform differences behind helpers in `test/helpers/`.
 - Prefer extracting shared flows into `test/helpers/` over copying logic between specs. Keep helpers small and reuse existing ones before adding new test code.
 
-## Local vs staging tags
+## iOS CI selection
 
-The app merge gate (`e2e.yml` / `e2e-tests.yml`) runs `BACKEND=local` (docker Electrum/LND). Staging (`e2e-staging.yml`) and migration (`e2e_migration.yml`) run `BACKEND=regtest` against stag0.
+The iOS consumer owns its path policy in `bitkit-ios/.github/e2e-policy.json` and selector in `.github/scripts/e2e-selection.cjs`. It reads this repo's `test/inventory.json`; iOS paths and selection policy do not belong in this shared repo. Historical `@ios_gate` and `@ios_nightly` tags do not control that consumer. Its base cases are `send_1`, `send_2`, `lightning_1`, `transfer_2`, `boost_2`; automatic risk selection expands coverage. Nightly E2E runs all applicable local/staging cases; the independent migration workflow runs all six migrations nightly and on release branches. See [inventory and reporting](docs/inventory-reporting.md).
 
-Capability tags (`@settings`, `@boost`, `@send`, …) stay on titles so Android local can keep grepping them. iOS queue tags are disjoint from `@staging` and from `*_staging` (mocha grep is a regex substring).
+Keep capability tags for Android's existing selectors and manual execution. Android workflows and selections are unchanged. Do not rename tags merely to match the iOS policy.
 
-| Tag | Android local | iOS Mini (`e2e-tests.yml`) | Staging (`e2e-staging.yml`) |
-|---|---|---|---|
-| `@ios_gate` | ignored | merge gate grep | no |
-| `@ios_nightly` | ignored (still run via `@settings` etc.) | no | extra iOS shard (`ios_nightly_ui`), GitHub mac, not Mini |
-| `@transfer_1`, `@transfer_max` | no | no | `@transfer_staging` (keep `@transfer_1` / `@transfer_max` / `@transfer`). `@transfer_1` is not in app `e2e-staging.yml` yet — add the transfer shard once it is 3× green. |
-| `@multi_address_2` | no | no | `@multi_address_staging` only |
-| `@pubky` / `@paykit` / `@pubky_profile` | no | no | `@pubky_staging` (keep capability tags for other greps) |
-| `@boost`, `@multi_address_3` | yes | `@ios_gate` (needs exclusive miner) | no |
-| `@send_2`, `@send_3`, `@lightning`, `@lnurl`, `@transfer_2`, `@multi_address_4` | yes | `@ios_gate` (local LND) | no |
-| `@hardware_wallet` | no (staging only) | `@ios_gate` | Android staging greps `@hardware_wallet`; do **not** add `@hardware_wallet_staging`. iOS Mini greps `@ios_gate` on this describe. No Trezor on GitHub mac. |
-| `@onboarding`, `@backup`, `@receive`, `@onchain_1`, `@onchain_2`, `@send_1`, `@multi_address_1`, `@settings`, `@numberpad`, `@widgets`, `@security` | yes | `@ios_nightly` | iOS nightly shard |
-| `@onchain_3` | yes (`@onchain`) | no | no |
-| `@migration_*` | migration workflow (nightly, dispatch, `release-*` PRs) | same | no |
-
-Put `@ios_gate` / `@ios_nightly` on `describe` when the whole file is one iOS queue; on `ciIt` when siblings split (`@send_1` vs `@send_2`/`_3`, `@multi_address_1` vs `_3`/`_4`). Local-LND specs (`@send_3`, `@multi_address_4`) stay `@ios_gate` — they cannot run on the regtest nightly shard. Mini keeps boost/RBF, local-LND money path, and hardware wallet.
-
-Poke staging with `gh workflow run e2e-staging.yml` on the app repo (does not queue the iOS Mini). Optional Slack post to `#bitkit-staging-nightly` via dispatch `post_to_slack`.
+Inventory-enabled iOS execution uses `scripts/ci-run.ts attempt` from three visible workflow steps. `ciIt()` skips cases that passed earlier in the same run, so only failed or uncompleted cases repeat. Completion locks are scoped to the run directory and rebuilt from verified worker results before each attempt. Reports combine current-run passes and retain first-failure evidence. Android non-inventory retries retain their existing `/tmp/lock` behavior. Plans and receipts must identify the app, test source, artifact, backend and run. Never reuse a previous night's pass as current execution.

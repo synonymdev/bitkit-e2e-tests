@@ -1,63 +1,73 @@
 name: Migration Wallet Setup
-
 on:
   workflow_call:
     inputs:
       e2e_branch:
-        description: 'Candidate branch of synonymdev/bitkit-e2e-tests. Re-validated immediately before checkout. Callers may pass an already-resolved ref; a missing default companion falls back to main.'
+        description: Candidate branch of synonymdev/bitkit-e2e-tests. Re-validated immediately before checkout. Callers may pass an already-resolved ref; a missing default companion falls back to main.
         required: true
         type: string
       e2e_branch_input:
-        description: 'Resolution mode (main | default-feature-branch | custom branch name). Empty inherits the caller workflow_dispatch input e2e_branch, then default-feature-branch. A custom name hard-fails when the branch is missing.'
+        description: Resolution mode (main | default-feature-branch | custom branch name). Empty inherits the caller workflow_dispatch input e2e_branch, then default-feature-branch. A custom name hard-fails when the branch is missing.
         required: false
         type: string
-        default: ''
+        default: ""
       rn_version:
-        description: 'Legacy RN app version to use for setup (e.g., v1.1.6)'
+        description: Legacy RN app version to use for setup (e.g., v1.1.6)
         required: false
         type: string
-        default: 'v1.1.6'
+        default: v1.1.6
       setup_type:
-        description: 'Wallet setup type (standard | passphrase | sweep)'
+        description: Wallet setup type (standard | passphrase | sweep)
         required: true
         type: string
       scenario_name:
-        description: 'Migration scenario name for artifact naming'
+        description: Migration scenario name for artifact naming
         required: true
         type: string
-
+      e2e_sha:
+        description: Optional immutable E2E commit. Checkout must match; never resolve or fall back as a branch.
+        type: string
+        default: ""
+      diagnostics_retention_days:
+        description: Preparation-log retention in days; zero preserves the repository default.
+        type: number
+        default: 0
 env:
   TERM: xterm-256color
   FORCE_COLOR: 1
-
 jobs:
   prepare-wallets:
     runs-on: ubuntu-latest
-
     steps:
-      # Re-resolve in this job. "Re-run failed jobs" does not re-run a
-      # successful resolve job in the caller, so inputs.e2e_branch can name
-      # a companion that was deleted after that job finished.
+      - name: Validate pinned commit
+        if: inputs.e2e_sha != ''
+        env:
+          E2E_SHA: ${{ inputs.e2e_sha }}
+        run: "[[ \"$E2E_SHA\" =~ ^[0-9a-f]{40}$ ]] || { echo 'Invalid pinned E2E commit' >&2; exit 1; }"
       - name: Resolve E2E tests ref
         id: e2e-ref
         uses: synonymdev/bitkit-e2e-tests/.github/actions/resolve-e2e-ref@main
         with:
           selected: ${{ inputs.e2e_branch }}
           e2e_branch_input: ${{ inputs.e2e_branch_input || github.event.inputs.e2e_branch || 'default-feature-branch' }}
-
+        if: inputs.e2e_sha == ''
       - name: Clone E2E tests
         uses: actions/checkout@v4
         with:
           repository: synonymdev/bitkit-e2e-tests
           path: bitkit-e2e-tests
-          ref: ${{ steps.e2e-ref.outputs.ref }}
-
+          ref: ${{ inputs.e2e_sha || steps.e2e-ref.outputs.ref }}
+      - name: Verify pinned checkout
+        if: inputs.e2e_sha != ''
+        working-directory: bitkit-e2e-tests
+        env:
+          E2E_SHA: ${{ inputs.e2e_sha }}
+        run: bash scripts/verify-e2e-sha.sh checkout
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-
       - name: Download RN app for migration
         working-directory: bitkit-e2e-tests
         env:
@@ -66,24 +76,20 @@ jobs:
           python3 scripts/download-migration-app.py android rn "$RN_VERSION"
           # WDIO initializes its session using the RN source during preparation.
           ln -sf bitkit_rn_regtest.apk aut/bitkit_e2e.apk
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
       - name: Cache npm cache
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
-
       - name: Install dependencies
         working-directory: bitkit-e2e-tests
         run: npm ci
-
       - name: Prepare independent wallets for all consumer attempts
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -97,16 +103,15 @@ jobs:
         env:
           BACKEND: regtest
           SETUP_TYPE: ${{ inputs.setup_type }}
-
       - name: Upload preparation diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: migration-setup-logs_${{ inputs.scenario_name }}_${{ github.run_attempt }}
+          retention-days: ${{ inputs.diagnostics_retention_days }}
           path: |
             bitkit-e2e-tests/artifacts/attempt-*/
             bitkit-e2e-tests/artifacts/migration-source.json
-
       - name: Upload migration env file
         uses: actions/upload-artifact@v4
         with:
@@ -118,3 +123,4 @@ jobs:
             bitkit-e2e-tests/artifacts/wallet-attempt-3/
           if-no-files-found: error
           retention-days: 1
+    timeout-minutes: 90

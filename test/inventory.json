@@ -1,0 +1,1577 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "backup_1",
+      "file": "test/specs/backup.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "boost_1",
+      "file": "test/specs/boost.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "local-money",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "exclusive-bitcoin-miner", "lnd", "lnurl-server"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "local-money",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "exclusive-bitcoin-miner", "lnd", "lnurl-server"]
+        }
+      }
+    },
+    {
+      "id": "boost_2",
+      "file": "test/specs/boost.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "local-money",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "exclusive-bitcoin-miner", "lnd", "lnurl-server"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "local-money",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "exclusive-bitcoin-miner", "lnd", "lnurl-server"]
+        }
+      }
+    },
+    {
+      "id": "hardware_wallet_1",
+      "file": "test/specs/hardware-wallet.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "hardware",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "trezor-emulator", "trezor-bridge-build"]
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "hardware",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "trezor-emulator", "trezor-bridge-build"]
+        }
+      }
+    },
+    {
+      "id": "hardware_wallet_2",
+      "file": "test/specs/hardware-wallet.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "hardware",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "trezor-emulator", "trezor-bridge-build"]
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "hardware",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "trezor-emulator", "trezor-bridge-build"]
+        }
+      }
+    },
+    {
+      "id": "hardware_wallet_3",
+      "file": "test/specs/hardware-wallet.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "hardware",
+          "disposition": "gap",
+          "fixtures": ["fresh-wallet", "trezor-emulator", "trezor-bridge-build"],
+          "reason": "Currently skipped after Blocktank channel-order retirement; retire or replace its assertions explicitly, rather than counting a skip as a pass.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "hardware",
+          "disposition": "gap",
+          "fixtures": ["fresh-wallet", "trezor-emulator", "trezor-bridge-build"],
+          "reason": "Currently skipped after Blocktank channel-order retirement; retire or replace its assertions explicitly, rather than counting a skip as a pass.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        }
+      }
+    },
+    {
+      "id": "hardware_wallet_4",
+      "file": "test/specs/hardware-wallet.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "hardware",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "trezor-emulator", "trezor-bridge-build"]
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "hardware",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "trezor-emulator", "trezor-bridge-build"]
+        }
+      }
+    },
+    {
+      "id": "lightning_1",
+      "file": "test/specs/lightning.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "local-money",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "exclusive-bitcoin-miner", "lnd", "lnurl-server"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "local-money",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "exclusive-bitcoin-miner", "lnd", "lnurl-server"]
+        }
+      }
+    },
+    {
+      "id": "lnurl_1",
+      "file": "test/specs/lnurl.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "local-money",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "exclusive-bitcoin-miner", "lnd", "lnurl-server"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "local-money",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "exclusive-bitcoin-miner", "lnd", "lnurl-server"]
+        }
+      }
+    },
+    {
+      "id": "blocktank_sunset_1",
+      "file": "test/specs/mainnet/blocktank-sunset.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "mainnet",
+          "pack": "mainnet",
+          "disposition": "gap",
+          "fixtures": [
+            "mainnet-build",
+            "private-nightly-configuration",
+            "geocheck-enabled",
+            "BLOCKTANK_SUNSET_UI"
+          ],
+          "reason": "The current spec rejects iOS; equivalent applicable iOS behavior needs its own validated fixture/spec.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        },
+        "android": {
+          "backend": "mainnet",
+          "pack": "mainnet",
+          "disposition": "required",
+          "fixtures": [
+            "mainnet-build",
+            "private-nightly-configuration",
+            "geocheck-enabled",
+            "BLOCKTANK_SUNSET_UI"
+          ]
+        }
+      }
+    },
+    {
+      "id": "blocktank_sunset_2",
+      "file": "test/specs/mainnet/blocktank-sunset.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "mainnet",
+          "pack": "mainnet",
+          "disposition": "gap",
+          "fixtures": [
+            "mainnet-build",
+            "private-nightly-configuration",
+            "geocheck-enabled",
+            "BLOCKTANK_SUNSET_UI"
+          ],
+          "reason": "The current spec rejects iOS; equivalent applicable iOS behavior needs its own validated fixture/spec.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        },
+        "android": {
+          "backend": "mainnet",
+          "pack": "mainnet",
+          "disposition": "required",
+          "fixtures": [
+            "mainnet-build",
+            "private-nightly-configuration",
+            "geocheck-enabled",
+            "BLOCKTANK_SUNSET_UI"
+          ]
+        }
+      }
+    },
+    {
+      "id": "blocktank_sunset_3",
+      "file": "test/specs/mainnet/blocktank-sunset.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "mainnet",
+          "pack": "mainnet",
+          "disposition": "gap",
+          "fixtures": [
+            "mainnet-build",
+            "private-nightly-configuration",
+            "geocheck-enabled",
+            "BLOCKTANK_SUNSET_UI"
+          ],
+          "reason": "The current spec rejects iOS; equivalent applicable iOS behavior needs its own validated fixture/spec.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        },
+        "android": {
+          "backend": "mainnet",
+          "pack": "mainnet",
+          "disposition": "required",
+          "fixtures": [
+            "mainnet-build",
+            "private-nightly-configuration",
+            "geocheck-enabled",
+            "BLOCKTANK_SUNSET_UI"
+          ]
+        }
+      }
+    },
+    {
+      "id": "strike_1",
+      "file": "test/specs/mainnet/ln.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "mainnet",
+          "pack": "mainnet",
+          "disposition": "gap",
+          "fixtures": [
+            "mainnet-build",
+            "private-nightly-configuration",
+            "funded-lightning-wallet",
+            "private-receiver-or-probe-targets"
+          ],
+          "reason": "iOS mainnet fixture, devtools and private nightly job support has not been validated.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        },
+        "android": {
+          "backend": "mainnet",
+          "pack": "mainnet",
+          "disposition": "required",
+          "fixtures": [
+            "mainnet-build",
+            "private-nightly-configuration",
+            "funded-lightning-wallet",
+            "private-receiver-or-probe-targets"
+          ]
+        }
+      }
+    },
+    {
+      "id": "wos_1",
+      "file": "test/specs/mainnet/ln.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "mainnet",
+          "pack": "mainnet",
+          "disposition": "gap",
+          "fixtures": [
+            "mainnet-build",
+            "private-nightly-configuration",
+            "funded-lightning-wallet",
+            "private-receiver-or-probe-targets"
+          ],
+          "reason": "iOS mainnet fixture, devtools and private nightly job support has not been validated.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        },
+        "android": {
+          "backend": "mainnet",
+          "pack": "mainnet",
+          "disposition": "required",
+          "fixtures": [
+            "mainnet-build",
+            "private-nightly-configuration",
+            "funded-lightning-wallet",
+            "private-receiver-or-probe-targets"
+          ]
+        }
+      }
+    },
+    {
+      "id": "probe_mainnet_1",
+      "file": "test/specs/mainnet/probe.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "mainnet",
+          "pack": "mainnet",
+          "disposition": "gap",
+          "fixtures": [
+            "mainnet-build",
+            "private-nightly-configuration",
+            "funded-lightning-wallet",
+            "private-receiver-or-probe-targets"
+          ],
+          "reason": "iOS mainnet fixture, devtools and private nightly job support has not been validated.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        },
+        "android": {
+          "backend": "mainnet",
+          "pack": "mainnet",
+          "disposition": "required",
+          "fixtures": [
+            "mainnet-build",
+            "private-nightly-configuration",
+            "funded-lightning-wallet",
+            "private-receiver-or-probe-targets"
+          ]
+        }
+      }
+    },
+    {
+      "id": "migration_native_restore",
+      "file": "test/specs/migration.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "regtest",
+          "pack": "migration",
+          "disposition": "required",
+          "fixtures": [
+            "previous-native-artifact",
+            "target-native-artifact",
+            "isolated-funded-wallet"
+          ]
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "migration",
+          "disposition": "required",
+          "fixtures": [
+            "previous-native-artifact",
+            "target-native-artifact",
+            "isolated-funded-wallet"
+          ]
+        }
+      }
+    },
+    {
+      "id": "migration_native_upgrade",
+      "file": "test/specs/migration.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "regtest",
+          "pack": "migration",
+          "disposition": "required",
+          "fixtures": [
+            "previous-native-artifact",
+            "target-native-artifact",
+            "isolated-funded-wallet"
+          ]
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "migration",
+          "disposition": "required",
+          "fixtures": [
+            "previous-native-artifact",
+            "target-native-artifact",
+            "isolated-funded-wallet"
+          ]
+        }
+      }
+    },
+    {
+      "id": "migration_setup_standard",
+      "file": "test/specs/migration.e2e.ts",
+      "kind": "fixture",
+      "platforms": {
+        "ios": {
+          "backend": "regtest",
+          "pack": "migration-fixture",
+          "disposition": "inapplicable",
+          "fixtures": [
+            "rn-artifact",
+            "target-native-artifact",
+            "isolated-funded-wallet",
+            "MIGRATION_SETUP_WALLET"
+          ],
+          "reason": "Fixture preparation runs on Android; iOS migration consumes its result, not this Android-only setup case.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "migration-fixture",
+          "disposition": "required",
+          "fixtures": [
+            "rn-artifact",
+            "target-native-artifact",
+            "isolated-funded-wallet",
+            "MIGRATION_SETUP_WALLET"
+          ]
+        }
+      }
+    },
+    {
+      "id": "migration_setup_passphrase",
+      "file": "test/specs/migration.e2e.ts",
+      "kind": "fixture",
+      "platforms": {
+        "ios": {
+          "backend": "regtest",
+          "pack": "migration-fixture",
+          "disposition": "inapplicable",
+          "fixtures": [
+            "rn-artifact",
+            "target-native-artifact",
+            "isolated-funded-wallet",
+            "MIGRATION_SETUP_WALLET"
+          ],
+          "reason": "Fixture preparation runs on Android; iOS migration consumes its result, not this Android-only setup case.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "migration-fixture",
+          "disposition": "required",
+          "fixtures": [
+            "rn-artifact",
+            "target-native-artifact",
+            "isolated-funded-wallet",
+            "MIGRATION_SETUP_WALLET"
+          ]
+        }
+      }
+    },
+    {
+      "id": "migration_setup_sweep",
+      "file": "test/specs/migration.e2e.ts",
+      "kind": "fixture",
+      "platforms": {
+        "ios": {
+          "backend": "regtest",
+          "pack": "migration-fixture",
+          "disposition": "inapplicable",
+          "fixtures": [
+            "rn-artifact",
+            "target-native-artifact",
+            "isolated-funded-wallet",
+            "MIGRATION_SETUP_WALLET"
+          ],
+          "reason": "Fixture preparation runs on Android; iOS migration consumes its result, not this Android-only setup case.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "migration-fixture",
+          "disposition": "required",
+          "fixtures": [
+            "rn-artifact",
+            "target-native-artifact",
+            "isolated-funded-wallet",
+            "MIGRATION_SETUP_WALLET"
+          ]
+        }
+      }
+    },
+    {
+      "id": "migration_rn_restore",
+      "file": "test/specs/migration.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "regtest",
+          "pack": "migration",
+          "disposition": "required",
+          "fixtures": [
+            "rn-artifact",
+            "target-native-artifact",
+            "isolated-funded-wallet",
+            "android-prepared-RN_MNEMONIC-and-RN_BALANCE"
+          ]
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "migration",
+          "disposition": "required",
+          "fixtures": ["rn-artifact", "target-native-artifact", "isolated-funded-wallet"]
+        }
+      }
+    },
+    {
+      "id": "migration_rn_upgrade",
+      "file": "test/specs/migration.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "regtest",
+          "pack": "migration",
+          "disposition": "required",
+          "fixtures": [
+            "rn-artifact",
+            "target-native-artifact",
+            "isolated-funded-wallet",
+            "android-prepared-RN_MNEMONIC-and-RN_BALANCE"
+          ]
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "migration",
+          "disposition": "required",
+          "fixtures": ["rn-artifact", "target-native-artifact", "isolated-funded-wallet"]
+        }
+      }
+    },
+    {
+      "id": "migration_3",
+      "file": "test/specs/migration.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "regtest",
+          "pack": "migration",
+          "disposition": "required",
+          "fixtures": [
+            "rn-artifact",
+            "target-native-artifact",
+            "isolated-funded-wallet",
+            "MIGRATION_EXTENDED=true",
+            "android-prepared-RN_MNEMONIC-and-RN_BALANCE"
+          ]
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "migration",
+          "disposition": "required",
+          "fixtures": [
+            "rn-artifact",
+            "target-native-artifact",
+            "isolated-funded-wallet",
+            "MIGRATION_EXTENDED=true"
+          ]
+        }
+      }
+    },
+    {
+      "id": "migration_4",
+      "file": "test/specs/migration.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "regtest",
+          "pack": "migration",
+          "disposition": "required",
+          "fixtures": [
+            "rn-artifact",
+            "target-native-artifact",
+            "isolated-funded-wallet",
+            "MIGRATION_EXTENDED=true",
+            "android-prepared-RN_MNEMONIC-and-RN_BALANCE"
+          ]
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "migration",
+          "disposition": "required",
+          "fixtures": [
+            "rn-artifact",
+            "target-native-artifact",
+            "isolated-funded-wallet",
+            "MIGRATION_EXTENDED=true"
+          ]
+        }
+      }
+    },
+    {
+      "id": "multi_address_1",
+      "file": "test/specs/multiaddress.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "multi_address_2",
+      "file": "test/specs/multiaddress.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "regtest",
+          "pack": "staging",
+          "disposition": "gap",
+          "fixtures": ["fresh-wallet", "blocktank-channel-orders"],
+          "reason": "Currently skipped after Blocktank channel-order retirement; retire or replace its assertions explicitly, rather than counting a skip as a pass.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "staging",
+          "disposition": "gap",
+          "fixtures": ["fresh-wallet", "blocktank-channel-orders"],
+          "reason": "Currently skipped after Blocktank channel-order retirement; retire or replace its assertions explicitly, rather than counting a skip as a pass.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        }
+      }
+    },
+    {
+      "id": "multi_address_3",
+      "file": "test/specs/multiaddress.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "local-money",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "exclusive-bitcoin-miner", "lnd", "lnurl-server"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "local-money",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "exclusive-bitcoin-miner", "lnd", "lnurl-server"]
+        }
+      }
+    },
+    {
+      "id": "multi_address_4",
+      "file": "test/specs/multiaddress.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "local-money",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "exclusive-bitcoin-miner", "lnd", "lnurl-server"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "local-money",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "exclusive-bitcoin-miner", "lnd", "lnurl-server"]
+        }
+      }
+    },
+    {
+      "id": "numberpad_1",
+      "file": "test/specs/numberpad.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "numberpad_2",
+      "file": "test/specs/numberpad.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "numberpad_3",
+      "file": "test/specs/numberpad.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "numberpad_4",
+      "file": "test/specs/numberpad.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "onboarding_1",
+      "file": "test/specs/onboarding.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "onboarding_2",
+      "file": "test/specs/onboarding.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "onchain_1",
+      "file": "test/specs/onchain.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "onchain_2",
+      "file": "test/specs/onchain.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "onchain_3",
+      "file": "test/specs/onchain.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-local",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "bitcoin-electrum"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-local",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "bitcoin-electrum"]
+        }
+      }
+    },
+    {
+      "id": "paykit_1",
+      "file": "test/specs/paykit.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "regtest",
+          "pack": "staging",
+          "disposition": "required",
+          "fixtures": [
+            "fresh-wallet",
+            "staging-homegate",
+            "contact-payment-fixture",
+            "profile-media"
+          ]
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "staging",
+          "disposition": "required",
+          "fixtures": [
+            "fresh-wallet",
+            "staging-homegate",
+            "contact-payment-fixture",
+            "profile-media"
+          ]
+        }
+      }
+    },
+    {
+      "id": "pubky_profile_1",
+      "file": "test/specs/pubky-profile.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "regtest",
+          "pack": "staging",
+          "disposition": "required",
+          "fixtures": [
+            "fresh-wallet",
+            "staging-homegate",
+            "contact-payment-fixture",
+            "profile-media"
+          ]
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "staging",
+          "disposition": "required",
+          "fixtures": [
+            "fresh-wallet",
+            "staging-homegate",
+            "contact-payment-fixture",
+            "profile-media"
+          ]
+        }
+      }
+    },
+    {
+      "id": "pubky_profile_2",
+      "file": "test/specs/pubky-profile.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "regtest",
+          "pack": "staging",
+          "disposition": "required",
+          "fixtures": [
+            "fresh-wallet",
+            "staging-homegate",
+            "contact-payment-fixture",
+            "profile-media"
+          ]
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "staging",
+          "disposition": "required",
+          "fixtures": [
+            "fresh-wallet",
+            "staging-homegate",
+            "contact-payment-fixture",
+            "profile-media"
+          ]
+        }
+      }
+    },
+    {
+      "id": "pubky_profile_3",
+      "file": "test/specs/pubky-profile.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "regtest",
+          "pack": "staging",
+          "disposition": "required",
+          "fixtures": [
+            "fresh-wallet",
+            "staging-homegate",
+            "contact-payment-fixture",
+            "profile-media"
+          ]
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "staging",
+          "disposition": "required",
+          "fixtures": [
+            "fresh-wallet",
+            "staging-homegate",
+            "contact-payment-fixture",
+            "profile-media"
+          ]
+        }
+      }
+    },
+    {
+      "id": "pubky_profile_4",
+      "file": "test/specs/pubky-profile.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "regtest",
+          "pack": "staging",
+          "disposition": "required",
+          "fixtures": [
+            "fresh-wallet",
+            "staging-homegate",
+            "contact-payment-fixture",
+            "profile-media"
+          ]
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "staging",
+          "disposition": "required",
+          "fixtures": [
+            "fresh-wallet",
+            "staging-homegate",
+            "contact-payment-fixture",
+            "profile-media"
+          ]
+        }
+      }
+    },
+    {
+      "id": "pubky_profile_5",
+      "file": "test/specs/pubky-profile.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "regtest",
+          "pack": "staging",
+          "disposition": "required",
+          "fixtures": [
+            "fresh-wallet",
+            "staging-homegate",
+            "contact-payment-fixture",
+            "profile-media"
+          ]
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "staging",
+          "disposition": "required",
+          "fixtures": [
+            "fresh-wallet",
+            "staging-homegate",
+            "contact-payment-fixture",
+            "profile-media"
+          ]
+        }
+      }
+    },
+    {
+      "id": "utility_receive_ln_1",
+      "file": "test/specs/receive-ln-payments.e2e.ts",
+      "kind": "utility",
+      "platforms": {
+        "ios": {
+          "backend": "regtest",
+          "pack": "manual",
+          "disposition": "manual",
+          "fixtures": ["already-prepared-wallet"],
+          "reason": "Interactive payment utility; does not provision its own wallet and accepts partial payment success. Not an autonomous regression case.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "manual",
+          "disposition": "manual",
+          "fixtures": ["already-prepared-wallet"],
+          "reason": "Interactive payment utility; does not provision its own wallet and accepts partial payment success. Not an autonomous regression case.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        }
+      }
+    },
+    {
+      "id": "receive_1",
+      "file": "test/specs/receive.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "security_1",
+      "file": "test/specs/security.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "send_1",
+      "file": "test/specs/send.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "send_2",
+      "file": "test/specs/send.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "local-money",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "exclusive-bitcoin-miner", "lnd", "lnurl-server"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "local-money",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "exclusive-bitcoin-miner", "lnd", "lnurl-server"]
+        }
+      }
+    },
+    {
+      "id": "send_3",
+      "file": "test/specs/send.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "local-money",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "exclusive-bitcoin-miner", "lnd", "lnurl-server"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "local-money",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "exclusive-bitcoin-miner", "lnd", "lnurl-server"]
+        }
+      }
+    },
+    {
+      "id": "settings_01",
+      "file": "test/specs/settings.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "settings_02",
+      "file": "test/specs/settings.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "settings_03",
+      "file": "test/specs/settings.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "settings_04",
+      "file": "test/specs/settings.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "settings_05",
+      "file": "test/specs/settings.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "settings_06",
+      "file": "test/specs/settings.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "settings_07",
+      "file": "test/specs/settings.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "settings_08",
+      "file": "test/specs/settings.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "gap",
+          "fixtures": ["fresh-wallet"],
+          "reason": "Currently skipped with an address-switching-unavailable comment; applicability needs reassessment before restoring or retiring this case.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "gap",
+          "fixtures": ["fresh-wallet"],
+          "reason": "Currently skipped with an address-switching-unavailable comment; applicability needs reassessment before restoring or retiring this case.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        }
+      }
+    },
+    {
+      "id": "settings_09",
+      "file": "test/specs/settings.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "settings_10",
+      "file": "test/specs/settings.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-local",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "bitcoin-electrum"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-local",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "bitcoin-electrum"]
+        }
+      }
+    },
+    {
+      "id": "settings_11",
+      "file": "test/specs/settings.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "settings_12",
+      "file": "test/specs/settings.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "settings_13",
+      "file": "test/specs/settings.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "settings_14",
+      "file": "test/specs/settings.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "transfer_1",
+      "file": "test/specs/transfer.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "regtest",
+          "pack": "staging",
+          "disposition": "gap",
+          "fixtures": ["fresh-wallet", "blocktank-channel-orders"],
+          "reason": "Currently skipped after Blocktank channel-order retirement; retire or replace its assertions explicitly, rather than counting a skip as a pass.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "staging",
+          "disposition": "gap",
+          "fixtures": ["fresh-wallet", "blocktank-channel-orders"],
+          "reason": "Currently skipped after Blocktank channel-order retirement; retire or replace its assertions explicitly, rather than counting a skip as a pass.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        }
+      }
+    },
+    {
+      "id": "transfer_max",
+      "file": "test/specs/transfer.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "regtest",
+          "pack": "staging",
+          "disposition": "gap",
+          "fixtures": ["fresh-wallet", "blocktank-channel-orders"],
+          "reason": "Currently skipped after Blocktank channel-order retirement; retire or replace its assertions explicitly, rather than counting a skip as a pass.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        },
+        "android": {
+          "backend": "regtest",
+          "pack": "staging",
+          "disposition": "gap",
+          "fixtures": ["fresh-wallet", "blocktank-channel-orders"],
+          "reason": "Currently skipped after Blocktank channel-order retirement; retire or replace its assertions explicitly, rather than counting a skip as a pass.",
+          "reference": "https://github.com/synonymdev/bitkit-e2e-tests/issues/264",
+          "owner": "bitkit-e2e-tests maintainers"
+        }
+      }
+    },
+    {
+      "id": "transfer_2",
+      "file": "test/specs/transfer.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "local-money",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "exclusive-bitcoin-miner", "lnd", "lnurl-server"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "local-money",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet", "exclusive-bitcoin-miner", "lnd", "lnurl-server"]
+        }
+      }
+    },
+    {
+      "id": "widgets_1",
+      "file": "test/specs/widgets.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "widgets_2",
+      "file": "test/specs/widgets.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    },
+    {
+      "id": "widgets_3",
+      "file": "test/specs/widgets.e2e.ts",
+      "kind": "test",
+      "platforms": {
+        "ios": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        },
+        "android": {
+          "backend": "local",
+          "pack": "core-ui",
+          "disposition": "required",
+          "fixtures": ["fresh-wallet"]
+        }
+      }
+    }
+  ]
+}

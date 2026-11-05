@@ -469,16 +469,29 @@ describe('@transfer - Transfer', () => {
     // check transfer card
     // await elementById('Suggestion-lightning_setting_up').waitForDisplayed();
 
-    const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
-    const totalAmtAfterChannelOpen = await totalBalance.getText();
-    await expect(totalBalance).not.toHaveText('100 000');
-    await sleep(2500);
-
-    // check activity
-    await elementById('ActivityShort-0').waitForDisplayed();
-    await expectTextWithin('ActivityShort-0', 'Transfer');
-    await elementById('ActivityShort-1').waitForDisplayed();
-    await expectTextWithin('ActivityShort-1', 'Received');
+    // QuickPay is shown once per wallet and can cover Home anywhere between
+    // channel opening and the last activity assertion.
+    let dismissedEarlyQuickPay = driver.isIOS && (await tryDismissQuickPayIntroIfVisible());
+    const readOpeningActivity = async () => {
+      const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
+      await expect(totalBalance).not.toHaveText('100 000');
+      const totalAmtAfterChannelOpen = await totalBalance.getText();
+      await sleep(2500);
+      await elementById('ActivityShort-0').waitForDisplayed();
+      await expectTextWithin('ActivityShort-0', 'Transfer');
+      await elementById('ActivityShort-1').waitForDisplayed();
+      await expectTextWithin('ActivityShort-1', 'Received');
+      return { totalBalance, totalAmtAfterChannelOpen };
+    };
+    const { totalBalance, totalAmtAfterChannelOpen } = await readOpeningActivity().catch(
+      async (error) => {
+        if (!driver.isIOS || dismissedEarlyQuickPay || !(await tryDismissQuickPayIntroIfVisible())) {
+          throw error;
+        }
+        dismissedEarlyQuickPay = true;
+        return readOpeningActivity();
+      }
+    );
     await swipeFullScreen('down');
     await swipeFullScreen('down');
 
@@ -488,7 +501,7 @@ describe('@transfer - Transfer', () => {
     await sleep(1000);
 
     await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });
-    await dismissQuickPayIntro({ triggerTimedSheet: true });
+    if (!dismissedEarlyQuickPay) await dismissQuickPayIntro({ triggerTimedSheet: true });
 
     await expectNoTextWithin('ActivitySpending', '0');
     await waitForActiveChannel(lnd, ldkNodeId);

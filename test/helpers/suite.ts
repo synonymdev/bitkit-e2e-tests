@@ -47,11 +47,17 @@ export function checkComplete(name: string): boolean {
 
 export function markComplete(name: string) {
   if (!ON_CI) return;
-  fs.mkdirSync(LOCK_PATH, { recursive: true });
-  fs.writeFileSync(lockFile(name), '1');
+  const file = lockFile(name);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, '1');
 }
 
-function lockFile(key: string) {
+export function lockFile(key: string, planFile = process.env.E2E_PLAN) {
+  if (planFile) {
+    const id = /^@([a-z][a-z0-9_]*)(?=[\s,]|$)/.exec(key)?.[1];
+    if (!id) throw new Error(`Missing case ID for retry lock: ${key}`);
+    return path.join(path.dirname(planFile), 'completed', `lock-${id}`);
+  }
   // replace anything that's *not* a letter, number, dot, underscore, or dash
   // with an underscore. This avoids weird characters in filenames.
   const safe = key.replace(/[^a-zA-Z0-9._-]/g, '_');

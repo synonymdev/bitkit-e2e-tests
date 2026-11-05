@@ -43,7 +43,7 @@ describe('Receive LN payments (utility)', () => {
     await sleep(3000);
   });
 
-  it(`should receive ${PAYMENT_COUNT} Lightning payments`, async () => {
+  it(`@utility_receive_ln_1 - should receive ${PAYMENT_COUNT} Lightning payments`, async () => {
     let succeeded = 0;
     let failed = 0;
 
