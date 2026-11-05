@@ -27,7 +27,6 @@ import {
   tap,
   selectSendFundingSource,
   enterAmount,
-  verifyAmountToSend,
 } from '../helpers/actions';
 import { lndConfig } from '../helpers/constants';
 import { reinstallApp } from '../helpers/setup';
@@ -162,10 +161,12 @@ describe('@send - Send', () => {
       await typeAddressAndVerifyContinue({ address: unified1 });
     }
 
-    // verify amount is set correctly
+    // a payable amount opens the review screen directly
     await tap('AddressContinue');
-    await verifyAmountToSend(10_000);
-    await elementById('ContinueAmount').waitForEnabled();
+    const unified1ReviewAmt = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
+    await unified1ReviewAmt.waitForDisplayed();
+    await expect(unified1ReviewAmt).toHaveText('10 000');
+    // the scanned amount is fixed, so Back returns to the address screen
     await tap('NavigationBack');
 
     // check validation for unified invoice when balance is too low (200_000 sats)
@@ -360,10 +361,7 @@ describe('@send - Send', () => {
     console.info({ unified2 });
     await sleep(1000);
     await enterAddress(unified2, { acceptCameraPermission: false });
-    // should only allow spending from savings
-    await elementById('AssetButton-savings').waitForDisplayed();
-    await sleep(500);
-    await tap('ContinueAmount');
+    // lightning cannot pay it, so the onchain amount opens the review screen directly
     await reviewAmt.waitForDisplayed();
     await expect(reviewAmt).toHaveText('20 000');
     await dragOnElement('GRAB', 'right', 0.95);
