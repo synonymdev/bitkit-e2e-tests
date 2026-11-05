@@ -13,6 +13,10 @@ Durable shared agent command specs live in `.agents/commands/`. `.claude/command
 
 For release sanity planning or remaining coverage gaps, use the shared [release-sanity skill](.agents/skills/release-sanity/SKILL.md) and canonical [release QA method](docs/release-qa.md). Keep recurring mainnet payment smoke plus justified release-specific checks; reuse applicable evidence and report skips/failures accurately. The [3.1.0 example](docs/release-qa/3.1.0-example.md) illustrates the method, not a standing checklist or approval. No personal skill or private spreadsheet is required.
 
+## Store release notes
+
+The app `/release` commands use [store release-note checks](docs/store-release-notes.md) for drafting, translation and final store metadata readback. Keep the method here and link to it from the native commands instead of maintaining separate policy checklists.
+
 ## Purpose
 
 Bitkit E2E tests for:

@@ -4,6 +4,8 @@ End-to-end tests for the [Bitkit-android](https://github.com/synonymdev/bitkit-a
 
 For pre-release sanity planning, use the shared [release QA method](docs/release-qa.md) or [/release-sanity](.agents/commands/release-sanity.md). See [3.1.0](docs/release-qa/3.1.0-example.md) for a worked example of reusing coverage and selecting remaining checks.
 
+Store-note generation and submission use the shared [store release-note checks](docs/store-release-notes.md), including platform-specific wording, all translations and saved-field readback.
+
 ---
 
 ### 📦 Requirements
