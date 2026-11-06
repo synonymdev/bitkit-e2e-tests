@@ -1,3 +1,5 @@
+import { actAndExpect, tapAndExpect, typeAndExpect } from './outcome';
+import { enterGateAddress, confirmGateAction } from './gate-actions';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -6,10 +8,8 @@ import {
   acknowledgeReceivedPaymentIfPresent,
   addSendTag,
   doNavigationClose,
-  dragOnElement,
   elementById,
   elementByText,
-  enterAddress,
   enterAmount,
   expectBalanceWithWait,
   expectTextWithin,
@@ -23,7 +23,6 @@ import {
   tap,
   selectSendFundingSource,
   tapFirstByAccessibilityIdPrefix,
-  typeText,
   handleAndroidAlert,
   waitForToast,
   type BalanceCondition,
@@ -102,35 +101,58 @@ export function ensureTrezorEmulator({
 
 export async function openHardwareWalletSettings() {
   await openSettings('general');
-  await tap('HardwareWalletsSettings');
+  await tapAndExpect(
+    { id: 'HardwareWalletsSettings' },
+    { anyVisible: [{ id: 'HardwareWalletsScreen' }] }
+  );
   await elementById('HardwareWalletsScreen').waitForDisplayed();
 }
 
 export async function startHardwareWalletFlowFromSuggestion() {
   await openHomeWidgets();
   await elementById('Suggestion-hardware').waitForDisplayed({ timeout: 30_000 });
-  await tap('Suggestion-hardware');
+  await tapAndExpect(
+    { id: 'Suggestion-hardware' },
+    { anyVisible: [{ id: 'HardwareWalletIntroScreen' }] }
+  );
 }
 
 export async function connectHardwareWalletFromSettings(label: string) {
   await openHardwareWalletSettings();
-  await tap('AddHardwareWallet');
+  await tapAndExpect(
+    { id: 'AddHardwareWallet' },
+    { anyVisible: [{ id: 'HardwareWalletIntroScreen' }] }
+  );
   await completeHardwareWalletFlow(label);
 }
 
 export async function completeHardwareWalletFlow(label: string) {
   await elementById('HardwareWalletIntroScreen').waitForDisplayed();
-  await sleep(1000);
-  await tap('HardwareWalletIntroContinue');
-  await handleAndroidAlert();
+  await actAndExpect(
+    'begin hardware pairing',
+    async () => {
+      await tap('HardwareWalletIntroContinue');
+      await handleAndroidAlert();
+    },
+    { anyVisible: [{ id: 'HardwareWalletFoundScreen' }] }
+  );
 
   await elementById('HardwareWalletFoundScreen').waitForDisplayed();
-  await sleep(1000);
-  await tap('HardwareWalletFoundConnect');
+  await tapAndExpect(
+    { id: 'HardwareWalletFoundConnect' },
+    { anyVisible: [{ id: 'HardwareWalletPairedScreen' }] }
+  );
   await elementById('HardwareWalletPairedScreen').waitForDisplayed();
-  await typeText('HardwareWalletLabelInput', label);
-  await tap('HardwareWalletPairedFinish');
-  await sleep(1000);
+  await typeAndExpect('HardwareWalletLabelInput', label, {}, { verifyClear: true });
+  await tapAndExpect(
+    { id: 'HardwareWalletPairedFinish' },
+    {
+      all: [
+        { visible: { id: 'ActivityHardware' } },
+        { textWithin: { id: 'ActivityHardware', text: label } },
+      ],
+    }
+  );
   // We finish on Main screen with the hardware wallet listed
   await elementById('ActivityHardware').waitForDisplayed();
   await expectText(label, { strategy: 'contains' });
@@ -147,12 +169,25 @@ export async function renameHardwareWalletFromSettings(currentLabel: string, new
   await expectHardwareWalletInSettings(currentLabel, { visible: true });
   const nameEl = await elementByText(currentLabel, 'contains');
   await nameEl.waitForDisplayed({ timeout: 30_000 });
-  await sleep(200);
-  await nameEl.click();
+  await actAndExpect('open hardware wallet rename', () => nameEl.click(), {
+    anyVisible: [{ id: 'RenameHardwareWalletInput' }],
+  });
   await elementById('RenameHardwareWalletInput').waitForDisplayed({ timeout: 30_000 });
-  await typeText('RenameHardwareWalletInput', newLabel);
-  await tap('RenameHardwareWalletSave');
-  await confirmInputOnKeyboard();
+  await typeAndExpect('RenameHardwareWalletInput', newLabel, {}, { verifyClear: true });
+  await actAndExpect(
+    'save hardware wallet name',
+    async () => {
+      await tap('RenameHardwareWalletSave');
+      await confirmInputOnKeyboard();
+    },
+    {
+      all: [
+        { hidden: { id: 'RenameHardwareWalletInput' } },
+        { visible: { text: newLabel } },
+        { hidden: { text: currentLabel } },
+      ],
+    }
+  );
   await elementById('RenameHardwareWalletInput').waitForDisplayed({
     reverse: true,
     timeout: 30_000,
@@ -209,7 +244,7 @@ export async function fundHardwareWalletAndAcknowledge({
 
 async function getHardwareReceiveAddress(): Promise<string> {
   await doNavigationClose();
-  await tap('Receive');
+  await tapAndExpect({ id: 'Receive' }, { anyVisible: [{ id: 'ReceiveScreen' }] });
   await elementById('ReceiveScreen').waitForDisplayed({ timeout: 30_000 });
 
   let defaultTabAddress = '';
@@ -224,14 +259,12 @@ async function getHardwareReceiveAddress(): Promise<string> {
     interval: 500,
     timeoutMsg: 'Timed out waiting for hardware receive tab (Tab-hardware or Tab-trezor)',
   });
+  const tabId = await displayedHardwareReceiveTabId();
+  if (!tabId) throw new Error('Hardware receive tab disappeared');
+  await tapAndExpect({ id: tabId }, { anyVisible: [{ id: 'QRCode' }] });
   await browser.waitUntil(
     async () => {
       try {
-        const tabId = await displayedHardwareReceiveTabId();
-        if (!tabId) {
-          return false;
-        }
-        await tap(tabId);
         const address = await peekQrOnchainAddress();
         return Boolean(address && address !== defaultTabAddress);
       } catch {
@@ -257,7 +290,7 @@ export async function expectHardwareWalletReceivedActivity(sats: number) {
   await doNavigationClose();
   await elementById('ActivityHardware').waitForDisplayed();
   await expectTextWithin('ActivityHardware', formatSats(sats));
-  await tap('ActivityHardware');
+  await tapAndExpect({ id: 'ActivityHardware' }, { anyVisible: [{ id: 'HardwareWalletScreen' }] });
   await elementById('HardwareWalletScreen').waitForDisplayed();
   await elementById('Activity-1').waitForDisplayed();
   await expectTextWithin('Activity-1', 'Received');
@@ -266,11 +299,11 @@ export async function expectHardwareWalletReceivedActivity(sats: number) {
 
 export async function expectHardwareWalletSentActivity(tag: string) {
   await doNavigationClose();
-  await tap('ActivityHardware');
+  await tapAndExpect({ id: 'ActivityHardware' }, { anyVisible: [{ id: 'HardwareWalletScreen' }] });
   await elementById('HardwareWalletScreen').waitForDisplayed();
   await elementById('Activity-1').waitForDisplayed();
   await expectTextWithin('Activity-1', '-');
-  await tap('Activity-1');
+  await tapAndExpect({ id: 'Activity-1' }, { anyVisible: [{ id: `Tag-${tag}-delete` }] });
   await elementById(`Tag-${tag}-delete`).waitForDisplayed();
 }
 
@@ -286,23 +319,32 @@ export async function sendOnchainFromHardwareWallet({
   tag?: string;
 }) {
   await doNavigationClose();
-  await enterAddress(address);
-  await elementById('ContinueAmount').waitForDisplayed({ timeout: 60_000 });
+  await enterGateAddress(address);
+  await elementById('ContinueAmount').waitForDisplayed({ timeout: 30_000 });
   await selectSendFundingSource(walletLabel);
   await enterAmount(amountSats);
-  await elementById('ContinueAmount').waitForEnabled({ timeout: 60_000 });
-  await tap('ContinueAmount');
+  await elementById('ContinueAmount').waitForEnabled({ timeout: 30_000 });
+  await tapAndExpect({ id: 'ContinueAmount' }, { anyVisible: [{ id: 'GRAB' }] });
   await elementById('GRAB').waitForDisplayed({ timeout: 120_000 });
   if (tag) {
     await addSendTag(tag);
     await sleep(500);
   }
-  await dragOnElement('GRAB', 'right', 0.95);
+  await confirmGateAction({
+    anyVisible: [{ id: 'HardwareSendOpenTrezorConnect' }],
+    timeout: 120_000,
+  });
   await elementById('HardwareSendOpenTrezorConnect').waitForDisplayed({ timeout: 120_000 });
-  await tap('HardwareSendOpenTrezorConnect');
-  await approveTrezorPromptsUntil(['SendSuccess']);
+  await actAndExpect(
+    'approve hardware send',
+    async () => {
+      await tap('HardwareSendOpenTrezorConnect');
+      await approveTrezorPromptsUntil(['SendSuccess']);
+    },
+    { anyVisible: [{ id: 'SendSuccess' }], timeout: 180_000 }
+  );
   await elementById('SendSuccess').waitForDisplayed();
-  await tap('Close');
+  await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
 }
 
 export async function transferHardwareWalletToSpending({
@@ -313,7 +355,7 @@ export async function transferHardwareWalletToSpending({
   waitForSync?: () => Promise<void>;
 }) {
   await doNavigationClose();
-  await tap('ActivityHardware');
+  await tapAndExpect({ id: 'ActivityHardware' }, { anyVisible: [{ id: 'HardwareWalletScreen' }] });
   await elementById('HardwareWalletScreen').waitForDisplayed();
   await tap('HardwareTransferToSpending');
 
@@ -373,9 +415,12 @@ export async function transferHardwareWalletToSpending({
 export async function removeHardwareWalletFromSettings(label: string) {
   await openHardwareWalletSettings();
   await expectHardwareWalletInSettings(label, { visible: true });
-  await tapFirstByAccessibilityIdPrefix('HardwareWalletRowDelete_');
-  await tap('DialogConfirm');
-  await sleep(500);
+  await actAndExpect(
+    'request hardware removal',
+    () => tapFirstByAccessibilityIdPrefix('HardwareWalletRowDelete_'),
+    { anyVisible: [{ id: 'DialogConfirm' }] }
+  );
+  await tapAndExpect({ id: 'DialogConfirm' }, { all: [{ hidden: { text: label } }] });
   await expectHardwareWalletInSettings(label, { visible: false });
 }
 
