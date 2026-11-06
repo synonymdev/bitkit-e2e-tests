@@ -275,7 +275,9 @@ export async function typeAndExpect(
           }
         );
       }
-      await elementById(id).setValue(text);
+      // setValue clears again internally; that would invalidate the verified clear.
+      if (verifyClear) await elementById(id).addValue(text);
+      else await elementById(id).setValue(text);
     },
     { ...outcome, all: [{ inputValue: { id, value: text } }, ...(outcome.all ?? [])] }
   );

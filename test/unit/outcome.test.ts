@@ -97,7 +97,12 @@ for (const isAndroid of [true, false]) {
           clearValue: async () => {
             clears++;
           },
-          setValue: async (value: string) => {
+          setValue: async () => {
+            // The installed SDK implements setValue as clearValue + addValue.
+            clears++;
+            throw new Error('setValue would issue a second unverified clear');
+          },
+          addValue: async (value: string) => {
             // Writing too early reproduces the observed append to the old address.
             text += value;
             writes++;
