@@ -1701,7 +1701,7 @@ async function triggerTimedSheetUnlessPresent(
 
 /**
  * Dismisses a sheet that covers home in place of sheetId.
- * @returns true when sheetId is showing afterwards
+ * @returns true when the Move to Spark intro was dismissed and the queue has moved on
  */
 async function dismissInterveningSheets(sheetId: string): Promise<boolean> {
   if (await dismissMoveToSparkIntroIfShown()) {
@@ -1714,19 +1714,20 @@ async function dismissInterveningSheets(sheetId: string): Promise<boolean> {
 }
 
 /**
- * Home re-checks the queue about 2 s after a dismiss, so sheetId usually surfaces by itself once the Move to Spark
- * intro is gone; trigger the queue only when it does not.
- * @returns true when sheetId is showing
+ * Home re-checks the queue about 2 s after a dismiss, so the next timed sheet usually surfaces by itself once the
+ * Move to Spark intro is gone. It can be another sheet than sheetId (QuickPay before Background Payments); the
+ * caller's own wait then decides, so the queue is triggered only when home is uncovered.
+ * @returns true, as the caller should not trigger the queue again
  */
 async function awaitSheetAfterMoveToSpark(sheetId: string): Promise<boolean> {
   const shown = await elementById(sheetId)
     .waitForDisplayed({ timeout: 5_000 })
     .then(() => true)
     .catch(() => false);
-  if (shown) return true;
-  if (!(await isTestIdDisplayed('HeaderMenu'))) return false;
-  await doTriggerTimedSheet();
-  return isTestIdDisplayed(sheetId);
+  if (!shown && (await isTestIdDisplayed('HeaderMenu'))) {
+    await doTriggerTimedSheet();
+  }
+  return true;
 }
 
 /**
