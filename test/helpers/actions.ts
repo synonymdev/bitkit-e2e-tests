@@ -591,6 +591,7 @@ export async function swipeFullScreen(
     upEndYPercent = 0.2,
     durationMs = 200,
     pauseMs = 50,
+    settleMs = 500,
   }: {
     downStartYPercent?: number;
     downEndYPercent?: number;
@@ -598,6 +599,7 @@ export async function swipeFullScreen(
     upEndYPercent?: number;
     durationMs?: number;
     pauseMs?: number;
+    settleMs?: number;
   } = {}
 ) {
   const { width, height } = await driver.getWindowSize();
@@ -641,7 +643,7 @@ export async function swipeFullScreen(
     },
   ]);
   await driver.releaseActions();
-  await sleep(500); // Allow time for the swipe to complete
+  if (settleMs > 0) await sleep(settleMs);
 }
 
 async function elementRect(el: ChainablePromiseElement) {
@@ -829,7 +831,8 @@ export async function waitForWalletHome({
 export async function handleUsdtIntro({
   enable = false,
 }: { enable?: boolean } = {}): Promise<boolean> {
-  const button = elementById(enable ? 'UsdtIntroEnable' : 'UsdtIntroDecline');
+  const buttonId = enable ? 'UsdtIntroEnable' : 'UsdtIntroDecline';
+  const button = elementById(buttonId);
   if (enable) {
     await button.waitForDisplayed({ timeout: 15_000 });
   } else {
@@ -839,8 +842,35 @@ export async function handleUsdtIntro({
       .catch(() => false);
     if (!visible) return false;
   }
-  await button.click();
-  await button.waitForDisplayed({ reverse: true });
+  if (driver.isAndroid) {
+    // A visible button can still be moving with the entering bottom sheet.
+    // Wait for an enabled target at stable bounds before issuing the one tap.
+    let previousBounds = '';
+    await browser.waitUntil(
+      async () => {
+        const current = elementById(buttonId);
+        if (!(await current.isDisplayed()) || !(await current.isEnabled())) {
+          previousBounds = '';
+          return false;
+        }
+        const bounds = JSON.stringify([await current.getLocation(), await current.getSize()]);
+        const stable = bounds === previousBounds;
+        previousBounds = bounds;
+        return stable;
+      },
+      { interval: 200, timeoutMsg: `USDT introduction ${buttonId} did not settle` }
+    );
+  }
+  await elementById(buttonId).click();
+  // The dismissed sheet can leave a cached UiAutomator element reporting displayed.
+  // Resolve the identifier again on every observation; do not repeat the action.
+  await browser.waitUntil(
+    async () => {
+      const current = elementById(buttonId);
+      return !(await current.isExisting()) || !(await current.isDisplayed());
+    },
+    { interval: 200, timeoutMsg: `USDT introduction still visible after ${buttonId}` }
+  );
   return true;
 }
 

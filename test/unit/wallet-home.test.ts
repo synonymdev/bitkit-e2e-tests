@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { waitForWalletHome } from '../helpers/actions.ts';
 
-function walletScreen({ homeAt = 0, introAt = Infinity } = {}) {
+function walletScreen({ homeAt = 0, introAt = Infinity, staleDismissedElement = false } = {}) {
   let elapsed = 0;
   let dismissed = false;
   const clicks: string[] = [];
@@ -19,10 +19,19 @@ function walletScreen({ homeAt = 0, introAt = Infinity } = {}) {
   };
   const select = (selector: string) => {
     const id = selector.startsWith('~') ? selector.slice(1) : selector.split('"')[1];
+    const selectedBeforeDismissal = !dismissed;
+    const displayed = () =>
+      staleDismissedElement && selectedBeforeDismissal && dismissed && id.startsWith('UsdtIntro')
+        ? true
+        : visible(id);
     return {
-      isDisplayed: async () => visible(id),
+      isDisplayed: async () => displayed(),
+      isExisting: async () => visible(id),
+      isEnabled: async () => visible(id),
+      getLocation: async () => ({ x: 20, y: elapsed < introAt + 500 ? 700 : 600 }),
+      getSize: async () => ({ width: 160, height: 48 }),
       waitForDisplayed: async ({ reverse = false, timeout = 5000 } = {}) =>
-        waitUntil(async () => visible(id) !== reverse, { timeout }),
+        waitUntil(async () => displayed() !== reverse, { timeout }),
       click: async () => {
         assert.ok(visible(id));
         clicks.push(id);
@@ -39,6 +48,11 @@ for (const isAndroid of [true, false]) {
     { name: 'declines an intro covering the home', introAt: 0 },
     { name: 'handles an intro after slow wallet setup', homeAt: 10_000, introAt: 10_000 },
     { name: 'handles an intro appearing after the home', introAt: 2000 },
+    {
+      name: 're-resolves a dismissed cached intro without clicking again',
+      introAt: 0,
+      staleDismissedElement: true,
+    },
     { name: 'preserves wallets without an intro' },
     { name: 'enables only when requested', introAt: 0, enableUsdt: true },
     { name: 'fails when explicit opt-in is unavailable', enableUsdt: true, fails: true },

@@ -22,5 +22,5 @@
     "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true
   },
-  "include": ["test", "test/types/**/*.d.ts", "wdio.conf.ts"]
+  "include": ["test", "test/types/**/*.d.ts", "wdio.conf.ts", "wdio.outcome-pilot.conf.ts"]
 }
