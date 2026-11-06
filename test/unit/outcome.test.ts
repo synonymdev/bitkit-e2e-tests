@@ -74,6 +74,57 @@ for (const stuck of [false, true]) {
   });
 }
 
+for (const isAndroid of [true, false]) {
+  for (const stuck of [false, true]) {
+    test(`input clear ${isAndroid ? 'Android' : 'iOS'}: ${stuck ? 'refuses append' : 'awaits stable empty state'}`, async (t) => {
+      const previous = { browser: globalThis.browser, driver: globalThis.driver, $: globalThis.$ };
+      let writes = 0;
+      let clears = 0;
+      let reads = 0;
+      let text = 'old-address';
+      const attributes: string[] = [];
+      Object.assign(globalThis, {
+        driver: { isAndroid },
+        browser: {
+          waitUntil: async (probe: () => Promise<boolean>, options: { timeoutMsg: string }) => {
+            for (let poll = 0; poll < 6; poll++) if (await probe()) return;
+            throw new Error(options.timeoutMsg);
+          },
+        },
+        $: () => ({
+          isDisplayed: async () => true,
+          waitForDisplayed: async () => {},
+          clearValue: async () => {
+            clears++;
+          },
+          setValue: async (value: string) => {
+            // Writing too early reproduces the observed append to the old address.
+            text += value;
+            writes++;
+          },
+          getAttribute: async (attribute: string) => {
+            attributes.push(attribute);
+            reads++;
+            // First empty observation is transient: the old app value can return.
+            if (!writes && !stuck && reads !== 1 && reads !== 3) text = '';
+            else if (!writes && reads === 3) text = 'old-address';
+            return text;
+          },
+        }),
+      });
+      t.after(() => Object.assign(globalThis, previous));
+      const result = typeAndExpect('RecipientInput', 'new-address', {}, { verifyClear: true });
+      if (stuck) await assert.rejects(result, /input did not clear; replacement not typed/);
+      else await result;
+      assert.equal(clears, 1);
+      assert.equal(writes, stuck ? 0 : 1);
+      if (!stuck) assert.equal(text, 'new-address');
+      assert.equal(attributes[0], isAndroid ? 'text' : 'value');
+      assert.ok(reads >= 5);
+    });
+  }
+}
+
 for (const scenario of [
   'expires',
   'missing',

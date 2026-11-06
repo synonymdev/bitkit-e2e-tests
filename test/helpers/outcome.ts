@@ -236,14 +236,46 @@ export async function swipeAndExpect(
   );
 }
 
-export async function typeAndExpect(id: string, text: string, outcome: Outcome = {}) {
+export async function typeAndExpect(
+  id: string,
+  text: string,
+  outcome: Outcome = {},
+  { verifyClear = false }: { verifyClear?: boolean } = {}
+) {
   await actAndExpect(
     `type id:${id}`,
     async () => {
       const current = elementById(id);
       await current.waitForDisplayed();
       await current.clearValue();
-      await current.setValue(text);
+      if (verifyClear) {
+        let emptySeen = false;
+        let actual: unknown;
+        await browser.waitUntil(
+          async () => {
+            const input = elementById(id);
+            if (!(await input.isDisplayed())) {
+              emptySeen = false;
+              return false;
+            }
+            // Read the native input attribute, not fallback labels/identifiers.
+            actual = await input.getAttribute(driver.isAndroid ? 'text' : 'value');
+            if (actual !== '' && actual !== null) {
+              emptySeen = false;
+              return false;
+            }
+            const stable = emptySeen;
+            emptySeen = true;
+            return stable;
+          },
+          {
+            timeout: 5000,
+            interval: 200,
+            timeoutMsg: `${id}: input did not clear; replacement not typed`,
+          }
+        );
+      }
+      await elementById(id).setValue(text);
     },
     { ...outcome, all: [{ inputValue: { id, value: text } }, ...(outcome.all ?? [])] }
   );

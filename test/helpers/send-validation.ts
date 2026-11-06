@@ -29,19 +29,27 @@ async function openManualRecipient() {
 }
 
 async function rejectedRecipient(value: string, toast: ToastId, negativeControl = false) {
-  await typeAndExpect('RecipientInput', value, {
-    appeared: [{ id: negativeControl ? 'PilotDeliberatelyMissingValidationToast' : toast }],
-    all: [{ enabled: { id: 'AddressContinue', value: false } }],
-    timeout: negativeControl ? 2000 : 30_000,
-  });
+  await typeAndExpect(
+    'RecipientInput',
+    value,
+    {
+      appeared: [{ id: negativeControl ? 'PilotDeliberatelyMissingValidationToast' : toast }],
+      all: [{ enabled: { id: 'AddressContinue', value: false } }],
+      timeout: negativeControl ? 2000 : 30_000,
+    },
+    { verifyClear: true }
+  );
   // Its appearance was asserted above; re-waiting or dragging can race its expiry.
   await waitAndExpect({ all: [{ hidden: { id: toast } }] });
 }
 
 async function acceptedRecipient(value: string) {
-  await typeAndExpect('RecipientInput', value, {
-    all: [{ enabled: { id: 'AddressContinue', value: true } }],
-  });
+  await typeAndExpect(
+    'RecipientInput',
+    value,
+    { all: [{ enabled: { id: 'AddressContinue', value: true } }] },
+    { verifyClear: true }
+  );
   await dismissKeyboardAndExpect();
 }
 
