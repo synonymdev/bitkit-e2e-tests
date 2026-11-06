@@ -1,5 +1,8 @@
 # Send validation action/outcome experiment
 
+This is the original sample. The separate [readiness/toast investigation and rerun](outcome-send-rerun-results.md)
+preserves these results and records the subsequent fixes, forty new attempts and driver diagnostics.
+
 The `send_1` experiment does **not support migrating the full gate yet**. Keep the candidate opt-in.
 The production `send_1` specification, IDs, queue tags and assertions remain unchanged.
 The [earlier onboarding/Receive sample](outcome-pilot-results.md) remains separate historical evidence.

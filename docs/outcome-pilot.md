@@ -143,6 +143,13 @@ funding fixture and recipient/amount assertions. The local pilot compares `runSe
 with the frozen original body from `f170a365` in `send-baseline.ts`. The production Send specification,
 IDs and queue tags are unchanged. [The measured results](outcome-send-results.md) do not justify gate promotion. `all` still means the original onboarding/Receive pair.
 
+The [readiness/toast investigation and rerun](outcome-send-rerun-results.md) records the newer
+sample separately: iOS baseline 8/10 versus outcome 9/10; Android 2/10 versus 3/10, with no
+setup failures. Send remains opt-in. The Send candidate now verifies one clear before one input
+write, prioritizes actual warning appearance before persistent-field reads, and restores Android's
+prior idle setting after each transient observation. Existing Receive typing retains its default.
+The separate driver-timeout diagnostics are excluded from these counts.
+
 With the same platform/device/backend variables as above, run:
 
 ```sh

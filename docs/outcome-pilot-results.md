@@ -3,6 +3,10 @@
 This draft introduces selector-based action/outcome helpers and local onboarding/Receive
 experiments. The regular iOS gate cases have not been migrated. OCR is deferred.
 
+The latest [Send readiness/toast investigation](outcome-send-rerun-results.md) is a separate
+sample. Wallet setup completed in all 40 attempts, but Send still has material warning-observation
+failures, especially on Android. Keep the pilot opt-in and all gate migration cases pending.
+
 ## Executed pilot
 
 On 6 November 2026, the final pilot revision passed 24/24 positive cases: three baseline and
