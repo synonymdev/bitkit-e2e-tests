@@ -1730,11 +1730,12 @@ async function awaitSheetAfterMoveToSpark(sheetId: string): Promise<boolean> {
 }
 
 /**
- * After a Lightning timed sheet is dismissed, home re-checks the queue about 2 s later and can surface the
- * Move to Spark intro, which needs a Lightning balance too; dismiss it before the caller reads home.
+ * After a Lightning timed sheet is dismissed, home re-checks the queue and can surface the Move to Spark intro,
+ * which needs a Lightning balance too; dismiss it before the caller reads home. On Android the swipe-down close
+ * and the 2 s re-check together took over 4 s in CI.
  */
 async function dismissMoveToSparkIntroAfterSheet(): Promise<void> {
-  await dismissMoveToSparkIntroIfShown({ timeout: 4_000 });
+  await dismissMoveToSparkIntroIfShown({ timeout: 10_000 });
 }
 
 /**
