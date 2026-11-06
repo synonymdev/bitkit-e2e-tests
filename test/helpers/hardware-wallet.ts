@@ -149,7 +149,7 @@ export async function completeHardwareWalletFlow(label: string) {
     {
       all: [
         { visible: { id: 'ActivityHardware' } },
-        { textWithin: { id: 'ActivityHardware', text: label } },
+        { textWithin: { id: 'ActivityHardware', text: label, strategy: 'contains' } },
       ],
     }
   );
