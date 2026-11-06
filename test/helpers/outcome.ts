@@ -87,6 +87,9 @@ async function withObservationIdleTimeout(
   const settings = { before: previous, during: 0, restored: false };
   record.observationIdleTimeout = settings;
   let observationFailed = false;
+  let observationError: unknown;
+  let restoreFailed = false;
+  let restoreError: unknown;
   try {
     // UiAutomator's idle wait can outlive a short toast before lookup starts.
     // The action has already completed under the original setting.
@@ -94,16 +97,19 @@ async function withObservationIdleTimeout(
     await observation();
   } catch (error) {
     observationFailed = true;
-    throw error;
+    observationError = error;
   } finally {
     try {
       await driver.updateSettings({ waitForIdleTimeout: previous });
       settings.restored = true;
     } catch (error) {
       record.settingsRestoreError = String(error);
-      if (!observationFailed) throw error;
+      restoreFailed = true;
+      restoreError = error;
     }
   }
+  if (observationFailed) throw observationError;
+  if (restoreFailed) throw restoreError;
 }
 
 /** Execute once, then poll only observations. Never retry an action with side effects. */
@@ -162,6 +168,11 @@ async function actAndExpect(
               sample[`appeared ${key}`] = appeared.has(key);
             }
             observed = sample;
+            // A warning can arrive just after the first lookup. Keep polling it
+            // before spending its lifetime on slower persistent-state reads.
+            if (!(outcome.appeared ?? []).every((target) => appeared.has(label(target)))) {
+              return false;
+            }
             // Re-resolve targets on every poll; navigation can replace the element tree.
             let anyPassed = !outcome.anyVisible?.length;
             for (const target of outcome.anyVisible ?? []) {
@@ -175,7 +186,7 @@ async function actAndExpect(
               observed[JSON.stringify(condition)] = result.actual;
               if (!result.passed) allPassed = false;
             }
-            if (!anyPassed || !allPassed || appeared.size !== (outcome.appeared?.length ?? 0)) {
+            if (!anyPassed || !allPassed) {
               previousBounds = '';
               return false;
             }
@@ -214,6 +225,20 @@ async function actAndExpect(
     record.status = 'failed';
     record.error = error instanceof Error ? error.message : String(error);
     // Evidence is best effort and must not replace the original failure.
+    if (outcome.appeared?.length && outcome.all?.length) {
+      const failureObserved: Record<string, unknown> = {};
+      const diagnosticErrors: string[] = [];
+      record.failureObservedAt = new Date().toISOString();
+      for (const condition of outcome.all) {
+        try {
+          failureObserved[JSON.stringify(condition)] = (await observe(condition)).actual;
+        } catch (diagnosticError) {
+          diagnosticErrors.push(String(diagnosticError));
+        }
+      }
+      record.failureObserved = failureObserved;
+      if (diagnosticErrors.length) record.failureObservationErrors = diagnosticErrors;
+    }
     try {
       const directory = process.env.OUTCOME_PILOT_ARTIFACTS;
       if (directory) {

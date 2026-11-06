@@ -132,6 +132,7 @@ for (const isAndroid of [true, false]) {
 
 for (const scenario of [
   'expires',
+  'delayed',
   'missing',
   'old',
   'wrong-state',
@@ -145,6 +146,8 @@ for (const scenario of [
     let writes = 0;
     let polls = 0;
     let toastReadsAfterAction = 0;
+    let waitFinished = false;
+    let prematureReads = 0;
     let idle = 10000;
     const updates: number[] = [];
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'outcome-evidence-'));
@@ -167,6 +170,7 @@ for (const scenario of [
       browser: {
         waitUntil: async (probe: () => Promise<boolean>, options: { timeoutMsg: string }) => {
           for (polls = 0; polls < 3; polls++) if (await probe()) return;
+          waitFinished = true;
           throw new Error(options.timeoutMsg);
         },
       },
@@ -178,7 +182,10 @@ for (const scenario of [
             toastReadsAfterAction++;
             assert.equal(idle, 0, 'Transient lookup must not wait for UI idle');
           }
-          return scenario === 'old' || (issued && !expired && scenario !== 'missing');
+          return (
+            scenario === 'old' ||
+            (issued && !expired && scenario !== 'missing' && (scenario !== 'delayed' || polls >= 1))
+          );
         },
         clearValue: async () => {},
         setValue: async () => {
@@ -192,6 +199,7 @@ for (const scenario of [
           writes++;
         },
         getAttribute: async () => {
+          if (scenario === 'missing' && !waitFinished) prematureReads++;
           expired = true;
           return scenario === 'amount'
             ? '1 500'
@@ -226,12 +234,17 @@ for (const scenario of [
     assert.equal(idle, 10000);
     assert.deepEqual(updates, scenario === 'old' ? [] : [0, 10000]);
     if (scenario === 'expires' || scenario === 'amount') assert.equal(toastReadsAfterAction, 1);
+    if (scenario === 'delayed') assert.equal(toastReadsAfterAction, 2);
+    assert.equal(prematureReads, 0);
     const [record] = fs
       .readFileSync(path.join(directory, 'steps.jsonl'), 'utf8')
       .trim()
       .split('\n')
       .map((line) => JSON.parse(line));
-    assert.equal(record.status, ['expires', 'amount'].includes(scenario) ? 'passed' : 'failed');
+    assert.equal(
+      record.status,
+      ['expires', 'delayed', 'amount'].includes(scenario) ? 'passed' : 'failed'
+    );
     assert.deepEqual(
       record.appeared,
       ['missing', 'old'].includes(scenario) ? [] : ['id:WarningToast']
@@ -240,6 +253,15 @@ for (const scenario of [
       record.observationIdleTimeout,
       scenario === 'old' ? undefined : { before: 10000, during: 0, restored: true }
     );
+    if (scenario === 'missing') {
+      assert.equal(
+        record.failureObserved[
+          JSON.stringify({ inputValue: { id: 'RecipientInput', value: 'test123' } })
+        ],
+        'test123'
+      );
+      assert.ok(record.failureObservedAt);
+    }
     if (scenario === 'wrong-state') {
       assert.equal(record.observed['appeared id:WarningToast'], true);
       assert.equal(
