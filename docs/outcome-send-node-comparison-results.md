@@ -1,5 +1,9 @@
 # Send comparison: Node 22 versus Node 24 at a 30-second default wait
 
+The subsequent [20-second versus 30-second comparison](outcome-send-wait-comparison-results.md)
+holds Node 24 fixed and changes only the default element wait. The results below remain the
+separate runtime-version comparison.
+
 Four outcome Send attempts per platform on each Node version. The default element wait stays
 at 30 seconds in both batches. The [Node 22 batch](outcome-send-default30-node22-results.md)
 ran first; this follow-up changes only the selected Node runtime.

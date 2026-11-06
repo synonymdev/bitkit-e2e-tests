@@ -138,17 +138,23 @@ coverage justify adoption. The original iOS onboarding results remain in
 
 ## Send validation comparison
 
-The latest [Node 22 versus Node 24 comparison](outcome-send-node-comparison-results.md)
+The latest [20-second versus 30-second default-wait comparison](outcome-send-wait-comparison-results.md)
+holds Node 24.9.0 fixed. At 30 seconds both platforms passed 4/4; at 20 seconds iOS passed 4/4
+and Android 3/4. The Android failure missed an over-limit warning using its unchanged explicit
+30-second assertion, so these results do not establish that the default wait caused the difference.
+The pilot is currently set to a 20-second default following this experiment.
+
+The previous [Node 22 versus Node 24 comparison](outcome-send-node-comparison-results.md)
 holds the default element wait at 30 seconds. Node 24 passed 4/4 attempts on each platform;
 Node 22 had passed iOS 4/4 and Android 3/4. The runtime helpers/configuration are identical.
 These small sequential batches show no observed advantage for Node 22; they do not establish
 the cause of improvement against the older 20-second-default sample.
 
-The latest [Node 22 / 30-second default-wait check](outcome-send-default30-node22-results.md)
+The earlier [Node 22 / 30-second default-wait check](outcome-send-default30-node22-results.md)
 ran the unchanged outcome Send journey four times per platform: iOS 4/4 and Android 3/4.
 The Android failure was the pilot's separate 5-second input-clear confirmation, before typing;
-no attempt failed a toast assertion. Use Node 22.23.4 to reproduce this batch. The pilot now sets
-the default element wait to 30 seconds; driver request retries and explicit helper limits retain
+no attempt failed a toast assertion. Use Node 22.23.4 to reproduce this batch. That batch used
+a 30-second default element wait; driver request retries and explicit helper limits retained
 their previous values. Earlier samples remain separate.
 
 `send_1` is represented by an opt-in prototype using the original wallet setup, 15,000-sat
