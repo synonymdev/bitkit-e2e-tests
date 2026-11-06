@@ -824,23 +824,28 @@ export async function waitForWalletHome({
     { timeout, interval: 250, timeoutMsg: 'Wallet home or USDT introduction did not appear' }
   );
   let introHandled = await handleUsdtIntro({ enable: enableUsdt });
-  await browser.waitUntil(
-    async () => {
-      // An optional intro can arrive after its initial observation window. Keep
-      // observing both states until Home is ready, with no cached Home handle.
-      if (await elementById('UsdtIntroDecline').isDisplayed()) {
-        if (introHandled) throw new Error('USDT introduction reappeared after dismissal');
-        introHandled = await handleUsdtIntro({ enable: enableUsdt });
-        return false;
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    let introVisible = false;
+    await browser.waitUntil(
+      async () => {
+        // An optional intro can arrive after its initial observation window.
+        // Poll only observations; WebdriverIO retries even rejected predicates.
+        introVisible = await elementById('UsdtIntroDecline').isDisplayed();
+        return introVisible || (await elementById('TotalBalance-primary').isDisplayed());
+      },
+      {
+        timeout: Math.max(1, deadline - Date.now()),
+        interval: 250,
+        timeoutMsg: 'Wallet home did not become ready after USDT introduction',
       }
-      return elementById('TotalBalance-primary').isDisplayed();
-    },
-    {
-      timeout,
-      interval: 250,
-      timeoutMsg: 'Wallet home did not become ready after USDT introduction',
-    }
-  );
+    );
+    if (!introVisible) return;
+    if (introHandled) throw new Error('USDT introduction reappeared after dismissal');
+    // A failed dismissal must propagate, never re-enter a retrying predicate.
+    introHandled = await handleUsdtIntro({ enable: enableUsdt });
+  }
+  throw new Error('Wallet home did not become ready after USDT introduction');
 }
 
 /** Ordinary BTC setup declines the optional intro; USDT journeys explicitly opt in. */

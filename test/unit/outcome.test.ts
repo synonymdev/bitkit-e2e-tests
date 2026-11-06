@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { tapAndExpect, typeAndExpect, waitAndExpect } from '../helpers/outcome.ts';
 
 test('toast disappearance re-resolves a stale displayed handle on every poll', async (t) => {
@@ -71,7 +74,14 @@ for (const stuck of [false, true]) {
   });
 }
 
-for (const scenario of ['expires', 'missing', 'old', 'wrong-state', 'amount'] as const) {
+for (const scenario of [
+  'expires',
+  'missing',
+  'old',
+  'wrong-state',
+  'amount',
+  'wrong-amount',
+] as const) {
   test(`transient warning: ${scenario}`, async (t) => {
     const previous = { browser: globalThis.browser, driver: globalThis.driver, $: globalThis.$ };
     let issued = false;
@@ -79,6 +89,14 @@ for (const scenario of ['expires', 'missing', 'old', 'wrong-state', 'amount'] as
     let writes = 0;
     let polls = 0;
     let toastReadsAfterAction = 0;
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'outcome-evidence-'));
+    const previousDirectory = process.env.OUTCOME_PILOT_ARTIFACTS;
+    process.env.OUTCOME_PILOT_ARTIFACTS = directory;
+    t.after(() => {
+      if (previousDirectory === undefined) delete process.env.OUTCOME_PILOT_ARTIFACTS;
+      else process.env.OUTCOME_PILOT_ARTIFACTS = previousDirectory;
+      fs.rmSync(directory, { recursive: true, force: true });
+    });
     Object.assign(globalThis, {
       driver: { isAndroid: true },
       browser: {
@@ -105,8 +123,13 @@ for (const scenario of ['expires', 'missing', 'old', 'wrong-state', 'amount'] as
         },
         getAttribute: async () => {
           expired = true;
-          return scenario === 'amount' ? '1 500' : 'test123';
+          return scenario === 'amount'
+            ? '1 500'
+            : scenario === 'wrong-amount'
+              ? '15 001'
+              : 'test123';
         },
+        $: () => ({ isDisplayed: async () => false }),
         // Persistent state can arrive after the short-lived toast disappeared.
         isEnabled: async () => scenario === 'wrong-state' || polls === 0,
       }),
@@ -117,7 +140,7 @@ for (const scenario of ['expires', 'missing', 'old', 'wrong-state', 'amount'] as
       all: [{ enabled: { id: 'AddressContinue', value: false } }],
     };
     const result =
-      scenario === 'amount'
+      scenario === 'amount' || scenario === 'wrong-amount'
         ? tapAndExpect(
             { id: 'N1' },
             {
@@ -126,9 +149,31 @@ for (const scenario of ['expires', 'missing', 'old', 'wrong-state', 'amount'] as
             }
           )
         : typeAndExpect('RecipientInput', 'test123', outcome);
-    if (['missing', 'old', 'wrong-state'].includes(scenario)) await assert.rejects(result);
+    if (['missing', 'old', 'wrong-state', 'wrong-amount'].includes(scenario))
+      await assert.rejects(result);
     else await result;
     assert.equal(writes, scenario === 'old' ? 0 : 1);
     if (scenario === 'expires' || scenario === 'amount') assert.equal(toastReadsAfterAction, 1);
+    const [record] = fs
+      .readFileSync(path.join(directory, 'steps.jsonl'), 'utf8')
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line));
+    assert.equal(record.status, ['expires', 'amount'].includes(scenario) ? 'passed' : 'failed');
+    assert.deepEqual(
+      record.appeared,
+      ['missing', 'old'].includes(scenario) ? [] : ['id:WarningToast']
+    );
+    if (scenario === 'wrong-state') {
+      assert.equal(record.observed['appeared id:WarningToast'], true);
+      assert.equal(
+        record.observed[JSON.stringify({ inputValue: { id: 'RecipientInput', value: 'test123' } })],
+        'test123'
+      );
+      assert.equal(
+        record.observed[JSON.stringify({ enabled: { id: 'AddressContinue', value: false } })],
+        true
+      );
+    }
   });
 }

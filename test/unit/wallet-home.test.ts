@@ -21,8 +21,15 @@ function walletScreen({
   };
   const waitUntil = async (probe: () => Promise<boolean>, { timeout = 5000 } = {}) => {
     const deadline = elapsed + timeout;
-    while (!(await probe())) {
-      if (elapsed >= deadline) throw new Error('Element did not appear');
+    let error: unknown;
+    while (true) {
+      try {
+        if (await probe()) return;
+      } catch (caught) {
+        // Match WebdriverIO's retry of a rejected predicate, not just false.
+        error = caught;
+      }
+      if (elapsed >= deadline) throw error ?? new Error('Element did not appear');
       elapsed += 250;
     }
   };
@@ -85,6 +92,13 @@ for (const isAndroid of [true, false]) {
     {
       name: 'fails without a second tap when dismissal has no effect',
       introAt: 0,
+      dismissSucceeds: false,
+      fails: true,
+    },
+    {
+      name: 'fails after one late dismissal even when rejected predicates are retried',
+      introAt: 6000,
+      homeVanishesAt: 1000,
       dismissSucceeds: false,
       fails: true,
     },
