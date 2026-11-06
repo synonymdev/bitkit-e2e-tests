@@ -1,3 +1,12 @@
+import {
+  enterGateAddress,
+  enterGateScanPrompt,
+  confirmGateAction,
+  enterGateAmount,
+  rejectGateContinue,
+  authenticateGateLnurl,
+} from '../helpers/gate-actions';
+import { tapAndExpect } from '../helpers/outcome';
 import LNURL from 'lnurl';
 
 import initElectrum from '../helpers/electrum';
@@ -10,18 +19,15 @@ import {
   typeText,
   confirmInputOnKeyboard,
   swipeFullScreen,
-  dragOnElement,
   completeOnboarding,
   multiTap,
   receiveOnchainFunds,
   expectTextWithin,
-  enterAddress,
   expectText,
   dismissQuickPayIntro,
   doNavigationClose,
   waitForToast,
   dismissBackgroundPaymentsTimedSheet,
-  enterAddressViaScanPrompt,
   acknowledgeReceivedPayment,
   acknowledgeExternalSuccess,
   enterAmount,
@@ -137,7 +143,7 @@ describe('@lnurl @ios_gate - LNURL', () => {
       });
       console.log('channelReq', channelReq);
 
-      await enterAddressViaScanPrompt(channelReq.encoded);
+      await enterGateScanPrompt(channelReq.encoded);
 
       const channelRequestPromise = waitForEvent(lnurlServer, 'channelRequest:action');
       await elementById('ConnectButton').waitForDisplayed();
@@ -173,24 +179,15 @@ describe('@lnurl @ios_gate - LNURL', () => {
       });
       console.log('payRequest1', payRequest1);
 
-      await enterAddressViaScanPrompt(payRequest1.encoded, { acceptCameraPermission: false });
+      await enterGateScanPrompt(payRequest1.encoded, { acceptCameraPermission: false });
       await expectTextWithin('SendNumberField', '0');
       // Check that 149 sats is below minimum and 201 sats is above maximum (both rejected)
-      try {
-        await enterAmount(201);
-        await waitForToast('SendAmountExceededToast', { dismiss: driver.isAndroid });
-      } catch {
-        console.warn('SendAmountExceededToast not triggered, trying again...');
-        // tap on 1 fast to trigger the toast
-        await elementById('N1').click();
-        await waitForToast('SendAmountExceededToast', { dismiss: driver.isAndroid });
-      }
+      await enterGateAmount(201, 'SendAmountExceededToast');
 
       await multiTap('NRemove', 3); // remove "201"
       await enterAmount(149);
       await expectTextWithin('SendNumberField', '149');
-      await tap('ContinueAmount');
-      await waitForToast('LnurlPayAmountTooLowToast');
+      await rejectGateContinue('LnurlPayAmountTooLowToast');
 
       await multiTap('NRemove', 3); // remove "149"
       // go with 150
@@ -200,9 +197,9 @@ describe('@lnurl @ios_gate - LNURL', () => {
       await tap('ContinueAmount');
       await typeText('CommentInput', 'test comment');
       await confirmInputOnKeyboard();
-      await dragOnElement('GRAB', 'right', 0.95);
+      await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
       await elementById('SendSuccess').waitForDisplayed();
-      await tap('Close');
+      await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
       await expectTextWithin('ActivitySpending', '19 851'); // 20 001 - 150
       await elementById('ActivityShort-0').waitForDisplayed();
       await expectTextWithin('ActivityShort-0', '150');
@@ -217,7 +214,6 @@ describe('@lnurl @ios_gate - LNURL', () => {
       // await doNavigationClose();
       // --- skip due to: https://github.com/synonymdev/bitkit-android/issues/417 ---//
 
-      await sleep(1000);
       await swipeFullScreen('down');
       await swipeFullScreen('down');
 
@@ -230,22 +226,22 @@ describe('@lnurl @ios_gate - LNURL', () => {
       });
       console.log('payRequest2', payRequest2);
 
-      await enterAddressViaScanPrompt(payRequest2.encoded, { acceptCameraPermission: false });
-      await sleep(2000);
-      await elementById('ReviewAmount-primary').waitForDisplayed({ timeout: 5000 });
+      await enterGateScanPrompt(payRequest2.encoded, { acceptCameraPermission: false });
+
+      await elementById('ReviewAmount-primary').waitForDisplayed({ timeout: 30_000 });
       // Comment input should not be visible
       await elementById('CommentInput').waitForDisplayed({ reverse: true });
       const reviewAmt = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
       await expect(reviewAmt).toHaveText('222');
-      await dragOnElement('GRAB', 'right', 0.95);
+      await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
       await elementById('SendSuccess').waitForDisplayed();
-      await tap('Close');
+      await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
       await expectTextWithin('ActivitySpending', '19 629'); // 19 851 - 222 = 19 629
       await elementById('ActivityShort-0').waitForDisplayed();
       await expectTextWithin('ActivityShort-0', '222');
       await expectTextWithin('ActivityShort-0', '-');
       await expectTextWithin('ActivityShort-0', 'Sent');
-      await sleep(1000);
+
       await swipeFullScreen('down');
       await swipeFullScreen('down');
 
@@ -258,21 +254,21 @@ describe('@lnurl @ios_gate - LNURL', () => {
       });
       console.log('payRequest3', payRequest3);
 
-      await enterAddress(payRequest3.encoded, { acceptCameraPermission: false });
+      await enterGateAddress(payRequest3.encoded, { acceptCameraPermission: false });
       await expectTextWithin('SendNumberField', '0');
       // go with 321
       await enterAmount(321);
       await elementById('ContinueAmount').waitForDisplayed();
-      await tap('ContinueAmount');
-      await dragOnElement('GRAB', 'right', 0.95);
+      await tapAndExpect({ id: 'ContinueAmount' }, { anyVisible: [{ id: 'GRAB' }] });
+      await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
       await elementById('SendSuccess').waitForDisplayed();
-      await tap('Close');
+      await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
       await expectTextWithin('ActivitySpending', '19 308'); // 19 629 - 321 = 19 308
       await elementById('ActivityShort-0').waitForDisplayed();
       await expectTextWithin('ActivityShort-0', '321');
       await expectTextWithin('ActivityShort-0', '-');
       await expectTextWithin('ActivityShort-0', 'Sent');
-      await sleep(1000);
+
       await swipeFullScreen('down');
       await swipeFullScreen('down');
 
@@ -284,13 +280,16 @@ describe('@lnurl @ios_gate - LNURL', () => {
       });
       console.log('withdrawRequest1', withdrawRequest1);
 
-      await enterAddressViaScanPrompt(withdrawRequest1.encoded, {
+      await enterGateScanPrompt(withdrawRequest1.encoded, {
         acceptCameraPermission: false,
       });
-      await sleep(2000);
-      await elementById('SendNumberField').waitForDisplayed({ timeout: 5000 });
+
+      await elementById('SendNumberField').waitForDisplayed({ timeout: 30_000 });
       await expectTextWithin('SendNumberField', '102');
-      await tap('ContinueAmount');
+      await tapAndExpect(
+        { id: 'ContinueAmount' },
+        { anyVisible: [{ id: 'WithdrawConfirmButton' }] }
+      );
       await tap('WithdrawConfirmButton');
       await acknowledgeReceivedPayment();
       await expectTextWithin('ActivitySpending', '19 410'); // 19 308 + 102 = 19 410
@@ -299,7 +298,7 @@ describe('@lnurl @ios_gate - LNURL', () => {
       await expectTextWithin('ActivityShort-0', '+');
       await expectTextWithin('ActivityShort-0', 'lnurl-withdraw1');
       await expectTextWithin('ActivityShort-0', 'Received');
-      await sleep(1000);
+
       await swipeFullScreen('down');
       await swipeFullScreen('down');
 
@@ -311,10 +310,9 @@ describe('@lnurl @ios_gate - LNURL', () => {
       });
       console.log('withdrawRequest2', withdrawRequest2);
 
-      await enterAddressViaScanPrompt(withdrawRequest2.encoded, { acceptCameraPermission: false });
+      await enterGateScanPrompt(withdrawRequest2.encoded, { acceptCameraPermission: false });
       const reviewAmtWithdraw = await elementByIdWithin('WithdrawAmount-primary', 'MoneyText');
       await expect(reviewAmtWithdraw).toHaveText('303');
-      await sleep(1000);
       await tap('WithdrawConfirmButton');
       await acknowledgeReceivedPayment();
       await expectTextWithin('ActivitySpending', '19 713'); // 19 410 + 303 = 19 713
@@ -323,7 +321,7 @@ describe('@lnurl @ios_gate - LNURL', () => {
       await expectTextWithin('ActivityShort-0', '+');
       await expectTextWithin('ActivityShort-0', 'lnurl-withdraw2');
       await expectTextWithin('ActivityShort-0', 'Received');
-      await sleep(1000);
+
       await swipeFullScreen('down');
       await swipeFullScreen('down');
 
@@ -347,13 +345,13 @@ describe('@lnurl @ios_gate - LNURL', () => {
         });
         console.log(`payRequest msat ${label}`, payReq);
 
-        await enterAddressViaScanPrompt(payReq.encoded, { acceptCameraPermission: false });
-        await sleep(2000);
-        await elementById('ReviewAmount-primary').waitForDisplayed({ timeout: 5000 });
+        await enterGateScanPrompt(payReq.encoded, { acceptCameraPermission: false });
+
+        await elementById('ReviewAmount-primary').waitForDisplayed({ timeout: 30_000 });
         await elementById('CommentInput').waitForDisplayed({ reverse: true });
         const reviewMoneyPay = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
         await expect(reviewMoneyPay).toHaveText(valueSatsStr);
-        await dragOnElement('GRAB', 'right', 0.95);
+        await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
         await elementById('SendSuccess').waitForDisplayed();
         await expectText(valueSatsStr);
         await tap('Close');
@@ -366,7 +364,7 @@ describe('@lnurl @ios_gate - LNURL', () => {
         await expectTextWithin('ActivityShort-0', '-');
         await expectTextWithin('ActivityShort-0', 'Sent');
         await expectTextWithin('ActivityShort-0', valueSatsStr);
-        await sleep(1000);
+
         await swipeFullScreen('down');
         await swipeFullScreen('down');
 
@@ -377,9 +375,9 @@ describe('@lnurl @ios_gate - LNURL', () => {
         });
         console.log(`withdrawRequest msat ${label}`, wReq);
 
-        await enterAddressViaScanPrompt(wReq.encoded, { acceptCameraPermission: false });
-        await sleep(2000);
-        await elementById('WithdrawAmount-primary').waitForDisplayed({ timeout: 5000 });
+        await enterGateScanPrompt(wReq.encoded, { acceptCameraPermission: false });
+
+        await elementById('WithdrawAmount-primary').waitForDisplayed({ timeout: 30_000 });
         const reviewMoneyWithdraw = await elementByIdWithin('WithdrawAmount-primary', 'MoneyText');
         await expect(reviewMoneyWithdraw).toHaveText(valueSatsStr);
         await tap('WithdrawConfirmButton');
@@ -394,7 +392,7 @@ describe('@lnurl @ios_gate - LNURL', () => {
         await expectTextWithin('ActivityShort-0', valueSatsStr);
         await expectTextWithin('ActivityShort-0', `lnurl-withdraw-msat-${label}`);
         await expectTextWithin('ActivityShort-0', 'Received');
-        await sleep(1000);
+
         await swipeFullScreen('down');
         await swipeFullScreen('down');
       }
@@ -407,9 +405,8 @@ describe('@lnurl @ios_gate - LNURL', () => {
       const loginRequest1 = await lnurlServer.generateNewUrl('login');
       console.log('loginRequest1', loginRequest1);
       const loginEvent = new Promise<void>((resolve) => lnurlServer.once('login', resolve));
-      await enterAddressViaScanPrompt(loginRequest1.encoded, { acceptCameraPermission: false });
-      await tap('LnurlAuthContinue');
-      await expectText('Signed In');
+      await enterGateScanPrompt(loginRequest1.encoded, { acceptCameraPermission: false });
+      await authenticateGateLnurl();
       await loginEvent;
     }
   );

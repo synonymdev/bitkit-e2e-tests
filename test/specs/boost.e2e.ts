@@ -1,11 +1,11 @@
+import { waitAndExpect, tapAndExpect } from '../helpers/outcome';
+import { enterGateAddress, confirmGateAction } from '../helpers/gate-actions';
 import {
-  sleep,
   completeOnboarding,
   tap,
   elementById,
   receiveOnchainFunds,
   expectText,
-  dragOnElement,
   expectTextWithin,
   elementByIdWithin,
   getTextUnder,
@@ -13,8 +13,6 @@ import {
   getSeed,
   waitForBackup,
   restoreWallet,
-  enterAddress,
-  waitForToast,
 } from '../helpers/actions';
 import initElectrum from '../helpers/electrum';
 import { reinstallApp } from '../helpers/setup';
@@ -55,14 +53,14 @@ describe('@boost @ios_gate - Boost', () => {
     await tap('NavigationBack');
 
     // boost
-    await tap('BoostButton');
+    await tapAndExpect({ id: 'BoostButton' }, { all: [{ visible: { id: 'CPFPBoost' } }] });
     await elementById('CPFPBoost').waitForDisplayed();
     await tap('CustomFeeButton');
     await tap('Plus');
     await tap('Minus');
     await tap('RecommendedFeeButton');
-    await dragOnElement('GRAB', 'right', 0.95); // Swipe to confirm
-    await waitForToast('BoostSuccessToast');
+    await confirmGateAction({ appeared: [{ id: 'BoostSuccessToast' }] });
+    await waitAndExpect({ all: [{ hidden: { id: 'BoostSuccessToast' } }] });
 
     // check Activity
     await elementById('BoostingIcon').waitForDisplayed();
@@ -105,23 +103,27 @@ describe('@boost @ios_gate - Boost', () => {
     // check activity after restore
     await elementById('BoostingIcon').waitForDisplayed();
     await elementById('ActivityShort-1').waitForDisplayed();
-    await tap('ActivityShort-1');
+    await tapAndExpect({ id: 'ActivityShort-1' }, { all: [{ visible: { id: 'BoostedButton' } }] });
     await elementById('BoostedButton').waitForDisplayed();
     await elementById('StatusBoosting').waitForDisplayed();
 
     // mine new block
     await mineBlocks(1);
     await doNavigationClose();
-    await sleep(500);
 
     // check activity item after mine
     await elementById('ActivityShort-0').waitForDisplayed();
     await elementById('ActivityShort-1').waitForDisplayed();
-
-    await tap('ActivityShort-0');
+    await tapAndExpect(
+      { id: 'ActivityShort-0' },
+      { all: [{ visible: { id: 'StatusConfirmed' } }] }
+    );
     await elementById('StatusConfirmed').waitForDisplayed();
     await doNavigationClose();
-    await tap('ActivityShort-1');
+    await tapAndExpect(
+      { id: 'ActivityShort-1' },
+      { all: [{ visible: { id: 'StatusConfirmed' } }] }
+    );
     await elementById('StatusConfirmed').waitForDisplayed();
   });
 
@@ -131,15 +133,15 @@ describe('@boost @ios_gate - Boost', () => {
 
     // Send 10 000
     const coreAddress = await getExternalAddress();
-    await enterAddress(coreAddress);
+    await enterGateAddress(coreAddress);
     await tap('N1');
     await tap('N0');
     await tap('N000');
     await expectText('10 000');
-    await tap('ContinueAmount');
-    await dragOnElement('GRAB', 'right', 0.95);
+    await tapAndExpect({ id: 'ContinueAmount' }, { anyVisible: [{ id: 'GRAB' }] });
+    await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
     await elementById('SendSuccess').waitForDisplayed();
-    await tap('Close');
+    await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     const moneyText = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     await expect(moneyText).not.toHaveText('100 000');
 
@@ -152,13 +154,15 @@ describe('@boost @ios_gate - Boost', () => {
     await expect(elementById('ActivityShort-2')).not.toBeDisplayed();
 
     // confirmed receiving tx
-    await tap('ActivityShort-1');
+    await tapAndExpect({ id: 'ActivityShort-1' }, { all: [{ visible: { id: 'BoostDisabled' } }] });
     await elementById('BoostDisabled').waitForDisplayed();
     await tap('NavigationBack');
-    await sleep(500); // wait for the app to settle
 
     // old tx
-    await tap('ActivityShort-0');
+    await tapAndExpect(
+      { id: 'ActivityShort-0' },
+      { all: [{ textWithin: { id: 'ActivityAmount', text: '10 000', strategy: 'contains' } }] }
+    );
     await expectTextWithin('ActivityAmount', '10 000');
     const oldFee = await (await elementByIdWithin('ActivityFee', 'MoneyText')).getText();
     console.info({ oldFee });
@@ -168,14 +172,14 @@ describe('@boost @ios_gate - Boost', () => {
     await tap('NavigationBack');
 
     // boost
-    await tap('BoostButton');
+    await tapAndExpect({ id: 'BoostButton' }, { all: [{ visible: { id: 'RBFBoost' } }] });
     await elementById('RBFBoost').waitForDisplayed();
     await tap('CustomFeeButton');
     await tap('Plus');
     await tap('Minus');
     await tap('RecommendedFeeButton');
-    await dragOnElement('GRAB', 'right', 0.95); // Swipe to confirm
-    await waitForToast('BoostSuccessToast');
+    await confirmGateAction({ appeared: [{ id: 'BoostSuccessToast' }] });
+    await waitAndExpect({ all: [{ hidden: { id: 'BoostSuccessToast' } }] });
 
     // check Activity
     await elementById('BoostingIcon').waitForDisplayed();
@@ -187,7 +191,7 @@ describe('@boost @ios_gate - Boost', () => {
     await expectTextWithin('ActivityShort-1', '+');
 
     // new tx
-    await tap('ActivityShort-0');
+    await tapAndExpect({ id: 'ActivityShort-0' }, { all: [{ visible: { id: 'BoostedButton' } }] });
     await elementById('BoostedButton').waitForDisplayed();
     await elementById('StatusBoosting').waitForDisplayed();
     await expectTextWithin('ActivityAmount', '10 000');
@@ -207,8 +211,8 @@ describe('@boost @ios_gate - Boost', () => {
     await restoreWallet(seed);
 
     // check activity after restore
-    (await elementByIdWithin('ActivityShort-0', 'BoostingIcon')).waitForDisplayed();
-    await tap('ActivityShort-0');
+    await (await elementByIdWithin('ActivityShort-0', 'BoostingIcon')).waitForDisplayed();
+    await tapAndExpect({ id: 'ActivityShort-0' }, { all: [{ visible: { id: 'BoostedButton' } }] });
     await elementById('BoostedButton').waitForDisplayed();
     await elementById('StatusBoosting').waitForDisplayed();
     await doNavigationClose();
@@ -216,11 +220,13 @@ describe('@boost @ios_gate - Boost', () => {
     // mine new block
     await mineBlocks(1);
     await doNavigationClose();
-    await sleep(500);
 
     // check activity item after mine
     await elementById('ActivityShort-0').waitForDisplayed();
-    await tap('ActivityShort-0');
+    await tapAndExpect(
+      { id: 'ActivityShort-0' },
+      { all: [{ visible: { id: 'StatusConfirmed' } }] }
+    );
     await elementById('StatusConfirmed').waitForDisplayed();
     await doNavigationClose();
   });

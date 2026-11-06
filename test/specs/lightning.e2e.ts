@@ -1,17 +1,15 @@
+import { enterGateAddress, confirmGateAction } from '../helpers/gate-actions';
+import { tapAndExpect, typeAndExpect } from '../helpers/outcome';
 import initElectrum from '../helpers/electrum';
 import {
   completeOnboarding,
   receiveOnchainFunds,
-  enterAddress,
   multiTap,
   tap,
-  dragOnElement,
   elementById,
   elementByIdWithin,
   getReceiveAddress,
-  sleep,
   expectTextWithin,
-  typeText,
   confirmInputOnKeyboard,
   swipeFullScreen,
   getAddressFromQRCode,
@@ -106,7 +104,6 @@ describe('@lightning @ios_gate - Lightning', () => {
     const response = await lnd.sendPaymentSync({ paymentRequest: receive, amt: '10000' });
     console.info({ response });
     await acknowledgeReceivedPayment();
-    await sleep(500);
 
     await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });
     await dismissQuickPayIntro({ triggerTimedSheet: true });
@@ -116,28 +113,25 @@ describe('@lightning @ios_gate - Lightning', () => {
     await expectTextWithin('ActivitySpending', '10 000');
 
     console.info('receive 111 sats from LND, (edited invoice with amt=111, note and tag)');
-    await tap('Receive');
-    await sleep(1000);
-    await tap('SpecifyInvoiceButton');
-    await tap('ReceiveNumberPadTextField');
-    await sleep(100);
+    await tapAndExpect({ id: 'Receive' }, { anyVisible: [{ id: 'SpecifyInvoiceButton' }] });
+    await tapAndExpect({ id: 'SpecifyInvoiceButton' }, { anyVisible: [{ id: 'ReceiveNumberPadTextField' }] });
+    await tapAndExpect({ id: 'ReceiveNumberPadTextField' }, { anyVisible: [{ id: 'N1' }] });
+
     await multiTap('N1', 3);
-    await tap('ReceiveNumberPadSubmit');
+    await tapAndExpect({ id: 'ReceiveNumberPadSubmit' }, { anyVisible: [{ id: 'ReceiveNote' }] });
     const note1 = 'note 111';
-    await typeText('ReceiveNote', note1);
+    await typeAndExpect('ReceiveNote', note1, {}, { verifyClear: true });
     await confirmInputOnKeyboard();
-    await sleep(300); // wait for keyboard to hide
-    await tap('TagsAdd');
-    await typeText('TagInputReceive', 'rtag');
-    await tap('ReceiveTagsSubmit');
-    await sleep(300);
-    await tap('ShowQrReceive');
-    await sleep(500);
+    await tapAndExpect({ id: 'TagsAdd' }, { anyVisible: [{ id: 'TagInputReceive' }] });
+    await typeAndExpect('TagInputReceive', 'rtag', {}, { verifyClear: true });
+    await tapAndExpect({ id: 'ReceiveTagsSubmit' }, { anyVisible: [{ id: 'ShowQrReceive' }] });
+    await tapAndExpect({ id: 'ShowQrReceive' }, { anyVisible: [{ id: 'QRCode' }] });
+
     const invoice2 = await getAddressFromQRCode('lightning');
     await swipeFullScreen('down');
     await lnd.sendPaymentSync({ paymentRequest: invoice2 });
     await acknowledgeReceivedPayment();
-    await sleep(500);
+
     await expect(totalBalance).toHaveText('11 111'); // 1k onchain + 10 111 lightning
     await expectTextWithin('ActivitySpending', '10 111');
 
@@ -147,15 +141,15 @@ describe('@lightning @ios_gate - Lightning', () => {
       memo: note2,
     });
     await console.info({ invoice1 });
-    await enterAddress(invoice1);
+    await enterGateAddress(invoice1);
     await multiTap('N1', 3);
-    await tap('ContinueAmount');
+    await tapAndExpect({ id: 'ContinueAmount' }, { anyVisible: [{ id: 'GRAB' }] });
     await console.info('I can edit the amount on Review screen');
     await tap('ReviewAmount-primary');
-    await tap('ContinueAmount');
-    await dragOnElement('GRAB', 'right', 0.95); // Swipe to confirm
+    await tapAndExpect({ id: 'ContinueAmount' }, { anyVisible: [{ id: 'GRAB' }] });
+    await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
     await elementById('SendSuccess').waitForDisplayed();
-    await tap('Close');
+    await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     await expect(totalBalance).toHaveText('11 000'); // 1k onchain + 10k lightning
     await expectTextWithin('ActivitySpending', '10 000');
 
@@ -167,7 +161,7 @@ describe('@lightning @ios_gate - Lightning', () => {
       value: value,
     });
     await console.info({ invoice4 });
-    await enterAddress(invoice4, { acceptCameraPermission: false });
+    await enterGateAddress(invoice4, { acceptCameraPermission: false });
     // Review & Send
     const reviewAmt = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
     await reviewAmt.waitForDisplayed();
@@ -175,10 +169,10 @@ describe('@lightning @ios_gate - Lightning', () => {
     await console.info('I cannot edit the amount on Review screen');
     await tap('ReviewAmount-primary');
     await addSendTag('stag');
-    await sleep(500); // wait for keyboard to close
-    await dragOnElement('GRAB', 'right', 0.95); // Swipe to confirm
+
+    await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
     await elementById('SendSuccess').waitForDisplayed();
-    await tap('Close');
+    await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     await expect(totalBalance).toHaveText('10 000'); // 1k onchain + 9k lightning
     await expectTextWithin('ActivitySpending', '9 000');
 
@@ -186,16 +180,22 @@ describe('@lightning @ios_gate - Lightning', () => {
     await expectTextWithin('ActivityShort-0', '1 000');
     await expectTextWithin('ActivityShort-1', '111');
     await expectTextWithin('ActivityShort-2', '111');
-    await tap('ActivityShort-1');
+    await tapAndExpect(
+      { id: 'ActivityShort-1' },
+      { all: [{ textWithin: { id: 'InvoiceNote', text: note2, strategy: 'contains' } }] }
+    );
     await expectTextWithin('InvoiceNote', note2);
     await doNavigationClose();
-    await tap('ActivityShort-2');
+    await tapAndExpect(
+      { id: 'ActivityShort-2' },
+      { all: [{ textWithin: { id: 'InvoiceNote', text: note1, strategy: 'contains' } }] }
+    );
     await expectTextWithin('InvoiceNote', note1);
     await doNavigationClose();
 
     // check activity filters & tags
-    await sleep(500); // wait for the app to settle
-    await tap('ActivityShowAll');
+
+    await tapAndExpect({ id: 'ActivityShowAll' }, { anyVisible: [{ id: 'Activity-1' }] });
 
     // All transactions
     await expectTextWithin('Activity-1', '-');
@@ -205,13 +205,19 @@ describe('@lightning @ios_gate - Lightning', () => {
     await expectTextWithin('Activity-5', '+');
 
     // Sent, 2 transactions
-    await tap('Tab-sent');
+    await tapAndExpect(
+      { id: 'Tab-sent' },
+      { all: [{ textWithin: { id: 'Activity-1', text: '-', strategy: 'contains' } }] }
+    );
     await expectTextWithin('Activity-1', '-');
     await expectTextWithin('Activity-2', '-');
     await elementById('Activity-3').waitForDisplayed({ reverse: true });
 
     // Received, 2 transactions
-    await tap('Tab-received');
+    await tapAndExpect(
+      { id: 'Tab-received' },
+      { all: [{ textWithin: { id: 'Activity-1', text: '+', strategy: 'contains' } }] }
+    );
     await expectTextWithin('Activity-1', '+');
     await expectTextWithin('Activity-2', '+');
     await expectTextWithin('Activity-3', '+');
@@ -224,20 +230,23 @@ describe('@lightning @ios_gate - Lightning', () => {
     // filter by receive tag
     await tap('Tab-all');
     await tap('TagsPrompt');
-    await sleep(500);
-    await tap('Tag-rtag');
+    await tapAndExpect(
+      { id: 'Tag-rtag' },
+      { all: [{ textWithin: { id: 'Activity-1', text: '+', strategy: 'contains' } }] }
+    );
     await expectTextWithin('Activity-1', '+');
     await elementById('Activity-2').waitForDisplayed({ reverse: true });
     await tap('Tag-rtag-delete');
 
     // filter by send tag
     await tap('TagsPrompt');
-    await sleep(500);
-    await tap('Tag-stag');
+    await tapAndExpect(
+      { id: 'Tag-stag' },
+      { all: [{ textWithin: { id: 'Activity-1', text: '-', strategy: 'contains' } }] }
+    );
     await expectTextWithin('Activity-1', '-');
     await elementById('Activity-2').waitForDisplayed({ reverse: true });
     await tap('Tag-stag-delete');
-
     await tap('NavigationBack');
 
     // wipe and restore wallet
@@ -253,26 +262,31 @@ describe('@lightning @ios_gate - Lightning', () => {
     await expectTextWithin('ActivityShort-0', '1 000');
     await expectTextWithin('ActivityShort-1', '111');
     await expectTextWithin('ActivityShort-2', '111');
-    await tap('ActivityShort-1');
+    await tapAndExpect(
+      { id: 'ActivityShort-1' },
+      { all: [{ textWithin: { id: 'InvoiceNote', text: note2, strategy: 'contains' } }] }
+    );
     await expectTextWithin('InvoiceNote', note2);
     await doNavigationClose();
-    await tap('ActivityShort-2');
+    await tapAndExpect(
+      { id: 'ActivityShort-2' },
+      { all: [{ textWithin: { id: 'InvoiceNote', text: note1, strategy: 'contains' } }] }
+    );
     await expectTextWithin('InvoiceNote', note1);
     await doNavigationClose();
 
     // check channel status
     await openSettings('advanced');
-    await tap('Channels');
-    await sleep(2000);
-    await tap('Channel');
-    await sleep(1000);
+    await tapAndExpect({ id: 'Channels' }, { anyVisible: [{ id: 'Channel' }] });
+    await tapAndExpect({ id: 'Channel' }, { anyVisible: [{ id: 'TotalSize' }] });
+
     await expectTextWithin('TotalSize', '₿ 100 000');
     await swipeFullScreen('up');
     await elementById('IsUsableYes').waitForDisplayed();
 
     // close channel
-    await tap('CloseConnection');
-    await tap('CloseConnectionButton');
+    await tapAndExpect({ id: 'CloseConnection' }, { anyVisible: [{ id: 'CloseConnectionButton' }] });
+    await tapAndExpect({ id: 'CloseConnectionButton' }, { anyVisible: [{ text: 'Transfer Initiated' }] });
     await elementByText('Transfer Initiated').waitForDisplayed();
     await elementByText('Transfer Initiated').waitForDisplayed({ reverse: true });
 

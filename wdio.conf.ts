@@ -94,6 +94,8 @@ export const config: WebdriverIO.Config = {
       : {
           platformName: 'iOS',
           'appium:automationName': 'XCUITest',
+          // Declare XCTest's defaults (seconds) so scoped transient steps can restore them.
+          'appium:settings': { waitForIdleTimeout: 10, animationCoolOffTimeout: 2 },
           ...(process.env.IOS_WDA_LOCAL_PORT
             ? { 'appium:wdaLocalPort': Number(process.env.IOS_WDA_LOCAL_PORT) }
             : {}),
@@ -156,7 +158,7 @@ export const config: WebdriverIO.Config = {
   // baseUrl: 'http://localhost:8080',
   //
   // Default timeout for all waitFor* commands.
-  waitforTimeout: process.env.CI ? 30000 : 20000,
+  waitforTimeout: 30_000,
   //
   // Default timeout in milliseconds for request
   // if browser driver or grid doesn't send response
