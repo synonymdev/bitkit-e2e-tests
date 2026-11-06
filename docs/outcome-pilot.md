@@ -51,7 +51,7 @@ RECORD_VIDEO=true SAVE_DIAGNOSTICS=true \
 ./node_modules/.bin/wdio run ./wdio.outcome-pilot.conf.ts
 ```
 
-`OUTCOME_PILOT_JOURNEY` accepts `onboarding` (default), `receive`, or `all`. With `all`, both
+`OUTCOME_PILOT_JOURNEY` accepts `onboarding` (default), `receive`, `send`, or `all`. With `all`, both
 journeys run sequentially in one session; each has a fresh app/wallet setup. Use explicit device
 serials and separate Appium/WDA/UiAutomator ports when running platforms concurrently. Keep
 the concurrency policy the same for both modes and record it with the results.
@@ -135,3 +135,38 @@ runs establishes feasibility, not a long-term flake rate or grounds for changing
 Keep the existing suite until a broader stability sample and appropriate visual/backend
 coverage justify adoption. The original iOS onboarding results remain in
 `artifacts/outcome-pilot`; the extended experiment uses `artifacts/outcome-phase2`.
+
+## Send validation comparison
+
+`send_1` is represented by an opt-in prototype using the original wallet setup, 15,000-sat
+funding fixture and recipient/amount assertions. The local pilot compares `runSendValidation()`
+with the frozen original body from `f170a365` in `send-baseline.ts`. The production Send specification,
+IDs and queue tags are unchanged. [The measured results](outcome-send-results.md) do not justify gate promotion. `all` still means the original onboarding/Receive pair.
+
+With the same platform/device/backend variables as above, run:
+
+```sh
+python3 scripts/outcome-pilot.py --journey send --pairs 10 \
+  --continue-on-test-failure --output artifacts/outcome-send/final-ios
+# Change platform/device variables and use final-android for the Android sample.
+```
+
+Each platform gets 10 runs per variant in alternating order, followed by one deliberate
+wrong-toast control. Every invocation reinstalls the app and creates a fresh wallet.
+The baseline retains its original sleeps and input retries. The outcome variant adds
+input readback and explicit visible/enabled/text outcomes, removes those retries and
+settling sleeps, and waits for asserted toasts to expire rather than dragging a potentially
+expired toast. The funding fixture remains shared and unchanged. This compares the whole
+helper pattern; it does not isolate polling from the additional assertions or toast handling.
+
+`--continue-on-test-failure` retains complete positive test failures and continues without
+retrying them; the runner exits unsuccessfully after completing a sample containing failures.
+Missing receipts, setup failures, unexpected exit codes, failed negative controls and source
+changes still stop the sample. Sessions have a 15-minute deadline; the test-body timeout is
+10 minutes. `sessions.jsonl` records total invocation time, including Appium/WDA/setup and
+artifact teardown; `results.jsonl` separately records test-body time.
+
+The send negative control requires a nonexistent validation toast after typing `test123`.
+It must stop on that first input, before any further validation or funding. Verify the actual
+input and disabled state with the trace, driver logs and screenshot evidence; a final empty
+trace sample alone does not establish the observed state.

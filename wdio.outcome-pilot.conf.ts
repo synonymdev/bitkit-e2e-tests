@@ -13,9 +13,11 @@ if (platform === 'android' && !process.env.ANDROID_UDID)
   throw new Error('Use a disposable ANDROID_UDID');
 if (!process.env.OUTCOME_PILOT_ARTIFACTS) throw new Error('Set OUTCOME_PILOT_ARTIFACTS');
 const journey = process.env.OUTCOME_PILOT_JOURNEY ?? 'onboarding';
-if (!['onboarding', 'receive', 'all'].includes(journey))
+if (!['onboarding', 'receive', 'send', 'all'].includes(journey))
   throw new Error('Invalid OUTCOME_PILOT_JOURNEY');
 const journeys = journey === 'all' ? ['onboarding', 'receive'] : [journey];
+const currentJourney = (parent?: string) =>
+  parent?.includes('receive') ? 'receive' : parent?.includes('send') ? 'send' : 'onboarding';
 const directory = process.env.OUTCOME_PILOT_ARTIFACTS;
 fs.mkdirSync(directory, { recursive: true });
 
@@ -28,11 +30,9 @@ export const config: WebdriverIO.Config = {
   services: [
     ['appium', { args: { port: Number(process.env.APPIUM_PORT ?? 4723) }, logPath: directory }],
   ],
-  mochaOpts: { ...base.mochaOpts, retries: 0, timeout: 240_000 },
+  mochaOpts: { ...base.mochaOpts, retries: 0, timeout: 600_000 },
   beforeTest: async function (test, context) {
-    process.env.OUTCOME_PILOT_CURRENT_JOURNEY = test.parent?.includes('receive')
-      ? 'receive'
-      : 'onboarding';
+    process.env.OUTCOME_PILOT_CURRENT_JOURNEY = currentJourney(test.parent);
     if (typeof base.beforeTest === 'function') await base.beforeTest.call(this, test, context);
   },
   afterHook: async function (test, context, result, hookName) {
@@ -68,7 +68,7 @@ export const config: WebdriverIO.Config = {
       `${JSON.stringify({
         mode: process.env.OUTCOME_PILOT_MODE,
         platform,
-        journey: test.parent?.includes('receive') ? 'receive' : 'onboarding',
+        journey: currentJourney(test.parent),
         negativeControl: process.env.OUTCOME_PILOT_NEGATIVE_CONTROL === 'true',
         title: test.title,
         passed: result.passed,

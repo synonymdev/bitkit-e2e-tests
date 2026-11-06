@@ -12,6 +12,7 @@ export type VisibleTarget = { id: string } | { text: string };
 export type Condition =
   | { visible: VisibleTarget }
   | { hidden: VisibleTarget }
+  | { enabled: { id: string; value: boolean } }
   | { inputValue: { id: string; value: string } }
   | { textWithin: { id: string; text: string } }
   | { keyboardShown: boolean };
@@ -34,6 +35,12 @@ function xpathLiteral(value: string): string {
 }
 
 async function observe(condition: Condition): Promise<{ actual: unknown; passed: boolean }> {
+  if ('enabled' in condition) {
+    const current = elementById(condition.enabled.id);
+    if (!(await current.isDisplayed())) return { actual: 'not visible', passed: false };
+    const actual = await current.isEnabled();
+    return { actual, passed: actual === condition.enabled.value };
+  }
   if ('keyboardShown' in condition) {
     const actual = await driver.isKeyboardShown();
     return { actual, passed: actual === condition.keyboardShown };
@@ -182,6 +189,11 @@ export async function tapAndExpect(target: VisibleTarget, outcome: Outcome) {
   );
 }
 
+/** Observe a state without retaining an element handle across polls. */
+export async function waitAndExpect(outcome: Outcome) {
+  await actAndExpect('wait for outcome', async () => {}, outcome);
+}
+
 export async function swipeAndExpect(
   direction: 'left' | 'right' | 'up' | 'down',
   outcome: Outcome
@@ -199,7 +211,7 @@ export async function swipeAndExpect(
   );
 }
 
-export async function typeAndExpect(id: string, text: string) {
+export async function typeAndExpect(id: string, text: string, outcome: Outcome = {}) {
   await actAndExpect(
     `type id:${id}`,
     async () => {
@@ -208,7 +220,7 @@ export async function typeAndExpect(id: string, text: string) {
       await current.clearValue();
       await current.setValue(text);
     },
-    { all: [{ inputValue: { id, value: text } }] }
+    { ...outcome, all: [{ inputValue: { id, value: text } }, ...(outcome.all ?? [])] }
   );
 }
 

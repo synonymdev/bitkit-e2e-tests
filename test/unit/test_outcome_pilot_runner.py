@@ -18,10 +18,11 @@ directory = Path(os.environ['OUTCOME_PILOT_ARTIFACTS'])
 directory.mkdir(parents=True)
 mode = os.environ['OUTCOME_PILOT_MODE']
 negative = os.environ['OUTCOME_PILOT_NEGATIVE_CONTROL'] == 'true'
+failed_positive = not negative and mode == os.environ.get('FAIL_MODE')
 with (root / 'artifacts/invocations.jsonl').open('a') as f:
     f.write(json.dumps({'mode': mode, 'negative': negative}) + '\n')
 rows = [{'platform': 'ios', 'mode': mode, 'negativeControl': negative,
-         'journey': name, 'passed': not negative} for name in ['onboarding', 'receive']]
+         'journey': name, 'passed': not (negative or failed_positive)} for name in (['send'] if os.environ['OUTCOME_PILOT_JOURNEY'] == 'send' else ['onboarding', 'receive'])]
 (directory / 'results.jsonl').write_text(''.join(json.dumps(r) + '\n' for r in rows))
 if negative:
     steps = [{'journey': 'onboarding', 'action': 'tap id:Continue', 'status': 'failed',
@@ -29,6 +30,9 @@ if negative:
     steps += [{'journey': 'receive', 'action': 'earlier action', 'status': 'passed'} for _ in range(5)]
     steps += [{'journey': 'receive', 'action': 'tap id:N1', 'status': 'failed',
                'error': 'expected PilotDeliberatelyMissingAmount'}]
+    if os.environ['OUTCOME_PILOT_JOURNEY'] == 'send':
+        steps = [{'journey': 'send', 'action': action, 'status': 'passed'} for action in ['tap id:Send', 'tap id:RecipientManual']]
+        steps += [{'journey': 'send', 'action': 'type id:RecipientInput', 'status': 'failed', 'error': 'expected PilotDeliberatelyMissingValidationToast'}]
     (directory / 'steps.jsonl').write_text(''.join(json.dumps(s) + '\n' for s in steps))
 stage = 'negative' if negative else mode
 if os.environ.get('MUTATE_AT') == stage:
@@ -37,7 +41,7 @@ if os.environ.get('MUTATE_AT') == stage:
         target.unlink()
     else:
         target.write_text(target.read_text() + '\nchanged' if target.exists() else 'new source')
-raise SystemExit(1 if negative else 0)
+raise SystemExit(1 if negative or failed_positive else 0)
 '''
 
 
@@ -58,12 +62,12 @@ class RunnerSourceFreezeTest(unittest.TestCase):
         fake.write_text(FAKE_WDIO)
         fake.chmod(0o755)
 
-    def run_sample(self, **changes):
+    def run_sample(self, journey='all', extra_args=(), **changes):
         env = {k: v for k, v in os.environ.items() if k != 'CI'}
         env.update(PLATFORM='ios', SIMULATOR_UDID='synthetic-device', **changes)
         result = subprocess.run(
             ['python3', str(self.root / 'scripts/outcome-pilot.py'), '--pairs', '1',
-             '--output', str(self.root / 'artifacts/sample')],
+             '--journey', journey, '--output', str(self.root / 'artifacts/sample'), *extra_args],
             env=env, cwd=self.root, capture_output=True, text=True, timeout=30,
         )
         file = self.root / 'artifacts/sample/sessions.jsonl'
@@ -76,6 +80,13 @@ class RunnerSourceFreezeTest(unittest.TestCase):
         self.assertEqual(len(rows), 3)
         self.assertTrue(all(r['valid'] and r['sourceUnchanged'] for r in rows))
         self.assertTrue(rows[-1]['negativeControl'])
+
+    def test_send_sample_requires_one_send_receipt_and_its_control(self):
+        result, rows = self.run_sample(journey='send')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(len(rows), 3)
+        self.assertTrue(all(r['valid'] for r in rows))
+        self.assertTrue(all(len(r['results']) == 1 and r['results'][0]['journey'] == 'send' for r in rows))
 
     def test_mutation_during_final_control_cannot_report_completion(self):
         result, rows = self.run_sample(MUTATE_AT='negative', MUTATE_PATH='test/helpers/outcome.ts')
@@ -93,6 +104,20 @@ class RunnerSourceFreezeTest(unittest.TestCase):
                 self.assertEqual(len(rows), 1)
                 self.assertFalse(rows[0]['sourceUnchanged'])
                 shutil.rmtree(self.root / 'artifacts/sample')
+
+    def test_comparison_retains_failure_and_continues_without_retry(self):
+        result, rows = self.run_sample(journey='send', extra_args=['--continue-on-test-failure'], FAIL_MODE='baseline')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(len(rows), 3)
+        self.assertFalse(rows[0]['valid'])
+        self.assertTrue(rows[1]['valid'] and rows[2]['valid'])
+        self.assertIn('1 positive sessions failed', result.stderr)
+
+    def test_continue_option_still_stops_on_source_change(self):
+        result, rows = self.run_sample(extra_args=['--continue-on-test-failure'], MUTATE_AT='baseline', MUTATE_PATH='wdio.conf.ts', FAIL_MODE='baseline')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(len(rows), 1)
+        self.assertFalse(rows[0]['sourceUnchanged'])
 
     def test_new_untracked_source_is_detected(self):
         result, rows = self.run_sample(MUTATE_AT='baseline', MUTATE_PATH='test/helpers/new.ts')

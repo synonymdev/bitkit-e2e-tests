@@ -49,6 +49,12 @@ Earlier exploratory failures and interrupted comparisons are retained locally. T
 or protocol differed, so they are excluded from the final timing comparison. Recovery is not
 counted as a first-attempt pass.
 
+## Send follow-up
+
+The [larger Send comparison](outcome-send-results.md) used newly built, pinned master apps and
+ten attempts per variant per platform. Its results were mixed, so Send remains opt-in and the
+production gate is unchanged. The earlier results above are not pooled with that sample.
+
 ## Remaining iOS gate migration
 
 Preserve case IDs, tags, fixtures and existing assertions. Add observable outcomes, execute
