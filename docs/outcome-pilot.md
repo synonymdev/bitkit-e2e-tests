@@ -138,6 +138,12 @@ coverage justify adoption. The original iOS onboarding results remain in
 
 ## Send validation comparison
 
+The latest [Node 22 versus Node 24 comparison](outcome-send-node-comparison-results.md)
+holds the default element wait at 30 seconds. Node 24 passed 4/4 attempts on each platform;
+Node 22 had passed iOS 4/4 and Android 3/4. The runtime helpers/configuration are identical.
+These small sequential batches show no observed advantage for Node 22; they do not establish
+the cause of improvement against the older 20-second-default sample.
+
 The latest [Node 22 / 30-second default-wait check](outcome-send-default30-node22-results.md)
 ran the unchanged outcome Send journey four times per platform: iOS 4/4 and Android 3/4.
 The Android failure was the pilot's separate 5-second input-clear confirmation, before typing;

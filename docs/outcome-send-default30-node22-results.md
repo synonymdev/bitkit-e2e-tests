@@ -1,5 +1,9 @@
 # Send pilot: 30-second element wait and Node 22
 
+The subsequent [Node 24 comparison](outcome-send-node-comparison-results.md) holds the default
+element wait at 30 seconds and uses identical runtime source. The results below remain the
+separate Node 22 batch.
+
 Four outcome-based Send attempts on each platform, using Node 22.23.4 and a 30-second default
 `waitFor*` element timeout. Both settings were changed together. The previous
 [ten-pair comparison](outcome-send-rerun-results.md) is a separate historical sample.
