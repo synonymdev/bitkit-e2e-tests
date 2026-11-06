@@ -1,0 +1,218 @@
+{
+  "experiment": "Four outcome Send attempts per platform with default element wait30s and Node22",
+  "e2eCandidate": "8d374c51aa328a0b7fa2914dc6ffe2372c308f23",
+  "node": "v22.23.4",
+  "defaultElementWaitMs": 30000,
+  "changesFromPreviousSample": ["default element wait20s ->30s", "Node24.9.0 ->22.23.4"],
+  "platforms": {
+    "ios": {
+      "passes": 4,
+      "attempts": 4,
+      "runs": [
+        {
+          "attempt": 1,
+          "passed": true,
+          "testSeconds": 133.101,
+          "sessionSeconds": 208.178,
+          "nodeProcessesVerified": 3,
+          "lastAction": "wait for outcome",
+          "lastActionStatus": "passed",
+          "warningsObserved": 6,
+          "nativeInputSequencesVerified": 7
+        },
+        {
+          "attempt": 2,
+          "passed": true,
+          "testSeconds": 133.494,
+          "sessionSeconds": 197.916,
+          "nodeProcessesVerified": 3,
+          "lastAction": "wait for outcome",
+          "lastActionStatus": "passed",
+          "warningsObserved": 6,
+          "nativeInputSequencesVerified": 7
+        },
+        {
+          "attempt": 3,
+          "passed": true,
+          "testSeconds": 151.099,
+          "sessionSeconds": 221.91,
+          "nodeProcessesVerified": 3,
+          "lastAction": "wait for outcome",
+          "lastActionStatus": "passed",
+          "warningsObserved": 6,
+          "nativeInputSequencesVerified": 7
+        },
+        {
+          "attempt": 4,
+          "passed": true,
+          "testSeconds": 147.033,
+          "sessionSeconds": 215.77,
+          "nodeProcessesVerified": 3,
+          "lastAction": "wait for outcome",
+          "lastActionStatus": "passed",
+          "warningsObserved": 6,
+          "nativeInputSequencesVerified": 7
+        }
+      ]
+    },
+    "android": {
+      "passes": 3,
+      "attempts": 4,
+      "runs": [
+        {
+          "attempt": 1,
+          "passed": true,
+          "testSeconds": 158.099,
+          "sessionSeconds": 228.399,
+          "nodeProcessesVerified": 3,
+          "lastAction": "wait for outcome",
+          "lastActionStatus": "passed",
+          "warningsObserved": 6,
+          "nativeInputSequencesVerified": 7
+        },
+        {
+          "attempt": 2,
+          "passed": true,
+          "testSeconds": 164.214,
+          "sessionSeconds": 240.37,
+          "nodeProcessesVerified": 3,
+          "lastAction": "wait for outcome",
+          "lastActionStatus": "passed",
+          "warningsObserved": 6,
+          "nativeInputSequencesVerified": 7
+        },
+        {
+          "attempt": 3,
+          "passed": false,
+          "testSeconds": 19.653,
+          "sessionSeconds": 113.541,
+          "nodeProcessesVerified": 3,
+          "lastAction": "type id:RecipientInput",
+          "lastActionStatus": "failed",
+          "error": "type id:RecipientInput: RecipientInput: input did not clear; replacement not typed; last visibility {}",
+          "failureObserved": {
+            "{\"inputValue\":{\"id\":\"RecipientInput\",\"value\":\"test123\"}}": "",
+            "{\"enabled\":{\"id\":\"AddressContinue\",\"value\":false}}": false
+          }
+        },
+        {
+          "attempt": 4,
+          "passed": true,
+          "testSeconds": 154.672,
+          "sessionSeconds": 222.524,
+          "nodeProcessesVerified": 3,
+          "lastAction": "wait for outcome",
+          "lastActionStatus": "passed",
+          "warningsObserved": 6,
+          "nativeInputSequencesVerified": 7
+        }
+      ]
+    }
+  },
+  "limits": "Four attempts per platform; two changed variables. No individual-variable causal or long-term reliability claim.",
+  "failureAnalysis": {
+    "attempt": 3,
+    "failure": "explicit 5000ms input-clear confirmation timeout before first replacement write",
+    "clearHttpStatus": 200,
+    "nativeInputReadbackEmpty": true,
+    "recipientWritesIssued": 0,
+    "postFailureDiagnosticInput": "",
+    "observedError": "RecipientInput: input did not clear; replacement not typed",
+    "manualScreenshotObservation": "Recipient field is empty with placeholder visible and Continue visually disabled"
+  },
+  "sourceFingerprint": "cf4b3614991b698b51122b79df6f3f7a4871c0a0b4d14871728d949ee089cfd4",
+  "runtimeDistribution": {
+    "version": "v22.23.4",
+    "archiveSha256": "037650d0839f457747396f052073fb48333d31bf5abd3c98b74da20d89ebb1ad",
+    "checksumSource": "https://nodejs.org/dist/v22.23.4/SHASUMS256.txt",
+    "platform": "darwin-arm64"
+  },
+  "historicalResults": "outcome-send-rerun-results.json",
+  "installedTools": {
+    "node": "v22.23.4",
+    "versions": {
+      "webdriverio": {
+        "version": "9.18.4",
+        "manifestSha256": "891462badf4794e80fcf15ca8353086ecad516c07aa3f322587ba1229cf83002"
+      },
+      "@wdio/cli": {
+        "version": "9.18.4",
+        "manifestSha256": "b3887ca8fb2dbe62def74302020a7e67f4ff5474005a0fbcc523adbf3420eb00"
+      },
+      "@wdio/mocha-framework": {
+        "version": "9.18.0",
+        "manifestSha256": "688906524effb5b262966c497225b09336be06bf7310718723bd8710dfc952ef"
+      },
+      "appium": {
+        "version": "3.0.0",
+        "manifestSha256": "f703b42a5902b263b0cb32e29d7c2c8acf95ce4afac921cc5186cd4ddee1b669"
+      },
+      "appium-uiautomator2-driver": {
+        "version": "5.0.0",
+        "manifestSha256": "c3cae422639ac9c4d4c0979f3622363b6f0f47d1f7563908981e516e98c6d118"
+      },
+      "appium-xcuitest-driver": {
+        "version": "10.17.0",
+        "manifestSha256": "875e198fd4e3d568152d18de4fc9a5eab0c026dd963cb5db5f13bbb48bf597fb"
+      }
+    }
+  },
+  "staticChecks": {
+    "passed": true,
+    "node": "v22.23.4",
+    "head": "8d374c51aa328a0b7fa2914dc6ffe2372c308f23",
+    "commands": [
+      ["./node_modules/.bin/tsc", "--noEmit"],
+      ["./node_modules/.bin/eslint", "wdio.outcome-pilot.conf.ts"],
+      ["./node_modules/.bin/prettier", "--check", "wdio.outcome-pilot.conf.ts"],
+      ["git", "diff", "--check"]
+    ],
+    "finishedAt": 1793986339.662105
+  },
+  "apps": {
+    "ios": {
+      "sourceSha": "4c7633a41bd1a8ea9f57fc46f9ce6870f4231ede",
+      "info": {
+        "CFBundleIdentifier": "to.bitkit",
+        "CFBundleShortVersionString": "3.0.1",
+        "CFBundleVersion": "202",
+        "E2E_BACKEND": "network",
+        "E2E_NETWORK": "regtest"
+      },
+      "bundleSha256": "e1aceaf828315ecc49916a5ae73ee2209c1aaadda3c63d493d494fea33d15586",
+      "buildSettings": {
+        "sourceSha": "4c7633a41bd1a8ea9f57fc46f9ce6870f4231ede",
+        "backend": "regtest",
+        "configuration": "Debug",
+        "E2E_BACKEND": "network",
+        "E2E_NETWORK": "regtest",
+        "SWIFT_ACTIVE_COMPILATION_CONDITIONS": "DEBUG E2E_BUILD",
+        "TREZOR_BRIDGE": false,
+        "toolchain": "Xcode 26.0.1 (17A400)",
+        "extraCFlags": [
+          "-DENABLE_MODULE_ECDH",
+          "-DENABLE_MODULE_RECOVERY",
+          "-DENABLE_MODULE_SCHNORRSIG",
+          "-DENABLE_MODULE_MUSIG"
+        ],
+        "reasonForCFlags": "Xcode omitted trait-conditional C defines from swift-secp256k1 0.24.0; explicitly enable the package default traits. No source or dependency-pin changes."
+      },
+      "device": "iPhone 17 / iOS26.0"
+    },
+    "android": {
+      "sourceSha": "7f49f216f20c70f95f6b9ff087fa3f2b6fb985c5",
+      "sha256": "14ff54fc8478ad2dd4596d7ad7a6e70507b79a33369e550cca4b8c56f1b19860",
+      "package": "package: name='to.bitkit.dev' versionCode='195' versionName='3.0.1' platformBuildVersionName='17' platformBuildVersionCode='37' compileSdkVersion='37' compileSdkVersionCodename='17'",
+      "buildSettings": {
+        "sourceSha": "7f49f216f20c70f95f6b9ff087fa3f2b6fb985c5",
+        "backend": "regtest",
+        "task": "assembleDevDebug",
+        "E2E": true,
+        "E2E_BACKEND": "network",
+        "GEO": false,
+        "TREZOR_BRIDGE": false
+      },
+      "device": "Pixel6 / Android13 API33"
+    }
+  }
+}

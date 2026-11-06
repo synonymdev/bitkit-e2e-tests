@@ -138,6 +138,13 @@ coverage justify adoption. The original iOS onboarding results remain in
 
 ## Send validation comparison
 
+The latest [Node 22 / 30-second default-wait check](outcome-send-default30-node22-results.md)
+ran the unchanged outcome Send journey four times per platform: iOS 4/4 and Android 3/4.
+The Android failure was the pilot's separate 5-second input-clear confirmation, before typing;
+no attempt failed a toast assertion. Use Node 22.23.4 to reproduce this batch. The pilot now sets
+the default element wait to 30 seconds; driver request retries and explicit helper limits retain
+their previous values. Earlier samples remain separate.
+
 `send_1` is represented by an opt-in prototype using the original wallet setup, 15,000-sat
 funding fixture and recipient/amount assertions. The local pilot compares `runSendValidation()`
 with the frozen original body from `f170a365` in `send-baseline.ts`. The production Send specification,

@@ -1,5 +1,9 @@
 # Send rerun after readiness and input fixes
 
+The subsequent [Node 22 / 30-second default-wait check](outcome-send-default30-node22-results.md)
+is a separate eight-attempt sample. The ten-pair results below remain historical evidence at their
+recorded source and runtime versions.
+
 Keep Send opt-in. This investigation corrected concrete test-orchestration defects, but
 short-lived validation feedback still needs a more reliable observation contract before gate rollout.
 The production `send_1` body, IDs, fixtures and queue tags remain unchanged. OCR remains deferred.
