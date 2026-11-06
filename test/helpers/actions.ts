@@ -1654,7 +1654,7 @@ async function triggerTimedSheetUnlessPresent(
     console.info(`→ ${sheetId} already visible, skipping HeaderMenu trigger`);
     return;
   }
-  await dismissInterveningUsdtIntro();
+  await dismissInterveningSheets();
   if (!triggerTimedSheet) {
     return;
   }
@@ -1663,6 +1663,7 @@ async function triggerTimedSheetUnlessPresent(
     async () =>
       (await isTestIdDisplayed(sheetId)) ||
       (await isTestIdDisplayed('UsdtIntroDecline')) ||
+      (await isTestIdDisplayed('MoveToSparkIntro')) ||
       (await isTestIdDisplayed('HeaderMenu')) ||
       (await isTestIdDisplayed('TotalBalance')),
     {
@@ -1671,7 +1672,7 @@ async function triggerTimedSheetUnlessPresent(
     }
   );
 
-  await dismissInterveningUsdtIntro();
+  await dismissInterveningSheets();
   if (await isTestIdDisplayed(sheetId)) {
     console.info(`→ ${sheetId} appeared while waiting, skipping HeaderMenu trigger`);
     return;
@@ -1679,7 +1680,7 @@ async function triggerTimedSheetUnlessPresent(
 
   // A queued sheet can surface a moment after the previous dismiss.
   await sleep(700);
-  await dismissInterveningUsdtIntro();
+  await dismissInterveningSheets();
   if (await isTestIdDisplayed(sheetId)) {
     console.info(`→ ${sheetId} appeared after settle, skipping HeaderMenu trigger`);
     return;
@@ -1690,12 +1691,49 @@ async function triggerTimedSheetUnlessPresent(
   }
 
   await doTriggerTimedSheet();
+
+  // Move to Spark outranks the other timed sheets, so the trigger can surface it instead of sheetId.
+  if (await dismissMoveToSparkIntroIfShown({ timeout: 3_000 })) {
+    await doTriggerTimedSheet();
+  }
 }
 
-async function dismissInterveningUsdtIntro(): Promise<void> {
+/** Dismisses a sheet that covers home in place of the expected timed sheet, then triggers the queue again. */
+async function dismissInterveningSheets(): Promise<void> {
+  if (await dismissMoveToSparkIntroIfShown()) {
+    await doTriggerTimedSheet();
+  }
   if (!(await isTestIdDisplayed('UsdtIntroDecline'))) return;
   await handleUsdtIntro();
   await doTriggerTimedSheet();
+}
+
+/**
+ * Dismisses the Move to Spark intro with Later if it is showing.
+ * The app shows it once, at the top timed-sheet priority, when a wallet's Lightning channels can move a balance
+ * to a ready Spark wallet; suites that open a channel and receive over it meet it on home.
+ *
+ * @param options.timeout - How long to wait for the intro to appear (default: none, check once)
+ * @returns true if the intro was shown and dismissed
+ */
+export async function dismissMoveToSparkIntroIfShown({
+  timeout = 0,
+}: { timeout?: number } = {}): Promise<boolean> {
+  const intro = elementById('MoveToSparkIntro');
+  const shown =
+    timeout > 0
+      ? await intro
+          .waitForDisplayed({ timeout })
+          .then(() => true)
+          .catch(() => false)
+      : await isTestIdDisplayed('MoveToSparkIntro');
+  if (!shown) return false;
+  console.info('→ Move to Spark intro visible, dismissing with Later...');
+  await sleep(500);
+  await tap('MoveToSparkIntroLater');
+  await intro.waitForDisplayed({ reverse: true });
+  await sleep(500);
+  return true;
 }
 
 /**
