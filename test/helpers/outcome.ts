@@ -75,6 +75,37 @@ async function observe(condition: Condition): Promise<{ actual: unknown; passed:
   return { actual: found ? text : actual, passed: found };
 }
 
+async function withObservationIdleTimeout(
+  previous: number | undefined,
+  observation: () => Promise<unknown>,
+  record: Record<string, unknown>
+) {
+  if (previous === undefined) {
+    await observation();
+    return;
+  }
+  const settings = { before: previous, during: 0, restored: false };
+  record.observationIdleTimeout = settings;
+  let observationFailed = false;
+  try {
+    // UiAutomator's idle wait can outlive a short toast before lookup starts.
+    // The action has already completed under the original setting.
+    await driver.updateSettings({ waitForIdleTimeout: 0 });
+    await observation();
+  } catch (error) {
+    observationFailed = true;
+    throw error;
+  } finally {
+    try {
+      await driver.updateSettings({ waitForIdleTimeout: previous });
+      settings.restored = true;
+    } catch (error) {
+      record.settingsRestoreError = String(error);
+      if (!observationFailed) throw error;
+    }
+  }
+}
+
 /** Execute once, then poll only observations. Never retry an action with side effects. */
 async function actAndExpect(
   name: string,
@@ -108,62 +139,75 @@ async function actAndExpect(
         throw new Error(`Transient target ${label(target)} was already visible before action`);
       }
     }
-    await action();
-    await browser.waitUntil(
-      async () => {
-        const sample: Record<string, unknown> = {};
-        // Observe short-lived feedback first and retain that evidence even if it
-        // expires while persistent input/button state is being read.
-        for (const target of outcome.appeared ?? []) {
-          const key = label(target);
-          if (!appeared.has(key) && (await element(target).isDisplayed())) appeared.add(key);
-          sample[`appeared ${key}`] = appeared.has(key);
-        }
-        observed = sample;
-        // Re-resolve targets on every poll; navigation can replace the element tree.
-        let anyPassed = !outcome.anyVisible?.length;
-        for (const target of outcome.anyVisible ?? []) {
-          observed[label(target)] = false;
-          observed[label(target)] = await element(target).isDisplayed();
-          if (observed[label(target)]) anyPassed = true;
-        }
-        let allPassed = true;
-        for (const condition of outcome.all ?? []) {
-          const result = await observe(condition);
-          observed[JSON.stringify(condition)] = result.actual;
-          if (!result.passed) allPassed = false;
-        }
-        if (!anyPassed || !allPassed || appeared.size !== (outcome.appeared?.length ?? 0)) {
-          previousBounds = '';
-          return false;
-        }
-        if (stableTargets.length) {
-          // A destination can be visible while its page is still sliding into place.
-          // Require two matching geometry observations before the next gesture.
-          const bounds = [];
-          for (const target of stableTargets) {
-            const current = element(target);
-            if (await current.isDisplayed()) {
-              bounds.push({
-                target,
-                location: await current.getLocation(),
-                size: await current.getSize(),
-              });
-            }
-          }
-          observed.destinationBounds = bounds;
-          const snapshot = JSON.stringify(bounds);
-          const stable = bounds.length > 0 && snapshot === previousBounds;
-          previousBounds = snapshot;
-          return stable;
-        }
-        return true;
-      },
-      {
-        timeout: outcome.timeout ?? 30_000,
-        interval: 200,
-        timeoutMsg: `${name}: expected ${JSON.stringify(record.expected)}`,
+    let previousIdle: number | undefined;
+    if (driver.isAndroid && outcome.appeared?.length) {
+      const previous = (await driver.getSettings()).waitForIdleTimeout;
+      if (typeof previous !== 'number' || !Number.isFinite(previous) || previous < 0) {
+        throw new Error('Cannot observe transient feedback without a restorable idle timeout');
       }
+      previousIdle = previous;
+    }
+    await action();
+    await withObservationIdleTimeout(
+      previousIdle,
+      () =>
+        browser.waitUntil(
+          async () => {
+            const sample: Record<string, unknown> = {};
+            // Observe short-lived feedback first and retain that evidence even if it
+            // expires while persistent input/button state is being read.
+            for (const target of outcome.appeared ?? []) {
+              const key = label(target);
+              if (!appeared.has(key) && (await element(target).isDisplayed())) appeared.add(key);
+              sample[`appeared ${key}`] = appeared.has(key);
+            }
+            observed = sample;
+            // Re-resolve targets on every poll; navigation can replace the element tree.
+            let anyPassed = !outcome.anyVisible?.length;
+            for (const target of outcome.anyVisible ?? []) {
+              observed[label(target)] = false;
+              observed[label(target)] = await element(target).isDisplayed();
+              if (observed[label(target)]) anyPassed = true;
+            }
+            let allPassed = true;
+            for (const condition of outcome.all ?? []) {
+              const result = await observe(condition);
+              observed[JSON.stringify(condition)] = result.actual;
+              if (!result.passed) allPassed = false;
+            }
+            if (!anyPassed || !allPassed || appeared.size !== (outcome.appeared?.length ?? 0)) {
+              previousBounds = '';
+              return false;
+            }
+            if (stableTargets.length) {
+              // A destination can be visible while its page is still sliding into place.
+              // Require two matching geometry observations before the next gesture.
+              const bounds = [];
+              for (const target of stableTargets) {
+                const current = element(target);
+                if (await current.isDisplayed()) {
+                  bounds.push({
+                    target,
+                    location: await current.getLocation(),
+                    size: await current.getSize(),
+                  });
+                }
+              }
+              observed.destinationBounds = bounds;
+              const snapshot = JSON.stringify(bounds);
+              const stable = bounds.length > 0 && snapshot === previousBounds;
+              previousBounds = snapshot;
+              return stable;
+            }
+            return true;
+          },
+          {
+            timeout: outcome.timeout ?? 30_000,
+            interval: 200,
+            timeoutMsg: `${name}: expected ${JSON.stringify(record.expected)}`,
+          }
+        ),
+      record
     );
     record.status = 'passed';
   } catch (error) {

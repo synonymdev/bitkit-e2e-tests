@@ -145,6 +145,8 @@ for (const scenario of [
     let writes = 0;
     let polls = 0;
     let toastReadsAfterAction = 0;
+    let idle = 10000;
+    const updates: number[] = [];
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'outcome-evidence-'));
     const previousDirectory = process.env.OUTCOME_PILOT_ARTIFACTS;
     process.env.OUTCOME_PILOT_ARTIFACTS = directory;
@@ -154,7 +156,14 @@ for (const scenario of [
       fs.rmSync(directory, { recursive: true, force: true });
     });
     Object.assign(globalThis, {
-      driver: { isAndroid: true },
+      driver: {
+        isAndroid: true,
+        getSettings: async () => ({ waitForIdleTimeout: idle }),
+        updateSettings: async ({ waitForIdleTimeout }: { waitForIdleTimeout: number }) => {
+          updates.push(waitForIdleTimeout);
+          idle = waitForIdleTimeout;
+        },
+      },
       browser: {
         waitUntil: async (probe: () => Promise<boolean>, options: { timeoutMsg: string }) => {
           for (polls = 0; polls < 3; polls++) if (await probe()) return;
@@ -165,15 +174,20 @@ for (const scenario of [
         waitForDisplayed: async () => {},
         isDisplayed: async () => {
           if (!selector.includes('WarningToast')) return true;
-          if (issued) toastReadsAfterAction++;
+          if (issued) {
+            toastReadsAfterAction++;
+            assert.equal(idle, 0, 'Transient lookup must not wait for UI idle');
+          }
           return scenario === 'old' || (issued && !expired && scenario !== 'missing');
         },
         clearValue: async () => {},
         setValue: async () => {
+          assert.equal(idle, 10000, 'Action retains its original idle policy');
           issued = true;
           writes++;
         },
         click: async () => {
+          assert.equal(idle, 10000, 'Action retains its original idle policy');
           issued = true;
           writes++;
         },
@@ -209,6 +223,8 @@ for (const scenario of [
       await assert.rejects(result);
     else await result;
     assert.equal(writes, scenario === 'old' ? 0 : 1);
+    assert.equal(idle, 10000);
+    assert.deepEqual(updates, scenario === 'old' ? [] : [0, 10000]);
     if (scenario === 'expires' || scenario === 'amount') assert.equal(toastReadsAfterAction, 1);
     const [record] = fs
       .readFileSync(path.join(directory, 'steps.jsonl'), 'utf8')
@@ -219,6 +235,10 @@ for (const scenario of [
     assert.deepEqual(
       record.appeared,
       ['missing', 'old'].includes(scenario) ? [] : ['id:WarningToast']
+    );
+    assert.deepEqual(
+      record.observationIdleTimeout,
+      scenario === 'old' ? undefined : { before: 10000, during: 0, restored: true }
     );
     if (scenario === 'wrong-state') {
       assert.equal(record.observed['appeared id:WarningToast'], true);
@@ -233,3 +253,87 @@ for (const scenario of [
     }
   });
 }
+
+for (const failure of ['enable', 'restore', 'primary-and-restore', 'settings-unavailable']) {
+  test(`Android observation settings failure: ${failure}`, async (t) => {
+    const previous = { browser: globalThis.browser, driver: globalThis.driver, $: globalThis.$ };
+    const previousDirectory = process.env.OUTCOME_PILOT_ARTIFACTS;
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'outcome-settings-'));
+    process.env.OUTCOME_PILOT_ARTIFACTS = directory;
+    let clicks = 0;
+    let idle = 321;
+    const updates: number[] = [];
+    Object.assign(globalThis, {
+      driver: {
+        isAndroid: true,
+        getSettings: async () =>
+          failure === 'settings-unavailable' ? {} : { waitForIdleTimeout: idle },
+        updateSettings: async ({ waitForIdleTimeout }: { waitForIdleTimeout: number }) => {
+          updates.push(waitForIdleTimeout);
+          idle = waitForIdleTimeout;
+          if (waitForIdleTimeout === 0 && failure === 'enable')
+            throw new Error('idle update failed');
+          if (waitForIdleTimeout === 321 && failure.includes('restore'))
+            throw new Error('idle restore failed');
+        },
+      },
+      browser: {
+        waitUntil: async (probe: () => Promise<boolean>, options: { timeoutMsg: string }) => {
+          for (let poll = 0; poll < 2; poll++) if (await probe()) return;
+          throw new Error(options.timeoutMsg);
+        },
+      },
+      $: (selector: string) => ({
+        waitForDisplayed: async () => {},
+        isDisplayed: async () =>
+          !selector.includes('WarningToast') || (clicks === 1 && failure !== 'primary-and-restore'),
+        click: async () => {
+          assert.equal(idle, 321);
+          clicks++;
+        },
+      }),
+    });
+    t.after(() => {
+      Object.assign(globalThis, previous);
+      if (previousDirectory === undefined) delete process.env.OUTCOME_PILOT_ARTIFACTS;
+      else process.env.OUTCOME_PILOT_ARTIFACTS = previousDirectory;
+      fs.rmSync(directory, { recursive: true, force: true });
+    });
+    const expected =
+      failure === 'enable'
+        ? /idle update failed/
+        : failure === 'restore'
+          ? /idle restore failed/
+          : failure === 'primary-and-restore'
+            ? /expected/
+            : /restorable idle timeout/;
+    await assert.rejects(
+      tapAndExpect({ id: 'N1' }, { appeared: [{ id: 'WarningToast' }] }),
+      expected
+    );
+    assert.equal(clicks, failure === 'settings-unavailable' ? 0 : 1);
+    assert.deepEqual(updates, failure === 'settings-unavailable' ? [] : [0, 321]);
+    const record = JSON.parse(fs.readFileSync(path.join(directory, 'steps.jsonl'), 'utf8'));
+    if (failure.includes('restore'))
+      assert.match(record.settingsRestoreError, /idle restore failed/);
+    if (failure === 'primary-and-restore') assert.match(record.error, /expected/);
+  });
+}
+
+test('iOS transient observation uses no Android settings commands', async (t) => {
+  const previous = { browser: globalThis.browser, driver: globalThis.driver, $: globalThis.$ };
+  let clicked = false;
+  Object.assign(globalThis, {
+    driver: { isAndroid: false },
+    browser: { waitUntil: async (probe: () => Promise<boolean>) => assert.ok(await probe()) },
+    $: () => ({
+      waitForDisplayed: async () => {},
+      isDisplayed: async () => clicked,
+      click: async () => {
+        clicked = true;
+      },
+    }),
+  });
+  t.after(() => Object.assign(globalThis, previous));
+  await tapAndExpect({ id: 'N1' }, { appeared: [{ id: 'WarningToast' }] });
+});
