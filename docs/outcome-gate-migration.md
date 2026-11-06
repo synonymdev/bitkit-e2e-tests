@@ -23,7 +23,11 @@ a missed observation. The RBF restore icon assertion is now awaited.
 
 Ordinary UI waits are 30 seconds in local and CI configurations, including verified input
 clearing. Domain balance, channel, backup and hardware approval waits retain their own budgets.
-Actions execute once; the outcome predicate only reads fresh selectors. Existing fixture
+Actions execute once; the outcome predicate only reads fresh selectors. LNURL authentication
+observes the exact `Signed In` confirmation inside its action: XCTest's idle and animation
+waits are temporarily bypassed for that step, then restored to their exact prior values. The
+iOS configuration explicitly declares the existing native defaults (10/2 seconds) so the
+driver can report them for restoration; the ordinary UI wait remains 30 seconds. Existing fixture
 recovery (for example fetching a Lightning invoice) is kept separate from payment submission.
 
 ## Comparison protocol

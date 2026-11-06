@@ -94,6 +94,8 @@ export const config: WebdriverIO.Config = {
       : {
           platformName: 'iOS',
           'appium:automationName': 'XCUITest',
+          // Declare XCTest's defaults (seconds) so scoped transient steps can restore them.
+          'appium:settings': { waitForIdleTimeout: 10, animationCoolOffTimeout: 2 },
           ...(process.env.IOS_WDA_LOCAL_PORT
             ? { 'appium:wdaLocalPort': Number(process.env.IOS_WDA_LOCAL_PORT) }
             : {}),

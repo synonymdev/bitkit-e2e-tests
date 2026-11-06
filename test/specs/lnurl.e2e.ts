@@ -4,6 +4,7 @@ import {
   confirmGateAction,
   enterGateAmount,
   rejectGateContinue,
+  authenticateGateLnurl,
 } from '../helpers/gate-actions';
 import { tapAndExpect } from '../helpers/outcome';
 import LNURL from 'lnurl';
@@ -405,8 +406,7 @@ describe('@lnurl @ios_gate - LNURL', () => {
       console.log('loginRequest1', loginRequest1);
       const loginEvent = new Promise<void>((resolve) => lnurlServer.once('login', resolve));
       await enterGateScanPrompt(loginRequest1.encoded, { acceptCameraPermission: false });
-      await tap('LnurlAuthContinue');
-      await expectText('Signed In');
+      await authenticateGateLnurl();
       await loginEvent;
     }
   );
