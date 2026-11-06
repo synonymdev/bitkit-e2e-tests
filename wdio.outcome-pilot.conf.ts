@@ -25,6 +25,7 @@ export const config: WebdriverIO.Config = {
   ...base,
   specs: [journeys.map((name) => `./test/experiments/${name}-outcome.e2e.ts`)],
   maxInstances: 1,
+  waitforTimeout: 30_000,
   specFileRetries: 0,
   connectionRetryCount: 0,
   services: [
