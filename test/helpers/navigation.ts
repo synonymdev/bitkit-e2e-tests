@@ -1,4 +1,4 @@
-import { elementById, tap, sleep } from './actions';
+import { elementById, tap, sleep, withMoveToSparkIntroRecovery } from './actions';
 import { CONTACTS_SCREEN_IDS, isContactsScreenOpen } from './pubky-screen';
 
 export type SettingsTab = 'general' | 'security' | 'advanced';
@@ -90,7 +90,9 @@ export async function doNavigationClose() {
  * we need to trigger them manually.
  */
 export async function doTriggerTimedSheet() {
-  await elementById('HeaderMenu').waitForDisplayed({ timeout: 45_000 });
+  await withMoveToSparkIntroRecovery(() =>
+    elementById('HeaderMenu').waitForDisplayed({ timeout: 45_000 })
+  );
   await sleep(700);
   await tap('HeaderMenu');
   await tap('DrawerSettings');
