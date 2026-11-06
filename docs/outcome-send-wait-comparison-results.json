@@ -1,0 +1,438 @@
+{
+  "experiment": "20s versus30s default element wait with Node24.9.0 fixed",
+  "node": "v24.9.0",
+  "default30": {
+    "experiment": "Four outcome Send attempts per platform with default element wait30s and Node24",
+    "e2eCandidate": "0c74af4eb4e31453d3bd88a12220d488b47e3cfb",
+    "node": "v24.9.0",
+    "defaultElementWaitMs": 30000,
+    "changesFromPreviousSample": ["Node22.23.4 ->24.9.0; default element wait remains30s"],
+    "platforms": {
+      "ios": {
+        "passes": 4,
+        "attempts": 4,
+        "runs": [
+          {
+            "attempt": 1,
+            "passed": true,
+            "testSeconds": 164.599,
+            "sessionSeconds": 238.421,
+            "nodeProcessesVerified": 3,
+            "lastAction": "wait for outcome",
+            "lastActionStatus": "passed",
+            "warningsObserved": 6,
+            "nativeInputSequencesVerified": 7
+          },
+          {
+            "attempt": 2,
+            "passed": true,
+            "testSeconds": 135.001,
+            "sessionSeconds": 197.132,
+            "nodeProcessesVerified": 3,
+            "lastAction": "wait for outcome",
+            "lastActionStatus": "passed",
+            "warningsObserved": 6,
+            "nativeInputSequencesVerified": 7
+          },
+          {
+            "attempt": 3,
+            "passed": true,
+            "testSeconds": 135.318,
+            "sessionSeconds": 197.177,
+            "nodeProcessesVerified": 3,
+            "lastAction": "wait for outcome",
+            "lastActionStatus": "passed",
+            "warningsObserved": 6,
+            "nativeInputSequencesVerified": 7
+          },
+          {
+            "attempt": 4,
+            "passed": true,
+            "testSeconds": 157.247,
+            "sessionSeconds": 219.84,
+            "nodeProcessesVerified": 3,
+            "lastAction": "wait for outcome",
+            "lastActionStatus": "passed",
+            "warningsObserved": 6,
+            "nativeInputSequencesVerified": 7
+          }
+        ]
+      },
+      "android": {
+        "passes": 4,
+        "attempts": 4,
+        "runs": [
+          {
+            "attempt": 1,
+            "passed": true,
+            "testSeconds": 136.641,
+            "sessionSeconds": 199.324,
+            "nodeProcessesVerified": 3,
+            "lastAction": "wait for outcome",
+            "lastActionStatus": "passed",
+            "warningsObserved": 6,
+            "nativeInputSequencesVerified": 7
+          },
+          {
+            "attempt": 2,
+            "passed": true,
+            "testSeconds": 163.866,
+            "sessionSeconds": 227.553,
+            "nodeProcessesVerified": 3,
+            "lastAction": "wait for outcome",
+            "lastActionStatus": "passed",
+            "warningsObserved": 6,
+            "nativeInputSequencesVerified": 7
+          },
+          {
+            "attempt": 3,
+            "passed": true,
+            "testSeconds": 136.5,
+            "sessionSeconds": 191.477,
+            "nodeProcessesVerified": 3,
+            "lastAction": "wait for outcome",
+            "lastActionStatus": "passed",
+            "warningsObserved": 6,
+            "nativeInputSequencesVerified": 7
+          },
+          {
+            "attempt": 4,
+            "passed": true,
+            "testSeconds": 169.529,
+            "sessionSeconds": 228.801,
+            "nodeProcessesVerified": 3,
+            "lastAction": "wait for outcome",
+            "lastActionStatus": "passed",
+            "warningsObserved": 6,
+            "nativeInputSequencesVerified": 7
+          }
+        ]
+      }
+    },
+    "limits": "Four attempts per platform in sequential batches. Runtime source/config unchanged; Node version changes. Small samples and ordering effects limit causal attribution and reliability estimates.",
+    "comparisonInputs": {
+      "node24Version": "v24.9.0",
+      "node24BinarySha256": "ac1b8926054c59ba572f0a3dd2e520413f88201058848917946446151182c18d",
+      "node22ExecutedSource": "8d374c51aa328a0b7fa2914dc6ffe2372c308f23",
+      "node24Source": "0c74af4eb4e31453d3bd88a12220d488b47e3cfb",
+      "runtimeSourceIdentical": true,
+      "interveningDocumentationOnly": [
+        "docs/outcome-pilot.md",
+        "docs/outcome-send-default30-node22-results.json",
+        "docs/outcome-send-default30-node22-results.md",
+        "docs/outcome-send-rerun-results.md"
+      ],
+      "runtimeReceiptScriptIdentical": true,
+      "defaultElementWaitMsBothBatches": 30000,
+      "method": "sequential four-attempt batches per platform; same app artifacts/dependencies/backend/devices/helpers/config; Node version changes"
+    },
+    "sourceFingerprint": "9742cf47bad6a8352a664ef11a80275fcee1bd94e6f1369dd90f9bfe73542008",
+    "installedTools": {
+      "node": "v24.9.0",
+      "versions": {
+        "webdriverio": {
+          "version": "9.18.4",
+          "manifestSha256": "891462badf4794e80fcf15ca8353086ecad516c07aa3f322587ba1229cf83002"
+        },
+        "@wdio/cli": {
+          "version": "9.18.4",
+          "manifestSha256": "b3887ca8fb2dbe62def74302020a7e67f4ff5474005a0fbcc523adbf3420eb00"
+        },
+        "@wdio/mocha-framework": {
+          "version": "9.18.0",
+          "manifestSha256": "688906524effb5b262966c497225b09336be06bf7310718723bd8710dfc952ef"
+        },
+        "appium": {
+          "version": "3.0.0",
+          "manifestSha256": "f703b42a5902b263b0cb32e29d7c2c8acf95ce4afac921cc5186cd4ddee1b669"
+        },
+        "appium-uiautomator2-driver": {
+          "version": "5.0.0",
+          "manifestSha256": "c3cae422639ac9c4d4c0979f3622363b6f0f47d1f7563908981e516e98c6d118"
+        },
+        "appium-xcuitest-driver": {
+          "version": "10.17.0",
+          "manifestSha256": "875e198fd4e3d568152d18de4fc9a5eab0c026dd963cb5db5f13bbb48bf597fb"
+        }
+      }
+    },
+    "apps": {
+      "ios": {
+        "sourceSha": "4c7633a41bd1a8ea9f57fc46f9ce6870f4231ede",
+        "info": {
+          "CFBundleIdentifier": "to.bitkit",
+          "CFBundleShortVersionString": "3.0.1",
+          "CFBundleVersion": "202",
+          "E2E_BACKEND": "network",
+          "E2E_NETWORK": "regtest"
+        },
+        "bundleSha256": "e1aceaf828315ecc49916a5ae73ee2209c1aaadda3c63d493d494fea33d15586",
+        "buildSettings": {
+          "sourceSha": "4c7633a41bd1a8ea9f57fc46f9ce6870f4231ede",
+          "backend": "regtest",
+          "configuration": "Debug",
+          "E2E_BACKEND": "network",
+          "E2E_NETWORK": "regtest",
+          "SWIFT_ACTIVE_COMPILATION_CONDITIONS": "DEBUG E2E_BUILD",
+          "TREZOR_BRIDGE": false,
+          "toolchain": "Xcode 26.0.1 (17A400)",
+          "extraCFlags": [
+            "-DENABLE_MODULE_ECDH",
+            "-DENABLE_MODULE_RECOVERY",
+            "-DENABLE_MODULE_SCHNORRSIG",
+            "-DENABLE_MODULE_MUSIG"
+          ],
+          "reasonForCFlags": "Xcode omitted trait-conditional C defines from swift-secp256k1 0.24.0; explicitly enable the package default traits. No source or dependency-pin changes."
+        },
+        "device": "iPhone 17 / iOS26.0"
+      },
+      "android": {
+        "sourceSha": "7f49f216f20c70f95f6b9ff087fa3f2b6fb985c5",
+        "sha256": "14ff54fc8478ad2dd4596d7ad7a6e70507b79a33369e550cca4b8c56f1b19860",
+        "package": "package: name='to.bitkit.dev' versionCode='195' versionName='3.0.1' platformBuildVersionName='17' platformBuildVersionCode='37' compileSdkVersion='37' compileSdkVersionCodename='17'",
+        "buildSettings": {
+          "sourceSha": "7f49f216f20c70f95f6b9ff087fa3f2b6fb985c5",
+          "backend": "regtest",
+          "task": "assembleDevDebug",
+          "E2E": true,
+          "E2E_BACKEND": "network",
+          "GEO": false,
+          "TREZOR_BRIDGE": false
+        },
+        "device": "Pixel6 / Android13 API33"
+      }
+    }
+  },
+  "default20": {
+    "experiment": "Four outcome Send attempts per platform with default element wait20s and Node24",
+    "e2eCandidate": "3604f7c25f2d5c05bd111d77ca2c43b9c94f9ebf",
+    "node": "v24.9.0",
+    "defaultElementWaitMs": 20000,
+    "changesFromPreviousSample": ["default element wait30s ->20s; Node24.9.0 unchanged"],
+    "platforms": {
+      "ios": {
+        "passes": 4,
+        "attempts": 4,
+        "runs": [
+          {
+            "attempt": 1,
+            "passed": true,
+            "testSeconds": 135.419,
+            "sessionSeconds": 203.269,
+            "nodeProcessesVerified": 3,
+            "lastAction": "wait for outcome",
+            "lastActionStatus": "passed",
+            "warningsObserved": 6,
+            "nativeInputSequencesVerified": 7
+          },
+          {
+            "attempt": 2,
+            "passed": true,
+            "testSeconds": 156.735,
+            "sessionSeconds": 238.295,
+            "nodeProcessesVerified": 3,
+            "lastAction": "wait for outcome",
+            "lastActionStatus": "passed",
+            "warningsObserved": 6,
+            "nativeInputSequencesVerified": 7
+          },
+          {
+            "attempt": 3,
+            "passed": true,
+            "testSeconds": 152.338,
+            "sessionSeconds": 218.033,
+            "nodeProcessesVerified": 3,
+            "lastAction": "wait for outcome",
+            "lastActionStatus": "passed",
+            "warningsObserved": 6,
+            "nativeInputSequencesVerified": 7
+          },
+          {
+            "attempt": 4,
+            "passed": true,
+            "testSeconds": 152.093,
+            "sessionSeconds": 215.276,
+            "nodeProcessesVerified": 3,
+            "lastAction": "wait for outcome",
+            "lastActionStatus": "passed",
+            "warningsObserved": 6,
+            "nativeInputSequencesVerified": 7
+          }
+        ]
+      },
+      "android": {
+        "passes": 3,
+        "attempts": 4,
+        "runs": [
+          {
+            "attempt": 1,
+            "passed": true,
+            "testSeconds": 121.008,
+            "sessionSeconds": 181.91,
+            "nodeProcessesVerified": 3,
+            "lastAction": "wait for outcome",
+            "lastActionStatus": "passed",
+            "warningsObserved": 6,
+            "nativeInputSequencesVerified": 7
+          },
+          {
+            "attempt": 2,
+            "passed": false,
+            "testSeconds": 203.852,
+            "sessionSeconds": 262.978,
+            "nodeProcessesVerified": 3,
+            "lastAction": "tap id:N1",
+            "lastActionStatus": "failed",
+            "error": "tap id:N1: tap id:N1: expected {\"all\":[{\"textWithin\":{\"id\":\"SendNumberField\",\"text\":\"1 500\"}}],\"appeared\":[\"id:SendAmountExceededToast\"]}; last visibility {\"appeared id:SendAmountExceededToast\":false}",
+            "failureObserved": {
+              "{\"textWithin\":{\"id\":\"SendNumberField\",\"text\":\"1 500\"}}": "1 500"
+            }
+          },
+          {
+            "attempt": 3,
+            "passed": true,
+            "testSeconds": 137.295,
+            "sessionSeconds": 201.108,
+            "nodeProcessesVerified": 3,
+            "lastAction": "wait for outcome",
+            "lastActionStatus": "passed",
+            "warningsObserved": 6,
+            "nativeInputSequencesVerified": 7
+          },
+          {
+            "attempt": 4,
+            "passed": true,
+            "testSeconds": 137.383,
+            "sessionSeconds": 193.362,
+            "nodeProcessesVerified": 3,
+            "lastAction": "wait for outcome",
+            "lastActionStatus": "passed",
+            "warningsObserved": 6,
+            "nativeInputSequencesVerified": 7
+          }
+        ]
+      }
+    },
+    "limits": "Four attempts per platform in sequential batches. Only the default element wait changes; Node24.9.0 and all helpers/assertions remain unchanged. Small samples and ordering effects limit causal attribution and reliability estimates.",
+    "comparisonInputs": {
+      "nodeVersionBothBatches": "v24.9.0",
+      "nodeBinarySha256": "ac1b8926054c59ba572f0a3dd2e520413f88201058848917946446151182c18d",
+      "reference30sSource": "0c74af4eb4e31453d3bd88a12220d488b47e3cfb",
+      "onlyRuntimeSourceChange": "wdio.outcome-pilot.conf.ts: waitforTimeout30_000 ->20_000",
+      "helpersAssertionsFixturesAndDependenciesUnchanged": true,
+      "defaultElementWaitMsPrevious": 30000,
+      "defaultElementWaitMsCurrent": 20000,
+      "method": "sequential four-attempt batches per platform; same apps/backend/device profiles/recording/retry policy; no failed-attempt replacement",
+      "completeInterveningDelta": [
+        "docs/outcome-pilot.md",
+        "docs/outcome-send-default30-node22-results.md",
+        "docs/outcome-send-node-comparison-results.json",
+        "docs/outcome-send-node-comparison-results.md",
+        "wdio.outcome-pilot.conf.ts"
+      ],
+      "node20sTestedSource": "3604f7c25f2d5c05bd111d77ca2c43b9c94f9ebf",
+      "onlyRuntimeConfigLineChanged": true
+    },
+    "sourceFingerprint": "1a8df60f9d55111e934e2ffa8c17de0d334eadf866e4f4a5f2b0e781c8fc2e70",
+    "failureAnalysis": [
+      {
+        "case": "android-outcome-2",
+        "failedAction": "tap id:N1",
+        "assertionTimeoutMs": 30000,
+        "defaultElementWaitMs": 20000,
+        "nativeWindow": [
+          "[f6ee3853][HTTP] --> POST /session/f6ee3853-defa-4cf3-bdc0-93dc95d99f0c/element/00000000-0000-0465-0000-04af00000004/click {}",
+          "[f6ee3853][HTTP] <-- POST /session/f6ee3853-defa-4cf3-bdc0-93dc95d99f0c/element/00000000-0000-0465-0000-04af00000004/click 200 89 ms - 14 ",
+          "[f6ee3853][HTTP] --> POST /session/f6ee3853-defa-4cf3-bdc0-93dc95d99f0c/appium/settings {\"settings\":{\"waitForIdleTimeout\":0}}",
+          "[f6ee3853][HTTP] <-- POST /session/f6ee3853-defa-4cf3-bdc0-93dc95d99f0c/appium/settings 200 23 ms - 14 ",
+          "[f6ee3853][HTTP] --> POST /session/f6ee3853-defa-4cf3-bdc0-93dc95d99f0c/element {\"using\":\"-android uiautomator\",\"value\":\"new UiSelector().resourceId(\\\"SendAmountExceededToast\\\")\"}",
+          "[f6ee3853][HTTP] <-- POST /session/f6ee3853-defa-4cf3-bdc0-93dc95d99f0c/element 404 1448 ms - 849 ",
+          "[f6ee3853][HTTP] --> POST /session/f6ee3853-defa-4cf3-bdc0-93dc95d99f0c/element {\"using\":\"-android uiautomator\",\"value\":\"new UiSelector().resourceId(\\\"SendAmountExceededToast\\\")\"}",
+          "[f6ee3853][HTTP] <-- POST /session/f6ee3853-defa-4cf3-bdc0-93dc95d99f0c/element 404 1011 ms - 849 ",
+          "[f6ee3853][HTTP] --> POST /session/f6ee3853-defa-4cf3-bdc0-93dc95d99f0c/element {\"using\":\"-android uiautomator\",\"value\":\"new UiSelector().resourceId(\\\"SendAmountExceededToast\\\")\"}",
+          "[f6ee3853][HTTP] <-- POST /session/f6ee3853-defa-4cf3-bdc0-93dc95d99f0c/element 404 215 ms - 849 ",
+          "[f6ee3853][HTTP] --> POST /session/f6ee3853-defa-4cf3-bdc0-93dc95d99f0c/element {\"using\":\"-android uiautomator\",\"value\":\"new UiSelector().resourceId(\\\"SendAmountExceededToast\\\")\"}",
+          "[f6ee3853][HTTP] <-- POST /session/f6ee3853-defa-4cf3-bdc0-93dc95d99f0c/element 404 70 ms - 849 "
+        ],
+        "persistentAmountAfterFailure": "1 500",
+        "observedWarningAppearance": false
+      }
+    ],
+    "installedTools": {
+      "node": "v24.9.0",
+      "versions": {
+        "webdriverio": {
+          "version": "9.18.4",
+          "manifestSha256": "891462badf4794e80fcf15ca8353086ecad516c07aa3f322587ba1229cf83002"
+        },
+        "@wdio/cli": {
+          "version": "9.18.4",
+          "manifestSha256": "b3887ca8fb2dbe62def74302020a7e67f4ff5474005a0fbcc523adbf3420eb00"
+        },
+        "@wdio/mocha-framework": {
+          "version": "9.18.0",
+          "manifestSha256": "688906524effb5b262966c497225b09336be06bf7310718723bd8710dfc952ef"
+        },
+        "appium": {
+          "version": "3.0.0",
+          "manifestSha256": "f703b42a5902b263b0cb32e29d7c2c8acf95ce4afac921cc5186cd4ddee1b669"
+        },
+        "appium-uiautomator2-driver": {
+          "version": "5.0.0",
+          "manifestSha256": "c3cae422639ac9c4d4c0979f3622363b6f0f47d1f7563908981e516e98c6d118"
+        },
+        "appium-xcuitest-driver": {
+          "version": "10.17.0",
+          "manifestSha256": "875e198fd4e3d568152d18de4fc9a5eab0c026dd963cb5db5f13bbb48bf597fb"
+        }
+      }
+    },
+    "apps": {
+      "ios": {
+        "sourceSha": "4c7633a41bd1a8ea9f57fc46f9ce6870f4231ede",
+        "info": {
+          "CFBundleIdentifier": "to.bitkit",
+          "CFBundleShortVersionString": "3.0.1",
+          "CFBundleVersion": "202",
+          "E2E_BACKEND": "network",
+          "E2E_NETWORK": "regtest"
+        },
+        "bundleSha256": "e1aceaf828315ecc49916a5ae73ee2209c1aaadda3c63d493d494fea33d15586",
+        "buildSettings": {
+          "sourceSha": "4c7633a41bd1a8ea9f57fc46f9ce6870f4231ede",
+          "backend": "regtest",
+          "configuration": "Debug",
+          "E2E_BACKEND": "network",
+          "E2E_NETWORK": "regtest",
+          "SWIFT_ACTIVE_COMPILATION_CONDITIONS": "DEBUG E2E_BUILD",
+          "TREZOR_BRIDGE": false,
+          "toolchain": "Xcode 26.0.1 (17A400)",
+          "extraCFlags": [
+            "-DENABLE_MODULE_ECDH",
+            "-DENABLE_MODULE_RECOVERY",
+            "-DENABLE_MODULE_SCHNORRSIG",
+            "-DENABLE_MODULE_MUSIG"
+          ],
+          "reasonForCFlags": "Xcode omitted trait-conditional C defines from swift-secp256k1 0.24.0; explicitly enable the package default traits. No source or dependency-pin changes."
+        },
+        "device": "iPhone 17 / iOS26.0"
+      },
+      "android": {
+        "sourceSha": "7f49f216f20c70f95f6b9ff087fa3f2b6fb985c5",
+        "sha256": "14ff54fc8478ad2dd4596d7ad7a6e70507b79a33369e550cca4b8c56f1b19860",
+        "package": "package: name='to.bitkit.dev' versionCode='195' versionName='3.0.1' platformBuildVersionName='17' platformBuildVersionCode='37' compileSdkVersion='37' compileSdkVersionCodename='17'",
+        "buildSettings": {
+          "sourceSha": "7f49f216f20c70f95f6b9ff087fa3f2b6fb985c5",
+          "backend": "regtest",
+          "task": "assembleDevDebug",
+          "E2E": true,
+          "E2E_BACKEND": "network",
+          "GEO": false,
+          "TREZOR_BRIDGE": false
+        },
+        "device": "Pixel6 / Android13 API33"
+      }
+    }
+  },
+  "limits": "Four attempts per platform/setting in sequential batches; timing and order effects remain possible. No long-term flake-rate or definitive causal claim."
+}

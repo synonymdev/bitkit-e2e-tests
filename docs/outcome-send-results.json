@@ -1,0 +1,615 @@
+{
+  "experiment": "send_1 selector action/outcome comparison",
+  "date": "2026-11-06",
+  "status": "keep-opt-in; production send_1 unchanged",
+  "baselineRevision": "f170a36578f7aa87001ec537ca29c188f78cd6a8",
+  "sourceFingerprint": "55dc0a7dc74595248b4952ff38151567581480cc7c3f556c5dc41576f6aa3b26",
+  "sourceFiles": 191,
+  "runtimeSourceHashes": {
+    "scripts/outcome-pilot.py": "202e35f1eb30a5223edd1f5e3851f2b47478281e6528a7b20ecec584d72bd99e",
+    "test/experiments/send-baseline.ts": "24736c3f55521069ad285ee13d9597c3e16695bd086a9a97816648914291eabd",
+    "test/experiments/send-outcome.e2e.ts": "8c326a5bedf5662ef7a4932c7bc0af92cec1537324e2f09d1165d8ccaf0f141f",
+    "test/helpers/actions.ts": "8e3ee1aa38e03b5996f6ca7f1b09238b682fbecc92fee87eed29bed35b3f6ccb",
+    "test/helpers/constants.ts": "8688bc6b9555ebc33c482d0a4e3973f9a4da4fda5437d4314ae0f226b37f0b35",
+    "test/helpers/electrum.ts": "e0c107b0eee0c5b334214f68a040fa80ab1f737b3eb19992d4027fa24c4ef6a0",
+    "test/helpers/navigation.ts": "d4316f269642e7290120511fcbf7c85482082bfe6e4e22d806a8775c1d2eb5de",
+    "test/helpers/outcome.ts": "5b41d7fe5d7264f2d68533ed806414cc8704ae616ae1418431e186a481fd2cf0",
+    "test/helpers/regtest.ts": "e854d0828e63f69603d98c36b189b5278b33c20398cf2ef5e995389d9f052246",
+    "test/helpers/send-validation.ts": "7add7186f68e6e15c5b449c50f755d43f8c9a2374edca09035e8bd43c9f2126b",
+    "test/helpers/setup.ts": "e5f292ef63bb47b11a0c3acf38eb753d7c6948004ee5a7668c6d3daed375d724",
+    "test/helpers/suite.ts": "15b967c3a48465bf89c300dc5d7def215af53d264ced4b550920a130312a81f0",
+    "wdio.conf.ts": "edf731469a48664c7d929529018823324b58eadf90cbca30f833957ad60a7aeb",
+    "wdio.outcome-pilot.conf.ts": "bf4dacfc1f8ff6e5c32750c56ca871d093cac5099962de54e4c8aa26bbc8601e"
+  },
+  "protocol": {
+    "backend": "regtest",
+    "attemptsPerVariantPerPlatform": 10,
+    "order": "baseline/outcome on odd pairs, outcome/baseline on even pairs",
+    "concurrency": "both platforms concurrently, sequential invocations within each platform",
+    "retries": "no test/attempt retries; baseline preserves original input-level retries",
+    "videoAndDiagnostics": true,
+    "sourceAndAppHashesUnchanged": true,
+    "timing": "test-body and full invocation reported separately; comparative timings use jointly successful pairs",
+    "plannedControlSessions": 2,
+    "supplementaryControlSessions": 1,
+    "positiveAttemptSetupFailures": 5,
+    "plannedControlSetupFailures": 1,
+    "positiveCasesStarted": 35,
+    "caseAssertionFailures": 14,
+    "positiveCasesPassed": 21
+  },
+  "apps": {
+    "ios": {
+      "sourceSha": "4c7633a41bd1a8ea9f57fc46f9ce6870f4231ede",
+      "info": {
+        "CFBundleIdentifier": "to.bitkit",
+        "CFBundleShortVersionString": "3.0.1",
+        "CFBundleVersion": "202",
+        "E2E_BACKEND": "network",
+        "E2E_NETWORK": "regtest"
+      },
+      "bundleSha256": "e1aceaf828315ecc49916a5ae73ee2209c1aaadda3c63d493d494fea33d15586",
+      "buildSettings": {
+        "sourceSha": "4c7633a41bd1a8ea9f57fc46f9ce6870f4231ede",
+        "backend": "regtest",
+        "configuration": "Debug",
+        "E2E_BACKEND": "network",
+        "E2E_NETWORK": "regtest",
+        "SWIFT_ACTIVE_COMPILATION_CONDITIONS": "DEBUG E2E_BUILD",
+        "TREZOR_BRIDGE": false,
+        "toolchain": "Xcode 26.0.1 (17A400)",
+        "extraCFlags": [
+          "-DENABLE_MODULE_ECDH",
+          "-DENABLE_MODULE_RECOVERY",
+          "-DENABLE_MODULE_SCHNORRSIG",
+          "-DENABLE_MODULE_MUSIG"
+        ],
+        "reasonForCFlags": "Xcode omitted trait-conditional C defines from swift-secp256k1 0.24.0; explicitly enable the package default traits. No source or dependency-pin changes."
+      },
+      "device": "iPhone 17 / iOS26.0"
+    },
+    "android": {
+      "sourceSha": "7f49f216f20c70f95f6b9ff087fa3f2b6fb985c5",
+      "sha256": "14ff54fc8478ad2dd4596d7ad7a6e70507b79a33369e550cca4b8c56f1b19860",
+      "package": "package: name='to.bitkit.dev' versionCode='195' versionName='3.0.1' platformBuildVersionName='17' platformBuildVersionCode='37' compileSdkVersion='37' compileSdkVersionCodename='17'",
+      "buildSettings": {
+        "sourceSha": "7f49f216f20c70f95f6b9ff087fa3f2b6fb985c5",
+        "backend": "regtest",
+        "task": "assembleDevDebug",
+        "E2E": true,
+        "E2E_BACKEND": "network",
+        "GEO": false,
+        "TREZOR_BRIDGE": false
+      },
+      "device": "Pixel6 / Android13 API33"
+    }
+  },
+  "installedTools": {
+    "node": "v24.9.0",
+    "versions": {
+      "webdriverio": {
+        "version": "9.18.4",
+        "manifestSha256": "891462badf4794e80fcf15ca8353086ecad516c07aa3f322587ba1229cf83002"
+      },
+      "@wdio/cli": {
+        "version": "9.18.4",
+        "manifestSha256": "b3887ca8fb2dbe62def74302020a7e67f4ff5474005a0fbcc523adbf3420eb00"
+      },
+      "@wdio/mocha-framework": {
+        "version": "9.18.0",
+        "manifestSha256": "688906524effb5b262966c497225b09336be06bf7310718723bd8710dfc952ef"
+      },
+      "appium": {
+        "version": "3.0.0",
+        "manifestSha256": "f703b42a5902b263b0cb32e29d7c2c8acf95ce4afac921cc5186cd4ddee1b669"
+      },
+      "appium-uiautomator2-driver": {
+        "version": "5.0.0",
+        "manifestSha256": "c3cae422639ac9c4d4c0979f3622363b6f0f47d1f7563908981e516e98c6d118"
+      },
+      "appium-xcuitest-driver": {
+        "version": "10.17.0",
+        "manifestSha256": "875e198fd4e3d568152d18de4fc9a5eab0c026dd963cb5db5f13bbb48bf597fb"
+      }
+    }
+  },
+  "platforms": {
+    "ios": {
+      "modes": {
+        "baseline": {
+          "passes": 10,
+          "attempts": 10,
+          "casesStarted": 10,
+          "setupFailures": 0,
+          "inputRetryMessages": 2,
+          "medianAllAttemptSessionSeconds": 183.966,
+          "medianSuccessfulTestSeconds": 131.493,
+          "medianSuccessfulSessionSeconds": 183.966,
+          "testRangeSeconds": [123.8, 168.066],
+          "medianStartedCaseTestSeconds": 131.493,
+          "runs": [
+            {
+              "name": "ios-baseline-1",
+              "result": "passed",
+              "testSeconds": 123.8,
+              "sessionSeconds": 170.254,
+              "failureTargets": [],
+              "failureKind": null
+            },
+            {
+              "name": "ios-baseline-2",
+              "result": "passed",
+              "testSeconds": 156.331,
+              "sessionSeconds": 218.44,
+              "failureTargets": [],
+              "failureKind": null
+            },
+            {
+              "name": "ios-baseline-3",
+              "result": "passed",
+              "testSeconds": 139.157,
+              "sessionSeconds": 205.196,
+              "failureTargets": [],
+              "failureKind": null
+            },
+            {
+              "name": "ios-baseline-4",
+              "result": "passed",
+              "testSeconds": 125.238,
+              "sessionSeconds": 197.522,
+              "failureTargets": [],
+              "failureKind": null
+            },
+            {
+              "name": "ios-baseline-5",
+              "result": "passed",
+              "testSeconds": 168.066,
+              "sessionSeconds": 219.497,
+              "failureTargets": [],
+              "failureKind": null
+            },
+            {
+              "name": "ios-baseline-6",
+              "result": "passed",
+              "testSeconds": 126.303,
+              "sessionSeconds": 174.365,
+              "failureTargets": [],
+              "failureKind": null
+            },
+            {
+              "name": "ios-baseline-7",
+              "result": "passed",
+              "testSeconds": 135.744,
+              "sessionSeconds": 187.297,
+              "failureTargets": [],
+              "failureKind": null
+            },
+            {
+              "name": "ios-baseline-8",
+              "result": "passed",
+              "testSeconds": 128.207,
+              "sessionSeconds": 178.865,
+              "failureTargets": [],
+              "failureKind": null
+            },
+            {
+              "name": "ios-baseline-9",
+              "result": "passed",
+              "testSeconds": 124.969,
+              "sessionSeconds": 177.376,
+              "failureTargets": [],
+              "failureKind": null
+            },
+            {
+              "name": "ios-baseline-10",
+              "result": "passed",
+              "testSeconds": 134.779,
+              "sessionSeconds": 180.635,
+              "failureTargets": [],
+              "failureKind": null
+            }
+          ]
+        },
+        "outcome": {
+          "passes": 9,
+          "attempts": 10,
+          "casesStarted": 10,
+          "setupFailures": 0,
+          "inputRetryMessages": 0,
+          "medianAllAttemptSessionSeconds": 179.5915,
+          "medianSuccessfulTestSeconds": 128.008,
+          "medianSuccessfulSessionSeconds": 178.116,
+          "testRangeSeconds": [120.911, 162.443],
+          "medianStartedCaseTestSeconds": 128.573,
+          "runs": [
+            {
+              "name": "ios-outcome-1",
+              "result": "passed",
+              "testSeconds": 122.197,
+              "sessionSeconds": 166.084,
+              "failureTargets": [],
+              "failureKind": null
+            },
+            {
+              "name": "ios-outcome-2",
+              "result": "passed",
+              "testSeconds": 121.811,
+              "sessionSeconds": 168.375,
+              "failureTargets": [],
+              "failureKind": null
+            },
+            {
+              "name": "ios-outcome-3",
+              "result": "test-failed",
+              "testSeconds": 146.453,
+              "sessionSeconds": 205.963,
+              "failureTargets": ["SendAmountExceededToast"],
+              "failureKind": "expected validation outcome not observed"
+            },
+            {
+              "name": "ios-outcome-4",
+              "result": "passed",
+              "testSeconds": 162.443,
+              "sessionSeconds": 222.508,
+              "failureTargets": [],
+              "failureKind": null
+            },
+            {
+              "name": "ios-outcome-5",
+              "result": "passed",
+              "testSeconds": 128.008,
+              "sessionSeconds": 178.116,
+              "failureTargets": [],
+              "failureKind": null
+            },
+            {
+              "name": "ios-outcome-6",
+              "result": "passed",
+              "testSeconds": 122.081,
+              "sessionSeconds": 166.803,
+              "failureTargets": [],
+              "failureKind": null
+            },
+            {
+              "name": "ios-outcome-7",
+              "result": "passed",
+              "testSeconds": 136.999,
+              "sessionSeconds": 189.522,
+              "failureTargets": [],
+              "failureKind": null
+            },
+            {
+              "name": "ios-outcome-8",
+              "result": "passed",
+              "testSeconds": 129.138,
+              "sessionSeconds": 183.405,
+              "failureTargets": [],
+              "failureKind": null
+            },
+            {
+              "name": "ios-outcome-9",
+              "result": "passed",
+              "testSeconds": 134.421,
+              "sessionSeconds": 181.067,
+              "failureTargets": [],
+              "failureKind": null
+            },
+            {
+              "name": "ios-outcome-10",
+              "result": "passed",
+              "testSeconds": 120.911,
+              "sessionSeconds": 167.928,
+              "failureTargets": [],
+              "failureKind": null
+            }
+          ]
+        }
+      },
+      "jointSuccessfulPairs": {
+        "count": 9,
+        "pairs": [
+          {
+            "pair": 1,
+            "baselineTestSeconds": 123.8,
+            "outcomeTestSeconds": 122.197,
+            "baselineSessionSeconds": 170.254,
+            "outcomeSessionSeconds": 166.084
+          },
+          {
+            "pair": 2,
+            "baselineTestSeconds": 156.331,
+            "outcomeTestSeconds": 121.811,
+            "baselineSessionSeconds": 218.44,
+            "outcomeSessionSeconds": 168.375
+          },
+          {
+            "pair": 4,
+            "baselineTestSeconds": 125.238,
+            "outcomeTestSeconds": 162.443,
+            "baselineSessionSeconds": 197.522,
+            "outcomeSessionSeconds": 222.508
+          },
+          {
+            "pair": 5,
+            "baselineTestSeconds": 168.066,
+            "outcomeTestSeconds": 128.008,
+            "baselineSessionSeconds": 219.497,
+            "outcomeSessionSeconds": 178.116
+          },
+          {
+            "pair": 6,
+            "baselineTestSeconds": 126.303,
+            "outcomeTestSeconds": 122.081,
+            "baselineSessionSeconds": 174.365,
+            "outcomeSessionSeconds": 166.803
+          },
+          {
+            "pair": 7,
+            "baselineTestSeconds": 135.744,
+            "outcomeTestSeconds": 136.999,
+            "baselineSessionSeconds": 187.297,
+            "outcomeSessionSeconds": 189.522
+          },
+          {
+            "pair": 8,
+            "baselineTestSeconds": 128.207,
+            "outcomeTestSeconds": 129.138,
+            "baselineSessionSeconds": 178.865,
+            "outcomeSessionSeconds": 183.405
+          },
+          {
+            "pair": 9,
+            "baselineTestSeconds": 124.969,
+            "outcomeTestSeconds": 134.421,
+            "baselineSessionSeconds": 177.376,
+            "outcomeSessionSeconds": 181.067
+          },
+          {
+            "pair": 10,
+            "baselineTestSeconds": 134.779,
+            "outcomeTestSeconds": 120.911,
+            "baselineSessionSeconds": 180.635,
+            "outcomeSessionSeconds": 167.928
+          }
+        ],
+        "medianBaselineTestSeconds": 128.207,
+        "medianOutcomeTestSeconds": 128.008,
+        "medianBaselineSessionSeconds": 180.635,
+        "medianOutcomeSessionSeconds": 178.116,
+        "medianTestPercentReduction": 1.2948303715670393,
+        "medianSessionPercentReduction": 2.44928166151749
+      },
+      "negativeControl": {
+        "correctFailure": true,
+        "plannedSessionBlocked": false,
+        "supplementaryAttempts": 0,
+        "directory": "ios-negative-control",
+        "inputReadbackConfirmedInDriverLog": true,
+        "missingTargetQueried": true,
+        "actions": 3,
+        "testSeconds": 6.103,
+        "screenshotFile": "step-1793972510623.png",
+        "lastTraceObservationEmpty": true,
+        "screenshotManuallyChecked": true
+      }
+    },
+    "android": {
+      "modes": {
+        "baseline": {
+          "passes": 0,
+          "attempts": 10,
+          "casesStarted": 8,
+          "setupFailures": 2,
+          "inputRetryMessages": 7,
+          "medianAllAttemptSessionSeconds": 158.473,
+          "medianSuccessfulTestSeconds": null,
+          "medianSuccessfulSessionSeconds": null,
+          "testRangeSeconds": [37.971, 280.501],
+          "medianStartedCaseTestSeconds": 94.765,
+          "runs": [
+            {
+              "name": "android-baseline-1",
+              "result": "test-failed",
+              "testSeconds": 113.385,
+              "sessionSeconds": 191.325,
+              "failureTargets": ["InsufficientSavingsToast"],
+              "failureKind": "expected validation outcome not observed"
+            },
+            {
+              "name": "android-baseline-2",
+              "result": "test-failed",
+              "testSeconds": 212.026,
+              "sessionSeconds": 262.366,
+              "failureTargets": ["SendAmountExceededToast"],
+              "failureKind": "toast target unavailable during dismissal"
+            },
+            {
+              "name": "android-baseline-3",
+              "result": "test-failed",
+              "testSeconds": 280.501,
+              "sessionSeconds": 331.86,
+              "failureTargets": ["InsufficientSavingsToast"],
+              "failureKind": "expected validation outcome not observed"
+            },
+            {
+              "name": "android-baseline-4",
+              "result": "setup-failed",
+              "testSeconds": null,
+              "sessionSeconds": 140.452,
+              "failureTargets": [],
+              "failureKind": "USDT intro visible at final Home readiness wait"
+            },
+            {
+              "name": "android-baseline-5",
+              "result": "test-failed",
+              "testSeconds": 37.971,
+              "sessionSeconds": 112.751,
+              "failureTargets": ["InvalidAddressToast"],
+              "failureKind": "expected validation outcome not observed"
+            },
+            {
+              "name": "android-baseline-6",
+              "result": "test-failed",
+              "testSeconds": 42.798,
+              "sessionSeconds": 123.916,
+              "failureTargets": ["InvalidAddressToast"],
+              "failureKind": "expected validation outcome not observed"
+            },
+            {
+              "name": "android-baseline-7",
+              "result": "test-failed",
+              "testSeconds": 49.199,
+              "sessionSeconds": 129.837,
+              "failureTargets": ["InvalidAddressToast"],
+              "failureKind": "toast target unavailable during dismissal"
+            },
+            {
+              "name": "android-baseline-8",
+              "result": "test-failed",
+              "testSeconds": 76.145,
+              "sessionSeconds": 176.494,
+              "failureTargets": ["InvalidAddressToast"],
+              "failureKind": "expected validation outcome not observed"
+            },
+            {
+              "name": "android-baseline-9",
+              "result": "test-failed",
+              "testSeconds": 142.399,
+              "sessionSeconds": 216.245,
+              "failureTargets": ["ExpiredLightningToast"],
+              "failureKind": "toast target unavailable during dismissal"
+            },
+            {
+              "name": "android-baseline-10",
+              "result": "setup-failed",
+              "testSeconds": null,
+              "sessionSeconds": 129.822,
+              "failureTargets": [],
+              "failureKind": "USDT intro visible at final Home readiness wait"
+            }
+          ]
+        },
+        "outcome": {
+          "passes": 2,
+          "attempts": 10,
+          "casesStarted": 7,
+          "setupFailures": 3,
+          "inputRetryMessages": 0,
+          "medianAllAttemptSessionSeconds": 153.07150000000001,
+          "medianSuccessfulTestSeconds": 138.06,
+          "medianSuccessfulSessionSeconds": 196.3765,
+          "testRangeSeconds": [39.163, 145.449],
+          "medianStartedCaseTestSeconds": 130.671,
+          "runs": [
+            {
+              "name": "android-outcome-1",
+              "result": "passed",
+              "testSeconds": 145.449,
+              "sessionSeconds": 215.815,
+              "failureTargets": [],
+              "failureKind": null
+            },
+            {
+              "name": "android-outcome-2",
+              "result": "passed",
+              "testSeconds": 130.671,
+              "sessionSeconds": 176.938,
+              "failureTargets": [],
+              "failureKind": null
+            },
+            {
+              "name": "android-outcome-3",
+              "result": "test-failed",
+              "testSeconds": 39.163,
+              "sessionSeconds": 106.741,
+              "failureTargets": ["InvalidAddressToast"],
+              "failureKind": "expected validation outcome not observed"
+            },
+            {
+              "name": "android-outcome-4",
+              "result": "setup-failed",
+              "testSeconds": null,
+              "sessionSeconds": 137.14,
+              "failureTargets": [],
+              "failureKind": "USDT intro visible at final Home readiness wait"
+            },
+            {
+              "name": "android-outcome-5",
+              "result": "test-failed",
+              "testSeconds": 61.387,
+              "sessionSeconds": 137.718,
+              "failureTargets": ["InvalidAddressToast"],
+              "failureKind": "expected validation outcome not observed"
+            },
+            {
+              "name": "android-outcome-6",
+              "result": "setup-failed",
+              "testSeconds": null,
+              "sessionSeconds": 138.707,
+              "failureTargets": [],
+              "failureKind": "USDT intro visible at final Home readiness wait"
+            },
+            {
+              "name": "android-outcome-7",
+              "result": "test-failed",
+              "testSeconds": 144.681,
+              "sessionSeconds": 233.038,
+              "failureTargets": ["SendAmountExceededToast"],
+              "failureKind": "expected validation outcome not observed"
+            },
+            {
+              "name": "android-outcome-8",
+              "result": "test-failed",
+              "testSeconds": 85.34,
+              "sessionSeconds": 167.436,
+              "failureTargets": ["ExpiredLightningToast"],
+              "failureKind": "expected validation outcome not observed"
+            },
+            {
+              "name": "android-outcome-9",
+              "result": "setup-failed",
+              "testSeconds": null,
+              "sessionSeconds": 129.705,
+              "failureTargets": [],
+              "failureKind": "USDT intro visible at final Home readiness wait"
+            },
+            {
+              "name": "android-outcome-10",
+              "result": "test-failed",
+              "testSeconds": 141.029,
+              "sessionSeconds": 216.694,
+              "failureTargets": ["SendAmountExceededToast"],
+              "failureKind": "expected validation outcome not observed"
+            }
+          ]
+        }
+      },
+      "jointSuccessfulPairs": {
+        "count": 0,
+        "pairs": []
+      },
+      "negativeControl": {
+        "correctFailure": true,
+        "plannedSessionBlocked": true,
+        "supplementaryAttempts": 1,
+        "directory": "master-control-android-supplement-1",
+        "inputReadbackConfirmedInDriverLog": true,
+        "missingTargetQueried": true,
+        "actions": 4,
+        "testSeconds": 7.898,
+        "screenshotFile": "step-1793972912909.png",
+        "lastTraceObservationEmpty": true,
+        "screenshotManuallyChecked": true
+      }
+    }
+  },
+  "continuation": {
+    "reason": "Android stopped during known pre-test Home readiness failures with the USDT introduction visible. Failed attempts were retained; only unrun original plan entries continued. No failed attempt was replaced.",
+    "executorHashes": [
+      "0f3325293801a441abecde72b5b7942e70d2a72dd54a9a6ce638fb8d9342fc4a",
+      "488f6c6fcea4f8ee3410ebefdc011cbdb7c1d5299a79a48cb3b3bee12274e07d"
+    ],
+    "knownSetupCondition": "beforeEach TotalBalance-primary timeout; UsdtIntroDecline=true; TotalBalance-primary=false; no test-start marker",
+    "plannedAndroidControl": "blocked before test; separately labeled supplementary control reached and verified the wrong-expectation guard"
+  }
+}
