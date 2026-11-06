@@ -12,14 +12,30 @@ import time
 
 
 def source_hashes(root):
-    files = [
-        'test/helpers/actions.ts',
-        'test/helpers/outcome.ts',
-        'test/experiments/onboarding-outcome.e2e.ts',
-        'test/experiments/receive-outcome.e2e.ts',
-        'wdio.outcome-pilot.conf.ts',
-    ]
-    return {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in files}
+    # Include base configuration, fixture imports, lockfiles, the runner itself and
+    # new untracked source. Ignored artifacts/dependencies are separate run inputs.
+    staged = subprocess.check_output(['git', 'ls-files', '--stage', '-z'], cwd=root).decode()
+    gitlinks = {}
+    for row in staged.split('\0'):
+        if row:
+            metadata, name = row.split('\t', 1)
+            mode, digest, _stage = metadata.split()
+            if mode == '160000':
+                gitlinks[name] = digest
+    names = subprocess.check_output(
+        ['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], cwd=root
+    ).decode().split('\0')
+    hashes = {}
+    for name in sorted(set(names) - {''}):
+        path = root / name
+        if name in gitlinks:
+            content = f'gitlink:{gitlinks[name]}'.encode()
+        elif path.is_symlink():
+            content = f'symlink:{os.readlink(path)}'.encode()
+        else:
+            content = path.read_bytes()
+        hashes[name] = hashlib.sha256(content).hexdigest()
+    return hashes
 
 
 def main():
@@ -34,6 +50,16 @@ def main():
     if not os.environ.get('SIMULATOR_UDID' if platform == 'ios' else 'ANDROID_UDID'):
         parser.error('Set an explicit disposable device identifier')
     output = args.output.resolve()
+    try:
+        relative_output = output.relative_to(root)
+    except ValueError:
+        pass
+    else:
+        ignored = subprocess.run(
+            ['git', 'check-ignore', '--quiet', str(relative_output)], cwd=root
+        ).returncode == 0
+        if not ignored:
+            parser.error('Output inside the checkout must be Git-ignored, or use an external directory')
     output.mkdir(parents=True, exist_ok=False)
     hashes = source_hashes(root)
     (output / 'source.json').write_text(json.dumps(hashes, indent=2) + '\n')
@@ -74,6 +100,12 @@ def main():
                     os.killpg(process.pid, signal.SIGKILL)
                     process.wait()
                 raise
+        source_error = None
+        try:
+            source_unchanged = source_hashes(root) == hashes
+        except (OSError, subprocess.SubprocessError) as error:
+            source_unchanged = False
+            source_error = str(error)
         receipt = directory / 'results.jsonl'
         rows = [json.loads(line) for line in receipt.read_text().splitlines()] if receipt.exists() else []
         complete = (
@@ -82,7 +114,7 @@ def main():
             and all(row.get('platform') == platform and row.get('mode') == mode for row in rows)
             and all(row.get('negativeControl') == negative for row in rows)
         )
-        valid = complete and code == (1 if negative else 0) and all(
+        valid = source_unchanged and complete and code == (1 if negative else 0) and all(
             row.get('passed') is (not negative) for row in rows
         )
         if negative and valid:
@@ -98,12 +130,15 @@ def main():
             'name': name, 'mode': mode, 'negativeControl': negative, 'exitCode': code,
             'wallSeconds': round(time.monotonic() - started, 3),
             'complete': complete, 'valid': valid, 'results': rows,
+            'sourceUnchanged': source_unchanged, 'sourceError': source_error,
         }
         with (output / 'sessions.jsonl').open('a') as log:
             log.write(json.dumps(record) + '\n')
         print(json.dumps(record), flush=True)
         if not valid:
             raise SystemExit('Incomplete or unexpected result; sample stopped, evidence retained')
+    if source_hashes(root) != hashes:
+        raise RuntimeError('Source changed before final completion; sample is not valid')
     print(f'Completed {args.pairs} pairs and both negative controls on {platform}', flush=True)
 
 

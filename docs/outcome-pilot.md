@@ -66,9 +66,13 @@ python3 scripts/outcome-pilot.py --pairs 3 --output artifacts/outcome-phase2/fin
 The runner alternates baseline/outcome order between pairs, executes both journeys each time,
 then runs both negative controls. It requires exactly one receipt per expected journey, checks
 the negative controls stopped at the intended action, and stops on unexpected or missing results.
-It never retries a case. It also hashes the test/helper/config source and rejects changes during
-a sample. Each device session has a bounded deadline, and only its own process group is stopped
-if that deadline expires. The output directory must not already exist.
+It never retries a case. It fingerprints Git-visible checkout files (including imported helpers,
+base configuration, lockfiles, the runner and new untracked source) and declared submodule pins
+before and after every session, including the final control session, and before completion.
+Installed dependencies, built apps and external services remain separate run inputs.
+Each device session has a bounded deadline, and only its own process group is stopped if that
+deadline expires. The output directory must not already exist and must be outside the checkout
+or Git-ignored, so result files cannot enter the source fingerprint.
 
 ## What differs
 
