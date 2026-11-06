@@ -393,7 +393,7 @@ export async function expectTotalBalance(
 
 export async function tap(testId: string, { timeout = 30_000 }: { timeout?: number } = {}) {
   const el = await elementById(testId);
-  await el.waitForDisplayed({ timeout });
+  await withMoveToSparkIntroRecovery(() => el.waitForDisplayed({ timeout }));
   await sleep(200); // Allow time for the element to settle
   await el.click();
   await sleep(100);
@@ -1535,10 +1535,15 @@ export async function waitForToastBestEffort(
 /** Acknowledges the received payment notification by tapping the button.
  */
 export async function acknowledgeReceivedPayment({ timeout = 30_000 }: { timeout?: number } = {}) {
-  await elementById('ReceivedTransaction').waitForDisplayed({ timeout });
+  await withMoveToSparkIntroRecovery(() =>
+    elementById('ReceivedTransaction').waitForDisplayed({ timeout })
+  );
   await sleep(500);
   await tap('ReceivedTransactionButton');
   await sleep(300);
+  // A Lightning receive can make the intro due; home shows it about 2 s after the received sheet closes, before
+  // balance reads that cannot recover from it.
+  await dismissMoveToSparkIntroIfShown({ timeout: 3_000 });
 }
 
 export async function acknowledgeReceivedPaymentIfPresent(): Promise<boolean> {
@@ -1663,7 +1668,7 @@ async function triggerTimedSheetUnlessPresent(
     async () =>
       (await isTestIdDisplayed(sheetId)) ||
       (await isTestIdDisplayed('UsdtIntroDecline')) ||
-      (await isTestIdDisplayed('MoveToSparkIntro')) ||
+      (await isTestIdDisplayed('MoveToSparkIntroLater')) ||
       (await isTestIdDisplayed('HeaderMenu')) ||
       (await isTestIdDisplayed('TotalBalance')),
     {
@@ -1730,22 +1735,10 @@ async function awaitSheetAfterMoveToSpark(sheetId: string): Promise<boolean> {
 }
 
 /**
- * The Move to Spark intro needs a Lightning balance, as the QuickPay sheet does, but home
- * re-checks the queue only when it is entered again, so the intro can surface at any later step. Trigger the queue
- * once now: the intro outranks every other timed sheet, so it shows first when due and is dismissed here.
- */
-async function dismissMoveToSparkIntroAfterSheet(): Promise<void> {
-  if (!(await isTestIdDisplayed('HeaderMenu'))) return;
-  await doTriggerTimedSheet();
-  if (await dismissMoveToSparkIntroIfShown({ timeout: 6_000 })) return;
-  // With no intro due, the trigger can surface the Background Payments sheet instead.
-  await tryDismissBackgroundPaymentsIfVisible();
-}
-
-/**
  * Dismisses the Move to Spark intro with Later if it is showing.
- * The app shows it once, at the top timed-sheet priority, when a wallet's Lightning channels can move a balance
- * to a ready Spark wallet; suites that open a channel and receive over it meet it on home.
+ * The apps show it once, at the top timed-sheet priority, when a wallet's Lightning channels can move a balance to a
+ * ready Spark wallet. That turns true on state a test cannot see (a receive, Spark connecting), so the intro can
+ * cover home at any step; the Later button is the probe, as it is queryable on both platforms.
  *
  * @param options.timeout - How long to wait for the intro to appear (default: none, check once)
  * @returns true if the intro was shown and dismissed
@@ -1753,21 +1746,34 @@ async function dismissMoveToSparkIntroAfterSheet(): Promise<void> {
 export async function dismissMoveToSparkIntroIfShown({
   timeout = 0,
 }: { timeout?: number } = {}): Promise<boolean> {
-  const intro = elementById('MoveToSparkIntro');
+  const later = elementById('MoveToSparkIntroLater');
   const shown =
     timeout > 0
-      ? await intro
+      ? await later
           .waitForDisplayed({ timeout })
           .then(() => true)
           .catch(() => false)
-      : await isTestIdDisplayed('MoveToSparkIntro');
+      : await isTestIdDisplayed('MoveToSparkIntroLater');
   if (!shown) return false;
   console.info('→ Move to Spark intro visible, dismissing with Later...');
   await sleep(500);
-  await tap('MoveToSparkIntroLater');
-  await intro.waitForDisplayed({ reverse: true });
+  await later.click();
+  await later.waitForDisplayed({ reverse: true });
   await sleep(500);
   return true;
+}
+
+/**
+ * Runs a wait and, when it fails while the Move to Spark intro covers the screen, dismisses the intro and retries
+ * once, as the ANR recovery does for system dialogs.
+ */
+export async function withMoveToSparkIntroRecovery<T>(wait: () => Promise<T>): Promise<T> {
+  try {
+    return await wait();
+  } catch (error) {
+    if (!(await dismissMoveToSparkIntroIfShown())) throw error;
+    return wait();
+  }
 }
 
 /**
@@ -1828,7 +1834,6 @@ export async function dismissQuickPayIntro({
     await tap('QuickpayIntroCancel');
     await sleep(500);
   }
-  await dismissMoveToSparkIntroAfterSheet();
 }
 
 /**
