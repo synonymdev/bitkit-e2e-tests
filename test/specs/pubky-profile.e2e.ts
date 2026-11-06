@@ -96,7 +96,7 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
           // create profile and verify pubky and details
           const { pubky } = await createProfile({ name: 'Alice' });
           await verifyPubkyString(pubky);
-          const copiedPubky = await readPubkyFromProfileCopy();
+          const copiedPubky = await readPubkyFromProfileCopy(pubky);
           await expect(copiedPubky).toBe(pubky.trim());
 
           // update profile and verify details
@@ -124,7 +124,7 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
             record: evidence.mark,
           });
           await verifyMyProfileDetails(details);
-          await expect((await readPubkyFromProfileCopy()).trim()).toBe(pubky.trim());
+          await expect((await readPubkyFromProfileCopy(pubky)).trim()).toBe(pubky.trim());
           evidence.snapshot('after-restart');
           await verifyContactRowDisplayed(stagingContact.pubky);
 
@@ -145,7 +145,7 @@ describe('@pubky @pubky_profile @pubky_staging, @staging - Pubky profile', () =>
             record: evidence.mark,
           });
           await verifyMyProfileDetails(details);
-          await expect((await readPubkyFromProfileCopy()).trim()).toBe(pubky.trim());
+          await expect((await readPubkyFromProfileCopy(pubky)).trim()).toBe(pubky.trim());
           evidence.snapshot('after-restore');
           await verifyContactRowDisplayed(stagingContact.pubky);
 

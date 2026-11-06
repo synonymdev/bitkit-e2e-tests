@@ -42,15 +42,40 @@ export async function verifyPubkyString(pubky: string) {
 }
 
 /**
- * Taps Profile Copy and returns the pubky string from the system clipboard
- * (same value as {@link getUriFromQRCode} on the profile QR when copy works).
- * Waits for the copy confirmation toast; on iOS waits until it disappears so the overlay
- * does not interfere with later gestures.
+ * Reads a fresh copy of the profile key. iOS simulator pasteboard commands avoid WDA
+ * foreground restrictions and a short-lived popup becoming the only proof of copying.
  */
-export async function readPubkyFromProfileCopy(): Promise<string> {
+export async function readPubkyFromProfileCopy(expectedPubky: string): Promise<string> {
   await openProfile();
+  if (driver.isIOS) {
+    await driver.execute('mobile: setPasteboard', { content: '', encoding: 'utf8' });
+    const cleared = await driver.execute<string, [{ encoding: string }]>('mobile: getPasteboard', {
+      encoding: 'utf8',
+    });
+    if (cleared !== '') {
+      throw new Error('Could not clear iOS clipboard before Profile Copy');
+    }
+    await tap('ProfileCopy');
+    let copiedPubky = '';
+    await browser.waitUntil(
+      async () => {
+        copiedPubky = (
+          await driver.execute<string, [{ encoding: string }]>('mobile: getPasteboard', {
+            encoding: 'utf8',
+          })
+        ).trim();
+        return copiedPubky === expectedPubky.trim();
+      },
+      {
+        timeout: 30_000,
+        interval: 250,
+        timeoutMsg: 'Profile Copy did not write the expected pubky to the cleared iOS clipboard',
+      }
+    );
+    return copiedPubky;
+  }
   await tap('ProfileCopy');
-  await waitForToast('ProfilePubkyCopiedToast', { waitToDisappear: driver.isIOS });
+  await waitForToast('ProfilePubkyCopiedToast');
   return (await getClipboardPlaintext()).trim();
 }
 

@@ -18,7 +18,6 @@ import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 
 const SEND_SHEET_TIMEOUT = 60_000;
-const CONTACT_PAY_RETRY_AFTER_MS = 8_000;
 // iOS: SendAmount. Android: send_amount_screen / SendSheet. Both: ContinueAmount.
 const SEND_AMOUNT_READY_IDS = [
   'SendAmount',
@@ -70,35 +69,13 @@ async function waitForSendAmountSheet() {
   });
 }
 
-async function openContactPayAmountSheet() {
-  await elementById('ContactPay').waitForDisplayed();
-  await tap('ContactPay');
-
-  let retried = false;
-  const started = Date.now();
+async function openPublicPayAmountSheet() {
+  await tap('AddContactPay');
   try {
-    await browser.waitUntil(
-      async () => {
-        if (await isSendAmountSheetDisplayed()) {
-          return true;
-        }
-        // One retap only: Paykit resolve keeps ContactPay on screen, so looping taps
-        // would start overlapping payContact() tasks.
-        if (
-          !retried &&
-          Date.now() - started > CONTACT_PAY_RETRY_AFTER_MS &&
-          (await isDisplayed('ContactPay'))
-        ) {
-          retried = true;
-          await tap('ContactPay');
-        }
-        return false;
-      },
-      { timeout: SEND_SHEET_TIMEOUT, interval: 1_000 }
-    );
+    await waitForSendAmountSheet();
   } catch {
     throw new Error(
-      `Send amount sheet did not open after ContactPay (${await describeContactPayScreen()})`
+      `Public send amount sheet did not open after AddContactPay (${await describeContactPayScreen()})`
     );
   }
 }
@@ -113,8 +90,8 @@ async function switchToOnchainIfNeeded() {
   }
 }
 
-async function payCurrentContactOnchain(amountSats: number) {
-  await openContactPayAmountSheet();
+async function payUnsavedContactOnchain(amountSats: number) {
+  await openPublicPayAmountSheet();
   await switchToOnchainIfNeeded();
   await enterAmount(amountSats);
   await elementById('ContinueAmount').waitForEnabled();
@@ -140,8 +117,8 @@ describe('@pubky @paykit @pubky_staging, @staging - Public payments', () => {
     await completeOnboarding();
   });
 
-  ciIt('@paykit_1 - Can pay saved contact via public on-chain endpoint', async () => {
-    const [savedPaykitContact, unsavedPaykitContact] = STAGING_PAYKIT_CONTACTS;
+  ciIt('@paykit_1 - Can pay unsaved contact via public on-chain endpoint', async () => {
+    const [paymentContact, unsavedPaykitContact] = STAGING_PAYKIT_CONTACTS;
 
     await receiveOnchainFunds({ sats: 50_000 });
 
@@ -163,15 +140,16 @@ describe('@pubky @paykit @pubky_staging, @staging - Public payments', () => {
     });
     await doNavigationClose();
 
-    await addContact({
-      pubky: savedPaykitContact.pubky,
-      firstContact: true,
+    // Saving a contact with a private path prevents public fallback.
+    await enterAddress(paymentContact.pubky, { acceptCameraPermission: false });
+    await verifyAddContactRoute(paymentContact.pubky, {
+      ableToPay: paymentContact.ableToPay,
     });
-    // addContact already lands on contact details with ContactPay visible.
+    await payUnsavedContactOnchain(10_000);
 
-    await payCurrentContactOnchain(10_000);
-
-    await openContactActivity(savedPaykitContact.pubky);
+    // Saving after the public payment must retain its contact activity association.
+    await addContact({ pubky: paymentContact.pubky, firstContact: true });
+    await openContactActivity(paymentContact.pubky);
     await expectText('Sent to', { strategy: 'contains' });
     await tap('ContactActivity-1');
     await expectText('10 000');
