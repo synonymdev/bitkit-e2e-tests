@@ -16,7 +16,13 @@ export type Condition =
   | { inputValue: { id: string; value: string } }
   | { textWithin: { id: string; text: string } }
   | { keyboardShown: boolean };
-export type Outcome = { anyVisible?: VisibleTarget[]; all?: Condition[]; timeout?: number };
+export type Outcome = {
+  anyVisible?: VisibleTarget[];
+  all?: Condition[];
+  /** Must be absent before the action, then observed at least once afterwards. */
+  appeared?: VisibleTarget[];
+  timeout?: number;
+};
 
 function element(target: VisibleTarget) {
   return 'id' in target ? elementById(target.id) : elementByText(target.text, 'exact');
@@ -76,7 +82,7 @@ async function actAndExpect(
   outcome: Outcome,
   stableTargets: VisibleTarget[] = []
 ) {
-  if (!outcome.anyVisible?.length && !outcome.all?.length) {
+  if (!outcome.anyVisible?.length && !outcome.all?.length && !outcome.appeared?.length) {
     throw new Error('An outcome must name at least one observation');
   }
   const started = Date.now();
@@ -86,16 +92,34 @@ async function actAndExpect(
     mode: process.env.OUTCOME_PILOT_MODE,
     action: name,
     startedAt: new Date(started).toISOString(),
-    expected: { anyVisible: outcome.anyVisible?.map(label), all: outcome.all },
+    expected: {
+      anyVisible: outcome.anyVisible?.map(label),
+      all: outcome.all,
+      appeared: outcome.appeared?.map(label),
+    },
   };
   let observed: Record<string, unknown> = {};
+  const appeared = new Set<string>();
   let previousBounds = '';
   console.info(`[outcome:start] ${JSON.stringify(record)}`);
   try {
+    for (const target of outcome.appeared ?? []) {
+      if (await element(target).isDisplayed()) {
+        throw new Error(`Transient target ${label(target)} was already visible before action`);
+      }
+    }
     await action();
     await browser.waitUntil(
       async () => {
-        observed = {};
+        const sample: Record<string, unknown> = {};
+        // Observe short-lived feedback first and retain that evidence even if it
+        // expires while persistent input/button state is being read.
+        for (const target of outcome.appeared ?? []) {
+          const key = label(target);
+          if (!appeared.has(key) && (await element(target).isDisplayed())) appeared.add(key);
+          sample[`appeared ${key}`] = appeared.has(key);
+        }
+        observed = sample;
         // Re-resolve targets on every poll; navigation can replace the element tree.
         let anyPassed = !outcome.anyVisible?.length;
         for (const target of outcome.anyVisible ?? []) {
@@ -109,7 +133,7 @@ async function actAndExpect(
           observed[JSON.stringify(condition)] = result.actual;
           if (!result.passed) allPassed = false;
         }
-        if (!anyPassed || !allPassed) {
+        if (!anyPassed || !allPassed || appeared.size !== (outcome.appeared?.length ?? 0)) {
           previousBounds = '';
           return false;
         }
@@ -164,6 +188,7 @@ async function actAndExpect(
   } finally {
     record.elapsedMs = Date.now() - started;
     record.observed = observed;
+    if (outcome.appeared?.length) record.appeared = [...appeared];
     console.info(`[outcome] ${JSON.stringify(record)}`);
     const directory = process.env.OUTCOME_PILOT_ARTIFACTS;
     if (directory) {

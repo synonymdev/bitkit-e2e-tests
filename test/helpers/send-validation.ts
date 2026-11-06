@@ -30,10 +30,8 @@ async function openManualRecipient() {
 
 async function rejectedRecipient(value: string, toast: ToastId, negativeControl = false) {
   await typeAndExpect('RecipientInput', value, {
-    all: [
-      { visible: { id: negativeControl ? 'PilotDeliberatelyMissingValidationToast' : toast } },
-      { enabled: { id: 'AddressContinue', value: false } },
-    ],
+    appeared: [{ id: negativeControl ? 'PilotDeliberatelyMissingValidationToast' : toast }],
+    all: [{ enabled: { id: 'AddressContinue', value: false } }],
     timeout: negativeControl ? 2000 : 30_000,
   });
   // Its appearance was asserted above; re-waiting or dragging can race its expiry.
@@ -74,10 +72,8 @@ export async function runSendValidation({ negativeControl = false } = {}) {
     await tapAndExpect(
       { id: `N${digits[index]}` },
       {
-        all: [
-          { textWithin: { id: 'SendNumberField', text: formatted } },
-          ...(index === digits.length - 1 ? [{ visible: { id: 'SendAmountExceededToast' } }] : []),
-        ],
+        appeared: index === digits.length - 1 ? [{ id: 'SendAmountExceededToast' }] : [],
+        all: [{ textWithin: { id: 'SendNumberField', text: formatted } }],
       }
     );
   }

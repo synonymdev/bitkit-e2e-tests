@@ -823,8 +823,24 @@ export async function waitForWalletHome({
       (await elementById('TotalBalance-primary').isDisplayed()),
     { timeout, interval: 250, timeoutMsg: 'Wallet home or USDT introduction did not appear' }
   );
-  await handleUsdtIntro({ enable: enableUsdt });
-  await elementById('TotalBalance-primary').waitForDisplayed({ timeout });
+  let introHandled = await handleUsdtIntro({ enable: enableUsdt });
+  await browser.waitUntil(
+    async () => {
+      // An optional intro can arrive after its initial observation window. Keep
+      // observing both states until Home is ready, with no cached Home handle.
+      if (await elementById('UsdtIntroDecline').isDisplayed()) {
+        if (introHandled) throw new Error('USDT introduction reappeared after dismissal');
+        introHandled = await handleUsdtIntro({ enable: enableUsdt });
+        return false;
+      }
+      return elementById('TotalBalance-primary').isDisplayed();
+    },
+    {
+      timeout,
+      interval: 250,
+      timeoutMsg: 'Wallet home did not become ready after USDT introduction',
+    }
+  );
 }
 
 /** Ordinary BTC setup declines the optional intro; USDT journeys explicitly opt in. */
@@ -832,16 +848,18 @@ export async function handleUsdtIntro({
   enable = false,
 }: { enable?: boolean } = {}): Promise<boolean> {
   const buttonId = enable ? 'UsdtIntroEnable' : 'UsdtIntroDecline';
-  const button = elementById(buttonId);
-  if (enable) {
-    await button.waitForDisplayed({ timeout: 15_000 });
-  } else {
-    const visible = await button
-      .waitForDisplayed({ timeout: 5_000 })
-      .then(() => true)
-      .catch(() => false);
-    if (!visible) return false;
-  }
+  const visible = await browser
+    .waitUntil(() => elementById(buttonId).isDisplayed(), {
+      timeout: enable ? 15_000 : 5_000,
+      interval: 200,
+      timeoutMsg: `USDT introduction ${buttonId} did not appear`,
+    })
+    .then(() => true)
+    .catch((error) => {
+      if (enable) throw error;
+      return false;
+    });
+  if (!visible) return false;
   if (driver.isAndroid) {
     // A visible button can still be moving with the entering bottom sheet.
     // Wait for an enabled target at stable bounds before issuing the one tap.
