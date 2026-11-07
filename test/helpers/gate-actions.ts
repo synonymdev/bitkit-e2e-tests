@@ -21,6 +21,47 @@ const paymentDestination: Outcome = {
   all: [{ hidden: { id: 'RecipientInput' } }],
 };
 
+/** The Android recipient button moves as the IME closes. Never tap its old position. */
+export async function continueGateRecipient(outcome: Outcome = paymentDestination) {
+  if (!driver.isAndroid) {
+    await tapAndExpect({ id: 'AddressContinue' }, outcome);
+    return;
+  }
+  await actAndExpect(
+    'continue recipient',
+    async () => {
+      let previousBounds = '';
+      await browser.waitUntil(
+        async () => {
+          const previous = previousBounds;
+          previousBounds = '';
+          const current = elementById('AddressContinue');
+          if (
+            (await driver.isKeyboardShown()) ||
+            !(await current.isDisplayed()) ||
+            !(await current.isEnabled())
+          ) {
+            return false;
+          }
+          const location = await current.getLocation();
+          const size = await current.getSize();
+          if (size.width <= 0 || size.height <= 0) return false;
+          previousBounds = JSON.stringify({ location, size });
+          return previousBounds === previous;
+        },
+        {
+          timeout: outcome.timeout ?? 30_000,
+          interval: 200,
+          timeoutMsg:
+            'Recipient Continue did not become enabled and stationary with keyboard hidden',
+        }
+      );
+      await elementById('AddressContinue').click();
+    },
+    outcome
+  );
+}
+
 export async function enterGateAddress(
   address: string,
   { acceptCameraPermission = true, addressTimeout = 30_000 } = {}
@@ -39,7 +80,7 @@ export async function enterGateAddress(
     { verifyClear: true }
   );
   await dismissKeyboardAndExpect();
-  await tapAndExpect({ id: 'AddressContinue' }, paymentDestination);
+  await continueGateRecipient();
 }
 
 export async function enterGateScanPrompt(address: string, { acceptCameraPermission = true } = {}) {

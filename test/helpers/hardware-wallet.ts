@@ -127,6 +127,7 @@ export async function connectHardwareWalletFromSettings(label: string) {
 }
 
 export async function completeHardwareWalletFlow(label: string) {
+  const homeLabel = driver.isAndroid ? label.toUpperCase() : label;
   await elementById('HardwareWalletIntroScreen').waitForDisplayed();
   await actAndExpect(
     'begin hardware pairing',
@@ -149,13 +150,13 @@ export async function completeHardwareWalletFlow(label: string) {
     {
       all: [
         { visible: { id: 'ActivityHardware' } },
-        { textWithin: { id: 'ActivityHardware', text: label, strategy: 'contains' } },
+        { textWithin: { id: 'ActivityHardware', text: homeLabel, strategy: 'contains' } },
       ],
     }
   );
   // We finish on Main screen with the hardware wallet listed
   await elementById('ActivityHardware').waitForDisplayed();
-  await expectText(label, { strategy: 'contains' });
+  await expectText(homeLabel, { strategy: 'contains' });
 }
 
 export async function expectHardwareWalletInSettings(
@@ -213,7 +214,7 @@ export async function expectHardwareWalletOnHome(label: string, { visible }: { v
     timeout: 30_000,
   });
   if (visible) {
-    await expectText(label, { strategy: 'contains' });
+    await expectText(driver.isAndroid ? label.toUpperCase() : label, { strategy: 'contains' });
   }
 }
 

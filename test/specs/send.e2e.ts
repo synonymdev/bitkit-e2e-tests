@@ -1,5 +1,10 @@
 import { runSendValidation } from '../helpers/send-validation';
-import { enterGateAddress, confirmGateAction, enterGateAmount } from '../helpers/gate-actions';
+import {
+  enterGateAddress,
+  confirmGateAction,
+  enterGateAmount,
+  continueGateRecipient,
+} from '../helpers/gate-actions';
 import { tapAndExpect } from '../helpers/outcome';
 import { encode } from 'bip21';
 
@@ -190,10 +195,7 @@ describe('@send - Send', () => {
     await reviewAmt.waitForDisplayed();
     await expect(reviewAmt).toHaveText('2 000');
     await editRecipientAddress(onchainAddress);
-    await tapAndExpect(
-      { id: 'AddressContinue' },
-      { all: [{ visible: { id: 'AssetButton-savings' } }] }
-    );
+    await continueGateRecipient({ all: [{ visible: { id: 'AssetButton-savings' } }] });
     await elementById('AssetButton-savings').waitForDisplayed();
     await tap('N2');
     await multiTap('N0', 4);

@@ -7,6 +7,7 @@ import {
   waitAndExpect,
 } from './outcome';
 import { getExternalAddress } from './regtest';
+import { continueGateRecipient } from './gate-actions';
 
 async function openManualRecipient() {
   const permission = 'com.android.permissioncontroller:id/permission_allow_foreground_only_button';
@@ -71,7 +72,7 @@ export async function runSendValidation({ negativeControl = false } = {}) {
   await receiveOnchainFunds({ sats: amount });
   await openManualRecipient();
   await acceptedRecipient(await getExternalAddress());
-  await tapAndExpect({ id: 'AddressContinue' }, { anyVisible: [{ id: 'SendNumberField' }] });
+  await continueGateRecipient({ anyVisible: [{ id: 'SendNumberField' }] });
   const digits = String(amount + 1);
   for (let index = 0; index < digits.length; index++) {
     // The final over-limit digit is rejected; the field keeps its previous value.
@@ -89,12 +90,9 @@ export async function runSendValidation({ negativeControl = false } = {}) {
   await tapAndExpect({ id: 'NavigationBack' }, { anyVisible: [{ id: 'RecipientInput' }] });
 
   await acceptedRecipient('bitcoin:bcrt1q07x3wl76zdxvdsz3qzzkvxrjg3n6t4tz2vnsx8?amount=0.0001');
-  await tapAndExpect(
-    { id: 'AddressContinue' },
-    {
-      all: [{ textWithin: { id: 'ReviewAmount-primary', text: '10 000' } }],
-    }
-  );
+  await continueGateRecipient({
+    all: [{ textWithin: { id: 'ReviewAmount-primary', text: '10 000' } }],
+  });
   await expectTextWithin('ReviewAmount-primary', '10 000');
   await tapAndExpect({ id: 'NavigationBack' }, { anyVisible: [{ id: 'RecipientInput' }] });
   await rejectedRecipient(
