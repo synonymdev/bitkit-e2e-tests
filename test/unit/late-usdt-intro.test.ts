@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { expectBalanceWithWait, tap, waitForWalletHomeCondition } from '../helpers/actions.ts';
-import { openSettings } from '../helpers/navigation.ts';
+import { doTriggerTimedSheet, openSettings } from '../helpers/navigation.ts';
 
 function homeScreen({
   homeAt = 0,
@@ -10,13 +10,20 @@ function homeScreen({
   dismissWorks = true,
   dismissThrows = false,
   reappearsAt = Infinity,
+  sparkAt = Infinity,
+  sparkDismissWorks = true,
 } = {}) {
   let elapsed = 0;
   let dismissed = false;
+  let sparkDismissed = false;
   const clicks: string[] = [];
   const introVisible = () => (!dismissed || elapsed >= reappearsAt) && elapsed >= introAt;
-  const visible = (id: string) =>
-    id.startsWith('UsdtIntro') ? introVisible() : elapsed >= homeAt && !introVisible();
+  const sparkVisible = () => !sparkDismissed && elapsed >= sparkAt;
+  const visible = (id: string) => {
+    if (id === 'MoveToSparkIntroLater') return sparkVisible();
+    if (id.startsWith('UsdtIntro')) return introVisible() && !sparkVisible();
+    return elapsed >= homeAt && !introVisible() && !sparkVisible();
+  };
   const waitUntil = async (
     probe: () => Promise<boolean>,
     { timeout = 30_000, timeoutMsg = 'Home condition did not become true' } = {}
@@ -48,6 +55,7 @@ function homeScreen({
       click: async () => {
         assert.ok(visible(id), `${id} must be visible when tapped`);
         clicks.push(id);
+        if (id === 'MoveToSparkIntroLater') sparkDismissed = sparkDismissWorks;
         if (id.startsWith('UsdtIntro')) {
           if (driver.isAndroid) {
             assert.ok(elapsed >= introAt + 500, 'Do not tap the entering Android sheet');
@@ -79,6 +87,38 @@ function homeScreen({
 
 for (const isAndroid of [true, false]) {
   const platform = isAndroid ? 'Android' : 'iOS';
+  for (const [name, navigate, expectedClicks] of [
+    ['menu tap', () => tap('HeaderMenu'), ['HeaderMenu']],
+    ['Settings', () => openSettings(), ['HeaderMenu', 'DrawerSettings']],
+    [
+      'timed-sheet trigger',
+      () => doTriggerTimedSheet(),
+      ['HeaderMenu', 'DrawerSettings', 'HeaderMenu', 'DrawerWallet'],
+    ],
+  ] as const) {
+    test(`${platform}: preserves Spark recovery before the ${name} Home wait`, async (t) => {
+      const previous = { browser: globalThis.browser, driver: globalThis.driver, $: globalThis.$ };
+      const screen = homeScreen({ sparkAt: 0, introAt: 0 });
+      Object.assign(globalThis, { browser: screen.browser, $: screen.$, driver: { isAndroid } });
+      t.after(() => Object.assign(globalThis, previous));
+      t.mock.method(Date, 'now', () => screen.elapsed);
+
+      await navigate();
+      assert.deepEqual(screen.clicks, ['MoveToSparkIntroLater', 'UsdtIntroDecline', ...expectedClicks]);
+    });
+  }
+
+  test(`${platform}: an ineffective Spark dismissal still fails without a menu tap`, async (t) => {
+    const previous = { browser: globalThis.browser, driver: globalThis.driver, $: globalThis.$ };
+    const screen = homeScreen({ sparkAt: 0, sparkDismissWorks: false });
+    Object.assign(globalThis, { browser: screen.browser, $: screen.$, driver: { isAndroid } });
+    t.after(() => Object.assign(globalThis, previous));
+    t.mock.method(Date, 'now', () => screen.elapsed);
+
+    await assert.rejects(tap('HeaderMenu'));
+    assert.deepEqual(screen.clicks, ['MoveToSparkIntroLater']);
+  });
+
   test(`${platform}: resolves a late intro during balance synchronization`, async (t) => {
     const previous = { browser: globalThis.browser, driver: globalThis.driver, $: globalThis.$ };
     const screen = homeScreen({ introAt: 6000, balanceAt: 10_000 });
