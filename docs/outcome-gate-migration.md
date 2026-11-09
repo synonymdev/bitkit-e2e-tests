@@ -62,10 +62,23 @@ readiness. The two activity-filter tag selections similarly await stationary ena
 Each interaction executes once; a missing destination still fails. Existing invoice, balance,
 tag, history, restore and channel assertions remain intact. UI waits remain 30 seconds.
 
-Android RBF has a separate activity publication race. The original activity receives the new
+The original Android app (`ebe9bc0`) has a separate activity publication race. The original activity receives the new
 fee and Boosting state before the replacement activity is published. A test can therefore open
 the original TXID and remain on its Removed from Mempool detail. The home row exposes an index,
 not transaction identity; fee, icon and geometry cannot reliably distinguish the replacement.
 This follow-up does not claim to fix that native/test observability gap or replace the existing
 Boosted/status/fee/TXID assertions with a delay. Retain first failures and distinguish successful
 targeted reruns from evidence of a durable reliability improvement.
+
+## Integration after updating the stack
+
+The stack includes E2E main `265a050`, retaining its late-introduction recovery, authenticated
+regtest helpers and removal of obsolete skipped Blocktank cases. All thirteen active iOS gate
+cases remain. Pilot #296 stays below this migration; merge it first, then retarget #298 to `main`.
+
+Android fixes #1808 and #1813 are merged. The final integration run uses app master `176430965`,
+which includes both fixes, for Send2, Boost2 and Lightning1. The complete iOS gate uses app master
+`10231d9e`. Both use local backends, 30-second ordinary UI waits and the final pinned E2E candidate.
+Record their actual results in #298; keep it draft during validation. These runs validate integration
+with current apps and do not replace the historical six-run comparison or establish a new speed
+or reliability cohort. Staging funding health is outside these local-backend runs.

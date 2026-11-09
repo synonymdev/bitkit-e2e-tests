@@ -8,7 +8,6 @@ import {
   expectText,
   elementById,
   multiTap,
-  dragOnElement,
   expectTextWithin,
   swipeFullScreen,
   elementByIdWithin,

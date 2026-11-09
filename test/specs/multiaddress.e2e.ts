@@ -26,7 +26,6 @@ import {
   expectText,
   formatSats,
   elementByText,
-  sleep,
   waitForToast,
   enterAmount,
   dismissQuickPayIntro,
