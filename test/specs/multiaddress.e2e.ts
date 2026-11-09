@@ -4,7 +4,6 @@ import initElectrum from '../helpers/electrum';
 import { reinstallApp } from '../helpers/setup';
 import {
   acknowledgeExternalSuccess,
-  assertAddressMatchesType,
   completeOnboarding,
   doNavigationClose,
   dragOnElement,
@@ -16,18 +15,14 @@ import {
   expectTotalBalance,
   expectTextWithin,
   getTextUnder,
-  getReceiveAddress,
   handleOver50PercentAlert,
   switchAndFundEachAddressType,
   swipeFullScreen,
   tap,
-  transferSavingsToSpending,
-  transferSpendingToSavings,
   type addressTypePreference,
   getSpendingBalance,
   getSavingsBalance,
   getTotalBalance,
-  attemptRefreshOnHomeScreen,
   expectText,
   formatSats,
   elementByText,
@@ -113,68 +108,6 @@ describe('@multi_address - Multi address', () => {
     await expect(savingsBalanceAfter).toEqual(0);
     await expect(spendingBalanceAfter).toEqual(0);
   });
-
-  // Blocktank staging no longer creates orders (synonymdev/blocktank-lsp-http#168)
-  ciIt.skip(
-    '@multi_address_2, @multi_address_staging, @staging - Receive to each address type, transfer all to spending, close channel to taproot',
-    async () => {
-      const addressTypes: addressTypePreference[] = ['p2pkh', 'p2sh-p2wpkh', 'p2wpkh', 'p2tr'];
-      // const addressTypes: addressTypePreference[] = ['p2tr'];
-      const satsPerAddressType = 25_000;
-      await switchAndFundEachAddressType({
-        addressTypes,
-        satsPerAddressType,
-        waitForSync: async () => {
-          await electrum?.waitForSync();
-        },
-      });
-
-      // Last funded type is Taproot, keep it as primary for channel open/close.
-      const taprootAddressBeforeClose = await getReceiveAddress();
-      assertAddressMatchesType(taprootAddressBeforeClose, 'p2tr');
-      await swipeFullScreen('down');
-      await swipeFullScreen('down');
-
-      await mineBlocks(1);
-      await electrum?.waitForSync();
-
-      await transferSavingsToSpending({
-        waitForSync: async () => {
-          await electrum?.waitForSync();
-        },
-      });
-      await expectSpendingBalance(0, { condition: 'gt' });
-      await expectSavingsBalance(0);
-
-      if (driver.isAndroid) {
-        // pull to refresh due to:
-        // https://github.com/synonymdev/bitkit-android/issues/810
-        await attemptRefreshOnHomeScreen();
-        await attemptRefreshOnHomeScreen();
-      }
-
-      await transferSpendingToSavings();
-
-      await mineBlocks(1);
-      await electrum?.waitForSync();
-      await expectSavingsBalance(0, { condition: 'gt' });
-      await expectSpendingBalance(0);
-      const savingsBalanceAfter = await getSavingsBalance();
-      await expectTotalBalance(savingsBalanceAfter);
-
-      const taprootAddressAfterClose = await getReceiveAddress();
-      assertAddressMatchesType(taprootAddressAfterClose, 'p2tr');
-      await swipeFullScreen('down');
-
-      // check in address viewer all savings are in taproot address
-      await openSettings('advanced');
-      await sleep(1000);
-      await tap('AddressViewer');
-      await sleep(1000);
-      await elementByText('Taproot').click();
-      await expectText(formatSats(savingsBalanceAfter));
-    }
-  );
 
   ciIt(
     '@multi_address_3 @ios_gate - Receive to each type, send almost max, verify change to primary, then RBF',

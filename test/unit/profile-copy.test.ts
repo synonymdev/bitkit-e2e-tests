@@ -16,6 +16,7 @@ function profileScreen({
   const select = (selector: string) => {
     const id = selector.slice(1);
     return {
+      isDisplayed: async () => id === 'HeaderMenu',
       waitForDisplayed: async () => {
         assert.notEqual(id, 'ProfilePubkyCopiedToast', 'Copy must not depend on popup visibility');
       },

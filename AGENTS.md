@@ -73,7 +73,7 @@ See `docs/pubky-profile-manual-e2e.md` (preconditions).
 **Important:** The `BACKEND` env var controls which infrastructure the tests use for deposits/mining:
 
 - `BACKEND=local` (default) — Uses local docker stack (Bitcoin RPC on localhost:18443, Electrum on localhost:60001). Requires `bitkit-docker` running locally.
-- `BACKEND=regtest` — Uses Blocktank API over the internet (remote regtest infrastructure).
+- `BACKEND=regtest` — Uses Blocktank API over the internet (remote regtest infrastructure). Staging requires `BLOCKTANK_REGTEST_AUTH=user:password`, otherwise deposits, mining and payments get `401`.
 
 **The `BACKEND` must match how the app was built:**
 
@@ -179,8 +179,6 @@ Capability tags (`@settings`, `@boost`, `@send`, …) stay on titles so Android 
 |---|---|---|---|
 | `@ios_gate` | ignored | merge gate grep | no |
 | `@ios_nightly` | ignored (still run via `@settings` etc.) | no | extra iOS shard (`ios_nightly_ui`), GitHub mac, not Mini |
-| `@transfer_1`, `@transfer_max` | no | no | `@transfer_staging` (keep `@transfer_1` / `@transfer_max` / `@transfer`). `@transfer_1` is not in app `e2e-staging.yml` yet — add the transfer shard once it is 3× green. |
-| `@multi_address_2` | no | no | `@multi_address_staging` only |
 | `@pubky` / `@paykit` / `@pubky_profile` | no | no | `@pubky_staging` (keep capability tags for other greps) |
 | `@boost`, `@multi_address_3` | yes | `@ios_gate` (needs exclusive miner) | no |
 | `@send_2`, `@send_3`, `@lightning`, `@lnurl`, `@transfer_2`, `@multi_address_4` | yes | `@ios_gate` (local LND) | no |

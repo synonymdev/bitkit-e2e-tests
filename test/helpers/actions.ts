@@ -355,7 +355,7 @@ export async function expectBalanceWithWait(
   } = {}
 ): Promise<number> {
   let lastValue = -1;
-  await browser.waitUntil(
+  await waitForWalletHomeCondition(
     async () => {
       const value = await getter();
       lastValue = value;
@@ -392,8 +392,13 @@ export async function expectTotalBalance(
 }
 
 export async function tap(testId: string, { timeout = 30_000 }: { timeout?: number } = {}) {
+  if (testId === 'HeaderMenu') {
+    await withMoveToSparkIntroRecovery(() =>
+      waitForWalletHomeCondition(() => elementById(testId).isDisplayed(), { timeout })
+    );
+  }
   const el = await elementById(testId);
-  await el.waitForDisplayed({ timeout });
+  await withMoveToSparkIntroRecovery(() => el.waitForDisplayed({ timeout }));
   await sleep(200); // Allow time for the element to settle
   await el.click();
   await sleep(100);
@@ -823,39 +828,71 @@ export async function waitForWalletHome({
       (await elementById('TotalBalance-primary').isDisplayed()),
     { timeout, interval: 250, timeoutMsg: 'Wallet home or USDT introduction did not appear' }
   );
-  let introHandled = await handleUsdtIntro({ enable: enableUsdt });
+  const introHandled = await handleUsdtIntro({ enable: enableUsdt });
+  await waitForWalletHomeCondition(() => elementById('TotalBalance-primary').isDisplayed(), {
+    enableUsdt,
+    introHandled,
+    timeout,
+  });
+}
+
+/** Waits for a Home outcome while resolving one optional introduction outside polling. */
+export async function waitForWalletHomeCondition(
+  condition: () => Promise<boolean>,
+  {
+    timeout = 30_000,
+    interval = 250,
+    timeoutMsg = 'Wallet home condition did not become true',
+    enableUsdt = false,
+    introHandled = false,
+  }: {
+    timeout?: number;
+    interval?: number;
+    timeoutMsg?: string;
+    enableUsdt?: boolean;
+    introHandled?: boolean;
+  } = {}
+): Promise<void> {
   const deadline = Date.now() + timeout;
-  while (Date.now() < deadline) {
+  const remaining = () => {
+    const ms = deadline - Date.now();
+    if (ms <= 0) throw new Error(timeoutMsg);
+    return ms;
+  };
+  while (true) {
     let introVisible = false;
     await browser.waitUntil(
       async () => {
-        // An optional intro can arrive after its initial observation window.
-        // Poll only observations; WebdriverIO retries even rejected predicates.
         introVisible = await elementById('UsdtIntroDecline').isDisplayed();
-        return introVisible || (await elementById('TotalBalance-primary').isDisplayed());
+        return introVisible || condition();
       },
-      {
-        timeout: Math.max(1, deadline - Date.now()),
-        interval: 250,
-        timeoutMsg: 'Wallet home did not become ready after USDT introduction',
-      }
+      { timeout: remaining(), interval, timeoutMsg }
     );
     if (!introVisible) return;
-    if (introHandled) throw new Error('USDT introduction reappeared after dismissal');
-    // A failed dismissal must propagate, never re-enter a retrying predicate.
-    introHandled = await handleUsdtIntro({ enable: enableUsdt });
+    if (introHandled) throw new Error('USDT introduction reappeared after its decision');
+    introHandled = true;
+    // Rejected waitUntil predicates are retried. Keep the choice outside that predicate.
+    if (!(await handleUsdtIntro({ enable: enableUsdt, timeout: remaining() }))) {
+      throw new Error('USDT introduction disappeared before its decision');
+    }
   }
-  throw new Error('Wallet home did not become ready after USDT introduction');
 }
 
 /** Ordinary BTC setup declines the optional intro; USDT journeys explicitly opt in. */
 export async function handleUsdtIntro({
   enable = false,
-}: { enable?: boolean } = {}): Promise<boolean> {
+  timeout,
+}: { enable?: boolean; timeout?: number } = {}): Promise<boolean> {
+  const deadline = timeout === undefined ? Infinity : Date.now() + timeout;
+  const remaining = (limit: number) => {
+    const ms = deadline - Date.now();
+    if (ms <= 0) throw new Error('USDT introduction decision timed out');
+    return Math.min(limit, ms);
+  };
   const buttonId = enable ? 'UsdtIntroEnable' : 'UsdtIntroDecline';
   const visible = await browser
     .waitUntil(() => elementById(buttonId).isDisplayed(), {
-      timeout: enable ? 15_000 : 5_000,
+      timeout: remaining(enable ? 15_000 : 5_000),
       interval: 200,
       timeoutMsg: `USDT introduction ${buttonId} did not appear`,
     })
@@ -866,8 +903,6 @@ export async function handleUsdtIntro({
     });
   if (!visible) return false;
   if (driver.isAndroid) {
-    // A visible button can still be moving with the entering bottom sheet.
-    // Wait for an enabled target at stable bounds before issuing the one tap.
     let previousBounds = '';
     await browser.waitUntil(
       async () => {
@@ -881,18 +916,25 @@ export async function handleUsdtIntro({
         previousBounds = bounds;
         return stable;
       },
-      { interval: 200, timeoutMsg: `USDT introduction ${buttonId} did not settle` }
+      {
+        timeout: remaining(30_000),
+        interval: 200,
+        timeoutMsg: `USDT introduction ${buttonId} did not settle`,
+      }
     );
   }
+  remaining(30_000);
   await elementById(buttonId).click();
-  // The dismissed sheet can leave a cached UiAutomator element reporting displayed.
-  // Resolve the identifier again on every observation; do not repeat the action.
   await browser.waitUntil(
     async () => {
       const current = elementById(buttonId);
       return !(await current.isExisting()) || !(await current.isDisplayed());
     },
-    { interval: 200, timeoutMsg: `USDT introduction still visible after ${buttonId}` }
+    {
+      timeout: remaining(30_000),
+      interval: 200,
+      timeoutMsg: `USDT introduction still visible after ${buttonId}`,
+    }
   );
   return true;
 }
@@ -1314,23 +1356,6 @@ export async function transferSavingsToSpending({
   await sleep(2000);
 }
 
-export async function transferSpendingToSavings() {
-  await tap('ActivitySpending');
-  await tap('TransferToSavings');
-  await sleep(800);
-  await tap('SavingsIntro-button');
-  await tap('AvailabilityContinue');
-  await sleep(1000);
-  await dragOnElement('GRAB', 'right', 0.95);
-  await elementById('TransferSuccess-button').waitForDisplayed();
-  await tap('TransferSuccess-button');
-
-  await sleep(1000);
-  await expectSavingsBalance(0, { condition: 'gt' });
-  await expectSpendingBalance(0);
-  await expectTotalBalance(await getSavingsBalance());
-}
-
 export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise<string> {
   await tap('Receive');
   await sleep(500);
@@ -1588,10 +1613,15 @@ export async function waitForToastBestEffort(
 /** Acknowledges the received payment notification by tapping the button.
  */
 export async function acknowledgeReceivedPayment({ timeout = 30_000 }: { timeout?: number } = {}) {
-  await elementById('ReceivedTransaction').waitForDisplayed({ timeout });
+  await withMoveToSparkIntroRecovery(() =>
+    elementById('ReceivedTransaction').waitForDisplayed({ timeout })
+  );
   await sleep(500);
   await tap('ReceivedTransactionButton');
   await sleep(300);
+  // A Lightning receive can make the intro due; home shows it about 2 s after the received sheet closes, before
+  // balance reads that cannot recover from it.
+  await dismissMoveToSparkIntroIfShown({ timeout: 3_000 });
 }
 
 export async function acknowledgeReceivedPaymentIfPresent(): Promise<boolean> {
@@ -1707,7 +1737,7 @@ async function triggerTimedSheetUnlessPresent(
     console.info(`→ ${sheetId} already visible, skipping HeaderMenu trigger`);
     return;
   }
-  await dismissInterveningUsdtIntro();
+  if (await dismissInterveningSheets(sheetId)) return;
   if (!triggerTimedSheet) {
     return;
   }
@@ -1716,6 +1746,7 @@ async function triggerTimedSheetUnlessPresent(
     async () =>
       (await isTestIdDisplayed(sheetId)) ||
       (await isTestIdDisplayed('UsdtIntroDecline')) ||
+      (await isTestIdDisplayed('MoveToSparkIntroLater')) ||
       (await isTestIdDisplayed('HeaderMenu')) ||
       (await isTestIdDisplayed('TotalBalance')),
     {
@@ -1724,7 +1755,7 @@ async function triggerTimedSheetUnlessPresent(
     }
   );
 
-  await dismissInterveningUsdtIntro();
+  if (await dismissInterveningSheets(sheetId)) return;
   if (await isTestIdDisplayed(sheetId)) {
     console.info(`→ ${sheetId} appeared while waiting, skipping HeaderMenu trigger`);
     return;
@@ -1732,7 +1763,7 @@ async function triggerTimedSheetUnlessPresent(
 
   // A queued sheet can surface a moment after the previous dismiss.
   await sleep(700);
-  await dismissInterveningUsdtIntro();
+  if (await dismissInterveningSheets(sheetId)) return;
   if (await isTestIdDisplayed(sheetId)) {
     console.info(`→ ${sheetId} appeared after settle, skipping HeaderMenu trigger`);
     return;
@@ -1743,12 +1774,92 @@ async function triggerTimedSheetUnlessPresent(
   }
 
   await doTriggerTimedSheet();
+
+  // Move to Spark outranks the other timed sheets, so the trigger can surface it instead of sheetId. Wait for
+  // whichever shows first, so a run where sheetId shows does not also wait out the intro.
+  await browser
+    .waitUntil(
+      async () =>
+        (await isTestIdDisplayed(sheetId)) || (await isTestIdDisplayed('MoveToSparkIntroLater')),
+      { timeout: 3_000 }
+    )
+    .catch(() => undefined);
+  if (await dismissMoveToSparkIntroIfShown()) {
+    await awaitSheetAfterMoveToSpark(sheetId);
+  }
 }
 
-async function dismissInterveningUsdtIntro(): Promise<void> {
-  if (!(await isTestIdDisplayed('UsdtIntroDecline'))) return;
+/**
+ * Dismisses a sheet that covers home in place of sheetId.
+ * @returns true when the Move to Spark intro was dismissed and the queue has moved on
+ */
+async function dismissInterveningSheets(sheetId: string): Promise<boolean> {
+  if (await dismissMoveToSparkIntroIfShown()) {
+    return awaitSheetAfterMoveToSpark(sheetId);
+  }
+  if (!(await isTestIdDisplayed('UsdtIntroDecline'))) return false;
   await handleUsdtIntro();
   await doTriggerTimedSheet();
+  return false;
+}
+
+/**
+ * Home re-checks the queue about 2 s after a dismiss, so the next timed sheet usually surfaces by itself once the
+ * Move to Spark intro is gone. It can be another sheet than sheetId (QuickPay before Background Payments); the
+ * caller's own wait then decides, so the queue is triggered only when home is uncovered.
+ * @returns true, as the caller should not trigger the queue again
+ */
+async function awaitSheetAfterMoveToSpark(sheetId: string): Promise<boolean> {
+  const shown = await elementById(sheetId)
+    .waitForDisplayed({ timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!shown && (await isTestIdDisplayed('HeaderMenu'))) {
+    await doTriggerTimedSheet();
+  }
+  return true;
+}
+
+/**
+ * Dismisses the Move to Spark intro with Later if it is showing.
+ * The apps show it once, at the top timed-sheet priority, when a wallet's Lightning channels can move a balance to a
+ * ready Spark wallet. That turns true on state a test cannot see (a receive, Spark connecting), so the intro can
+ * cover home at any step; the Later button is the probe, as it is queryable on both platforms.
+ *
+ * @param options.timeout - How long to wait for the intro to appear (default: none, check once)
+ * @returns true if the intro was shown and dismissed
+ */
+export async function dismissMoveToSparkIntroIfShown({
+  timeout = 0,
+}: { timeout?: number } = {}): Promise<boolean> {
+  const later = elementById('MoveToSparkIntroLater');
+  const shown =
+    timeout > 0
+      ? await later
+          .waitForDisplayed({ timeout })
+          .then(() => true)
+          .catch(() => false)
+      : await isTestIdDisplayed('MoveToSparkIntroLater');
+  if (!shown) return false;
+  console.info('→ Move to Spark intro visible, dismissing with Later...');
+  await sleep(500);
+  await later.click();
+  await later.waitForDisplayed({ reverse: true });
+  await sleep(500);
+  return true;
+}
+
+/**
+ * Runs a wait and, when it fails while the Move to Spark intro covers the screen, dismisses the intro and retries
+ * once, as the ANR recovery does for system dialogs.
+ */
+export async function withMoveToSparkIntroRecovery<T>(wait: () => Promise<T>): Promise<T> {
+  try {
+    return await wait();
+  } catch (error) {
+    if (!(await dismissMoveToSparkIntroIfShown())) throw error;
+    return wait();
+  }
 }
 
 /**
@@ -1845,27 +1956,6 @@ export async function tryDismissQuickPayIntroIfVisible({
     }
     return false;
   }
-}
-
-/**
- * Dismisses the Background Payments timed sheet if it is already visible.
- * Does nothing if the sheet is not showing. After a Blocktank transfer the
- * sheet can cover HeaderMenu / Settings (iOS #741 @transfer_1).
- */
-export async function tryDismissBackgroundPaymentsIfVisible(): Promise<boolean> {
-  const testId = driver.isAndroid
-    ? 'BackgroundPaymentsIntro-later'
-    : 'BackgroundPaymentsDescription';
-  const isVisible = await elementById(testId)
-    .isDisplayed()
-    .catch(() => false);
-  if (!isVisible) {
-    return false;
-  }
-
-  console.info('→ Background Payments sheet visible, dismissing...');
-  await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: false });
-  return true;
 }
 
 /**
