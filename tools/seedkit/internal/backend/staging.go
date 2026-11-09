@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"strings"
 )
 
 type StagingBackend struct {
@@ -44,7 +46,15 @@ func (b *StagingBackend) post(path string, payload interface{}) error {
 	if err != nil {
 		return err
 	}
-	resp, err := b.client.Post(b.baseURL+path, "application/json", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, b.baseURL+path, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if user, password, ok := strings.Cut(os.Getenv("BLOCKTANK_REGTEST_AUTH"), ":"); ok {
+		req.SetBasicAuth(user, password)
+	}
+	resp, err := b.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("POST %s: %w", path, err)
 	}

@@ -73,7 +73,7 @@ See `docs/pubky-profile-manual-e2e.md` (preconditions).
 **Important:** The `BACKEND` env var controls which infrastructure the tests use for deposits/mining:
 
 - `BACKEND=local` (default) — Uses local docker stack (Bitcoin RPC on localhost:18443, Electrum on localhost:60001). Requires `bitkit-docker` running locally.
-- `BACKEND=regtest` — Uses Blocktank API over the internet (remote regtest infrastructure).
+- `BACKEND=regtest` — Uses Blocktank API over the internet (remote regtest infrastructure). Staging requires `BLOCKTANK_REGTEST_AUTH=user:password`, otherwise deposits, mining and payments get `401`.
 
 **The `BACKEND` must match how the app was built:**
 

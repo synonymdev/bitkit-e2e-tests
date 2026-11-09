@@ -9,6 +9,9 @@
 #   ./scripts/mine-blocks.sh       # mines 1 block
 #   ./scripts/mine-blocks.sh 6     # mines 6 blocks
 #
+# Environment:
+#   BLOCKTANK_REGTEST_AUTH → user:password, required by staging
+#
 
 set -e
 
@@ -18,7 +21,7 @@ ENDPOINT="${BLOCKTANK_URL}/regtest/chain/mine"
 
 echo "→ Mining ${COUNT} block(s) via Blocktank..."
 
-RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$ENDPOINT" \
+RESPONSE=$(curl -s -w "\n%{http_code}" ${BLOCKTANK_REGTEST_AUTH:+-u "$BLOCKTANK_REGTEST_AUTH"} -X POST "$ENDPOINT" \
   -H "Content-Type: application/json" \
   -d "{\"count\": ${COUNT}}")
 

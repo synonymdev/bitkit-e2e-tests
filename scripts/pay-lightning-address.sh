@@ -17,6 +17,7 @@
 #
 # Environment:
 #   BLOCKTANK_URL   → override API base (default: staging)
+#   BLOCKTANK_REGTEST_AUTH → user:password, required by staging
 #   LNURL_SCHEME    → http or https for LN address resolution (default: auto)
 
 set -e
@@ -113,7 +114,7 @@ fi
 BODY="${BODY}}"
 
 echo "→ Paying ${AMOUNT_SATS} sats via Blocktank..."
-PAY_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${BLOCKTANK_URL}/regtest/channel/pay" \
+PAY_RESPONSE=$(curl -s -w "\n%{http_code}" ${BLOCKTANK_REGTEST_AUTH:+-u "$BLOCKTANK_REGTEST_AUTH"} -X POST "${BLOCKTANK_URL}/regtest/channel/pay" \
   -H "Content-Type: application/json" \
   -d "$BODY")
 

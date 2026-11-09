@@ -77,6 +77,7 @@ Uses Synonym's Blocktank API for regtest operations.
 
 - Default URL: `https://api.stag0.blocktank.to/blocktank/api/v2`
 - Override with `--blocktank-url`
+- Set `BLOCKTANK_REGTEST_AUTH=user:password`; the default URL returns `401` without it
 
 ## JSON Output
 
