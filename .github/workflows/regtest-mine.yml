@@ -59,9 +59,12 @@ jobs:
           echo "Initial tip height: ${TIP_BEFORE}"
           echo "TIP_BEFORE=${TIP_BEFORE}" >> "${GITHUB_ENV}"
       - name: Mine regtest blocks
+        env:
+          BLOCKTANK_REGTEST_AUTH: ${{ secrets.BLOCKTANK_REGTEST_AUTH }}
         run: |
           echo "Mining ${BLOCK_COUNT} block(s) on regtest..."
           curl --fail --silent --show-error \
+            -u "${BLOCKTANK_REGTEST_AUTH}" \
             -X POST \
             "${BLOCKTANK_SERVER}/regtest/chain/mine" \
             -H 'Content-Type: application/json' \
