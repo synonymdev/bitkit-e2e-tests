@@ -355,7 +355,7 @@ export async function expectBalanceWithWait(
   } = {}
 ): Promise<number> {
   let lastValue = -1;
-  await browser.waitUntil(
+  await waitForWalletHomeCondition(
     async () => {
       const value = await getter();
       lastValue = value;
@@ -392,6 +392,11 @@ export async function expectTotalBalance(
 }
 
 export async function tap(testId: string, { timeout = 30_000 }: { timeout?: number } = {}) {
+  if (testId === 'HeaderMenu') {
+    await withMoveToSparkIntroRecovery(() =>
+      waitForWalletHomeCondition(() => elementById(testId).isDisplayed(), { timeout })
+    );
+  }
   const el = await elementById(testId);
   await withMoveToSparkIntroRecovery(() => el.waitForDisplayed({ timeout }));
   await sleep(200); // Allow time for the element to settle
@@ -821,26 +826,114 @@ export async function waitForWalletHome({
       (await elementById('TotalBalance-primary').isDisplayed()),
     { timeout, interval: 250, timeoutMsg: 'Wallet home or USDT introduction did not appear' }
   );
-  await handleUsdtIntro({ enable: enableUsdt });
-  await elementById('TotalBalance-primary').waitForDisplayed({ timeout });
+  const introHandled = await handleUsdtIntro({ enable: enableUsdt });
+  await waitForWalletHomeCondition(() => elementById('TotalBalance-primary').isDisplayed(), {
+    enableUsdt,
+    introHandled,
+    timeout,
+  });
+}
+
+/** Waits for a Home outcome while resolving one optional introduction outside polling. */
+export async function waitForWalletHomeCondition(
+  condition: () => Promise<boolean>,
+  {
+    timeout = 30_000,
+    interval = 250,
+    timeoutMsg = 'Wallet home condition did not become true',
+    enableUsdt = false,
+    introHandled = false,
+  }: {
+    timeout?: number;
+    interval?: number;
+    timeoutMsg?: string;
+    enableUsdt?: boolean;
+    introHandled?: boolean;
+  } = {}
+): Promise<void> {
+  const deadline = Date.now() + timeout;
+  const remaining = () => {
+    const ms = deadline - Date.now();
+    if (ms <= 0) throw new Error(timeoutMsg);
+    return ms;
+  };
+  while (true) {
+    let introVisible = false;
+    await browser.waitUntil(
+      async () => {
+        introVisible = await elementById('UsdtIntroDecline').isDisplayed();
+        return introVisible || condition();
+      },
+      { timeout: remaining(), interval, timeoutMsg }
+    );
+    if (!introVisible) return;
+    if (introHandled) throw new Error('USDT introduction reappeared after its decision');
+    introHandled = true;
+    // Rejected waitUntil predicates are retried. Keep the choice outside that predicate.
+    if (!(await handleUsdtIntro({ enable: enableUsdt, timeout: remaining() }))) {
+      throw new Error('USDT introduction disappeared before its decision');
+    }
+  }
 }
 
 /** Ordinary BTC setup declines the optional intro; USDT journeys explicitly opt in. */
 export async function handleUsdtIntro({
   enable = false,
-}: { enable?: boolean } = {}): Promise<boolean> {
-  const button = elementById(enable ? 'UsdtIntroEnable' : 'UsdtIntroDecline');
-  if (enable) {
-    await button.waitForDisplayed({ timeout: 15_000 });
-  } else {
-    const visible = await button
-      .waitForDisplayed({ timeout: 5_000 })
-      .then(() => true)
-      .catch(() => false);
-    if (!visible) return false;
+  timeout,
+}: { enable?: boolean; timeout?: number } = {}): Promise<boolean> {
+  const deadline = timeout === undefined ? Infinity : Date.now() + timeout;
+  const remaining = (limit: number) => {
+    const ms = deadline - Date.now();
+    if (ms <= 0) throw new Error('USDT introduction decision timed out');
+    return Math.min(limit, ms);
+  };
+  const buttonId = enable ? 'UsdtIntroEnable' : 'UsdtIntroDecline';
+  const visible = await browser
+    .waitUntil(() => elementById(buttonId).isDisplayed(), {
+      timeout: remaining(enable ? 15_000 : 5_000),
+      interval: 200,
+      timeoutMsg: `USDT introduction ${buttonId} did not appear`,
+    })
+    .then(() => true)
+    .catch((error) => {
+      if (enable) throw error;
+      return false;
+    });
+  if (!visible) return false;
+  if (driver.isAndroid) {
+    let previousBounds = '';
+    await browser.waitUntil(
+      async () => {
+        const current = elementById(buttonId);
+        if (!(await current.isDisplayed()) || !(await current.isEnabled())) {
+          previousBounds = '';
+          return false;
+        }
+        const bounds = JSON.stringify([await current.getLocation(), await current.getSize()]);
+        const stable = bounds === previousBounds;
+        previousBounds = bounds;
+        return stable;
+      },
+      {
+        timeout: remaining(30_000),
+        interval: 200,
+        timeoutMsg: `USDT introduction ${buttonId} did not settle`,
+      }
+    );
   }
-  await button.click();
-  await button.waitForDisplayed({ reverse: true });
+  remaining(30_000);
+  await elementById(buttonId).click();
+  await browser.waitUntil(
+    async () => {
+      const current = elementById(buttonId);
+      return !(await current.isExisting()) || !(await current.isDisplayed());
+    },
+    {
+      timeout: remaining(30_000),
+      interval: 200,
+      timeoutMsg: `USDT introduction still visible after ${buttonId}`,
+    }
+  );
   return true;
 }
 
