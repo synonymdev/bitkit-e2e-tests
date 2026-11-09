@@ -27,6 +27,7 @@ import {
   expectTotalBalance,
   expectSpendingBalance,
   expectSavingsBalance,
+  waitForWalletHomeCondition,
 } from '../helpers/actions';
 import { ciIt } from '../helpers/suite';
 import {
@@ -130,8 +131,13 @@ describe('@onchain - Onchain', () => {
       await sleep(1000); // wait for the app to settle
 
       // - shows correct total balance
-      const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
       const expected = `${i}00 000 000`;
+      await waitForWalletHomeCondition(
+        async () =>
+          (await (await elementByIdWithin('TotalBalance-primary', 'MoneyText')).getText()) ===
+          expected
+      );
+      const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
       await expect(totalBalance).toHaveText(expected);
 
       if (i === 1) {

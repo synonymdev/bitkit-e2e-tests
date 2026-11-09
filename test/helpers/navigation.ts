@@ -1,4 +1,10 @@
-import { elementById, tap, sleep, withMoveToSparkIntroRecovery } from './actions';
+import {
+  elementById,
+  tap,
+  sleep,
+  waitForWalletHomeCondition,
+  withMoveToSparkIntroRecovery,
+} from './actions';
 import { CONTACTS_SCREEN_IDS, isContactsScreenOpen } from './pubky-screen';
 
 export type SettingsTab = 'general' | 'security' | 'advanced';
@@ -8,7 +14,9 @@ export type SettingsTab = 'general' | 'security' | 'advanced';
  * General is the default tab so no extra tap is needed for it.
  */
 export async function openSettings(tab: SettingsTab = 'general') {
-  await elementById('HeaderMenu').waitForDisplayed();
+  await withMoveToSparkIntroRecovery(() =>
+    waitForWalletHomeCondition(() => elementById('HeaderMenu').isDisplayed())
+  );
   await sleep(500);
   await tap('HeaderMenu');
   await elementById('DrawerSettings').waitForDisplayed();
@@ -91,7 +99,9 @@ export async function doNavigationClose() {
  */
 export async function doTriggerTimedSheet() {
   await withMoveToSparkIntroRecovery(() =>
-    elementById('HeaderMenu').waitForDisplayed({ timeout: 45_000 })
+    waitForWalletHomeCondition(() => elementById('HeaderMenu').isDisplayed(), {
+      timeout: 45_000,
+    })
   );
   await sleep(700);
   await tap('HeaderMenu');
