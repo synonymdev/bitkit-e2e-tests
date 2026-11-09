@@ -1697,8 +1697,16 @@ async function triggerTimedSheetUnlessPresent(
 
   await doTriggerTimedSheet();
 
-  // Move to Spark outranks the other timed sheets, so the trigger can surface it instead of sheetId.
-  if (await dismissMoveToSparkIntroIfShown({ timeout: 3_000 })) {
+  // Move to Spark outranks the other timed sheets, so the trigger can surface it instead of sheetId. Wait for
+  // whichever shows first, so a run where sheetId shows does not also wait out the intro.
+  await browser
+    .waitUntil(
+      async () =>
+        (await isTestIdDisplayed(sheetId)) || (await isTestIdDisplayed('MoveToSparkIntroLater')),
+      { timeout: 3_000 }
+    )
+    .catch(() => undefined);
+  if (await dismissMoveToSparkIntroIfShown()) {
     await awaitSheetAfterMoveToSpark(sheetId);
   }
 }
