@@ -1,4 +1,4 @@
-import { elementById, tap, sleep } from './actions';
+import { elementById, tap, sleep, waitForWalletHomeCondition } from './actions';
 import { CONTACTS_SCREEN_IDS, isContactsScreenOpen } from './pubky-screen';
 
 export type SettingsTab = 'general' | 'security' | 'advanced';
@@ -8,7 +8,7 @@ export type SettingsTab = 'general' | 'security' | 'advanced';
  * General is the default tab so no extra tap is needed for it.
  */
 export async function openSettings(tab: SettingsTab = 'general') {
-  await elementById('HeaderMenu').waitForDisplayed();
+  await waitForWalletHomeCondition(() => elementById('HeaderMenu').isDisplayed());
   await sleep(500);
   await tap('HeaderMenu');
   await elementById('DrawerSettings').waitForDisplayed();
@@ -90,7 +90,9 @@ export async function doNavigationClose() {
  * we need to trigger them manually.
  */
 export async function doTriggerTimedSheet() {
-  await elementById('HeaderMenu').waitForDisplayed({ timeout: 45_000 });
+  await waitForWalletHomeCondition(() => elementById('HeaderMenu').isDisplayed(), {
+    timeout: 45_000,
+  });
   await sleep(700);
   await tap('HeaderMenu');
   await tap('DrawerSettings');
