@@ -56,7 +56,6 @@ const TAG_SENT = 'sent';
 // Amounts for testing
 const INITIAL_FUND_SATS = 500_000; // 500k sats initial funding
 const ONCHAIN_SEND_SATS = 50_000; // 50k sats for on-chain send test
-// const CJIT_INVOICE_SATS = 3000; // Unused - Blocktank regtest doesn't support CJIT
 
 // Passphrase for passphrase-protected wallet tests
 const TEST_PASSPHRASE = 'supersecret';

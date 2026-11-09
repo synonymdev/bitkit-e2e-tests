@@ -179,8 +179,6 @@ Capability tags (`@settings`, `@boost`, `@send`, …) stay on titles so Android 
 |---|---|---|---|
 | `@ios_gate` | ignored | merge gate grep | no |
 | `@ios_nightly` | ignored (still run via `@settings` etc.) | no | extra iOS shard (`ios_nightly_ui`), GitHub mac, not Mini |
-| `@transfer_1`, `@transfer_max` | no | no | `@transfer_staging` (keep `@transfer_1` / `@transfer_max` / `@transfer`). `@transfer_1` is not in app `e2e-staging.yml` yet — add the transfer shard once it is 3× green. |
-| `@multi_address_2` | no | no | `@multi_address_staging` only |
 | `@pubky` / `@paykit` / `@pubky_profile` | no | no | `@pubky_staging` (keep capability tags for other greps) |
 | `@boost`, `@multi_address_3` | yes | `@ios_gate` (needs exclusive miner) | no |
 | `@send_2`, `@send_3`, `@lightning`, `@lnurl`, `@transfer_2`, `@multi_address_4` | yes | `@ios_gate` (local LND) | no |
