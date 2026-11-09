@@ -25,6 +25,9 @@ on:
         description: 'Migration scenario name for artifact naming'
         required: true
         type: string
+    secrets:
+      BLOCKTANK_REGTEST_AUTH:
+        required: false
 
 env:
   TERM: xterm-256color
@@ -96,6 +99,7 @@ jobs:
           script: cd bitkit-e2e-tests && bash scripts/prepare-migration-wallets.sh "$SETUP_TYPE"
         env:
           BACKEND: regtest
+          BLOCKTANK_REGTEST_AUTH: ${{ secrets.BLOCKTANK_REGTEST_AUTH }}
           SETUP_TYPE: ${{ inputs.setup_type }}
 
       - name: Upload preparation diagnostics

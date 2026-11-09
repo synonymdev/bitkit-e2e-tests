@@ -22,6 +22,17 @@ downloader = load_script("download-migration-app")
 
 
 class MigrationPlanTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        (self.root / "config").mkdir()
+        self.baselines = {"android": "2.8.1", "ios": "2.9.2"}
+        (self.root / "config/migration-baselines.json").write_text(json.dumps(self.baselines))
+        root_patch = patch.object(matrix, "ROOT", self.root)
+        root_patch.start()
+        self.addCleanup(root_patch.stop)
+
     def test_routine_has_exactly_four_cases_and_one_rn_version(self):
         for platform in ("android", "ios"):
             plan = matrix.migration_plan(platform)
@@ -30,7 +41,8 @@ class MigrationPlanTests(unittest.TestCase):
                 "@migration_native_restore", "@migration_native_upgrade",
             ])
             self.assertEqual({case["version"] for case in plan["rn"]}, {"v1.1.6"})
-            self.assertEqual(plan["version"], "3.0.1")
+            self.assertEqual(plan["version"], self.baselines[platform])
+            self.assertEqual({case["version"] for case in plan["native"]}, {self.baselines[platform]})
 
     def test_override_and_extended_are_explicit(self):
         plan = matrix.migration_plan("ios", "2.4.0", True)

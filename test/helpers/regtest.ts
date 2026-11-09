@@ -3,6 +3,7 @@
  *
  * Set BACKEND=local to use local docker stack (Bitcoin RPC on localhost).
  * Set BACKEND=regtest to use Blocktank API (company regtest over the internet).
+ * Staging requires BLOCKTANK_REGTEST_AUTH=user:password for its regtest routes.
  *
  * Default is 'local' for backwards compatibility with existing tests.
  */
@@ -112,6 +113,15 @@ async function localPayInvoice(invoice: string, amountSat?: number): Promise<str
 
 // Blocktank backend (regtest API over HTTPS)
 
+function blocktankHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const auth = process.env.BLOCKTANK_REGTEST_AUTH;
+  if (auth) {
+    headers.Authorization = `Basic ${Buffer.from(auth).toString('base64')}`;
+  }
+  return headers;
+}
+
 async function blocktankDeposit(address: string, amountSat?: number): Promise<string> {
   requireRegtestBackend('deposit');
   const url = `${blocktankURL}/regtest/chain/deposit`;
@@ -123,7 +133,7 @@ async function blocktankDeposit(address: string, amountSat?: number): Promise<st
   console.info(`→ [blocktank] Deposit to ${address}${amountSat ? ` (${amountSat} sats)` : ''}`);
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: blocktankHeaders(),
     body: JSON.stringify(body),
   });
 
@@ -144,7 +154,7 @@ async function blocktankMineBlocks(count: number): Promise<void> {
   console.info(`→ [blocktank] Mining ${count} block(s)...`);
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: blocktankHeaders(),
     body: JSON.stringify({ count }),
   });
 
@@ -167,7 +177,7 @@ async function blocktankPayInvoice(invoice: string, amountSat?: number): Promise
   console.info(`→ [blocktank] Paying invoice...`);
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: blocktankHeaders(),
     body: JSON.stringify(body),
   });
 

@@ -316,8 +316,6 @@ npm run e2e:android -- --mochaOpts.grep "@backup" --mochaOpts.invert
 
 | Staging grep             | Specs                                                                                                                                    |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `@transfer_staging`      | `@transfer_1` and `@transfer_max` (keep those tags plus `@transfer` on the describe). `@transfer_1` is not in app `e2e-staging.yml` yet. |
-| `@multi_address_staging` | Staging multi-address (`@multi_address_2` kept for other greps)                                                                          |
 | `@pubky_staging`         | Public-payments + pubky-profile (`@pubky` / `@paykit` / `@pubky_profile` kept for other greps)                                           |
 | `@ios_nightly`           | iOS-only shard for everything off Mini (`@settings`, `@onboarding`, `@backup`, `@receive`, `@onchain_1`/`_2`, `@send_1`, `@multi_address_1`, …). Does not queue the Mini. Local-LND specs (`@send_3`, `@multi_address_4`) stay on `@ios_gate`. |
 | `@hardware_wallet`       | Android staging only — do not add `@hardware_wallet_staging` (iOS Mini greps `@ios_gate` on this describe)                                |

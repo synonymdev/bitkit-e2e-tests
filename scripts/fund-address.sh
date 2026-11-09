@@ -11,6 +11,9 @@
 #   ./scripts/fund-address.sh bitcoin:bcrt1q...            # BIP21 URI (strips prefix)
 #   ./scripts/fund-address.sh "bitcoin:bcrt1q...?amount=0.001"  # BIP21 URI with params
 #
+# Environment:
+#   BLOCKTANK_REGTEST_AUTH → user:password, required by staging
+#
 
 set -e
 
@@ -36,7 +39,7 @@ else
   echo "→ Depositing to ${ADDRESS} (default amount)..."
 fi
 
-RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$ENDPOINT" \
+RESPONSE=$(curl -s -w "\n%{http_code}" ${BLOCKTANK_REGTEST_AUTH:+-u "$BLOCKTANK_REGTEST_AUTH"} -X POST "$ENDPOINT" \
   -H "Content-Type: application/json" \
   -d "$BODY")
 
