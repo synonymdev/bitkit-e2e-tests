@@ -1354,23 +1354,6 @@ export async function transferSavingsToSpending({
   await sleep(2000);
 }
 
-export async function transferSpendingToSavings() {
-  await tap('ActivitySpending');
-  await tap('TransferToSavings');
-  await sleep(800);
-  await tap('SavingsIntro-button');
-  await tap('AvailabilityContinue');
-  await sleep(1000);
-  await dragOnElement('GRAB', 'right', 0.95);
-  await elementById('TransferSuccess-button').waitForDisplayed();
-  await tap('TransferSuccess-button');
-
-  await sleep(1000);
-  await expectSavingsBalance(0, { condition: 'gt' });
-  await expectSpendingBalance(0);
-  await expectTotalBalance(await getSavingsBalance());
-}
-
 export async function getReceiveAddress(which: addressType = 'bitcoin'): Promise<string> {
   await tap('Receive');
   await sleep(500);
@@ -1790,8 +1773,16 @@ async function triggerTimedSheetUnlessPresent(
 
   await doTriggerTimedSheet();
 
-  // Move to Spark outranks the other timed sheets, so the trigger can surface it instead of sheetId.
-  if (await dismissMoveToSparkIntroIfShown({ timeout: 3_000 })) {
+  // Move to Spark outranks the other timed sheets, so the trigger can surface it instead of sheetId. Wait for
+  // whichever shows first, so a run where sheetId shows does not also wait out the intro.
+  await browser
+    .waitUntil(
+      async () =>
+        (await isTestIdDisplayed(sheetId)) || (await isTestIdDisplayed('MoveToSparkIntroLater')),
+      { timeout: 3_000 }
+    )
+    .catch(() => undefined);
+  if (await dismissMoveToSparkIntroIfShown()) {
     await awaitSheetAfterMoveToSpark(sheetId);
   }
 }
@@ -1963,27 +1954,6 @@ export async function tryDismissQuickPayIntroIfVisible({
     }
     return false;
   }
-}
-
-/**
- * Dismisses the Background Payments timed sheet if it is already visible.
- * Does nothing if the sheet is not showing. After a Blocktank transfer the
- * sheet can cover HeaderMenu / Settings (iOS #741 @transfer_1).
- */
-export async function tryDismissBackgroundPaymentsIfVisible(): Promise<boolean> {
-  const testId = driver.isAndroid
-    ? 'BackgroundPaymentsIntro-later'
-    : 'BackgroundPaymentsDescription';
-  const isVisible = await elementById(testId)
-    .isDisplayed()
-    .catch(() => false);
-  if (!isVisible) {
-    return false;
-  }
-
-  console.info('→ Background Payments sheet visible, dismissing...');
-  await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: false });
-  return true;
 }
 
 /**

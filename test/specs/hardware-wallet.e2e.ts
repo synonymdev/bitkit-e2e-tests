@@ -24,9 +24,8 @@ import {
   sendOnchainFromHardwareWallet,
   startHardwareWalletFlowFromSuggestion,
   stopTrezorEmulator,
-  transferHardwareWalletToSpending,
 } from '../helpers/hardware-wallet';
-import { ensureLocalFunds, getBackend, getExternalAddress } from '../helpers/regtest';
+import { ensureLocalFunds, getExternalAddress } from '../helpers/regtest';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 
@@ -88,28 +87,6 @@ describe('@hardware_wallet @ios_gate - Hardware Wallet', () => {
     await expectHardwareWalletBalance(sats);
     await expectSavingsBalance(sats);
     await expectSpendingBalance(0);
-  });
-
-  // Blocktank staging no longer creates orders (synonymdev/blocktank-lsp-http#168)
-  ciIt.skip('@hardware_wallet_3 - Can transfer hardware wallet funds to spending', async () => {
-    const fundingSats = 100_000;
-    const transferSats = 20_000;
-
-    await connectHardwareWalletFromSettings(walletLabel);
-    await fundHardwareWalletAndAcknowledge({ sats: fundingSats });
-    await expectHardwareWalletBalance(fundingSats);
-    await transferHardwareWalletToSpending({
-      amountSats: transferSats,
-      waitForSync: async () => {
-        await electrum?.waitForSync();
-      },
-    });
-    await doNavigationClose();
-    await expectHardwareWalletBalance(fundingSats, { condition: 'lt' });
-    if (getBackend() === 'regtest') {
-      // We only check balance on staging regtest backend, local does not have Blocktank.
-      await expectSpendingBalance(0, { condition: 'gt', timeout: 60_000 });
-    }
   });
 
   ciIt('@hardware_wallet_4 - Can send onchain from hardware wallet', async () => {
