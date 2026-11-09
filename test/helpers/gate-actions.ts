@@ -121,7 +121,12 @@ export async function enterGateAmount(amountSats: number, toast?: string) {
 
 /** Commit the transaction once; a failed observation must never submit it again. */
 export async function confirmGateAction(outcome: Outcome) {
-  await actAndExpect('confirm gate action', () => dragOnElement('GRAB', 'right', 0.95), outcome);
+  const confirm = () =>
+    actAndExpect('confirm gate action', () => dragOnElement('GRAB', 'right', 0.95), outcome);
+  if (driver.isIOS && outcome.appeared?.length) {
+    await elementById('GRAB').waitForDisplayed({ timeout: 30_000 });
+    await withIosTransientFeedback(confirm);
+  } else await confirm();
 }
 
 export async function rejectGateContinue(toast: string) {
@@ -139,6 +144,11 @@ export async function authenticateGateLnurl() {
   }
   // Establish that the auth screen is ready under the original settings first.
   await elementById(target.id).waitForDisplayed({ timeout: 30_000 });
+  await withIosTransientFeedback(() => tapAndExpect(target, outcome));
+}
+
+/** Include native action response time in the short-feedback observation window. */
+async function withIosTransientFeedback(operation: () => Promise<void>) {
   const settings = await driver.getSettings();
   const previous = {
     waitForIdleTimeout: settings.waitForIdleTimeout,
@@ -146,7 +156,7 @@ export async function authenticateGateLnurl() {
   };
   for (const [name, value] of Object.entries(previous)) {
     if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
-      throw new Error(`Cannot observe LNURL auth without a restorable ${name}`);
+      throw new Error(`Cannot observe iOS transient feedback without a restorable ${name}`);
     }
   }
   let failed = false;
@@ -155,13 +165,18 @@ export async function authenticateGateLnurl() {
   let restoreFailure: unknown;
   try {
     await driver.updateSettings({ waitForIdleTimeout: 0, animationCoolOffTimeout: 0 });
-    await tapAndExpect(target, outcome);
+    console.info('[iOS transient settings]', {
+      before: previous,
+      during: { waitForIdleTimeout: 0, animationCoolOffTimeout: 0 },
+    });
+    await operation();
   } catch (error) {
     failed = true;
     failure = error;
   } finally {
     try {
       await driver.updateSettings(previous);
+      console.info('[iOS transient settings restored]', previous);
     } catch (error) {
       restoreFailed = true;
       restoreFailure = error;
@@ -171,7 +186,7 @@ export async function authenticateGateLnurl() {
     if (failed) {
       throw new AggregateError(
         [failure, restoreFailure],
-        'LNURL auth and settings restore failed',
+        'iOS transient action and settings restore failed',
         {
           cause: failure,
         }

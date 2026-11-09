@@ -1,5 +1,6 @@
+import { editGateLightningInvoice } from '../helpers/receive-invoice';
 import { enterGateAddress, confirmGateAction } from '../helpers/gate-actions';
-import { tapAndExpect, typeAndExpect } from '../helpers/outcome';
+import { tapAndExpect, typeAndExpect, tapStationaryAndExpect } from '../helpers/outcome';
 import initElectrum from '../helpers/electrum';
 import {
   completeOnboarding,
@@ -114,7 +115,7 @@ describe('@lightning @ios_gate - Lightning', () => {
 
     console.info('receive 111 sats from LND, (edited invoice with amt=111, note and tag)');
     await tapAndExpect({ id: 'Receive' }, { anyVisible: [{ id: 'SpecifyInvoiceButton' }] });
-    await tapAndExpect({ id: 'SpecifyInvoiceButton' }, { anyVisible: [{ id: 'ReceiveNumberPadTextField' }] });
+    await editGateLightningInvoice(receive);
     await tapAndExpect({ id: 'ReceiveNumberPadTextField' }, { anyVisible: [{ id: 'N1' }] });
 
     await multiTap('N1', 3);
@@ -230,7 +231,7 @@ describe('@lightning @ios_gate - Lightning', () => {
     // filter by receive tag
     await tap('Tab-all');
     await tap('TagsPrompt');
-    await tapAndExpect(
+    await tapStationaryAndExpect(
       { id: 'Tag-rtag' },
       { all: [{ textWithin: { id: 'Activity-1', text: '+', strategy: 'contains' } }] }
     );
@@ -240,7 +241,7 @@ describe('@lightning @ios_gate - Lightning', () => {
 
     // filter by send tag
     await tap('TagsPrompt');
-    await tapAndExpect(
+    await tapStationaryAndExpect(
       { id: 'Tag-stag' },
       { all: [{ textWithin: { id: 'Activity-1', text: '-', strategy: 'contains' } }] }
     );
@@ -285,8 +286,14 @@ describe('@lightning @ios_gate - Lightning', () => {
     await elementById('IsUsableYes').waitForDisplayed();
 
     // close channel
-    await tapAndExpect({ id: 'CloseConnection' }, { anyVisible: [{ id: 'CloseConnectionButton' }] });
-    await tapAndExpect({ id: 'CloseConnectionButton' }, { anyVisible: [{ text: 'Transfer Initiated' }] });
+    await tapAndExpect(
+      { id: 'CloseConnection' },
+      { anyVisible: [{ id: 'CloseConnectionButton' }] }
+    );
+    await tapAndExpect(
+      { id: 'CloseConnectionButton' },
+      { anyVisible: [{ text: 'Transfer Initiated' }] }
+    );
     await elementByText('Transfer Initiated').waitForDisplayed();
     await elementByText('Transfer Initiated').waitForDisplayed({ reverse: true });
 

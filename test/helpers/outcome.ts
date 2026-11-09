@@ -288,6 +288,42 @@ export async function tapAndExpect(target: VisibleTarget, outcome: Outcome) {
   );
 }
 
+/** A tag can be visible before its sheet finishes entering the touch position. */
+export async function tapStationaryAndExpect(target: VisibleTarget, outcome: Outcome) {
+  if (!driver.isAndroid) return tapAndExpect(target, outcome);
+  await actAndExpect(
+    `tap stationary ${label(target)}`,
+    async () => {
+      let previous = '';
+      let ready: { click(): Promise<void> } | undefined;
+      await browser.waitUntil(
+        async () => {
+          const last = previous;
+          previous = '';
+          ready = undefined;
+          const current = await element(target);
+          if (!(await current.isDisplayed()) || !(await current.isEnabled())) return false;
+          const location = await current.getLocation();
+          const size = await current.getSize();
+          if (size.width <= 0 || size.height <= 0) return false;
+          previous = JSON.stringify({ id: current.elementId, location, size });
+          if (previous !== last) return false;
+          ready = current;
+          return true;
+        },
+        {
+          timeout: outcome.timeout ?? 30_000,
+          interval: 200,
+          timeoutMsg: `${label(target)} did not become enabled and stationary`,
+        }
+      );
+      if (!ready) throw new Error(`${label(target)} readiness was not established`);
+      await ready.click();
+    },
+    outcome
+  );
+}
+
 /** Observe a state without retaining an element handle across polls. */
 export async function waitAndExpect(outcome: Outcome) {
   await actAndExpect('wait for outcome', async () => {}, outcome);

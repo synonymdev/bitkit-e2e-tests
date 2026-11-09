@@ -46,3 +46,26 @@ because the workflow uses `continue-on-error` and retries only cases that have n
 Local Xcode 26.0.1 / iOS 26.0 differs from CI's iOS 26.5 environment; local versus CI wall time
 is not a controlled speed measurement. This migration also standardizes waits to 30 seconds,
 so any change in reliability cannot be attributed solely to action/outcome structure.
+
+## Boost and Lightning follow-up
+
+iOS transient confirmations share LNURL's scoped XCTest settings: the existing idle and
+animation timeouts are saved, bypassed around the single confirm gesture and required toast
+observation, then restored exactly, including failure paths. Persistent confirmations and
+Android gestures retain their existing policy. A replacement notification can interrupt the
+Boost success toast; observing a successful transaction alone never substitutes for that toast.
+
+Android Lightning1 waits for a generated Lightning QR different from the invoice already paid,
+paired with an enabled Edit control in the same visible pager page. Two matching fresh samples
+include the URI, native identities and geometry, so same-position subtree replacement resets
+readiness. The two activity-filter tag selections similarly await stationary enabled targets.
+Each interaction executes once; a missing destination still fails. Existing invoice, balance,
+tag, history, restore and channel assertions remain intact. UI waits remain 30 seconds.
+
+Android RBF has a separate activity publication race. The original activity receives the new
+fee and Boosting state before the replacement activity is published. A test can therefore open
+the original TXID and remain on its Removed from Mempool detail. The home row exposes an index,
+not transaction identity; fee, icon and geometry cannot reliably distinguish the replacement.
+This follow-up does not claim to fix that native/test observability gap or replace the existing
+Boosted/status/fee/TXID assertions with a delay. Retain first failures and distinguish successful
+targeted reruns from evidence of a durable reliability improvement.
