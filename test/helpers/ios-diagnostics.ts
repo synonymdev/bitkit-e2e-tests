@@ -26,6 +26,17 @@ export function createIOSDiagnostics({
       return await operation();
     } catch (error) {
       console.warn(`[diagnostics] ${label}: ${String(error)}`);
+      try {
+        if (active) {
+          fs.mkdirSync(active.dir, { recursive: true });
+          fs.appendFileSync(
+            path.join(active.dir, 'collection-errors.log'),
+            `${new Date().toISOString()} ${label}: ${String(error)}\n`
+          );
+        }
+      } catch {
+        /* Artifact storage may also be unavailable. Preserve the original failure. */
+      }
       return undefined;
     }
   };
@@ -147,7 +158,12 @@ async function appiumCommand(method: string, endpoint: string, body?: unknown): 
     signal: AbortSignal.timeout(endpoint.includes('recording') ? 30_000 : 10_000),
   });
   const result = (await response.json()) as { value: unknown };
-  if (!response.ok) throw new Error(`Appium ${endpoint}: HTTP ${response.status}`);
+  if (!response.ok) {
+    const value = result.value as { error?: string; message?: string } | undefined;
+    throw new Error(
+      `Appium ${endpoint}: HTTP ${response.status} ${value?.error ?? ''} ${String(value?.message ?? '').slice(0, 1000)}`
+    );
+  }
   return result.value;
 }
 

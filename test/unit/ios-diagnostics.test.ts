@@ -95,6 +95,10 @@ test('failed media collection cannot replace original failure or prevent native 
     );
     assert.equal(f.snapshots.length, 1);
     assert.match(
+      fs.readFileSync(path.join(f.snapshots[0].dir, '../collection-errors.log'), 'utf8'),
+      /Appium unavailable/
+    );
+    assert.match(
       fs.readFileSync(path.join(f.snapshots[0].dir, 'failure.json'), 'utf8'),
       /original failure/
     );
