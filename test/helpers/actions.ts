@@ -596,6 +596,7 @@ export async function swipeFullScreen(
     upEndYPercent = 0.2,
     durationMs = 200,
     pauseMs = 50,
+    settleMs = 500,
   }: {
     downStartYPercent?: number;
     downEndYPercent?: number;
@@ -603,6 +604,7 @@ export async function swipeFullScreen(
     upEndYPercent?: number;
     durationMs?: number;
     pauseMs?: number;
+    settleMs?: number;
   } = {}
 ) {
   const { width, height } = await driver.getWindowSize();
@@ -646,7 +648,7 @@ export async function swipeFullScreen(
     },
   ]);
   await driver.releaseActions();
-  await sleep(500); // Allow time for the swipe to complete
+  if (settleMs > 0) await sleep(settleMs);
 }
 
 async function elementRect(el: ChainablePromiseElement) {
