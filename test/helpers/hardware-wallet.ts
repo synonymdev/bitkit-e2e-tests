@@ -321,7 +321,10 @@ export async function sendOnchainFromHardwareWallet({
   await selectSendFundingSource(walletLabel);
   await enterAmount(amountSats);
   await elementById('ContinueAmount').waitForEnabled({ timeout: 30_000 });
-  await tapAndExpect({ id: 'ContinueAmount' }, { anyVisible: [{ id: 'GRAB' }] });
+  await tapAndExpect(
+    { id: 'ContinueAmount' },
+    { anyVisible: [{ id: 'GRAB' }], timeout: 120_000 }
+  );
   await elementById('GRAB').waitForDisplayed({ timeout: 120_000 });
   if (tag) {
     await addSendTag(tag);
