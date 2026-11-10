@@ -258,7 +258,16 @@ async function getHardwareReceiveAddress(): Promise<string> {
   });
   const tabId = await displayedHardwareReceiveTabId();
   if (!tabId) throw new Error('Hardware receive tab disappeared');
-  await tapAndExpect({ id: tabId }, { anyVisible: [{ id: 'QRCode' }] });
+  await selectHardwareReceiveTab(tabId, defaultTabAddress);
+
+  return getAddressFromQRCode('bitcoin');
+}
+
+/** The default tab already has a QR: require a different address after one tab click. */
+export async function selectHardwareReceiveTab(tabId: string, defaultTabAddress: string) {
+  const tab = elementById(tabId);
+  await tab.waitForDisplayed({ timeout: 30_000 });
+  await tab.click();
   await browser.waitUntil(
     async () => {
       try {
@@ -274,12 +283,12 @@ async function getHardwareReceiveAddress(): Promise<string> {
       timeoutMsg: 'Timed out waiting for hardware receive address',
     }
   );
-
-  return getAddressFromQRCode('bitcoin');
 }
 
 async function peekQrOnchainAddress(): Promise<string> {
-  const uri = (await getAccessibleText(elementById('QRCode'))).trim();
+  const qr = elementById('QRCode');
+  if (!(await qr.isDisplayed())) return '';
+  const uri = (await getAccessibleText(qr)).trim();
   return uri.replace(/^bitcoin:/i, '').replace(/\?.*$/, '');
 }
 
