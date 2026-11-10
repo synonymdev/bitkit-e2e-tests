@@ -1,6 +1,6 @@
 # Action/outcome iOS gate migration
 
-This branch is stacked on the shared selector helpers in #296. It migrates the existing thirteen
+Foundation #296 is merged into `main`. This branch migrates the existing thirteen
 active `@ios_gate` cases; it does not enable OCR or change the app.
 
 The local experiment harness and comparison reports are preserved at their
@@ -76,13 +76,16 @@ targeted reruns from evidence of a durable reliability improvement.
 
 ## Integration after updating the stack
 
-The stack includes E2E main `265a050`, retaining its late-introduction recovery, authenticated
-regtest helpers and removal of obsolete skipped Blocktank cases. All thirteen active iOS gate
-cases remain. Foundation #296 stays below this migration; merge it first, then retarget #298 to `main`.
+Foundation #296 merged as `3bb0130`; #298 now targets `main` and includes it through a signed
+forward merge. Main's late-introduction recovery, authenticated regtest helpers and removal of
+obsolete skipped Blocktank cases remain. All thirteen active iOS gate cases are retained.
+The hardware Send review outcome explicitly keeps the original 120-second GRAB wait budget;
+ordinary UI waits remain 30 seconds and actions still execute once.
 
 Android fixes #1808 and #1813 are merged. The final integration run uses app master `176430965`,
 which includes both fixes, for Send2, Boost2 and Lightning1. The complete iOS gate uses app master
-`10231d9e`. Both use local backends, 30-second ordinary UI waits and the final pinned E2E candidate.
-Record their actual results in #298; keep it draft during validation. These runs validate integration
-with current apps and do not replace the historical six-run comparison or establish a new speed
-or reliability cohort. Staging funding health is outside these local-backend runs.
+`10231d9e`. Both executions used E2E `38b1255`, local backends and 30-second ordinary UI waits.
+Their actual results and current-source applicability are recorded in #298; they are historical
+executions, not new runs at the reconciled head. They do not replace the historical six-run
+comparison or establish a new speed or reliability cohort. Staging funding health is outside
+these local-backend runs.
