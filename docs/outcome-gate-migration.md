@@ -1,7 +1,11 @@
 # Action/outcome iOS gate migration
 
-This branch is stacked on the selector pilot in #296. It migrates the existing thirteen
+This branch is stacked on the shared selector helpers in #296. It migrates the existing thirteen
 active `@ios_gate` cases; it does not enable OCR or change the app.
+
+The local experiment harness and comparison reports are preserved at their
+[historical commit](https://github.com/synonymdev/bitkit-e2e-tests/tree/96d6fcabea2ad3b86c223299c2f83d057c8806d3).
+The merge payload keeps the reusable helpers and production test migration.
 
 | Cases | Coverage retained |
 | --- | --- |
@@ -74,7 +78,7 @@ targeted reruns from evidence of a durable reliability improvement.
 
 The stack includes E2E main `265a050`, retaining its late-introduction recovery, authenticated
 regtest helpers and removal of obsolete skipped Blocktank cases. All thirteen active iOS gate
-cases remain. Pilot #296 stays below this migration; merge it first, then retarget #298 to `main`.
+cases remain. Foundation #296 stays below this migration; merge it first, then retarget #298 to `main`.
 
 Android fixes #1808 and #1813 are merged. The final integration run uses app master `176430965`,
 which includes both fixes, for Send2, Boost2 and Lightning1. The complete iOS gate uses app master
