@@ -39,11 +39,17 @@ function fixture({ brokenMedia = false } = {}) {
 test('beforeEach failure retains setup video, screen, source and logs without afterTest', async () => {
   const f = fixture();
   try {
-    const context = { currentTest: { title: '@send_3', parent: { title: 'Send' } } };
-    await f.diagnostics.beforeHook({ title: 'before each' }, context, 'beforeEach');
+    const context = {
+      currentTest: { title: '@send_3', parent: { title: 'Send' } },
+      timeout: () => {},
+      test: { callback: () => {} },
+    };
+    await f.diagnostics.rootHooks.beforeEach.call(context);
+    f.diagnostics.beforeHook({}, context);
     await f.diagnostics.beforeReset();
     const original = new Error('Wallet home did not appear');
-    await f.diagnostics.afterHook({ title: 'before each' }, context, { error: original });
+    f.diagnostics.afterHook({ title: 'before each' }, context, { error: original });
+    await f.diagnostics.rootHooks.afterEach.call(context);
     assert.deepEqual(f.commands, [
       'appium/start_recording_screen',
       'screenshot',
@@ -70,14 +76,22 @@ test('setup to body keeps one recording; body failure and next case retain separ
   const f = fixture();
   try {
     const currentTest = { title: '@boost_2', parent: { title: 'Boost' } };
-    await f.diagnostics.beforeHook({}, { currentTest }, 'beforeEach');
-    await f.diagnostics.beforeTest({ title: '@boost_2', parent: 'Boost' });
+    const context = { currentTest, timeout: () => {}, test: { callback: () => {} } };
+    await f.diagnostics.rootHooks.beforeEach.call(context);
+    f.diagnostics.beforeHook({}, context);
+    f.diagnostics.beforeTest({ title: '@boost_2', parent: 'Boost' }, context);
     await f.diagnostics.beforeReset();
-    await f.diagnostics.afterTest({ error: new Error('Restore failed') });
+    f.diagnostics.afterTest({ error: new Error('Restore failed') }, context);
+    await f.diagnostics.rootHooks.afterEach.call(context);
     const failedDir = f.snapshots[1].dir;
-    await f.diagnostics.beforeHook({}, { currentTest: { title: '@send_3' } }, 'beforeEach');
+    await f.diagnostics.rootHooks.beforeEach.call({
+      currentTest: { title: '@send_3' },
+      timeout: () => {},
+      test: { callback: () => {} },
+    });
     await f.diagnostics.beforeReset();
-    await f.diagnostics.afterTest({});
+    f.diagnostics.afterTest({}, context);
+    await f.diagnostics.rootHooks.afterEach.call(context);
     assert.equal(f.commands.filter((c) => c.includes('start_recording')).length, 2);
     assert.notEqual(path.dirname(f.snapshots[0].dir), path.dirname(f.snapshots[2].dir));
     assert.ok(fs.existsSync(path.join(failedDir, 'app.log')));
@@ -89,10 +103,15 @@ test('setup to body keeps one recording; body failure and next case retain separ
 test('failed media collection cannot replace original failure or prevent native log capture', async () => {
   const f = fixture({ brokenMedia: true });
   try {
-    await f.diagnostics.beforeHook({}, { currentTest: { title: 'setup' } }, 'beforeEach');
-    await assert.doesNotReject(
-      f.diagnostics.afterHook({}, {}, { error: new Error('original failure') })
-    );
+    const context = {
+      currentTest: { title: 'setup' },
+      timeout: () => {},
+      test: { callback: () => {} },
+    };
+    await f.diagnostics.rootHooks.beforeEach.call(context);
+    f.diagnostics.beforeHook({}, context);
+    f.diagnostics.afterHook({}, context, { error: new Error('original failure') });
+    await assert.doesNotReject(f.diagnostics.rootHooks.afterEach.call(context));
     assert.equal(f.snapshots.length, 1);
     assert.match(
       fs.readFileSync(path.join(f.snapshots[0].dir, '../collection-errors.log'), 'utf8'),

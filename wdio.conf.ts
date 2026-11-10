@@ -203,6 +203,7 @@ export const config: WebdriverIO.Config = {
   mochaOpts: {
     ui: 'bdd',
     timeout: 15 * 60 * 1000, // 15 minutes
+    ...(!isAndroid ? { rootHooks: iosDiagnostics.rootHooks } : {}),
   },
 
   //
@@ -368,9 +369,9 @@ export const config: WebdriverIO.Config = {
       grantIOSCameraPermission();
     }
   },
-  beforeTest: async function (test) {
+  beforeTest: async function (test, context) {
     if (!isAndroid) {
-      await iosDiagnostics.beforeTest(test);
+      iosDiagnostics.beforeTest(test, context);
       console.log(`🧪 Start: ${test.parent} - ${test.title}`);
       return;
     }
@@ -389,8 +390,8 @@ export const config: WebdriverIO.Config = {
     console.log(`🧪 Start: ${test.parent} - ${test.title}`);
   },
 
-  afterTest: async function (test, _context, { error }) {
-    if (!isAndroid) return iosDiagnostics.afterTest({ error });
+  afterTest: async function (test, context, { error }) {
+    if (!isAndroid) return iosDiagnostics.afterTest({ error }, context);
     const saveDiagnostics = Boolean(error) || process.env.SAVE_DIAGNOSTICS === 'true';
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -422,10 +423,10 @@ export const config: WebdriverIO.Config = {
       }
     }
   },
-  beforeHook: async function (hook, context, name) {
-    if (!isAndroid) await iosDiagnostics.beforeHook(hook, context, name);
+  beforeHook: function (hook, context) {
+    if (!isAndroid) iosDiagnostics.beforeHook(hook, context);
   },
-  afterHook: async function (hook, context, result) {
-    if (!isAndroid) await iosDiagnostics.afterHook(hook, context, result);
+  afterHook: function (hook, context, result) {
+    if (!isAndroid) iosDiagnostics.afterHook(hook, context, result);
   },
 };
