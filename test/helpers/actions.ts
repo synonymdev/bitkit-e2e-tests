@@ -570,6 +570,17 @@ export async function typeText(testId: string, text: string) {
   await el.setValue(text);
 }
 
+/** Replace a populated native field without Android's clear/type race. */
+export async function replaceText(testId: string, text: string) {
+  const el = await elementById(testId);
+  await el.waitForDisplayed();
+  if (driver.isAndroid) {
+    await driver.execute('mobile: replaceElementValue', { elementId: el.elementId, text });
+  } else {
+    await typeText(testId, text);
+  }
+}
+
 export async function addSendTag(tag: string) {
   await tap('SendConfirmToggleDetails');
   await tap('TagsAddSend');

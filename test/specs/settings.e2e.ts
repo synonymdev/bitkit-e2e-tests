@@ -23,6 +23,7 @@ import { electrumHost, electrumPort, getBackend } from '../helpers/constants';
 import { launchFreshApp, reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 import { openSettings, openSupport } from '../helpers/navigation';
+import { applyRgsSetting } from '../helpers/rgs-settings';
 
 describe('@settings @ios_nightly - Settings', () => {
   before(async () => {
@@ -438,19 +439,12 @@ describe('@settings @ios_nightly - Settings', () => {
         await confirmInputOnKeyboard();
         await elementById('ConnectToHost').waitForEnabled();
       }
-      await tap('ConnectToHost');
-      await waitForToast('RgsUpdatedToast', { waitToDisappear: driver.isIOS });
+      await applyRgsSetting('ConnectToHost');
       const updatedUrl = await (await elementById('ConnectedUrl')).getText();
       await expect(updatedUrl).toBe(newUrl);
 
       // switch back to default
-      await tap('ResetToDefault');
-      // iOS applies the default immediately; Android only updates the input.
-      if (driver.isAndroid) {
-        await sleep(2000);
-        await tap('ConnectToHost');
-      }
-      await waitForToast('RgsUpdatedToast', { waitToDisappear: driver.isIOS });
+      await applyRgsSetting('ResetToDefault');
 
       const resetUrl = await (await elementById('ConnectedUrl')).getText();
       await expect(resetUrl).toBe(rgsUrl);
