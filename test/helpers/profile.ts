@@ -6,6 +6,7 @@ import {
   getAccessibleText,
   getClipboardPlaintext,
   getUriFromQRCode,
+  replaceText,
   sleep,
   swipeFullScreen,
   tap,
@@ -175,7 +176,8 @@ async function clickYesDelete() {
  */
 export async function deleteProfile() {
   await openEditProfile();
-  await swipeFullScreen('up', { upStartYPercent: 0.3 });
+  // Android's short header swipe leaves Delete below the sticky Save/Cancel footer.
+  await swipeFullScreen('up', { upStartYPercent: driver.isAndroid ? 0.7 : 0.3 });
   await sleep(500);
   await confirmYesDelete();
   // Remote Paykit cleanup can outlast the default element wait.
@@ -447,9 +449,16 @@ export async function updateMyProfile(details: ProfileDetails) {
  * adding; use {@link removeEditProfileLinkAt} / {@link removeEditProfileTag} and {@link saveEditProfile} for removals.
  */
 export async function updateProfileDetails(details: ProfileDetails) {
-  await typeText('ProfileEditName', details.name);
+  await replaceText('ProfileEditName', details.name);
+  if (driver.isAndroid) {
+    // Android exposes the name field with its uppercase visual transformation.
+    await expect(elementById('ProfileEditName')).toHaveText(details.name.toUpperCase());
+  }
   await confirmInputOnKeyboard();
-  await typeText('ProfileEditBio', details.notes);
+  await replaceText('ProfileEditBio', details.notes);
+  if (driver.isAndroid) {
+    await expect(elementById('ProfileEditBio')).toHaveText(details.notes);
+  }
   await elementByText('PUBKY').click();
 
   for (const link of details.links) {
