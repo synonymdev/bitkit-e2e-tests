@@ -6,6 +6,7 @@ import {
   elementByText,
   getAccessibleText,
   swipeFullScreen,
+  withMoveToSparkIntroRecovery,
 } from './actions';
 
 export type VisibleTarget = { id: string } | { text: string };
@@ -281,7 +282,9 @@ export async function tapAndExpect(target: VisibleTarget, outcome: Outcome) {
     `tap ${label(target)}`,
     async () => {
       const current = element(target);
-      await current.waitForDisplayed({ timeout: outcome.timeout ?? 30_000 });
+      await withMoveToSparkIntroRecovery(() =>
+        current.waitForDisplayed({ timeout: outcome.timeout ?? 30_000 })
+      );
       await current.click();
     },
     outcome
@@ -296,26 +299,28 @@ export async function tapStationaryAndExpect(target: VisibleTarget, outcome: Out
     async () => {
       let previous = '';
       let ready: { click(): Promise<void> } | undefined;
-      await browser.waitUntil(
-        async () => {
-          const last = previous;
-          previous = '';
-          ready = undefined;
-          const current = await element(target);
-          if (!(await current.isDisplayed()) || !(await current.isEnabled())) return false;
-          const location = await current.getLocation();
-          const size = await current.getSize();
-          if (size.width <= 0 || size.height <= 0) return false;
-          previous = JSON.stringify({ id: current.elementId, location, size });
-          if (previous !== last) return false;
-          ready = current;
-          return true;
-        },
-        {
-          timeout: outcome.timeout ?? 30_000,
-          interval: 200,
-          timeoutMsg: `${label(target)} did not become enabled and stationary`,
-        }
+      await withMoveToSparkIntroRecovery(() =>
+        browser.waitUntil(
+          async () => {
+            const last = previous;
+            previous = '';
+            ready = undefined;
+            const current = await element(target);
+            if (!(await current.isDisplayed()) || !(await current.isEnabled())) return false;
+            const location = await current.getLocation();
+            const size = await current.getSize();
+            if (size.width <= 0 || size.height <= 0) return false;
+            previous = JSON.stringify({ id: current.elementId, location, size });
+            if (previous !== last) return false;
+            ready = current;
+            return true;
+          },
+          {
+            timeout: outcome.timeout ?? 30_000,
+            interval: 200,
+            timeoutMsg: `${label(target)} did not become enabled and stationary`,
+          }
+        )
       );
       if (!ready) throw new Error(`${label(target)} readiness was not established`);
       await ready.click();
@@ -356,7 +361,7 @@ export async function typeAndExpect(
     `type id:${id}`,
     async () => {
       const current = elementById(id);
-      await current.waitForDisplayed();
+      await withMoveToSparkIntroRecovery(() => current.waitForDisplayed());
       await current.clearValue();
       if (verifyClear) {
         let emptySeen = false;
