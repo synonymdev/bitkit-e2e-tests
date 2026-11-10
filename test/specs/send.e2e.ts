@@ -1,12 +1,18 @@
+import { runSendValidation } from '../helpers/send-validation';
+import {
+  enterGateAddress,
+  confirmGateAction,
+  enterGateAmount,
+  continueGateRecipient,
+} from '../helpers/gate-actions';
+import { tapAndExpect } from '../helpers/outcome';
 import { encode } from 'bip21';
 
 import initElectrum from '../helpers/electrum';
 import {
   attemptRefreshOnHomeScreen,
   completeOnboarding,
-  dragOnElement,
   elementById,
-  enterAddress,
   elementByIdWithin,
   expectText,
   expectTextWithin,
@@ -15,18 +21,14 @@ import {
   sleep,
   swipeFullScreen,
   multiTap,
-  typeAddressAndVerifyContinue,
   dismissQuickPayIntro,
   doNavigationClose,
   waitForToast,
-  handleAndroidAlert,
   dismissBackgroundPaymentsTimedSheet,
   acknowledgeReceivedPayment,
   editRecipientAddress,
-  typeRecipientInput,
   tap,
   selectSendFundingSource,
-  enterAmount,
 } from '../helpers/actions';
 import { lndConfig } from '../helpers/constants';
 import { reinstallApp } from '../helpers/setup';
@@ -40,12 +42,7 @@ import {
   checkChannelStatus,
 } from '../helpers/lnd';
 import { ciIt } from '../helpers/suite';
-import {
-  ensureLocalFunds,
-  getBitcoinRpc,
-  getExternalAddress,
-  mineBlocks,
-} from '../helpers/regtest';
+import { ensureLocalFunds, getBitcoinRpc, mineBlocks } from '../helpers/regtest';
 import { openSettings } from '../helpers/navigation';
 
 describe('@send - Send', () => {
@@ -67,120 +64,7 @@ describe('@send - Send', () => {
   });
 
   ciIt('@send_1 @ios_gate - Validates payment data in the manual input', async () => {
-    await tap('Send');
-    await sleep(1000);
-    await handleAndroidAlert('permission_allow_foreground_only_button');
-    await sleep(4000);
-    await tap('RecipientManual');
-
-    // check validation for empty address
-    await elementById('AddressContinue').waitForEnabled({ reverse: true });
-
-    // check validation for invalid data
-    await typeRecipientInput('test123', { confirmKeyboard: false });
-    await waitForToast('InvalidAddressToast');
-    await elementById('AddressContinue').waitForEnabled({ reverse: true });
-
-    // check validation for invalid address (network mismatch)
-    const mainnetAddress = 'bc1qnc8at2e2navahnz7lvtl39r4dnfzxv3cc9e7ax';
-    try {
-      await typeRecipientInput(mainnetAddress, { confirmKeyboard: false });
-      await waitForToast('InvalidAddressToast');
-      await elementById('AddressContinue').waitForEnabled({ reverse: true });
-    } catch {
-      console.warn('Invalid address (network mismatch) input failed, trying again...');
-      await typeRecipientInput(mainnetAddress, { confirmKeyboard: false });
-      await waitForToast('InvalidAddressToast');
-      await elementById('AddressContinue').waitForEnabled({ reverse: true });
-    }
-
-    // check validation for address when balance is 0
-    const address = await getExternalAddress();
-    console.info({ address });
-    try {
-      await typeRecipientInput(address, { confirmKeyboard: false });
-      await waitForToast('InsufficientSavingsToast');
-      await elementById('AddressContinue').waitForEnabled({ reverse: true });
-    } catch {
-      console.warn('Insufficient savings input failed, trying again...');
-      await typeRecipientInput(address, { confirmKeyboard: false });
-      await waitForToast('InsufficientSavingsToast');
-      await elementById('AddressContinue').waitForEnabled({ reverse: true });
-    }
-
-    // check validation for expired invoice
-    const invoice =
-      'lnbcrt1pn3zpqpdqqnp4qfh2x8nyvvzq4kf8j9wcaau2chr580l93pnyrh5027l8f7qtm48h6pp5lmwkulnpze4ek4zqwfepguahcr2ma3vfhwa6uepxfd378xlldprssp5wnq34d553g50suuvfy387csx5hx6mdv8zezem6f4tky7rhezycas9qyysgqcqpcxqrrssrzjqtr7pzpunxgwjddwdqucegdphm6776xcarz60gw9gxva0rhal5ntmapyqqqqqqqqpqqqqqlgqqqqqqgq2ql9zpeakxvff9cz5rd6ssc3cngl256u8htm860qv3r28vqkwy9xe3wp0l9ms3zcqvys95yf3r34ytmegz6zynuthh5s0kh7cueunm3mspg3uwpt';
-    try {
-      await typeRecipientInput(invoice, { confirmKeyboard: false });
-      await waitForToast('ExpiredLightningToast');
-      await elementById('AddressContinue').waitForEnabled({ reverse: true });
-    } catch {
-      console.warn('Expired lightning invoice input failed, trying again...');
-      await typeRecipientInput(invoice, { confirmKeyboard: false });
-      await waitForToast('ExpiredLightningToast');
-      await elementById('AddressContinue').waitForEnabled({ reverse: true });
-    }
-
-    // Receive funds and check validation w/ balance
-    await swipeFullScreen('down');
-    const amount = 15000;
-    await receiveOnchainFunds({ sats: amount });
-
-    await tap('Send');
-    await sleep(500);
-    await tap('RecipientManual');
-
-    // check validation for address
-    const address2 = await getExternalAddress();
-    try {
-      await typeAddressAndVerifyContinue({ address: address2 });
-    } catch {
-      console.warn('Address2 input failed, trying again...');
-      await typeAddressAndVerifyContinue({ address: address2 });
-    }
-
-    // type amount over balance and verify you cannot continue
-    await tap('AddressContinue');
-    await enterAmount(amount + 1);
-    try {
-      await waitForToast('SendAmountExceededToast');
-    } catch {
-      console.warn('SendAmountExceededToast not triggered, trying again...');
-      await elementById('N1').click();
-      await waitForToast('SendAmountExceededToast');
-    }
-    await tap('NavigationBack');
-
-    // check validation for unified invoice when balance is enough (10_000 sats)
-    const unified1 = 'bitcoin:bcrt1q07x3wl76zdxvdsz3qzzkvxrjg3n6t4tz2vnsx8?amount=0.0001';
-    try {
-      await typeAddressAndVerifyContinue({ address: unified1 });
-    } catch {
-      console.warn('Unified1 input failed, trying again...');
-      await typeAddressAndVerifyContinue({ address: unified1 });
-    }
-
-    // a payable amount opens the review screen directly
-    await tap('AddressContinue');
-    const unified1ReviewAmt = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
-    await unified1ReviewAmt.waitForDisplayed();
-    await expect(unified1ReviewAmt).toHaveText('10 000');
-    // the scanned amount is fixed, so Back returns to the address screen
-    await tap('NavigationBack');
-
-    // check validation for unified invoice when balance is too low (200_000 sats)
-    const unified2 = 'bitcoin:bcrt1q07x3wl76zdxvdsz3qzzkvxrjg3n6t4tz2vnsx8?amount=0.002';
-    try {
-      await typeRecipientInput(unified2, { confirmKeyboard: false });
-      await waitForToast('InsufficientSavingsToast');
-      await elementById('AddressContinue').waitForEnabled({ reverse: true });
-    } catch {
-      console.warn('Insufficient savings (unified) input failed, trying again...');
-      await typeRecipientInput(unified2, { confirmKeyboard: false });
-      await waitForToast('InsufficientSavingsToast');
-      await elementById('AddressContinue').waitForEnabled({ reverse: true });
-    }
+    await runSendValidation();
   });
 
   ciIt('@send_2 @ios_gate - Can receive funds and send to different invoices', async () => {
@@ -229,7 +113,7 @@ describe('@send - Send', () => {
     // receive lightning funds
     // TODO: receive 50 000 instead of 10 000 after fixing https://github.com/synonymdev/bitkit-android/issues/364
     console.info('Receiving lightning funds...');
-    await sleep(2000);
+
     let receive: string;
     try {
       receive = await getReceiveAddress('lightning');
@@ -263,30 +147,22 @@ describe('@send - Send', () => {
     console.info('Trying to send ln amount over balance...');
     const { paymentRequest: invoice0 } = await lnd.addInvoice({});
     console.info({ invoice0 });
-    await enterAddress(invoice0);
-    await enterAmount(10_000 + 1);
-    try {
-      await waitForToast('SendAmountExceededToast');
-    } catch {
-      console.warn('SendAmountExceededToast not triggered, trying again...');
-      await elementById('N1').click();
-      await waitForToast('SendAmountExceededToast');
-    }
+    await enterGateAddress(invoice0);
+    await enterGateAmount(10_000 + 1, 'SendAmountExceededToast');
     await swipeFullScreen('down');
 
     // send to onchain address
     console.info('Sending to onchain address...');
     const { address: onchainAddress } = await lnd.newAddress();
     console.info({ onchainAddress });
-    await enterAddress(onchainAddress, { acceptCameraPermission: false });
+    await enterGateAddress(onchainAddress, { acceptCameraPermission: false });
     await elementById('AssetButton-savings').waitForDisplayed();
     await tap('N1');
     await multiTap('N0', 4);
-    await tap('ContinueAmount');
-    await dragOnElement('GRAB', 'right', 0.95);
+    await tapAndExpect({ id: 'ContinueAmount' }, { anyVisible: [{ id: 'GRAB' }] });
+    await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
     await elementById('SendSuccess').waitForDisplayed();
-    await sleep(500);
-    await tap('Close');
+    await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     await expect(totalBalance).not.toHaveText('110 000');
     const amtAfterOnchain = await totalBalance.getText();
     console.info({ amtAfterOnchain });
@@ -296,16 +172,15 @@ describe('@send - Send', () => {
     console.info('Sending to lightning invoice...');
     const { paymentRequest: invoice1 } = await lnd.addInvoice({});
     console.info({ invoice1 });
-    await sleep(1000);
-    await enterAddress(invoice1, { acceptCameraPermission: false });
+
+    await enterGateAddress(invoice1, { acceptCameraPermission: false });
     await elementById('AssetButton-spending').waitForDisplayed();
     await tap('N2');
     await multiTap('N0', 3);
-    await tap('ContinueAmount');
-    await dragOnElement('GRAB', 'right', 0.95);
+    await tapAndExpect({ id: 'ContinueAmount' }, { anyVisible: [{ id: 'GRAB' }] });
+    await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
     await elementById('SendSuccess').waitForDisplayed();
-    await sleep(500);
-    await tap('Close');
+    await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     await expect(totalBalance).not.toHaveText(amtAfterOnchain);
     const amtAfterLightning = await totalBalance.getText();
     console.info({ amtAfterLightning });
@@ -315,12 +190,12 @@ describe('@send - Send', () => {
     console.info('Editing invoice on review screen...');
     const { paymentRequest: invoice2 } = await lnd.addInvoice({ value: '2000' });
     console.info({ invoice2 });
-    await enterAddress(invoice2, { acceptCameraPermission: false });
+    await enterGateAddress(invoice2, { acceptCameraPermission: false });
     const reviewAmt = await elementByIdWithin('ReviewAmount-primary', 'MoneyText');
     await reviewAmt.waitForDisplayed();
     await expect(reviewAmt).toHaveText('2 000');
     await editRecipientAddress(onchainAddress);
-    await tap('AddressContinue');
+    await continueGateRecipient({ all: [{ visible: { id: 'AssetButton-savings' } }] });
     await elementById('AssetButton-savings').waitForDisplayed();
     await tap('N2');
     await multiTap('N0', 4);
@@ -337,13 +212,12 @@ describe('@send - Send', () => {
       amount: 0.00001,
     });
     console.info({ unified1 });
-    await sleep(1000);
-    await enterAddress(unified1, { acceptCameraPermission: false });
+
+    await enterGateAddress(unified1, { acceptCameraPermission: false });
     await expect(reviewAmt).toHaveText('1 000'); // invoice amount
-    await dragOnElement('GRAB', 'right', 0.95);
+    await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
     await elementById('SendSuccess').waitForDisplayed();
-    await sleep(500);
-    await tap('Close');
+    await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     await expect(totalBalance).not.toHaveText(amtAfterLightning);
     const amtAfterUnified = await totalBalance.getText();
     console.info({ amtAfterUnified });
@@ -359,22 +233,20 @@ describe('@send - Send', () => {
       amount: 0.0002,
     });
     console.info({ unified2 });
-    await sleep(1000);
-    await enterAddress(unified2, { acceptCameraPermission: false });
+
+    await enterGateAddress(unified2, { acceptCameraPermission: false });
     // lightning cannot pay it, so the onchain amount opens the review screen directly
     await reviewAmt.waitForDisplayed();
     await expect(reviewAmt).toHaveText('20 000');
-    await dragOnElement('GRAB', 'right', 0.95);
+    await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
     await elementById('SendSuccess').waitForDisplayed();
-    await sleep(500);
-    await tap('Close');
+    await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     await expect(totalBalance).not.toHaveText(amtAfterUnified);
     const amtAfterUnified2 = await totalBalance.getText();
     console.info({ amtAfterUnified2 });
     await expectTextWithin('ActivitySpending', '7 000');
 
     // send to unified invoice w/ expired invoice
-    let amtAfterUnified3: string;
     console.info('Sending to unified invoice w/ expired invoice...');
     const unified3 =
       'bitcoin:bcrt1qaytrqsrgg75rtxrtr7ur6k75la8p3v95mey48z?lightning=LNBCRT1PN33T20DQQNP4QTNTQ4D2DHDYQ420HAUQF5TS7X32TNW9WGYEPQZQ6R9G69QPHW4RXPP5QU7UYXJYJA9PJV7H6JPEYEFFNZ98N686JDEAAK8AUD5AGC5X70HQSP54V5LEFATCQDEU8TLKAF6MDK3ZLU6MWUA52J4JEMD5XA85KGKMTTQ9QYYSGQCQPCXQRRSSRZJQWU6G4HMGH26EXXQYPQD8XHVWLARA66PL53V7S9CV2EE808UGDRN4APYQQQQQQQGRCQQQQLGQQQQQQGQ2QX7F74RT5SQE0KEYCU47LYMSVY2LM4QA4KLR65PPSY55M0H4VR8AN7WVM9EFVSPYJ5R8EFGVXTGVATAGFTC372VRJ3HEPSEELFZ7FQFCQ9XDU9X';
@@ -385,19 +257,18 @@ describe('@send - Send', () => {
     // const dec = await lnd.decodePayReq({ payReq: ln });
     // console.info(JSON.stringify(dec, null, 2));
 
-    await sleep(1000);
-    await enterAddress(unified3, { acceptCameraPermission: false });
+    await enterGateAddress(unified3, { acceptCameraPermission: false });
     await elementById('AssetButton-savings').waitForDisplayed();
     await tap('N1');
     await multiTap('N0', 4);
     await tap('ContinueAmount');
     await reviewAmt.waitForDisplayed();
     await expect(reviewAmt).toHaveText('10 000');
-    await dragOnElement('GRAB', 'right', 0.95);
+    await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
     await elementById('SendSuccess').waitForDisplayed();
-    await tap('Close');
+    await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     await expect(totalBalance).not.toHaveText(amtAfterUnified2);
-    amtAfterUnified3 = await totalBalance.getText();
+    const amtAfterUnified3 = await totalBalance.getText();
     console.info({ amtAfterUnified3 });
     await expectTextWithin('ActivitySpending', '7 000');
 
@@ -406,8 +277,8 @@ describe('@send - Send', () => {
     const { paymentRequest: invoice5 } = await lnd.addInvoice({});
     const unified4 = encode(onchainAddress, { lightning: invoice5 });
     console.info({ unified4 });
-    await sleep(1000);
-    await enterAddress(unified4, { acceptCameraPermission: false });
+
+    await enterGateAddress(unified4, { acceptCameraPermission: false });
     // max amount (lightning)
     // Android shows raw `maxSendLightningSats` (7k - 1k reserve = 6k).
     // iOS subtracts an estimated routing fee which includes a hardcoded 2 sat buffer (see SendAmountView.calculateRoutingFee()).
@@ -421,10 +292,9 @@ describe('@send - Send', () => {
     await tap('ContinueAmount');
     await reviewAmt.waitForDisplayed();
     await expect(reviewAmt).toHaveText('1 000');
-    await dragOnElement('GRAB', 'right', 0.95);
+    await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
     await elementById('SendSuccess').waitForDisplayed();
-    await sleep(500);
-    await tap('Close');
+    await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     await expect(totalBalance).not.toHaveText(amtAfterUnified3);
     const amtAfterUnified4 = await totalBalance.getText();
     console.info({ amtAfterUnified4 });
@@ -434,16 +304,15 @@ describe('@send - Send', () => {
     const { paymentRequest: invoice6 } = await lnd.addInvoice({});
     const unified5 = encode(onchainAddress, { lightning: invoice6 });
     console.info({ unified5 });
-    await sleep(1000);
-    await enterAddress(unified5, { acceptCameraPermission: false });
+
+    await enterGateAddress(unified5, { acceptCameraPermission: false });
     // max amount (lightning)
-    await sleep(500);
+
     await tap('AvailableAmount');
     await tap('ContinueAmount');
     await expectText('4 998', { strategy: 'contains' });
     // expect toast about reserve balance
     await expectText('Reserve Balance');
-    await sleep(4000);
     await tap('NavigationBack');
     // max amount (onchain)
     await selectSendFundingSource('Savings');
@@ -460,11 +329,10 @@ describe('@send - Send', () => {
     await multiTap('NRemove', 6);
     await tap('N1');
     await multiTap('N0', 4);
-    await tap('ContinueAmount');
-    await dragOnElement('GRAB', 'right', 0.95);
+    await tapAndExpect({ id: 'ContinueAmount' }, { anyVisible: [{ id: 'GRAB' }] });
+    await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
     await elementById('SendSuccess').waitForDisplayed();
-    await sleep(500);
-    await tap('Close');
+    await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     await expect(totalBalance).not.toHaveText(amtAfterUnified4);
     const amtAfterUnified5 = await totalBalance.getText();
     console.info({ amtAfterUnified5 });
@@ -477,16 +345,14 @@ describe('@send - Send', () => {
     // enable quickpay
     console.info('Enabling quickpay...');
     await openSettings();
-    await tap('QuickpaySettings');
+    await tapAndExpect({ id: 'QuickpaySettings' }, { anyVisible: [{ id: 'QuickpayToggle' }] });
     // no quickpay intro as we already dismissed it after getting lightning balance
     await tap('QuickpayToggle');
     await doNavigationClose();
 
-    await sleep(1000);
-    await enterAddress(invoice7, { acceptCameraPermission: false });
+    await enterGateAddress(invoice7, { acceptCameraPermission: false });
     await elementById('SendSuccess').waitForDisplayed();
-    await sleep(500);
-    await tap('Close');
+    await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     await expect(totalBalance).not.toHaveText(amtAfterUnified5);
     const amtAfterLightning2 = await totalBalance.getText();
     console.info({ amtAfterLightning2 });
@@ -499,11 +365,10 @@ describe('@send - Send', () => {
       lightning: invoice8,
     });
     console.info({ unified7 });
-    await sleep(1000);
-    await enterAddress(unified7, { acceptCameraPermission: false });
+
+    await enterGateAddress(unified7, { acceptCameraPermission: false });
     await elementById('SendSuccess').waitForDisplayed();
-    await sleep(500);
-    await tap('Close');
+    await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     await expect(totalBalance).not.toHaveText(amtAfterLightning2);
     await expectTextWithin('ActivitySpending', '4 000');
 
@@ -523,28 +388,28 @@ describe('@send - Send', () => {
 
     const { paymentRequest: invoice9 } = await lnd.addInvoice({ value: '10000' });
     console.info({ invoice9 });
-    await sleep(1000);
-    await enterAddress(invoice9, { acceptCameraPermission: false });
+
+    await enterGateAddress(invoice9, { acceptCameraPermission: false });
     await elementById('ReviewAmount').waitForDisplayed();
     await swipeFullScreen('down');
 
     // sanity check activities displayed
-    await sleep(1000);
+
     await elementById('ActivityShort-0').waitForDisplayed();
     await elementById('ActivityShort-1').waitForDisplayed();
     await elementById('ActivityShort-2').waitForDisplayed();
-    await tap('ActivityShowAll');
+    await tapAndExpect({ id: 'ActivityShowAll' }, { all: [{ visible: { id: 'Activity-1' } }] });
     await elementById('Activity-1').waitForDisplayed();
     await elementById('Activity-2').waitForDisplayed();
     await elementById('Activity-3').waitForDisplayed();
     await doNavigationClose();
     await swipeFullScreen('down');
     await swipeFullScreen('down');
-    await tap('ActivitySavings');
+    await tapAndExpect({ id: 'ActivitySavings' }, { all: [{ visible: { id: 'Activity-1' } }] });
     await elementById('Activity-1').waitForDisplayed();
     await elementById('Activity-2').waitForDisplayed();
     await doNavigationClose();
-    await tap('ActivitySpending');
+    await tapAndExpect({ id: 'ActivitySpending' }, { all: [{ visible: { id: 'Activity-1' } }] });
     await elementById('Activity-1').waitForDisplayed();
     await elementById('Activity-2').waitForDisplayed();
   });
@@ -602,18 +467,18 @@ describe('@send - Send', () => {
     ) {
       const { paymentRequest } = await lnd.addInvoice({ valueMsat });
       console.info({ valueMsat, paymentRequest });
-      await sleep(1000);
-      await enterAddress(paymentRequest, { acceptCameraPermission });
-      await elementById('ReviewAmount-primary').waitForDisplayed({ timeout: 15_000 });
-      await dragOnElement('GRAB', 'right', 0.95);
+
+      await enterGateAddress(paymentRequest, { acceptCameraPermission });
+      await elementById('ReviewAmount-primary').waitForDisplayed({ timeout: 30_000 });
+      await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
       await elementById('SendSuccess').waitForDisplayed();
       await expectText(valueSats);
-      await tap('Close');
+      await tapAndExpect({ id: 'Close' }, { all: [{ visible: { id: 'ActivityShort-0' } }] });
       await elementById('ActivityShort-0').waitForDisplayed();
       await expectTextWithin('ActivityShort-0', '-');
       await expectTextWithin('ActivityShort-0', 'Sent');
       await expectTextWithin('ActivityShort-0', valueSats);
-      await sleep(1000);
+
       await swipeFullScreen('down');
       await swipeFullScreen('down');
     }

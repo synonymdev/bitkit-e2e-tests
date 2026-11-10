@@ -1,3 +1,5 @@
+import { waitAndExpect, actAndExpect, tapAndExpect } from '../helpers/outcome';
+import { enterGateAddress, confirmGateAction } from '../helpers/gate-actions';
 import initElectrum from '../helpers/electrum';
 import { reinstallApp } from '../helpers/setup';
 import {
@@ -24,7 +26,6 @@ import {
   expectText,
   formatSats,
   elementByText,
-  sleep,
   waitForToast,
   enterAmount,
   dismissQuickPayIntro,
@@ -123,35 +124,61 @@ describe('@multi_address - Multi address', () => {
       });
 
       const coreAddress = await getExternalAddress();
-      await enterAddress(coreAddress);
+      await enterGateAddress(coreAddress);
       await enterAmount(sendAmountSats);
       await expectText(formatSats(sendAmountSats));
-      await tap('ContinueAmount');
-      await dragOnElement('GRAB', 'right', 0.95);
-      await handleOver50PercentAlert().catch(async () => {});
+      await tapAndExpect({ id: 'ContinueAmount' }, { anyVisible: [{ id: 'GRAB' }] });
+      await actAndExpect('confirm multi-address send', async () => {
+        await dragOnElement('GRAB', 'right', 0.95);
+        await handleOver50PercentAlert().catch(async () => {});
+      }, { anyVisible: [{ id: 'SendSuccess' }] });
       await elementById('SendSuccess').waitForDisplayed();
-      await tap('Close');
+      await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
 
       await expectTextWithin('ActivityShort-0', 'Sent');
-      await tap('ActivityShort-0');
+      await tapAndExpect(
+        { id: 'ActivityShort-0' },
+        {
+          all: [
+            {
+              textWithin: {
+                id: 'ActivityAmount',
+                text: formatSats(sendAmountSats),
+                strategy: 'contains',
+              },
+            },
+          ],
+        }
+      );
       await expectTextWithin('ActivityAmount', formatSats(sendAmountSats));
       const oldFee = await (await elementByIdWithin('ActivityFee', 'MoneyText')).getText();
       await tap('ActivityTxDetails');
       const oldTxId = await getTextUnder('TXID');
       await tap('NavigationBack');
-
-      await tap('BoostButton');
+      await tapAndExpect({ id: 'BoostButton' }, { all: [{ visible: { id: 'RBFBoost' } }] });
       await elementById('RBFBoost').waitForDisplayed();
       await tap('CustomFeeButton');
       await tap('Plus');
       await tap('Minus');
       await tap('RecommendedFeeButton');
-      await dragOnElement('GRAB', 'right', 0.95);
-      await waitForToast('BoostSuccessToast');
+      await confirmGateAction({ appeared: [{ id: 'BoostSuccessToast' }] });
+      await waitAndExpect({ all: [{ hidden: { id: 'BoostSuccessToast' } }] });
 
-      await sleep(1000);
       await elementById('ActivityShort-0').waitForDisplayed();
-      await tap('ActivityShort-0');
+      await tapAndExpect(
+        { id: 'ActivityShort-0' },
+        {
+          all: [
+            {
+              textWithin: {
+                id: 'ActivityAmount',
+                text: formatSats(sendAmountSats),
+                strategy: 'contains',
+              },
+            },
+          ],
+        }
+      );
       await expectTextWithin('ActivityAmount', formatSats(sendAmountSats));
       const newFee = await (await elementByIdWithin('ActivityFee', 'MoneyText')).getText();
       await tap('ActivityTxDetails');
@@ -161,7 +188,6 @@ describe('@multi_address - Multi address', () => {
       await elementById('RBFBoosted').waitForDisplayed();
       await doNavigationClose();
 
-      await sleep(1000);
       await swipeFullScreen('down');
       await swipeFullScreen('down');
 
@@ -172,9 +198,8 @@ describe('@multi_address - Multi address', () => {
 
       // verify change is in taproot address
       await openSettings('advanced');
-      await sleep(1000);
       await tap('AddressViewer');
-      await sleep(1000);
+
       await elementByText('Taproot').click();
       await elementByText('Change Addresses').click();
       await expectText(formatSats(remainingTotal));
@@ -200,13 +225,12 @@ describe('@multi_address - Multi address', () => {
       const ldkNodeId = await getLDKNodeID();
       await connectToLND(lndNodeID, { navigationClose: false });
       await waitForPeerConnection(lnd, ldkNodeId);
+      await tapAndExpect({ id: 'ExternalAmountMax' }, { all: [{ enabled: { id: 'ExternalAmountContinue', value: true } }] });
 
-      await tap('ExternalAmountMax');
-      await sleep(1000);
       const channelSize = await getAmountUnder('ExternalAmountNumberField');
-      await tap('ExternalAmountContinue');
-      await sleep(1000);
-      await dragOnElement('GRAB', 'right', 0.95);
+      await tapAndExpect({ id: 'ExternalAmountContinue' }, { anyVisible: [{ id: 'GRAB' }] });
+
+      await confirmGateAction({ anyVisible: [{ id: 'ExternalSuccess' }] });
       await acknowledgeExternalSuccess();
 
       await mineBlocks(6);
@@ -222,9 +246,8 @@ describe('@multi_address - Multi address', () => {
       await expectSavingsBalance(satsPerAddressType, { condition: 'gte' });
 
       await openSettings('advanced');
-      await sleep(1000);
       await tap('AddressViewer');
-      await sleep(1000);
+
       await elementByText('Legacy').click();
       await expectText(formatSats(satsPerAddressType));
       await doNavigationClose();

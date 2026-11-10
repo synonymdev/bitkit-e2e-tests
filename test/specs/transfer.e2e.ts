@@ -1,17 +1,16 @@
+import { enterGateAddress, confirmGateAction } from '../helpers/gate-actions';
+import { tapAndExpect } from '../helpers/outcome';
 import initElectrum from '../helpers/electrum';
 import {
   completeOnboarding,
-  sleep,
   receiveOnchainFunds,
   tap,
   expectText,
   elementById,
   multiTap,
-  dragOnElement,
   expectTextWithin,
   swipeFullScreen,
   elementByIdWithin,
-  enterAddress,
   dismissQuickPayIntro,
   waitForToast,
   acknowledgeExternalSuccess,
@@ -71,13 +70,12 @@ describe('@transfer - Transfer', () => {
 
     // Set amount
     await enterAmount(20000);
-    await tap('ExternalAmountContinue');
-    await sleep(500);
+    await tapAndExpect({ id: 'ExternalAmountContinue' }, { anyVisible: [{ id: 'GRAB' }] });
 
     // Swipe to confirm
-    await dragOnElement('GRAB', 'right', 0.95);
+    await confirmGateAction({ anyVisible: [{ id: 'ExternalSuccess' }] });
     console.info('channel opening...');
-    await sleep(1000);
+
     await acknowledgeExternalSuccess();
 
     // check transfer card
@@ -86,7 +84,6 @@ describe('@transfer - Transfer', () => {
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     const totalAmtAfterChannelOpen = await totalBalance.getText();
     await expect(totalBalance).not.toHaveText('100 000');
-    await sleep(2500);
 
     // check activity
     await elementById('ActivityShort-0').waitForDisplayed();
@@ -99,7 +96,6 @@ describe('@transfer - Transfer', () => {
     await mineBlocks(6);
     await electrum?.waitForSync();
     await waitForToast('SpendingBalanceReadyToast');
-    await sleep(1000);
 
     await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });
     await dismissQuickPayIntro({ triggerTimedSheet: true });
@@ -117,25 +113,24 @@ describe('@transfer - Transfer', () => {
     const { paymentRequest } = await lnd.addInvoice({ memo: 'zero' });
 
     // send payment
-    await sleep(1000);
-    await enterAddress(paymentRequest);
+
+    await enterGateAddress(paymentRequest);
     await multiTap('N1', 3);
-    await tap('ContinueAmount');
-    await dragOnElement('GRAB', 'right', 0.95); // Swipe to confirm
+    await tapAndExpect({ id: 'ContinueAmount' }, { anyVisible: [{ id: 'GRAB' }] });
+    await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
     await elementById('SendSuccess').waitForDisplayed();
-    await tap('Close');
+    await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     await expect(totalBalance).not.toHaveText(totalAmtAfterChannelOpen);
 
     // close the channel
-    await tap('ActivitySpending');
+    await tapAndExpect({ id: 'ActivitySpending' }, { anyVisible: [{ id: 'Activity-1' }] });
     await tap('TransferToSavings');
     await tap('SavingsIntro-button');
-    await tap('AvailabilityContinue');
-    await sleep(1000);
-    await dragOnElement('GRAB', 'right', 0.95);
+    await tapAndExpect({ id: 'AvailabilityContinue' }, { anyVisible: [{ id: 'GRAB' }] });
+
+    await confirmGateAction({ anyVisible: [{ id: 'TransferSuccess' }] });
     await elementById('TransferSuccess').waitForDisplayed();
     await tap('TransferSuccess-button');
-    await sleep(1000);
 
     // check channel is closed
     await openSettings('advanced');

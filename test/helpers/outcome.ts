@@ -14,7 +14,7 @@ export type Condition =
   | { hidden: VisibleTarget }
   | { enabled: { id: string; value: boolean } }
   | { inputValue: { id: string; value: string } }
-  | { textWithin: { id: string; text: string } }
+  | { textWithin: { id: string; text: string; strategy?: 'exact' | 'contains' } }
   | { keyboardShown: boolean };
 export type Outcome = {
   anyVisible?: VisibleTarget[];
@@ -66,11 +66,16 @@ async function observe(condition: Condition): Promise<{ actual: unknown; passed:
   }
   const text = condition.textWithin.text;
   const actual = await getAccessibleText(parent);
-  if (actual === text) return { actual, passed: true };
+  const contains = condition.textWithin.strategy === 'contains';
+  if (contains ? actual.includes(text) : actual === text) return { actual, passed: true };
   const literal = xpathLiteral(text);
   const child = driver.isAndroid
-    ? parent.$(`.//*[@text=${literal}]`)
-    : parent.$(`.//*[@label=${literal} or @value=${literal}]`);
+    ? parent.$(contains ? `.//*[contains(@text,${literal})]` : `.//*[@text=${literal}]`)
+    : parent.$(
+        contains
+          ? `.//*[contains(@label,${literal}) or contains(@value,${literal})]`
+          : `.//*[@label=${literal} or @value=${literal}]`
+      );
   const found = await child.isDisplayed();
   return { actual: found ? text : actual, passed: found };
 }
@@ -113,7 +118,7 @@ async function withObservationIdleTimeout(
 }
 
 /** Execute once, then poll only observations. Never retry an action with side effects. */
-async function actAndExpect(
+export async function actAndExpect(
   name: string,
   action: () => Promise<void>,
   outcome: Outcome,
@@ -283,6 +288,42 @@ export async function tapAndExpect(target: VisibleTarget, outcome: Outcome) {
   );
 }
 
+/** A tag can be visible before its sheet finishes entering the touch position. */
+export async function tapStationaryAndExpect(target: VisibleTarget, outcome: Outcome) {
+  if (!driver.isAndroid) return tapAndExpect(target, outcome);
+  await actAndExpect(
+    `tap stationary ${label(target)}`,
+    async () => {
+      let previous = '';
+      let ready: { click(): Promise<void> } | undefined;
+      await browser.waitUntil(
+        async () => {
+          const last = previous;
+          previous = '';
+          ready = undefined;
+          const current = await element(target);
+          if (!(await current.isDisplayed()) || !(await current.isEnabled())) return false;
+          const location = await current.getLocation();
+          const size = await current.getSize();
+          if (size.width <= 0 || size.height <= 0) return false;
+          previous = JSON.stringify({ id: current.elementId, location, size });
+          if (previous !== last) return false;
+          ready = current;
+          return true;
+        },
+        {
+          timeout: outcome.timeout ?? 30_000,
+          interval: 200,
+          timeoutMsg: `${label(target)} did not become enabled and stationary`,
+        }
+      );
+      if (!ready) throw new Error(`${label(target)} readiness was not established`);
+      await ready.click();
+    },
+    outcome
+  );
+}
+
 /** Observe a state without retaining an element handle across polls. */
 export async function waitAndExpect(outcome: Outcome) {
   await actAndExpect('wait for outcome', async () => {}, outcome);
@@ -338,7 +379,7 @@ export async function typeAndExpect(
             return stable;
           },
           {
-            timeout: 5000,
+            timeout: outcome.timeout ?? 30_000,
             interval: 200,
             timeoutMsg: `${id}: input did not clear; replacement not typed`,
           }
