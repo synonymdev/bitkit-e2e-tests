@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { sleep } from './actions';
 import { getAppId, getAppPath } from './constants';
+import { iosDiagnostics } from './ios-diagnostics';
 
 function getIosSimulatorUdidForSimctl(): string {
   try {
@@ -59,6 +60,7 @@ export async function reinstallApp() {
   const appId = getAppId();
   const appPath = getAppPath();
 
+  if (driver.isIOS) await iosDiagnostics.beforeReset();
   await driver.removeApp(appId);
   resetBootedIOSKeychain();
   await driver.installApp(appPath);
@@ -93,6 +95,7 @@ export async function reinstallAppFromPath(
   { strictKeychainReset = false }: { strictKeychainReset?: boolean } = {}
 ) {
   console.info(`→ Reinstalling app from: ${appPath}`);
+  if (driver.isIOS) await iosDiagnostics.beforeReset();
   await driver.removeApp(appId);
   resetBootedIOSKeychain({ strict: strictKeychainReset });
   await driver.installApp(appPath);

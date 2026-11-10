@@ -89,10 +89,14 @@ stream_ios_logs &
 SIM_LOG_PID=$!
 
 cleanup() {
+  local status=$?
+  python3 scripts/collect-ios-diagnostics.py --output "$ARTIFACTS_DIR/attempt-end" \
+    --udid "$SIMULATOR_UDID" --app-id "${APP_ID_IOS:-to.bitkit}" || true
   if ps -p "$SIM_LOG_PID" >/dev/null 2>&1; then
     kill "$SIM_LOG_PID" 2>/dev/null || true
     wait "$SIM_LOG_PID" 2>/dev/null || true
   fi
+  return "$status"
 }
 trap cleanup EXIT INT TERM
 
