@@ -29,6 +29,7 @@ import {
   editRecipientAddress,
   tap,
   selectSendFundingSource,
+  withMoveToSparkIntroRecovery,
 } from '../helpers/actions';
 import { lndConfig } from '../helpers/constants';
 import { reinstallApp } from '../helpers/setup';
@@ -163,8 +164,7 @@ describe('@send - Send', () => {
     await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
     await elementById('SendSuccess').waitForDisplayed();
     await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
-    await expect(totalBalance).not.toHaveText('110 000');
-    const amtAfterOnchain = await totalBalance.getText();
+    const amtAfterOnchain = await totalBalanceChangedFrom(totalBalance, '110 000');
     console.info({ amtAfterOnchain });
     await expectTextWithin('ActivitySpending', '10 000');
 
@@ -181,8 +181,7 @@ describe('@send - Send', () => {
     await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
     await elementById('SendSuccess').waitForDisplayed();
     await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
-    await expect(totalBalance).not.toHaveText(amtAfterOnchain);
-    const amtAfterLightning = await totalBalance.getText();
+    const amtAfterLightning = await totalBalanceChangedFrom(totalBalance, amtAfterOnchain);
     console.info({ amtAfterLightning });
     await expectTextWithin('ActivitySpending', '8 000');
 
@@ -218,8 +217,7 @@ describe('@send - Send', () => {
     await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
     await elementById('SendSuccess').waitForDisplayed();
     await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
-    await expect(totalBalance).not.toHaveText(amtAfterLightning);
-    const amtAfterUnified = await totalBalance.getText();
+    const amtAfterUnified = await totalBalanceChangedFrom(totalBalance, amtAfterLightning);
     console.info({ amtAfterUnified });
     await expectTextWithin('ActivitySpending', '7 000');
 
@@ -241,8 +239,7 @@ describe('@send - Send', () => {
     await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
     await elementById('SendSuccess').waitForDisplayed();
     await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
-    await expect(totalBalance).not.toHaveText(amtAfterUnified);
-    const amtAfterUnified2 = await totalBalance.getText();
+    const amtAfterUnified2 = await totalBalanceChangedFrom(totalBalance, amtAfterUnified);
     console.info({ amtAfterUnified2 });
     await expectTextWithin('ActivitySpending', '7 000');
 
@@ -267,8 +264,7 @@ describe('@send - Send', () => {
     await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
     await elementById('SendSuccess').waitForDisplayed();
     await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
-    await expect(totalBalance).not.toHaveText(amtAfterUnified2);
-    const amtAfterUnified3 = await totalBalance.getText();
+    const amtAfterUnified3 = await totalBalanceChangedFrom(totalBalance, amtAfterUnified2);
     console.info({ amtAfterUnified3 });
     await expectTextWithin('ActivitySpending', '7 000');
 
@@ -295,8 +291,7 @@ describe('@send - Send', () => {
     await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
     await elementById('SendSuccess').waitForDisplayed();
     await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
-    await expect(totalBalance).not.toHaveText(amtAfterUnified3);
-    const amtAfterUnified4 = await totalBalance.getText();
+    const amtAfterUnified4 = await totalBalanceChangedFrom(totalBalance, amtAfterUnified3);
     console.info({ amtAfterUnified4 });
     await expectTextWithin('ActivitySpending', '6 000');
 
@@ -333,8 +328,7 @@ describe('@send - Send', () => {
     await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }] });
     await elementById('SendSuccess').waitForDisplayed();
     await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
-    await expect(totalBalance).not.toHaveText(amtAfterUnified4);
-    const amtAfterUnified5 = await totalBalance.getText();
+    const amtAfterUnified5 = await totalBalanceChangedFrom(totalBalance, amtAfterUnified4);
     console.info({ amtAfterUnified5 });
     await expectTextWithin('ActivitySpending', '6 000');
 
@@ -353,8 +347,7 @@ describe('@send - Send', () => {
     await enterGateAddress(invoice7, { acceptCameraPermission: false });
     await elementById('SendSuccess').waitForDisplayed();
     await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
-    await expect(totalBalance).not.toHaveText(amtAfterUnified5);
-    const amtAfterLightning2 = await totalBalance.getText();
+    const amtAfterLightning2 = await totalBalanceChangedFrom(totalBalance, amtAfterUnified5);
     console.info({ amtAfterLightning2 });
     await expectTextWithin('ActivitySpending', '5 000');
 
@@ -369,7 +362,9 @@ describe('@send - Send', () => {
     await enterGateAddress(unified7, { acceptCameraPermission: false });
     await elementById('SendSuccess').waitForDisplayed();
     await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
-    await expect(totalBalance).not.toHaveText(amtAfterLightning2);
+    await withMoveToSparkIntroRecovery(async () => {
+      await expect(totalBalance).not.toHaveText(amtAfterLightning2);
+    });
     await expectTextWithin('ActivitySpending', '4 000');
 
     // send to lightning invoice w/ amount (skip quickpay for large amounts)
@@ -491,3 +486,14 @@ describe('@send - Send', () => {
     await payMsatInvoice('500500', '501', false);
   });
 });
+
+/** Reads the total balance once it moved off `previous`; the Move to Spark intro can cover home right after Close. */
+async function totalBalanceChangedFrom(
+  totalBalance: Awaited<ReturnType<typeof elementByIdWithin>>,
+  previous: string
+): Promise<string> {
+  await withMoveToSparkIntroRecovery(async () => {
+    await expect(totalBalance).not.toHaveText(previous);
+  });
+  return withMoveToSparkIntroRecovery(() => totalBalance.getText());
+}
