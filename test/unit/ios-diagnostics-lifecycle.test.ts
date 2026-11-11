@@ -168,7 +168,7 @@ for (const mode of [
   });
 }
 
-test('the real WDIO Mocha adapter drains a setup timeout before after/session cleanup', async () => {
+test('the real WDIO adapter drains a setup timeout and continues past a skipped suite', async () => {
   const { MochaAdapter } = await import('@wdio/mocha-framework');
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ios-adapter-'));
   const spec = path.join(root, 'probe.cjs');
@@ -180,12 +180,17 @@ test('the real WDIO Mocha adapter drains a setup timeout before after/session cl
       beforeEach(async () => { await new Promise(() => {}); });
       it('body must not run', () => { throw new Error('BODY_MUST_NOT_RUN'); });
     });
+    describe.skip('adapter skipped suite', () => {
+      it('stays skipped', () => { throw new Error('SKIPPED_BODY_MUST_NOT_RUN'); });
+    });
     describe('adapter next suite', () => {
       it('passes', async () => {});
     });
   `
   );
   let stopped = false;
+  let stoppedBeforeAfter = false;
+  let nextCasePassed = false;
   const diagnostics = createIOSDiagnostics({
     root,
     recordVideo: true,
@@ -206,12 +211,20 @@ test('the real WDIO Mocha adapter drains a setup timeout before after/session cl
     afterHook: diagnostics.afterHook,
     afterTest: (_test: unknown, context: any, result: any) =>
       diagnostics.afterTest(result, context),
-    after: () => assert.ok(stopped, 'session cleanup must wait for recording'),
+    after: () => {
+      stoppedBeforeAfter = stopped;
+    },
   } as unknown as ConstructorParameters<typeof MochaAdapter>[1];
   try {
-    const adapter = new MochaAdapter('0-0', config, [spec], {}, new EventEmitter());
+    const reporter = new EventEmitter();
+    reporter.on('test:pass', (result: { title: string }) => {
+      if (result.title === 'passes') nextCasePassed = true;
+    });
+    const adapter = new MochaAdapter('0-0', config, [spec], {}, reporter);
     await adapter.init();
     assert.equal(await adapter.run(), 1);
+    assert.ok(stoppedBeforeAfter, 'session cleanup must wait for recording');
+    assert.ok(nextCasePassed, 'a suite after describe.skip must still run');
     const manifests = fs
       .readdirSync(root, { recursive: true })
       .filter((p) => String(p).endsWith('failure.json'));

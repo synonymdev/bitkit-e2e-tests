@@ -166,6 +166,8 @@ export function createIOSDiagnostics({
         const addCleanup = (suite: Mocha.Suite) => {
           for (const entry of suite.suites) {
             const child = entry as DiagnosticSuite;
+            // Mocha does not register hooks on pending suites.
+            if (child.isPending()) continue;
             // WDIO 9.18 re-reads Mocha's mutable context after awaiting the
             // body. Keep that invocation's runnable/identity stable, including
             // a late afterHook. Forward other context reads/writes unchanged.
