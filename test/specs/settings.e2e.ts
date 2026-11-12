@@ -265,7 +265,12 @@ describe('@settings @ios_nightly - Settings', () => {
       if (await elementById('ShuffledWord-0').isExisting()) {
         const chipWords: string[] = [];
         for (let i = 0; i < words.length; i++) {
-          chipWords.push(await getAccessibleText(elementById(`ShuffledWord-${i}`)));
+          const chip = elementById(`ShuffledWord-${i}`);
+          // Android exposes the word on the chip's child text node, iOS on the button itself
+          const label = driver.isAndroid
+            ? await getAccessibleText(chip.$('.//*[string-length(@text) > 0]'))
+            : await getAccessibleText(chip);
+          chipWords.push(label);
         }
         const used = new Set<number>();
         for (const [n, w] of words.entries()) {
