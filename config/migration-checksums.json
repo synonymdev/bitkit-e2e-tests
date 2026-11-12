@@ -14,5 +14,9 @@
   "3.1.0": {
     "bitkit_e2e.apk": "cdd1958e6db0784d76a8488e6ae5da548213d9f903c721ac3a5598f833d6effc",
     "Bitkit.app.zip": "775a3a9e4ac3f8f8d436d9303c451f93a0c30037986b4c2681fe1850d9678331"
+  },
+  "3.1.1": {
+    "bitkit_e2e.apk": "759ddce35d5dee0af2306e0932dd449907b454458410d94438f218ffb9451132",
+    "Bitkit.app.zip": "64f371771b5d0a1de163e8f7f4a9f260f8c1bb7519bd18e9175757e390b85cb5"
   }
 }
