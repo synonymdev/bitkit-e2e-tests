@@ -260,14 +260,30 @@ describe('@settings @ios_nightly - Settings', () => {
 
       await tap('ContinueShowMnemonic');
 
-      // enter the seed
-      const words_used: string[] = [];
-      for (const w of seed.split(' ')) {
-        const word = await elementsById('Word-' + w);
-        // in case there are a few same words in the seed phrase
-        const idxToClick = words_used.filter((x) => x === w).length;
-        word[idxToClick].click();
-        words_used.push(w);
+      // enter the seed: each shuffled chip's id carries its position, its label the word
+      const words = seed.split(' ');
+      if (await elementById('ShuffledWord-0').isExisting()) {
+        const chipWords: string[] = [];
+        for (let i = 0; i < words.length; i++) {
+          chipWords.push(await getAccessibleText(elementById(`ShuffledWord-${i}`)));
+        }
+        const used = new Set<number>();
+        for (const [n, w] of words.entries()) {
+          // in case there are a few same words in the seed phrase
+          const idx = chipWords.findIndex((x, i) => x === w && !used.has(i));
+          if (idx < 0) throw new Error(`No unused chip for seed word #${n + 1}`);
+          await elementById(`ShuffledWord-${idx}`).click();
+          used.add(idx);
+        }
+      } else {
+        // app builds before position-only chip ids
+        const words_used: string[] = [];
+        for (const w of words) {
+          const word = await elementsById('Word-' + w);
+          const idxToClick = words_used.filter((x) => x === w).length;
+          word[idxToClick].click();
+          words_used.push(w);
+        }
       }
       await sleep(1000);
       await tap('ContinueConfirmMnemonic');
