@@ -1054,7 +1054,15 @@ export async function restoreWallet(
     }
   }
 
-  await elementById('TotalBalance-primary').waitForDisplayed({ timeout: 90_000 });
+  // A restored wallet whose channels hold a balance gets the Move to Spark intro once Spark connects, over home.
+  await browser.waitUntil(
+    async () =>
+      (await isTestIdDisplayed('TotalBalance-primary')) ||
+      (await isTestIdDisplayed('MoveToSparkIntroLater')),
+    { timeout: 90_000, timeoutMsg: 'Wallet home did not show after restore' }
+  );
+  await dismissMoveToSparkIntroIfShown();
+  await elementById('TotalBalance-primary').waitForDisplayed({ timeout: 30_000 });
 }
 
 type addressType = 'bitcoin' | 'lightning';
