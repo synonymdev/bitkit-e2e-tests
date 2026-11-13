@@ -26,11 +26,12 @@ jobs:
       - name: Detect branch to use
         id: detect
         shell: bash
+        env:
+          APP_BRANCH: ${{ inputs.app_branch }}
+          INPUT_BRANCH: ${{ inputs.e2e_branch_input }}
+          CALLER_REPO: ${{ github.repository }}
         run: |
-          APP_BRANCH="${{ inputs.app_branch }}"
-          INPUT_BRANCH="${{ inputs.e2e_branch_input }}"
           TEST_REPO="synonymdev/bitkit-e2e-tests"
-          CALLER_REPO="${{ github.repository }}"
 
           # Platform-specific base branch overrides.
           # When a platform needs a different base than 'main', update it here.
