@@ -2,6 +2,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 
 import { grantIOSCameraPermission } from './test/helpers/setup';
+import { iosDiagnostics } from './test/helpers/ios-diagnostics';
 
 const appiumPort = Number(process.env.APPIUM_PORT ?? '4723');
 const isAndroid = process.env.PLATFORM === 'android';
@@ -202,6 +203,7 @@ export const config: WebdriverIO.Config = {
   mochaOpts: {
     ui: 'bdd',
     timeout: 15 * 60 * 1000, // 15 minutes
+    ...(!isAndroid ? { rootHooks: iosDiagnostics.rootHooks } : {}),
   },
 
   //
@@ -367,7 +369,12 @@ export const config: WebdriverIO.Config = {
       grantIOSCameraPermission();
     }
   },
-  beforeTest: async function (test) {
+  beforeTest: async function (test, context) {
+    if (!isAndroid) {
+      iosDiagnostics.beforeTest(test, context);
+      console.log(`🧪 Start: ${test.parent} - ${test.title}`);
+      return;
+    }
     if (process.env.RECORD_VIDEO === 'true') {
       const recordingOptions = isAndroid
         ? { timeLimit: '600', bitRate: '4000000' }
@@ -383,7 +390,8 @@ export const config: WebdriverIO.Config = {
     console.log(`🧪 Start: ${test.parent} - ${test.title}`);
   },
 
-  afterTest: async function (test, _context, { error }) {
+  afterTest: async function (test, context, { error }) {
+    if (!isAndroid) return iosDiagnostics.afterTest({ error }, context);
     const saveDiagnostics = Boolean(error) || process.env.SAVE_DIAGNOSTICS === 'true';
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -414,5 +422,11 @@ export const config: WebdriverIO.Config = {
         console.log(`🎥 Saved test video: ${videoPath}`);
       }
     }
+  },
+  beforeHook: function (hook, context) {
+    if (!isAndroid) iosDiagnostics.beforeHook(hook, context);
+  },
+  afterHook: function (hook, context, result) {
+    if (!isAndroid) iosDiagnostics.afterHook(hook, context, result);
   },
 };
