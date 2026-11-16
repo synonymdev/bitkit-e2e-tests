@@ -1,20 +1,38 @@
 import {
-  confirmInputOnKeyboard,
   elementById,
   elementByText,
-  getReceiveAddress,
   getSeed,
   restoreWallet,
-  sleep,
-  swipeFullScreen,
-  tap,
-  typeText,
   waitForSetupWalletScreenFinish,
   waitForWalletHome,
 } from '../helpers/actions';
+import {
+  dismissKeyboardAndExpect,
+  swipeAndExpect,
+  tapAndExpect,
+  tapStationaryAndExpect,
+  typeAndExpect,
+} from '../helpers/outcome';
+import { openReceiveOnchainQr } from '../helpers/receive-invoice';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 import { openSettings } from '../helpers/navigation';
+
+async function startOnboardingSlides() {
+  await tapAndExpect({ id: 'Continue' }, { anyVisible: [{ id: 'GetStarted' }] });
+  await tapAndExpect({ id: 'GetStarted' }, { anyVisible: [{ id: 'Slide0' }] });
+  await elementById('Slide0').waitForDisplayed();
+  await swipeAndExpect('left', { anyVisible: [{ id: 'Slide1' }] });
+  await elementById('Slide1').waitForDisplayed();
+  await swipeAndExpect('left', { anyVisible: [{ id: 'Slide2' }] });
+  await elementById('Slide2').waitForDisplayed();
+}
+
+async function createWallet(button: 'NewWallet' | 'CreateNewWallet') {
+  await tapStationaryAndExpect({ id: button }, { all: [{ hidden: { id: button } }] });
+  await waitForSetupWalletScreenFinish();
+  await waitForWalletHome();
+}
 
 describe('@onboarding @ios_nightly - Onboarding', () => {
   beforeEach(async () => {
@@ -22,68 +40,54 @@ describe('@onboarding @ios_nightly - Onboarding', () => {
   });
 
   ciIt('@onboarding_1 - Can start onboarding', async () => {
-    // TOS and PP
-    await elementById('Continue').waitForDisplayed();
-    await sleep(1000); // Wait for the app to settle
-    await tap('Continue');
-    await tap('GetStarted');
-    await elementById('Slide0').waitForDisplayed();
-    await swipeFullScreen('left');
-    await elementById('Slide1').waitForDisplayed();
-    await swipeFullScreen('left');
-    await elementById('Slide2').waitForDisplayed();
-    await swipeFullScreen('left');
-    await swipeFullScreen('left');
-    await swipeFullScreen('right');
-    await swipeFullScreen('right');
-    await tap('SkipButton');
+    await startOnboardingSlides();
+    const walletChoice = { anyVisible: [{ id: 'NewWallet' }] };
+    await swipeAndExpect('left', walletChoice);
+    await swipeAndExpect('left', walletChoice); // Stay on the final slide.
+    await swipeAndExpect('right', { anyVisible: [{ id: 'Slide2' }] });
+    await swipeAndExpect('right', { anyVisible: [{ id: 'Slide1' }] });
+    await tapStationaryAndExpect({ id: 'SkipButton' }, walletChoice);
 
     // create new wallet
     await elementById('NewWallet').waitForDisplayed();
-    await sleep(1000); // Wait for the app to settle
-    await tap('NewWallet');
-    await waitForSetupWalletScreenFinish();
-
-    await waitForWalletHome();
+    await createWallet('NewWallet');
     await elementByText('TO GET').waitForDisplayed();
   });
 
   ciIt('@onboarding_2 - Can pass onboarding correctly', async () => {
-    // TOS and PP
-    await elementById('Continue').waitForDisplayed();
-    await sleep(1000); // Wait for the app to settle
-    await tap('Continue');
-    await tap('GetStarted');
-    await elementById('Slide0').waitForDisplayed();
-    await swipeFullScreen('left');
-    await elementById('Slide1').waitForDisplayed();
-    await swipeFullScreen('left');
-    await elementById('Slide2').waitForDisplayed();
-    await swipeFullScreen('right');
-    await tap('SkipButton');
+    await startOnboardingSlides();
+    await swipeAndExpect('right', { anyVisible: [{ id: 'Slide1' }] });
+    await tapStationaryAndExpect(
+      { id: 'SkipButton' },
+      { all: [{ visible: { id: 'NewWallet' } }, { visible: { id: 'Passphrase' } }] }
+    );
 
     // create new wallet with passphrase
     const passphrase = 'supersecret';
-    await tap('Passphrase');
-    await typeText('PassphraseInput', passphrase);
-    await confirmInputOnKeyboard();
-    await tap('CreateNewWallet');
-    await waitForSetupWalletScreenFinish();
-
-    await waitForWalletHome();
+    await tapStationaryAndExpect({ id: 'Passphrase' }, { anyVisible: [{ id: 'PassphraseInput' }] });
+    await typeAndExpect('PassphraseInput', passphrase, {
+      all: [{ enabled: { id: 'CreateNewWallet', value: true } }],
+    });
+    await dismissKeyboardAndExpect();
+    await createWallet('CreateNewWallet');
 
     const seed = await getSeed();
 
-    const address0 = await getReceiveAddress();
+    const address0 = await openReceiveOnchainQr();
 
     await restoreWallet(seed, { passphrase });
 
-    const address1 = await getReceiveAddress();
+    const address1 = await openReceiveOnchainQr();
 
     // Go to Address Viewer
-    await swipeFullScreen('down');
+    await swipeAndExpect('down', {
+      all: [{ visible: { id: 'Receive' } }, { hidden: { id: 'ShowDetails' } }],
+    });
     await openSettings('advanced');
-    await tap('AddressViewer');
+    await tapAndExpect(
+      { id: 'AddressViewer' },
+      { all: [{ visible: { id: 'Address-0' } }, { visible: { id: 'Address-1' } }] }
+    );
 
     const address0Element = await elementById('Address-0');
     const address1Element = await elementById('Address-1');

@@ -1,17 +1,15 @@
-import {
-  completeOnboarding,
-  expectText,
-  expectTextWithin,
-  getAddressFromQRCode,
-} from '../helpers/actions';
+import { completeOnboarding, expectText, expectTextWithin } from '../helpers/actions';
 import {
   swipeAndExpect,
   tapAndExpect,
   tapStationaryAndExpect,
   typeAndExpect,
-  type Outcome,
 } from '../helpers/outcome';
-import { dismissReceiveNoteKeyboard } from '../helpers/receive-invoice';
+import {
+  dismissReceiveNoteKeyboard,
+  openReceiveOnchainQr,
+  receiveQrOutcome,
+} from '../helpers/receive-invoice';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 
@@ -22,15 +20,7 @@ describe('@receive @ios_nightly - Receive', () => {
   });
 
   ciIt('@receive_1 - Basic functionality', async () => {
-    const qrVisible: Outcome = {
-      all: [
-        { visible: { id: 'QRCode' } },
-        { visible: { id: 'ShowDetails' } },
-        { enabled: { id: 'ReceiveCopyQR', value: true } },
-      ],
-    };
-    await tapAndExpect({ id: 'Receive' }, qrVisible);
-    const address = await getAddressFromQRCode('bitcoin');
+    const address = await openReceiveOnchainQr();
     if (!address.startsWith('bcrt1')) {
       throw new Error(`Wrong default receiving address: ${address}`);
     }
@@ -48,7 +38,7 @@ describe('@receive @ios_nightly - Receive', () => {
     );
 
     // ReceiveDetail
-    await tapAndExpect({ id: 'QRCode' }, qrVisible);
+    await tapAndExpect({ id: 'QRCode' }, receiveQrOutcome);
     // Android can expose the Edit button before the QR sheet settles.
     await tapStationaryAndExpect(
       { id: 'SpecifyInvoiceButton' },
@@ -95,7 +85,7 @@ describe('@receive @ios_nightly - Receive', () => {
     );
 
     // Show QR
-    await tapAndExpect({ id: 'ShowQrReceive' }, qrVisible);
+    await tapAndExpect({ id: 'ShowQrReceive' }, receiveQrOutcome);
 
     // Back to ReceiveDetail
     // data should still be there
@@ -111,7 +101,7 @@ describe('@receive @ios_nightly - Receive', () => {
     await swipeAndExpect('down', {
       all: [{ visible: { id: 'Receive' } }, { hidden: { id: 'ReceiveNumberPadTextField' } }],
     });
-    await tapAndExpect({ id: 'Receive' }, qrVisible);
+    await tapAndExpect({ id: 'Receive' }, receiveQrOutcome);
 
     // data should be reset
     await tapStationaryAndExpect(

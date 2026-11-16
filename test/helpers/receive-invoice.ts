@@ -1,4 +1,18 @@
-import { actAndExpect, dismissKeyboardAndExpect, tapAndExpect } from './outcome';
+import { getAddressFromQRCode } from './actions';
+import { actAndExpect, dismissKeyboardAndExpect, tapAndExpect, type Outcome } from './outcome';
+
+export const receiveQrOutcome: Outcome = {
+  all: [
+    { visible: { id: 'QRCode' } },
+    { visible: { id: 'ShowDetails' } },
+    { enabled: { id: 'ReceiveCopyQR', value: true } },
+  ],
+};
+
+export async function openReceiveOnchainQr() {
+  await tapAndExpect({ id: 'Receive' }, receiveQrOutcome);
+  return getAddressFromQRCode('bitcoin');
+}
 
 export async function dismissReceiveNoteKeyboard() {
   if (driver.isAndroid) {

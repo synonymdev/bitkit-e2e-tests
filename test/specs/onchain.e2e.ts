@@ -8,12 +8,9 @@ import {
   elementByText,
   expectTextWithin,
   doNavigationClose,
-  getReceiveAddress,
-  multiTap,
+  getAmountUnder,
   sleep,
-  swipeFullScreen,
   tap,
-  typeText,
   receiveOnchainFunds,
   acknowledgeHighBalanceWarning,
   enterAddress,
@@ -21,8 +18,6 @@ import {
   handleOver50PercentAlert,
   handleOver100Alert,
   acknowledgeReceivedPayment,
-  addSendTag,
-  enterAmount,
   formatSats,
   expectTotalBalance,
   expectSpendingBalance,
@@ -37,6 +32,36 @@ import {
   sendToAddress,
 } from '../helpers/regtest';
 import { openSettings } from '../helpers/navigation';
+import { confirmGateAction, enterGateAddress, enterGateAmount } from '../helpers/gate-actions';
+import {
+  actAndExpect,
+  swipeAndExpect,
+  tapAndExpect,
+  tapStationaryAndExpect,
+  typeAndExpect,
+  type Outcome,
+} from '../helpers/outcome';
+import { openReceiveOnchainQr, receiveQrOutcome } from '../helpers/receive-invoice';
+
+const sendSuccess: Outcome = { anyVisible: [{ id: 'SendSuccess' }] };
+const walletHome: Outcome = {
+  all: [{ visible: { id: 'TotalBalance-primary' } }, { hidden: { id: 'SendSuccess' } }],
+};
+const activityRows = {
+  all: [1, 2, 3].map((index) => ({ visible: { id: `Activity-${index}` } })),
+} satisfies Outcome;
+const datePicker: Outcome = { anyVisible: [{ id: 'CalendarApplyButton' }] };
+const calendarDate = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+const calendarMonth = new Intl.DateTimeFormat('en-US', {
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
 
 describe('@onchain - Onchain', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
@@ -64,13 +89,13 @@ describe('@onchain - Onchain', () => {
     // then send out 10 000
     const coreAddress = await getExternalAddress();
     console.info({ coreAddress });
-    await enterAddress(coreAddress);
-    await enterAmount(10_000);
+    await enterGateAddress(coreAddress);
+    await enterGateAmount(10_000);
 
-    await tap('ContinueAmount');
-    await dragOnElement('GRAB', 'right', 0.95);
+    await tapAndExpect({ id: 'ContinueAmount' }, { anyVisible: [{ id: 'GRAB' }] });
+    await confirmGateAction(sendSuccess);
     await elementById('SendSuccess').waitForDisplayed();
-    await tap('Close');
+    await tapAndExpect({ id: 'Close' }, walletHome);
 
     await mineBlocks(1);
     await electrum?.waitForSync();
@@ -90,9 +115,12 @@ describe('@onchain - Onchain', () => {
     await expectTextWithin(receiveShort, 'Received');
     await expectTextWithin(receiveShort, formatSats(satsToReceive));
 
-    await tap('ActivityShowAll');
     const sentDetail = 'Activity-1';
     const receiveDetail = 'Activity-2';
+    await tapAndExpect(
+      { id: 'ActivityShowAll' },
+      { all: [{ visible: { id: sentDetail } }, { visible: { id: receiveDetail } }] }
+    );
     await expectTextWithin(sentDetail, '-');
     await expectTextWithin(sentDetail, 'Sent');
     await expectTextWithin(receiveDetail, '+');
@@ -108,151 +136,242 @@ describe('@onchain - Onchain', () => {
   // - shows warnings for sending over 100$ or 50% of total
   // - avoid creating dust output
 
-  ciIt('@onchain_2 @ios_nightly - Can receive 2 transactions and send them all at once', async () => {
-    // - can receive to 2 addresses and tag them //
-    for (let i = 1; i <= 2; i++) {
-      const address = await getReceiveAddress();
+  ciIt(
+    '@onchain_2 @ios_nightly - Can receive 2 transactions and send them all at once',
+    async () => {
+      // - can receive to 2 addresses and tag them //
+      for (let i = 1; i <= 2; i++) {
+        const address = await openReceiveOnchainQr();
+        const tag = `rtag${i}`;
+        const tagId = `Tag-${tag}`;
+        const deleteTagId = `${tagId}-delete`;
 
-      await tap('SpecifyInvoiceButton');
-      await tap('TagsAdd');
-      await typeText('TagInputReceive', `rtag${i}`);
-      await tap('ReceiveTagsSubmit');
-      await elementById(`Tag-rtag${i}`).waitForDisplayed();
-      await elementById(`Tag-rtag${i}-delete`).waitForDisplayed();
-      await sleep(300);
-      await tap('ShowQrReceive');
-      await swipeFullScreen('down');
+        await tapStationaryAndExpect(
+          { id: 'SpecifyInvoiceButton' },
+          { anyVisible: [{ id: 'TagsAdd' }] }
+        );
+        await tapAndExpect({ id: 'TagsAdd' }, { anyVisible: [{ id: 'TagInputReceive' }] });
+        await typeAndExpect('TagInputReceive', tag);
+        await tapAndExpect(
+          { id: 'ReceiveTagsSubmit' },
+          {
+            all: [
+              { visible: { id: tagId } },
+              { visible: { id: deleteTagId } },
+              { hidden: { id: 'TagInputReceive' } },
+              { keyboardShown: false },
+            ],
+          }
+        );
+        await elementById(tagId).waitForDisplayed();
+        await elementById(deleteTagId).waitForDisplayed();
+        await tapAndExpect({ id: 'ShowQrReceive' }, receiveQrOutcome);
+        await swipeAndExpect('down', {
+          all: [{ visible: { id: 'Receive' } }, { hidden: { id: 'ShowDetails' } }],
+        });
 
-      await sendToAddress(address, '1');
-      await acknowledgeReceivedPayment({ timeout: 60_000 });
+        await sendToAddress(address, '1');
+        await acknowledgeReceivedPayment({ timeout: 60_000 });
+
+        await mineBlocks(1);
+        await electrum?.waitForSync();
+
+        // - shows correct total balance
+        const expected = `${i}00 000 000`;
+        await waitForWalletHomeCondition(
+          async () =>
+            (await (await elementByIdWithin('TotalBalance-primary', 'MoneyText')).getText()) ===
+            expected
+        );
+        const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
+        await expect(totalBalance).toHaveText(expected);
+
+        if (i === 1) {
+          await dismissBackupTimedSheet({ triggerTimedSheet: true });
+          await acknowledgeHighBalanceWarning({ triggerTimedSheet: true });
+        }
+      }
+
+      // - can send total balance and tag the tx //
+      const coreAddress = await getExternalAddress();
+      await enterGateAddress(coreAddress);
+
+      // Amount / NumberPad
+      const maxAmount = await getAmountUnder('AvailableAmount');
+      const amountEntered = (amount: number): Outcome => ({
+        all: [{ textWithin: { id: 'SendNumberField', text: formatSats(amount) } }],
+      });
+      await tapAndExpect({ id: 'AvailableAmount' }, amountEntered(maxAmount));
+      let reduced = maxAmount;
+      for (let i = 0; i < 3; i++) {
+        reduced = Math.trunc(reduced / 10);
+        await tapAndExpect({ id: 'NRemove' }, amountEntered(reduced));
+      }
+      await elementByText('199 999').waitForDisplayed();
+
+      await tapAndExpect({ id: 'AvailableAmount' }, amountEntered(maxAmount));
+      await tapAndExpect({ id: 'ContinueAmount' }, { anyVisible: [{ id: 'GRAB' }] });
+
+      // Review & Send
+      await tapAndExpect(
+        { id: 'SendConfirmToggleDetails' },
+        { anyVisible: [{ id: 'TagsAddSend' }] }
+      );
+      await tapAndExpect({ id: 'TagsAddSend' }, { anyVisible: [{ id: 'TagInputSend' }] });
+      await typeAndExpect('TagInputSend', 'stag');
+      await tapAndExpect(
+        { id: 'SendTagsSubmit' },
+        {
+          all: [
+            { visible: { text: 'stag' } },
+            { hidden: { id: 'TagInputSend' } },
+            { keyboardShown: false },
+          ],
+        }
+      );
+      await actAndExpect(
+        'confirm onchain send with balance warning',
+        async () => {
+          await dragOnElement('GRAB', 'right', 0.95);
+          await handleOver50PercentAlert();
+        },
+        sendSuccess
+      );
+      await elementById('SendSuccess').waitForDisplayed();
+      await tapAndExpect({ id: 'Close' }, walletHome);
 
       await mineBlocks(1);
-      await electrum?.waitForSync();
-      await sleep(1000); // wait for the app to settle
 
-      // - shows correct total balance
-      const expected = `${i}00 000 000`;
-      await waitForWalletHomeCondition(
-        async () =>
-          (await (await elementByIdWithin('TotalBalance-primary', 'MoneyText')).getText()) ===
-          expected
+      await expectTotalBalance(0);
+      await expectSavingsBalance(0);
+      await expectSpendingBalance(0);
+
+      // Check Activity
+      await elementById('ActivityShort-0').waitForDisplayed();
+      await elementById('ActivityShort-1').waitForDisplayed();
+      await elementById('ActivityShort-2').waitForDisplayed();
+      await tapAndExpect({ id: 'ActivityShowAll' }, activityRows);
+      // All 3 transactions should be present
+      await elementById('Activity-1').waitForDisplayed();
+      await elementById('Activity-2').waitForDisplayed();
+      await elementById('Activity-3').waitForDisplayed();
+      await elementById('Activity-4').waitForDisplayed({ reverse: true });
+      await expectTextWithin('Activity-1', '-');
+      await expectTextWithin('Activity-2', '+');
+      await expectTextWithin('Activity-3', '+');
+
+      // Sent, 1 transaction
+      await tapAndExpect(
+        { id: 'Tab-sent' },
+        {
+          all: [
+            { textWithin: { id: 'Activity-1', text: '-', strategy: 'contains' } },
+            { hidden: { id: 'Activity-2' } },
+          ],
+        }
       );
-      const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
-      await expect(totalBalance).toHaveText(expected);
+      await expectTextWithin('Activity-1', '-');
+      await elementById('Activity-2').waitForDisplayed({ reverse: true });
 
-      if (i === 1) {
-        await dismissBackupTimedSheet({ triggerTimedSheet: true });
-        await acknowledgeHighBalanceWarning({ triggerTimedSheet: true });
-      }
+      // Received, 2 transactions
+      await tapAndExpect(
+        { id: 'Tab-received' },
+        {
+          all: [
+            { textWithin: { id: 'Activity-1', text: '+', strategy: 'contains' } },
+            { textWithin: { id: 'Activity-2', text: '+', strategy: 'contains' } },
+            { hidden: { id: 'Activity-3' } },
+          ],
+        }
+      );
+      await expectTextWithin('Activity-1', '+');
+      await expectTextWithin('Activity-2', '+');
+      await elementById('Activity-3').waitForDisplayed({ reverse: true });
+
+      // Other, 0 transactions
+      await tapAndExpect({ id: 'Tab-other' }, { all: [{ hidden: { id: 'Activity-1' } }] });
+      await elementById('Activity-1').waitForDisplayed({ reverse: true });
+      await tapAndExpect({ id: 'Tab-all' }, activityRows);
+
+      // TODO: receive tag does not work in local regtest for some reason
+      // https://github.com/synonymdev/bitkit-android/issues/322
+      // // filter by receive tag
+      // await tap('TagsPrompt');
+      // await tap('Tag-rtag1');
+      // await expectTextWithin('Activity-1', '+');
+      // await elementById('Activity-2').waitForDisplayed({ reverse: true });
+      // await tap('Tag-rtag1-delete');
+
+      // filter by send tag
+      await tapAndExpect({ id: 'TagsPrompt' }, { anyVisible: [{ id: 'Tag-stag' }] });
+      await tapStationaryAndExpect(
+        { id: 'Tag-stag' },
+        {
+          all: [
+            { textWithin: { id: 'Activity-1', text: '-', strategy: 'contains' } },
+            { hidden: { id: 'Activity-2' } },
+          ],
+        }
+      );
+      await expectTextWithin('Activity-1', '-');
+      await elementById('Activity-2').waitForDisplayed({ reverse: true });
+      await tapAndExpect({ id: 'Tag-stag-delete' }, activityRows);
+
+      // calendar, 0 transactions
+      await tapAndExpect({ id: 'DatePicker' }, datePicker);
+      await elementById('CalendarApplyButton').waitForDisplayed();
+      const today = new Date(`${(await driver.getDeviceTime()).slice(0, 10)}T12:00:00Z`);
+      const nextMonth = today.getUTCMonth() + 1;
+      const from = new Date(Date.UTC(today.getUTCFullYear(), nextMonth, 10));
+      const to = new Date(Date.UTC(today.getUTCFullYear(), nextMonth, 12));
+      const startDate = calendarDate.format(from);
+      await tapAndExpect(
+        { id: 'NextMonth' },
+        { anyVisible: [{ text: calendarMonth.format(from) }] }
+      );
+      await tapStationaryAndExpect({ id: 'Day-10' }, { anyVisible: [{ text: startDate }] });
+      await tapStationaryAndExpect(
+        { id: 'Day-12' },
+        { anyVisible: [{ text: `${startDate} - ${calendarDate.format(to)}` }] }
+      );
+      await tapAndExpect(
+        { id: 'CalendarApplyButton' },
+        {
+          all: [{ hidden: { id: 'CalendarApplyButton' } }, { hidden: { id: 'Activity-1' } }],
+        }
+      );
+      await elementById('Activity-1').waitForDisplayed({ reverse: true });
+
+      // calendar, clear, 3 transactions
+      await tapAndExpect({ id: 'DatePicker' }, datePicker);
+      await elementById('CalendarApplyButton').waitForDisplayed();
+      await tapAndExpect(
+        { id: 'CalendarClearButton' },
+        { all: [{ enabled: { id: 'CalendarApplyButton', value: false } }] }
+      );
+      await swipeAndExpect('down', {
+        all: [...activityRows.all, { hidden: { id: 'CalendarApplyButton' } }],
+      });
+      await elementById('Activity-1').waitForDisplayed();
+      await elementById('Activity-2').waitForDisplayed();
+      await elementById('Activity-3').waitForDisplayed();
+
+      // calendar, current date, 3 transactions
+      await tapAndExpect({ id: 'DatePicker' }, datePicker);
+      await elementById('CalendarApplyButton').waitForDisplayed();
+      await tapStationaryAndExpect(
+        { id: 'Today' },
+        { anyVisible: [{ text: calendarDate.format(today) }] }
+      );
+      await tapAndExpect(
+        { id: 'CalendarApplyButton' },
+        { all: [...activityRows.all, { hidden: { id: 'CalendarApplyButton' } }] }
+      );
+      await elementById('Activity-1').waitForDisplayed();
+      await elementById('Activity-2').waitForDisplayed();
+      await elementById('Activity-3').waitForDisplayed();
     }
-
-    // - can send total balance and tag the tx //
-    const coreAddress = await getExternalAddress();
-    await enterAddress(coreAddress);
-
-    // Amount / NumberPad
-    await tap('AvailableAmount');
-    await multiTap('NRemove', 3);
-    await elementByText('199 999').waitForDisplayed();
-
-    await tap('AvailableAmount');
-    await tap('ContinueAmount');
-
-    // Review & Send
-    await addSendTag('stag');
-    await dragOnElement('GRAB', 'right', 0.95);
-
-    await sleep(1000);
-    await handleOver50PercentAlert();
-    await elementById('SendSuccess').waitForDisplayed();
-    await tap('Close');
-
-    await mineBlocks(1);
-
-    await expectTotalBalance(0);
-    await expectSavingsBalance(0);
-    await expectSpendingBalance(0);
-
-    // Check Activity
-    await elementById('ActivityShort-0').waitForDisplayed();
-    await elementById('ActivityShort-1').waitForDisplayed();
-    await elementById('ActivityShort-2').waitForDisplayed();
-    await tap('ActivityShowAll');
-    // All 3 transactions should be present
-    await elementById('Activity-1').waitForDisplayed();
-    await elementById('Activity-2').waitForDisplayed();
-    await elementById('Activity-3').waitForDisplayed();
-    await elementById('Activity-4').waitForDisplayed({ reverse: true });
-    await expectTextWithin('Activity-1', '-');
-    await expectTextWithin('Activity-2', '+');
-    await expectTextWithin('Activity-3', '+');
-
-    // Sent, 1 transaction
-    await tap('Tab-sent');
-    await expectTextWithin('Activity-1', '-');
-    await elementById('Activity-2').waitForDisplayed({ reverse: true });
-
-    // Received, 2 transactions
-    await tap('Tab-received');
-    await expectTextWithin('Activity-1', '+');
-    await expectTextWithin('Activity-2', '+');
-    await elementById('Activity-3').waitForDisplayed({ reverse: true });
-
-    // Other, 0 transactions
-    await tap('Tab-other');
-    await elementById('Activity-1').waitForDisplayed({ reverse: true });
-    await tap('Tab-all');
-
-    // TODO: receive tag does not work in local regtest for some reason
-    // https://github.com/synonymdev/bitkit-android/issues/322
-    // // filter by receive tag
-    // await tap('TagsPrompt');
-    // await tap('Tag-rtag1');
-    // await expectTextWithin('Activity-1', '+');
-    // await elementById('Activity-2').waitForDisplayed({ reverse: true });
-    // await tap('Tag-rtag1-delete');
-
-    // filter by send tag
-    await tap('TagsPrompt');
-    await tap('Tag-stag');
-    await expectTextWithin('Activity-1', '-');
-    await elementById('Activity-2').waitForDisplayed({ reverse: true });
-    await tap('Tag-stag-delete');
-
-    // calendar, 0 transactions
-    await tap('DatePicker');
-    await elementById('CalendarApplyButton').waitForDisplayed();
-    await sleep(1000);
-    await tap('NextMonth');
-    await sleep(500);
-    await tap('Day-10');
-    await tap('Day-12');
-    await sleep(500);
-    await tap('CalendarApplyButton');
-    await elementById('Activity-1').waitForDisplayed({ reverse: true });
-
-    // calendar, clear, 3 transactions
-    await tap('DatePicker');
-    await elementById('CalendarApplyButton').waitForDisplayed();
-    await sleep(1000);
-    await tap('CalendarClearButton');
-    await sleep(500);
-    await swipeFullScreen('down'); // hide calendar
-    await elementById('Activity-1').waitForDisplayed();
-    await elementById('Activity-2').waitForDisplayed();
-    await elementById('Activity-3').waitForDisplayed();
-
-    // calendar, current date, 3 transactions
-    await tap('DatePicker');
-    await elementById('CalendarApplyButton').waitForDisplayed();
-    await sleep(1000);
-    await tap('Today');
-    await sleep(500);
-    await tap('CalendarApplyButton');
-    await elementById('Activity-1').waitForDisplayed();
-    await elementById('Activity-2').waitForDisplayed();
-    await elementById('Activity-3').waitForDisplayed();
-  });
+  );
 
   ciIt('@onchain_3 - Avoids creating a dust output and instead adds it to the fee', async () => {
     // receive some first
