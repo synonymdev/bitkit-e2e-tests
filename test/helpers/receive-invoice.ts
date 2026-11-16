@@ -1,4 +1,13 @@
-import { actAndExpect, tapAndExpect } from './outcome';
+import { actAndExpect, dismissKeyboardAndExpect, tapAndExpect } from './outcome';
+
+export async function dismissReceiveNoteKeyboard() {
+  if (driver.isAndroid) {
+    await dismissKeyboardAndExpect();
+    return;
+  }
+  // The iOS Receive note editor uses the Done submit label.
+  await tapAndExpect({ text: 'done' }, { all: [{ keyboardShown: false }] });
+}
 
 /** Edit the newly generated invoice, not a cached/placeholder Receive subtree. */
 export async function editGateLightningInvoice(paidInvoice: string) {
