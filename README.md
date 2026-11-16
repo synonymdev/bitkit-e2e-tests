@@ -183,20 +183,21 @@ Useful URLs:
 - User Env dashboard: `http://localhost:9002`
 - Trezor Bridge: `http://localhost:21325`
 
-The Trezor User Env image is pinned in `docker/docker-compose.yml` so the emulator Bridge keeps the raw message format expected by current Bitkit builds.
+Android uses the Trezor User Env image pinned by the selected `bitkit-docker` revision. The iOS setup uses the pin in `docker/docker-compose.yml`. Both use the Bridge message format expected by the apps.
 
 #### Android Emulator
 
 ```bash
 # Local backend on pinned bitkit-docker
 ./scripts/local-backend up
-BACKEND=local ./scripts/build-android-apk.sh
-./scripts/local-backend run ./ci_run_android.sh --mochaOpts.grep "@onchain_1"
+BACKEND=local TREZOR_BRIDGE=true ./scripts/build-android-apk.sh
+./scripts/local-backend run ./ci_run_android.sh --mochaOpts.grep "@hardware_wallet"
 
-# Staging regtest backend
-./scripts/trezor-emulator start
+# Staging regtest backend with pinned Trezor
+./scripts/local-backend prepare
 BACKEND=regtest TREZOR_BRIDGE=true ./scripts/build-android-apk.sh
-BACKEND=regtest npm run e2e:android
+BITKIT_LOCAL_BACKEND_ROOT="$(./scripts/local-backend path)" \
+  BACKEND=regtest ./ci_run_android.sh --mochaOpts.grep "@hardware_wallet"
 ```
 
 For manual checks, open Bitkit and use the app's developer Trezor screen to scan and connect to `Bitkit Test Trezor`.
@@ -204,8 +205,9 @@ For manual checks, open Bitkit and use the app's developer Trezor screen to scan
 #### Android Physical Device
 
 ```bash
-./scripts/trezor-emulator start
-./scripts/trezor-emulator adb
+./scripts/local-backend prepare
+./scripts/local-backend run ./scripts/trezor-emulator start
+./scripts/local-backend run ./scripts/trezor-emulator adb
 TREZOR_BRIDGE=true TREZOR_BRIDGE_URL=http://127.0.0.1:21325 ./scripts/build-android-apk.sh
 ```
 
@@ -229,6 +231,10 @@ BACKEND=regtest npm run e2e:ios
 Stop the emulator when finished:
 
 ```bash
+# Android pinned fixture
+./scripts/local-backend run ./scripts/trezor-emulator stop
+
+# iOS bundled fixture
 ./scripts/trezor-emulator stop
 ```
 
@@ -248,8 +254,12 @@ Backend and Trezor are independent. `BACKEND=local` uses local Bitcoin/Electrum,
 **App override:** By default tests use `aut/bitkit_e2e.apk` (Android) and `aut/Bitkit.app` (iOS). Set `AUT_FILENAME` to use a different file in `aut/` (e.g. `AUT_FILENAME=bitkit_rn_regtest.apk`)
 
 ```bash
-# Run all tests on Android (local backend - default)
-npm run e2e:android
+# Start the pinned local Android backend and build its APK
+./scripts/local-backend up
+BACKEND=local ./scripts/build-android-apk.sh
+
+# Run the on-chain smoke test
+./scripts/local-backend run ./ci_run_android.sh --mochaOpts.grep "@onchain_1"
 
 # Run all tests on Android (regtest backend)
 BACKEND=regtest npm run e2e:android
@@ -262,7 +272,7 @@ BACKEND=regtest npm run e2e:ios
 To run a **specific test file**:
 
 ```bash
-npm run e2e:android -- --spec ./test/specs/onboarding.e2e.ts
+./scripts/local-backend run ./ci_run_android.sh --spec ./test/specs/onboarding.e2e.ts
 
 # With regtest backend
 BACKEND=regtest npm run e2e:android -- --spec ./test/specs/migration.e2e.ts
@@ -271,7 +281,7 @@ BACKEND=regtest npm run e2e:android -- --spec ./test/specs/migration.e2e.ts
 To run a **specific test case**:
 
 ```bash
-npm run e2e:android -- --mochaOpts.grep "Can pass onboarding correctly"
+./scripts/local-backend run ./ci_run_android.sh --mochaOpts.grep "Can pass onboarding correctly"
 ```
 
 To run against a **different app** in `aut/`:
@@ -300,13 +310,13 @@ You can use Mocha’s `--grep` option to run only the tests that match a given t
 
 ```bash
 # Run only backup tests
-npm run e2e:android -- --mochaOpts.grep "@backup"
+./scripts/local-backend run ./ci_run_android.sh --mochaOpts.grep "@backup"
 
 # Run backup OR onboarding OR onchain tests
-npm run e2e:android -- --mochaOpts.grep "@onchain|@backup|@onboarding"
+./scripts/local-backend run ./ci_run_android.sh --mochaOpts.grep "@onchain|@backup|@onboarding"
 
 # Run everything except backup tests
-npm run e2e:android -- --mochaOpts.grep "@backup" --mochaOpts.invert
+./scripts/local-backend run ./ci_run_android.sh --mochaOpts.grep "@backup" --mochaOpts.invert
 ```
 
 **Local vs staging (CI):** the app merge gate uses `BACKEND=local`. Android greps capability tags (`@settings`, `@send`, `@boost`, …). iOS Mini greps `@ios_gate`. Staging shards grep dedicated `*_staging` tags, plus iOS-only `@ios_nightly` for UI that Android still runs on local:
@@ -368,26 +378,26 @@ The Android script will:
 **Usage examples:**
 
 ```bash
-# Run all Android tests with local backend (default)
-./ci_run_android.sh
+# Run Android tests against the pinned local backend
+./scripts/local-backend run ./ci_run_android.sh
 
 # Run all Android tests with regtest backend (for apps built with BACKEND=regtest)
 BACKEND=regtest ./ci_run_android.sh
 
 # Run only @backup tests
-./ci_run_android.sh --mochaOpts.grep "@backup"
+./scripts/local-backend run ./ci_run_android.sh --mochaOpts.grep "@backup"
 
 # Run migration tests (typically need regtest backend for RN app)
 BACKEND=regtest ./ci_run_android.sh --mochaOpts.grep "@migration"
 
 # Run backup OR onboarding OR onchain tests
-./ci_run_android.sh --mochaOpts.grep "@backup|@onboarding|@onchain"
+./scripts/local-backend run ./ci_run_android.sh --mochaOpts.grep "@backup|@onboarding|@onchain"
 
 # Run everything except @backup
-./ci_run_android.sh --mochaOpts.grep "@backup" --mochaOpts.invert
+./scripts/local-backend run ./ci_run_android.sh --mochaOpts.grep "@backup" --mochaOpts.invert
 
 # Run a specific spec file
-./ci_run_android.sh --spec ./test/specs/onboarding.e2e.ts
+./scripts/local-backend run ./ci_run_android.sh --spec ./test/specs/onboarding.e2e.ts
 ```
 
 #### iOS (`ci_run_ios.sh`)
