@@ -49,7 +49,8 @@ describe('@receive @ios_nightly - Receive', () => {
 
     // ReceiveDetail
     await tapAndExpect({ id: 'QRCode' }, qrVisible);
-    await tapAndExpect(
+    // Android can expose the Edit button before the QR sheet settles.
+    await tapStationaryAndExpect(
       { id: 'SpecifyInvoiceButton' },
       { anyVisible: [{ id: 'ReceiveNumberPadTextField' }] }
     );
@@ -98,7 +99,10 @@ describe('@receive @ios_nightly - Receive', () => {
 
     // Back to ReceiveDetail
     // data should still be there
-    await tapAndExpect({ id: 'SpecifyInvoiceButton' }, { anyVisible: [{ id: 'ReceiveNote' }] });
+    await tapStationaryAndExpect(
+      { id: 'SpecifyInvoiceButton' },
+      { anyVisible: [{ id: 'ReceiveNote' }] }
+    );
     await expectText('123');
     await expectTextWithin('ReceiveNote', note);
     await expectText(tag);
@@ -110,7 +114,10 @@ describe('@receive @ios_nightly - Receive', () => {
     await tapAndExpect({ id: 'Receive' }, qrVisible);
 
     // data should be reset
-    await tapAndExpect({ id: 'SpecifyInvoiceButton' }, { anyVisible: [{ id: 'ReceiveNote' }] });
+    await tapStationaryAndExpect(
+      { id: 'SpecifyInvoiceButton' },
+      { anyVisible: [{ id: 'ReceiveNote' }] }
+    );
     await expectText('123', { visible: false });
     await expectTextWithin('ReceiveNote', note, { visible: false });
     await expectText(tag, { visible: false });
