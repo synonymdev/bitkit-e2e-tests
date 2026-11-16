@@ -4,6 +4,7 @@ aut
 node_modules
 __pycache__/
 .cache/usdt-infra
+.cache/local-backend/
 docker/lnd
 docker/lnurl-server-data
 docker/lnurl-server/data

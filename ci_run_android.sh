@@ -63,9 +63,9 @@ clear_app_logs
 # local/regtest helper ports
 if [[ "${BACKEND:-local}" != "mainnet" ]]; then
   # regtest electrum port
-  adb reverse tcp:60001 tcp:60001
+  adb reverse tcp:60001 "tcp:${ELECTRUM_PORT:-60001}"
   # lnd port
-  adb reverse tcp:9735 tcp:9735
+  adb reverse "tcp:${LND_P2P_PORT:-9735}" "tcp:${LND_P2P_PORT:-9735}"
   # lnurl server port
   adb reverse tcp:30001 tcp:30001
   # homegate port

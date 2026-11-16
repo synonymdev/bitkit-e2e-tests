@@ -188,13 +188,10 @@ The Trezor User Env image is pinned in `docker/docker-compose.yml` so the emulat
 #### Android Emulator
 
 ```bash
-# Local backend
-cd docker
-docker compose up -d
-cd ..
-./scripts/trezor-emulator start
-TREZOR_BRIDGE=true ./scripts/build-android-apk.sh
-npm run e2e:android
+# Local backend on pinned bitkit-docker
+./scripts/local-backend up
+BACKEND=local ./scripts/build-android-apk.sh
+./scripts/local-backend run ./ci_run_android.sh --mochaOpts.grep "@onchain_1"
 
 # Staging regtest backend
 ./scripts/trezor-emulator start
@@ -243,7 +240,7 @@ Backend and Trezor are independent. `BACKEND=local` uses local Bitcoin/Electrum,
 
 | Backend                   | Infrastructure                                                                   | When to use                       |
 | ------------------------- | -------------------------------------------------------------------------------- | --------------------------------- |
-| `BACKEND=local` (default) | Local docker stack (Bitcoin RPC on localhost:18443, Electrum on localhost:60001) | Apps built with `BACKEND=local`   |
+| `BACKEND=local` (default) | Local Docker stack (Bitcoin RPC on localhost:43782, Electrum on localhost:60001) | Apps built with `BACKEND=local`   |
 | `BACKEND=regtest`         | Blocktank API over the internet (remote regtest)                                 | Apps built with `BACKEND=regtest` |
 
 > ⚠️ **The `BACKEND` must match how the app was built.** If the app connects to remote electrum, use `BACKEND=regtest`. If it connects to localhost, use `BACKEND=local`.
