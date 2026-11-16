@@ -149,7 +149,7 @@ Start the emulator:
 ```
 
 `start` prints the generated mnemonic and the first native regtest receive address (`m/84h/1h/0h/0/0`) so it can be funded during manual checks.
-`start` refuses to wipe/reseed an already-running emulator. Use `stop` before starting a new one.
+The bundled helper’s `start` refuses to wipe or reseed an already-running emulator. Use `stop` before starting a new one.
 
 For CI or scripts, use JSON output:
 
@@ -180,7 +180,7 @@ TREZOR_ADDRESS_COIN=Testnet TREZOR_ADDRESS_PATH="m/84h/1h/0h/0/0" ./scripts/trez
 
 Useful URLs:
 
-- User Env dashboard: `http://localhost:9002`
+- User Env dashboard: `http://localhost:23902` for the pinned Android fixture, `http://localhost:9002` for the bundled fixture.
 - Trezor Bridge: `http://localhost:21325`
 
 Android uses the Trezor User Env image pinned by the selected `bitkit-docker` revision. The iOS setup uses the pin in `docker/docker-compose.yml`. Both use the Bridge message format expected by the apps.
@@ -204,11 +204,13 @@ For manual checks, open Bitkit and use the app's developer Trezor screen to scan
 
 #### Android Physical Device
 
+This recipe uses staging regtest. If the pinned Trezor emulator is already running, use `./scripts/local-backend run ./scripts/trezor-emulator status` to reuse it.
+
 ```bash
 ./scripts/local-backend prepare
 ./scripts/local-backend run ./scripts/trezor-emulator start
 ./scripts/local-backend run ./scripts/trezor-emulator adb
-TREZOR_BRIDGE=true TREZOR_BRIDGE_URL=http://127.0.0.1:21325 ./scripts/build-android-apk.sh
+BACKEND=regtest TREZOR_BRIDGE=true TREZOR_BRIDGE_URL=http://127.0.0.1:21325 ./scripts/build-android-apk.sh
 ```
 
 #### iOS Simulator
@@ -287,7 +289,7 @@ To run a **specific test case**:
 To run against a **different app** in `aut/`:
 
 ```bash
-AUT_FILENAME=bitkit_rn_regtest.apk npm run e2e:android
+BACKEND=regtest AUT_FILENAME=bitkit_rn_regtest.apk npm run e2e:android
 ```
 
 ---
