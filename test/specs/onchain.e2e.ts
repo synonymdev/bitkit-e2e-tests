@@ -8,7 +8,6 @@ import {
   elementByText,
   expectTextWithin,
   doNavigationClose,
-  getAmountUnder,
   sleep,
   tap,
   receiveOnchainFunds,
@@ -192,8 +191,13 @@ describe('@onchain - Onchain', () => {
       await enterGateAddress(coreAddress);
 
       // Amount / NumberPad
-      await elementById('AvailableAmount').waitForDisplayed();
-      const maxAmount = await getAmountUnder('AvailableAmount');
+      const availableAmount = await elementByIdWithin('AvailableAmount', 'MoneyText');
+      await availableAmount.waitForDisplayed();
+      const availableSats = (await availableAmount.getText()).replace(/[₿\s]/g, '');
+      if (!/^\d+$/.test(availableSats)) {
+        throw new Error(`Invalid available on-chain amount: ${availableSats}`);
+      }
+      const maxAmount = Number(availableSats);
       const amountEntered = (amount: number): Outcome => ({
         all: [{ textWithin: { id: 'SendNumberField', text: formatSats(amount) } }],
       });
@@ -344,7 +348,7 @@ describe('@onchain - Onchain', () => {
       // calendar, clear, 3 transactions
       await tapAndExpect({ id: 'DatePicker' }, datePicker);
       await elementById('CalendarApplyButton').waitForDisplayed();
-      await tapAndExpect(
+      await tapStationaryAndExpect(
         { id: 'CalendarClearButton' },
         { all: [{ enabled: { id: 'CalendarApplyButton', value: false } }] }
       );

@@ -12,6 +12,7 @@ import {
   tapAndExpect,
   tapStationaryAndExpect,
   typeAndExpect,
+  waitAndExpect,
 } from '../helpers/outcome';
 import { openReceiveOnchainQr } from '../helpers/receive-invoice';
 import { reinstallApp } from '../helpers/setup';
@@ -65,10 +66,11 @@ describe('@onboarding @ios_nightly - Onboarding', () => {
     // create new wallet with passphrase
     const passphrase = 'supersecret';
     await tapStationaryAndExpect({ id: 'Passphrase' }, { anyVisible: [{ id: 'PassphraseInput' }] });
-    await typeAndExpect('PassphraseInput', passphrase, {
+    await typeAndExpect('PassphraseInput', passphrase);
+    await dismissKeyboardAndExpect();
+    await waitAndExpect({
       all: [{ enabled: { id: 'CreateNewWallet', value: true } }],
     });
-    await dismissKeyboardAndExpect();
     await createWallet('CreateNewWallet');
 
     const seed = await getSeed();
