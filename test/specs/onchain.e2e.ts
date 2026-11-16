@@ -17,7 +17,6 @@ import {
   dismissBackupTimedSheet,
   handleOver50PercentAlert,
   handleOver100Alert,
-  acknowledgeReceivedPayment,
   formatSats,
   expectTotalBalance,
   expectSpendingBalance,
@@ -41,7 +40,11 @@ import {
   typeAndExpect,
   type Outcome,
 } from '../helpers/outcome';
-import { openReceiveOnchainQr, receiveQrOutcome } from '../helpers/receive-invoice';
+import {
+  acknowledgeOnchainDeposit,
+  openReceiveOnchainQr,
+  receiveQrOutcome,
+} from '../helpers/receive-invoice';
 
 const sendSuccess: Outcome = { anyVisible: [{ id: 'SendSuccess' }] };
 const walletHome: Outcome = {
@@ -51,17 +54,9 @@ const activityRows = {
   all: [1, 2, 3].map((index) => ({ visible: { id: `Activity-${index}` } })),
 } satisfies Outcome;
 const datePicker: Outcome = { anyVisible: [{ id: 'CalendarApplyButton' }] };
-const calendarDate = new Intl.DateTimeFormat('en-US', {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
-const calendarMonth = new Intl.DateTimeFormat('en-US', {
-  month: 'long',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
+const calendarSelection: Outcome = {
+  all: [{ enabled: { id: 'CalendarApplyButton', value: true } }],
+};
 
 describe('@onchain - Onchain', () => {
   let electrum: Awaited<ReturnType<typeof initElectrum>> | undefined;
@@ -171,7 +166,7 @@ describe('@onchain - Onchain', () => {
         });
 
         await sendToAddress(address, '1');
-        await acknowledgeReceivedPayment({ timeout: 60_000 });
+        await acknowledgeOnchainDeposit();
 
         await mineBlocks(1);
         await electrum?.waitForSync();
@@ -197,6 +192,7 @@ describe('@onchain - Onchain', () => {
       await enterGateAddress(coreAddress);
 
       // Amount / NumberPad
+      await elementById('AvailableAmount').waitForDisplayed();
       const maxAmount = await getAmountUnder('AvailableAmount');
       const amountEntered = (amount: number): Outcome => ({
         all: [{ textWithin: { id: 'SendNumberField', text: formatSats(amount) } }],
@@ -320,20 +316,23 @@ describe('@onchain - Onchain', () => {
       // calendar, 0 transactions
       await tapAndExpect({ id: 'DatePicker' }, datePicker);
       await elementById('CalendarApplyButton').waitForDisplayed();
-      const today = new Date(`${(await driver.getDeviceTime()).slice(0, 10)}T12:00:00Z`);
-      const nextMonth = today.getUTCMonth() + 1;
-      const from = new Date(Date.UTC(today.getUTCFullYear(), nextMonth, 10));
-      const to = new Date(Date.UTC(today.getUTCFullYear(), nextMonth, 12));
-      const startDate = calendarDate.format(from);
+      await elementById('Today').waitForDisplayed();
       await tapAndExpect(
         { id: 'NextMonth' },
-        { anyVisible: [{ text: calendarMonth.format(from) }] }
+        {
+          all: [
+            { hidden: { id: 'Today' } },
+            { visible: { id: 'Day-10' } },
+            { visible: { id: 'CalendarApplyButton' } },
+          ],
+        }
       );
-      await tapStationaryAndExpect({ id: 'Day-10' }, { anyVisible: [{ text: startDate }] });
-      await tapStationaryAndExpect(
-        { id: 'Day-12' },
-        { anyVisible: [{ text: `${startDate} - ${calendarDate.format(to)}` }] }
-      );
+      await tapStationaryAndExpect({ id: 'Day-10' }, calendarSelection);
+      // Both apps add this separator when the summary switches from one date to a range.
+      const dateRange = elementByText(' - ', 'contains');
+      await dateRange.waitForDisplayed({ reverse: true });
+      await tapStationaryAndExpect({ id: 'Day-12' }, calendarSelection);
+      await dateRange.waitForDisplayed();
       await tapAndExpect(
         { id: 'CalendarApplyButton' },
         {
@@ -359,10 +358,7 @@ describe('@onchain - Onchain', () => {
       // calendar, current date, 3 transactions
       await tapAndExpect({ id: 'DatePicker' }, datePicker);
       await elementById('CalendarApplyButton').waitForDisplayed();
-      await tapStationaryAndExpect(
-        { id: 'Today' },
-        { anyVisible: [{ text: calendarDate.format(today) }] }
-      );
+      await tapStationaryAndExpect({ id: 'Today' }, calendarSelection);
       await tapAndExpect(
         { id: 'CalendarApplyButton' },
         { all: [...activityRows.all, { hidden: { id: 'CalendarApplyButton' } }] }

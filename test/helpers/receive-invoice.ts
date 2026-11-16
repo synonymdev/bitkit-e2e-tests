@@ -1,5 +1,16 @@
-import { getAddressFromQRCode } from './actions';
-import { actAndExpect, dismissKeyboardAndExpect, tapAndExpect, type Outcome } from './outcome';
+import {
+  dismissMoveToSparkIntroIfShown,
+  elementById,
+  getAddressFromQRCode,
+  withMoveToSparkIntroRecovery,
+} from './actions';
+import {
+  actAndExpect,
+  dismissKeyboardAndExpect,
+  tapAndExpect,
+  tapStationaryAndExpect,
+  type Outcome,
+} from './outcome';
 
 export const receiveQrOutcome: Outcome = {
   all: [
@@ -12,6 +23,23 @@ export const receiveQrOutcome: Outcome = {
 export async function openReceiveOnchainQr() {
   await tapAndExpect({ id: 'Receive' }, receiveQrOutcome);
   return getAddressFromQRCode('bitcoin');
+}
+
+export async function acknowledgeOnchainDeposit() {
+  await withMoveToSparkIntroRecovery(() =>
+    elementById('ReceivedTransaction').waitForDisplayed({ timeout: 60_000 })
+  );
+  const dismiss = { id: 'ReceivedTransactionButton' };
+  if (driver.isIOS) {
+    await browser.waitUntil(
+      async () => String(await elementById(dismiss.id).getAttribute('hittable')) === 'true',
+      { timeout: 30_000, timeoutMsg: 'The received payment button was not hittable' }
+    );
+  }
+  await tapStationaryAndExpect(dismiss, {
+    all: [{ hidden: dismiss }, { hidden: { id: 'ReceivedTransaction' } }],
+  });
+  await dismissMoveToSparkIntroIfShown({ timeout: 3_000 });
 }
 
 export async function dismissReceiveNoteKeyboard() {
