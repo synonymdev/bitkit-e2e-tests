@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+# Android Appium's pinned Bitcoin, Electrum and LND fixture.
+set -euo pipefail
+
+root="$(cd "$(dirname "$0")/.." && pwd)"
+cache="$root/.cache/local-backend"
+stack="${BITKIT_LOCAL_BACKEND_ROOT:-$cache/infra}"
+credentials="$cache/lnd"
+revision="$(tr -d '[:space:]' < "$root/BITKIT_DOCKER_REVISION")"
+
+if [[ ! "$revision" =~ ^[0-9a-f]{40}$ ]]; then
+  echo 'BITKIT_DOCKER_REVISION must contain a full Git SHA.' >&2
+  exit 1
+fi
+
+check_revision() {
+  local actual
+  actual="$(git -C "$stack" rev-parse --verify HEAD 2>/dev/null || true)"
+  if [[ "$actual" != "$revision" ]]; then
+    echo "Expected bitkit-docker $revision at $stack. Run ./scripts/local-backend prepare." >&2
+    exit 1
+  fi
+  if ! git -C "$stack" diff --quiet HEAD --; then
+    echo "The pinned bitkit-docker checkout has local source edits: $stack" >&2
+    exit 1
+  fi
+}
+
+prepare() {
+  if [[ -z "${BITKIT_LOCAL_BACKEND_ROOT:-}" ]]; then
+    if [[ ! -e "$stack/.git" ]]; then
+      mkdir -p "$stack"
+      git -C "$stack" init >&2
+      git -C "$stack" remote add origin https://github.com/synonymdev/bitkit-docker.git
+    fi
+    if [[ "$(git -C "$stack" rev-parse --verify HEAD 2>/dev/null || true)" != "$revision" ]]; then
+      if ! git -C "$stack" diff --quiet HEAD -- 2>/dev/null && git -C "$stack" rev-parse --verify HEAD >/dev/null 2>&1; then
+        echo "The cached bitkit-docker checkout has local source edits: $stack" >&2
+        exit 1
+      fi
+      git -C "$stack" fetch --depth 1 origin "$revision" >&2
+      git -C "$stack" checkout --detach "$revision" >&2
+    fi
+  fi
+  check_revision
+  echo "Using bitkit-docker $revision" >&2
+}
+
+compose() (
+  cd "$stack"
+  docker compose "$@"
+)
+
+set_runner_env() {
+  export BITKIT_LOCAL_BACKEND_ROOT="$stack"
+  export ELECTRUM_PORT="${ELECTRUM_PORT:-60001}"
+  export LND_P2P_PORT="${LND_P2P_PORT:-23735}"
+  export LND_GRPC_PORT="${LND_GRPC_PORT:-23009}"
+  export LND_REST_PORT="${LND_REST_PORT:-23180}"
+  export LND_TLS_PATH="$credentials/tls.cert"
+  export LND_MACAROON_PATH="$credentials/admin.macaroon"
+}
+
+up() {
+  prepare
+  compose up -d bitcoind bitcoinsetup electrs darkhttpd lnd ldk-backup-server
+  compose wait bitcoinsetup
+
+  local attempt
+  mkdir -p "$credentials"
+  for ((attempt = 0; attempt < 60; attempt++)); do
+    if nc -z 127.0.0.1 "${ELECTRUM_PORT:-60001}" 2>/dev/null &&
+      compose cp lnd:/home/lnd/.lnd/tls.cert "$credentials/tls.cert" >/dev/null 2>&1 &&
+      compose cp lnd:/home/lnd/.lnd/data/chain/bitcoin/regtest/admin.macaroon "$credentials/admin.macaroon" >/dev/null 2>&1 &&
+      [[ -s "$credentials/tls.cert" && -s "$credentials/admin.macaroon" ]]; then
+      local balance
+      balance="$(compose exec -T bitcoind bitcoin-cli -rpcport=43782 -rpcuser=polaruser -rpcpassword=polarpass getbalance)"
+      awk -v balance="$balance" 'BEGIN { exit !(balance > 0) }' || {
+        echo 'The pinned regtest wallet has no spendable balance.' >&2
+        return 1
+      }
+      echo "Pinned backend ready with $balance BTC of spendable regtest funds."
+      return
+    fi
+    sleep 2
+  done
+
+  echo 'Timed out waiting for Electrum and LND credentials.' >&2
+  compose ps >&2
+  return 1
+}
+
+case "${1:-}" in
+  prepare) prepare ;;
+  path)
+    check_revision
+    printf '%s\n' "$stack"
+    ;;
+  up) up ;;
+  down|ps|logs)
+    check_revision
+    compose "$@"
+    ;;
+  github-env)
+    check_revision
+    set_runner_env
+    for key in BITKIT_LOCAL_BACKEND_ROOT ELECTRUM_PORT LND_P2P_PORT LND_GRPC_PORT LND_REST_PORT LND_TLS_PATH LND_MACAROON_PATH; do
+      printf '%s=%s\n' "$key" "${!key}"
+    done
+    ;;
+  run)
+    shift
+    check_revision
+    set_runner_env
+    export BACKEND=local
+    exec "$@"
+    ;;
+  *)
+    echo 'Usage: ./scripts/local-backend {prepare|path|up|down|ps|logs|github-env|run <command>}' >&2
+    exit 2
+    ;;
+esac

@@ -2,9 +2,13 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-COMPOSE_FILE="$ROOT/docker/docker-compose.yml"
+if [[ -n "${BITKIT_LOCAL_BACKEND_ROOT:-}" ]]; then
+  COMPOSE_FILE="$("$ROOT/scripts/local-backend" path)/docker-compose.yml"
+else
+  COMPOSE_FILE="$ROOT/docker/docker-compose.yml"
+fi
 HOST="${EXTERNAL_HOST:-0.0.0.0}"
-PORT="${EXTERNAL_PORT:-9735}"
+PORT="${EXTERNAL_PORT:-${LND_P2P_PORT:-9735}}"
 NETWORK="${LND_NETWORK:-regtest}"
 LND_DIR="${LND_DIR:-/home/lnd/.lnd}"
 TLS_CERT_PATH="${TLS_CERT_PATH:-$LND_DIR/tls.cert}"

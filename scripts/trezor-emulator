@@ -2,6 +2,12 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [[ -n "${BITKIT_LOCAL_BACKEND_ROOT:-}" ]]; then
+  stack="$("$ROOT_DIR/scripts/local-backend" path)"
+  export TREZOR_SERVICE="${TREZOR_SERVICE:-trezor-user-env-mac}"
+  export TREZOR_RANDOM_MNEMONIC="${TREZOR_RANDOM_MNEMONIC:-true}"
+  exec "$stack/scripts/trezor-emulator" "$@"
+fi
 COMPOSE_FILE="$ROOT_DIR/docker/docker-compose.yml"
 CONTROLLER_SCRIPT="$ROOT_DIR/scripts/trezor-controller.py"
 TREZOR_DATA_DIR="$ROOT_DIR/docker/.trezor-user-env"

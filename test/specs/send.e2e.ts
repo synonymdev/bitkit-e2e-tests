@@ -142,7 +142,7 @@ describe('@send - Send', () => {
 
     const totalBalance = await elementByIdWithin('TotalBalance-primary', 'MoneyText');
     await expect(totalBalance).toHaveText('110 000'); // 100k onchain + 10k lightning
-    await expectTextWithin('ActivitySpending', '10 000');
+    await expectSpendingBalanceText('10 000');
 
     // try to send amount over balance and verify you cannot continue
     console.info('Trying to send ln amount over balance...');
@@ -166,7 +166,7 @@ describe('@send - Send', () => {
     await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     const amtAfterOnchain = await totalBalanceChangedFrom(totalBalance, '110 000');
     console.info({ amtAfterOnchain });
-    await expectTextWithin('ActivitySpending', '10 000');
+    await expectSpendingBalanceText('10 000');
 
     // send to lightning invoice
     console.info('Sending to lightning invoice...');
@@ -183,7 +183,7 @@ describe('@send - Send', () => {
     await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     const amtAfterLightning = await totalBalanceChangedFrom(totalBalance, amtAfterOnchain);
     console.info({ amtAfterLightning });
-    await expectTextWithin('ActivitySpending', '8 000');
+    await expectSpendingBalanceText('8 000');
 
     // can edit invoice on the review screen
     console.info('Editing invoice on review screen...');
@@ -219,7 +219,7 @@ describe('@send - Send', () => {
     await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     const amtAfterUnified = await totalBalanceChangedFrom(totalBalance, amtAfterLightning);
     console.info({ amtAfterUnified });
-    await expectTextWithin('ActivitySpending', '7 000');
+    await expectSpendingBalanceText('7 000');
 
     // send to unified invoice w/ amount exceeding balance(s)
     console.info('Sending to unified invoice w/ amount exceeding balance(s)...');
@@ -241,7 +241,7 @@ describe('@send - Send', () => {
     await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     const amtAfterUnified2 = await totalBalanceChangedFrom(totalBalance, amtAfterUnified);
     console.info({ amtAfterUnified2 });
-    await expectTextWithin('ActivitySpending', '7 000');
+    await expectSpendingBalanceText('7 000');
 
     // send to unified invoice w/ expired invoice
     console.info('Sending to unified invoice w/ expired invoice...');
@@ -266,7 +266,7 @@ describe('@send - Send', () => {
     await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     const amtAfterUnified3 = await totalBalanceChangedFrom(totalBalance, amtAfterUnified2);
     console.info({ amtAfterUnified3 });
-    await expectTextWithin('ActivitySpending', '7 000');
+    await expectSpendingBalanceText('7 000');
 
     // send to unified invoice w/o amount (lightning)
     console.info('Sending to unified invoice w/o amount (lightning)...');
@@ -293,7 +293,7 @@ describe('@send - Send', () => {
     await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     const amtAfterUnified4 = await totalBalanceChangedFrom(totalBalance, amtAfterUnified3);
     console.info({ amtAfterUnified4 });
-    await expectTextWithin('ActivitySpending', '6 000');
+    await expectSpendingBalanceText('6 000');
 
     // send to unified invoice w/o amount (switch to onchain)
     const { paymentRequest: invoice6 } = await lnd.addInvoice({});
@@ -330,7 +330,7 @@ describe('@send - Send', () => {
     await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     const amtAfterUnified5 = await totalBalanceChangedFrom(totalBalance, amtAfterUnified4);
     console.info({ amtAfterUnified5 });
-    await expectTextWithin('ActivitySpending', '6 000');
+    await expectSpendingBalanceText('6 000');
 
     // send to lightning invoice w/ amount (quickpay)
     console.info('Sending to lightning invoice w/ amount (quickpay)...');
@@ -349,7 +349,7 @@ describe('@send - Send', () => {
     await tapAndExpect({ id: 'Close' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     const amtAfterLightning2 = await totalBalanceChangedFrom(totalBalance, amtAfterUnified5);
     console.info({ amtAfterLightning2 });
-    await expectTextWithin('ActivitySpending', '5 000');
+    await expectSpendingBalanceText('5 000');
 
     // send to unified invoice w/ amount (quickpay)
     console.info('Sending to unified invoice w/ amount (quickpay)...');
@@ -365,7 +365,7 @@ describe('@send - Send', () => {
     await withMoveToSparkIntroRecovery(async () => {
       await expect(totalBalance).not.toHaveText(amtAfterLightning2);
     });
-    await expectTextWithin('ActivitySpending', '4 000');
+    await expectSpendingBalanceText('4 000');
 
     // send to lightning invoice w/ amount (skip quickpay for large amounts)
     console.info('Sending to lightning invoice w/ amount (skip quickpay for large amounts)...');
@@ -379,7 +379,7 @@ describe('@send - Send', () => {
     const r = await lnd.sendPaymentSync({ paymentRequest: receive2, amt: '10000' });
     console.info({ r });
     await acknowledgeReceivedPayment();
-    await expectTextWithin('ActivitySpending', '14 000');
+    await expectSpendingBalanceText('14 000');
 
     const { paymentRequest: invoice9 } = await lnd.addInvoice({ value: '10000' });
     console.info({ invoice9 });
@@ -453,7 +453,7 @@ describe('@send - Send', () => {
     await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });
     await dismissQuickPayIntro({ triggerTimedSheet: true });
 
-    await expectTextWithin('ActivitySpending', '10 000');
+    await expectSpendingBalanceText('10 000');
 
     async function payMsatInvoice(
       valueMsat: string,
@@ -486,6 +486,15 @@ describe('@send - Send', () => {
     await payMsatInvoice('500500', '501', false);
   });
 });
+
+async function expectSpendingBalanceText(expected: string): Promise<void> {
+  const wait = () => expectTextWithin('ActivitySpending', expected);
+  if (driver.isAndroid) {
+    await withMoveToSparkIntroRecovery(wait);
+    return;
+  }
+  await wait();
+}
 
 /** Reads the total balance once it moved off `previous`; the Move to Spark intro can cover home right after Close. */
 async function totalBalanceChangedFrom(
