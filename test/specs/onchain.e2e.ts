@@ -333,10 +333,11 @@ describe('@onchain - Onchain', () => {
       );
       await tapStationaryAndExpect({ id: 'Day-10' }, calendarSelection);
       // Both apps add this separator when the summary switches from one date to a range.
-      const dateRange = elementByText(' - ', 'contains');
-      await dateRange.waitForDisplayed({ reverse: true });
+      await elementByText(' - ', 'contains').waitForDisplayed({ reverse: true });
       await tapStationaryAndExpect({ id: 'Day-12' }, calendarSelection);
-      await dateRange.waitForDisplayed();
+      await browser.waitUntil(() => elementByText(' - ', 'contains').isDisplayed(), {
+        timeoutMsg: 'The selected two-date range was not displayed',
+      });
       await tapAndExpect(
         { id: 'CalendarApplyButton' },
         {

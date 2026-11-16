@@ -20,8 +20,8 @@ import { ciIt } from '../helpers/suite';
 import { openSettings } from '../helpers/navigation';
 
 async function startOnboardingSlides() {
-  await tapAndExpect({ id: 'Continue' }, { anyVisible: [{ id: 'GetStarted' }] });
-  await tapAndExpect({ id: 'GetStarted' }, { anyVisible: [{ id: 'Slide0' }] });
+  await tapStationaryAndExpect({ id: 'Continue' }, { anyVisible: [{ id: 'GetStarted' }] });
+  await tapStationaryAndExpect({ id: 'GetStarted' }, { anyVisible: [{ id: 'Slide0' }] });
   await elementById('Slide0').waitForDisplayed();
   await swipeAndExpect('left', { anyVisible: [{ id: 'Slide1' }] });
   await elementById('Slide1').waitForDisplayed();
