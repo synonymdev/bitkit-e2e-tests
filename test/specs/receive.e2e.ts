@@ -1,15 +1,16 @@
 import {
   completeOnboarding,
-  confirmInputOnKeyboard,
-  elementById,
   expectText,
   expectTextWithin,
-  getReceiveAddress,
-  sleep,
-  swipeFullScreen,
-  tap,
-  typeText,
+  getAddressFromQRCode,
 } from '../helpers/actions';
+import {
+  dismissKeyboardAndExpect,
+  swipeAndExpect,
+  tapAndExpect,
+  tapStationaryAndExpect,
+  typeAndExpect,
+} from '../helpers/outcome';
 import { reinstallApp } from '../helpers/setup';
 import { ciIt } from '../helpers/suite';
 
@@ -20,72 +21,90 @@ describe('@receive @ios_nightly - Receive', () => {
   });
 
   ciIt('@receive_1 - Basic functionality', async () => {
-    const address = await getReceiveAddress();
+    await tapAndExpect({ id: 'Receive' }, { anyVisible: [{ id: 'QRCode' }] });
+    const address = await getAddressFromQRCode('bitcoin');
     if (!address.startsWith('bcrt1')) {
       throw new Error(`Wrong default receiving address: ${address}`);
     }
 
     // Onchain/Lightning details
-    await tap('ShowDetails');
-    await elementById('ReceiveScreen').waitForDisplayed();
+    await tapAndExpect(
+      { id: 'ShowDetails' },
+      { all: [{ visible: { id: 'ReceiveScreen' } }, { hidden: { id: 'ShowDetails' } }] }
+    );
 
     // ReceiveDetail
-    await tap('QRCode');
-    await sleep(1000);
-    await tap('SpecifyInvoiceButton');
+    await tapAndExpect({ id: 'QRCode' }, { anyVisible: [{ id: 'SpecifyInvoiceButton' }] });
+    await tapAndExpect(
+      { id: 'SpecifyInvoiceButton' },
+      { anyVisible: [{ id: 'ReceiveNumberPadTextField' }] }
+    );
 
     // NumberPad
-    await tap('ReceiveNumberPadTextField');
-    await sleep(1000);
+    await tapAndExpect(
+      { id: 'ReceiveNumberPadTextField' },
+      { anyVisible: [{ id: 'ReceiveNumberPadSubmit' }] }
+    );
     // Unit set to sats
-    await tap('N1');
-    await tap('N2');
-    await tap('N3');
+    for (const amount of ['1', '12', '123']) {
+      await tapAndExpect(
+        { id: `N${amount.slice(-1)}` },
+        { all: [{ textWithin: { id: 'ReceiveNumberPadTextField', text: amount } }] }
+      );
+    }
     await expectText('123');
-    await tap('ReceiveNumberPadSubmit');
+    await tapAndExpect({ id: 'ReceiveNumberPadSubmit' }, { anyVisible: [{ id: 'ReceiveNote' }] });
 
     // Invoice note
     const note = 'iPhone Refurbished';
-    await typeText('ReceiveNote', note);
-    await confirmInputOnKeyboard();
-    await sleep(300); // wait for keyboard to hide
+    await typeAndExpect('ReceiveNote', note);
+    await dismissKeyboardAndExpect();
 
     // Tags
     const tag = 'test123';
-    await tap('TagsAdd');
-    await typeText('TagInputReceive', tag);
-    await tap('ReceiveTagsSubmit');
-    await sleep(300); // wait for keyboard to hide
+    await tapAndExpect({ id: 'TagsAdd' }, { anyVisible: [{ id: 'TagInputReceive' }] });
+    await typeAndExpect('TagInputReceive', tag);
+    await tapAndExpect(
+      { id: 'ReceiveTagsSubmit' },
+      {
+        all: [
+          { visible: { text: tag } },
+          { hidden: { id: 'TagInputReceive' } },
+          { keyboardShown: false },
+        ],
+      }
+    );
 
     // Show QR
-    await tap('ShowQrReceive');
-    await sleep(500);
+    await tapAndExpect({ id: 'ShowQrReceive' }, { anyVisible: [{ id: 'SpecifyInvoiceButton' }] });
 
     // Back to ReceiveDetail
     // data should still be there
-    await tap('SpecifyInvoiceButton');
+    await tapAndExpect({ id: 'SpecifyInvoiceButton' }, { anyVisible: [{ id: 'ReceiveNote' }] });
     await expectText('123');
     await expectTextWithin('ReceiveNote', note);
     await expectText(tag);
 
     // Close & reopen
-    await swipeFullScreen('down');
-    await sleep(1000);
-    await elementById('Receive').waitForDisplayed();
-    await tap('Receive');
+    await swipeAndExpect('down', {
+      all: [{ visible: { id: 'Receive' } }, { hidden: { id: 'ReceiveNumberPadTextField' } }],
+    });
+    await tapAndExpect({ id: 'Receive' }, { anyVisible: [{ id: 'SpecifyInvoiceButton' }] });
 
     // data should be reset
-    await sleep(500);
-    await tap('SpecifyInvoiceButton');
+    await tapAndExpect({ id: 'SpecifyInvoiceButton' }, { anyVisible: [{ id: 'ReceiveNote' }] });
     await expectText('123', { visible: false });
     await expectTextWithin('ReceiveNote', note, { visible: false });
     await expectText(tag, { visible: false });
 
     // check previous tags & delete
-    await tap('TagsAdd');
-    await tap(`Tag-${tag}`);
+    await tapAndExpect({ id: 'TagsAdd' }, { anyVisible: [{ id: `Tag-${tag}` }] });
+    await tapStationaryAndExpect(
+      { id: `Tag-${tag}` },
+      { all: [{ visible: { text: tag } }, { hidden: { id: 'TagInputReceive' } }] }
+    );
     await expectText(tag);
-    await tap(`Tag-${tag}-delete`);
+    await tapAndExpect({ id: `Tag-${tag}-delete` }, { all: [{ hidden: { text: tag } }] });
     await expectText(tag, { visible: false });
   });
 });
