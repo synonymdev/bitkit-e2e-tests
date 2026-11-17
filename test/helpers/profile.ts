@@ -76,7 +76,7 @@ export async function readPubkyFromProfileCopy(expectedPubky: string): Promise<s
     return copiedPubky;
   }
   await tap('ProfileCopy');
-  await waitForToast('ProfilePubkyCopiedToast');
+  await waitForToast('ProfilePubkyCopiedToast', { waitToDisappear: true });
   return (await getClipboardPlaintext()).trim();
 }
 
