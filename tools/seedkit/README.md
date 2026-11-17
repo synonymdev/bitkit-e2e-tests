@@ -73,7 +73,7 @@ Connects to Bitcoin Core via JSON-RPC. Expects [bitkit-docker](https://github.co
 
 ### Staging
 
-Uses Synonym's Blocktank API for regtest operations.
+Uses Blocktank staging's regtest deposit and mine routes.
 
 - Default URL: `https://api.stag0.blocktank.to/blocktank/api/v2`
 - Override with `--blocktank-url`

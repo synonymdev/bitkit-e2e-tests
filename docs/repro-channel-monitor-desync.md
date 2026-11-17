@@ -51,6 +51,8 @@ Failed to start wallet
 
 ## Repro Case #1: Blocktank channel (staging regtest)
 
+> Historical: Blocktank no longer opens channels, so "transfer to spending" cannot create this channel any more. Use Repro Case #2 (3rd-party channel, local docker) to reproduce the bug today.
+
 Reproduces the bug using a Blocktank LSP channel opened via "transfer to spending".
 
 ### Prerequisites

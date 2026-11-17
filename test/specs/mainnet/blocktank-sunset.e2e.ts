@@ -15,7 +15,7 @@ import { openSettings } from '../../helpers/navigation';
 import { reinstallApp } from '../../helpers/setup';
 import { ciIt } from '../../helpers/suite';
 
-const sunsetUi = process.env.BLOCKTANK_SUNSET_UI ?? 'legacy';
+const sunsetUi = process.env.BLOCKTANK_SUNSET_UI ?? 'manual';
 const blockedText =
   'Bitkit does not currently provide Lightning services in your country, but you can still connect to other nodes directly.';
 const manualSetupText =

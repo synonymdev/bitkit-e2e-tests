@@ -249,7 +249,7 @@ Backend and Trezor are independent. `BACKEND=local` uses local Bitcoin/Electrum,
 | Backend                   | Infrastructure                                                                   | When to use                       |
 | ------------------------- | -------------------------------------------------------------------------------- | --------------------------------- |
 | `BACKEND=local` (default) | Local Docker stack (Bitcoin RPC on localhost:43782, Electrum on localhost:60001) | Apps built with `BACKEND=local`   |
-| `BACKEND=regtest`         | Blocktank API over the internet (remote regtest)                                 | Apps built with `BACKEND=regtest` |
+| `BACKEND=regtest`         | Blocktank staging's regtest tools over the internet (deposit, mine, pay)         | Apps built with `BACKEND=regtest` |
 
 > ⚠️ **The `BACKEND` must match how the app was built.** If the app connects to remote electrum, use `BACKEND=regtest`. If it connects to localhost, use `BACKEND=local`.
 
