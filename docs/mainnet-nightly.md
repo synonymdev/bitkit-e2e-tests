@@ -49,12 +49,12 @@ Coverage:
 - Receive → Spending → Receive Lightning funds: the unavailable screen appears instead of a CJIT quote, can be dismissed/reopened, and leads to Manual Setup.
 - Receive on-chain: a mainnet native SegWit address remains available without a Lightning channel.
 
-Set `BLOCKTANK_SUNSET_UI=legacy` (default) for 3.0.1's country-blocked UI, or `BLOCKTANK_SUNSET_UI=manual` for the sunset UI introduced by Android #1696. The latter also requires the explanatory copy, Learn More actions, and disabled hardware-wallet funding option. Expectations do not auto-detect the UI, so a missing sunset screen cannot pass as an older build. Geocheck must return blocked; E2E builds that bypass it are unsuitable for this suite.
+Set `BLOCKTANK_SUNSET_UI=manual` (default) for the sunset UI introduced by Android #1696 and shipped in 3.1.0, or `BLOCKTANK_SUNSET_UI=legacy` for 3.0.1's country-blocked UI. `manual` also requires the explanatory copy, Learn More actions, and disabled hardware-wallet funding option. Expectations do not auto-detect the UI, so a missing sunset screen cannot pass as an older build. Geocheck must return blocked; E2E builds that bypass it are unsuitable for this suite.
 
 Example against a compatible APK in `aut/bitkit_e2e.apk`:
 
 ```sh
-BACKEND=mainnet APP_ID_ANDROID=to.bitkit BLOCKTANK_SUNSET_UI=legacy \
+BACKEND=mainnet APP_ID_ANDROID=to.bitkit BLOCKTANK_SUNSET_UI=manual \
   npm run e2e:android -- --mochaOpts.grep '@blocktank_sunset_mainnet'
 ```
 

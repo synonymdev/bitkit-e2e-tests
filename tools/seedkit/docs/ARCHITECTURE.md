@@ -24,7 +24,7 @@ Both backends implement the same `Backend` interface with three methods:
   - Staging: `POST /regtest/chain/mine`
 - **`EnsureFunds()`** - make sure the backend has spendable coins
   - Local: checks balance, mines 101 blocks if needed
-  - Staging: no-op (Blocktank handles funding)
+  - Staging: no-op (Blocktank staging's faucet funds `/regtest/chain/deposit`)
 
 Connection details from existing infra:
 
