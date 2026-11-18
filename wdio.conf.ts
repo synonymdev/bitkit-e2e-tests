@@ -12,6 +12,15 @@ const androidPlatformVersion = process.env.ANDROID_PLATFORM_VERSION || '13.0';
 const iosDeviceName = process.env.SIMULATOR_NAME || 'iPhone 17';
 const iosPlatformVersion = process.env.SIMULATOR_OS_VERSION || '26.0.1';
 
+const iosGateShard = isAndroid ? undefined : process.env.IOS_GATE_SHARD;
+if (iosGateShard && iosGateShard !== 'payments' && iosGateShard !== 'channels') {
+  throw new Error('IOS_GATE_SHARD must be payments or channels');
+}
+// The complementary shard picks up new gate specs automatically.
+const paymentsSpecs = ['multiaddress', 'send', 'transfer'].map(
+  (name) => `./test/specs/${name}.e2e.ts`
+);
+
 const autDir = path.join(__dirname, 'aut');
 const autFilename = process.env.AUT_FILENAME;
 const androidApp = path.join(autDir, autFilename || 'bitkit_e2e.apk');
@@ -48,11 +57,8 @@ export const config: WebdriverIO.Config = {
   //
   // Spec in [] will be run in a separate worker process.
   // Running all specs sequentially for now.
-  specs: [['./test/specs/**/*.ts']],
-  // Patterns to exclude.
-  exclude: [
-    // 'path/to/excluded/files'
-  ],
+  specs: [iosGateShard === 'payments' ? paymentsSpecs : ['./test/specs/**/*.ts']],
+  exclude: iosGateShard === 'channels' ? paymentsSpecs : [],
   //
   // ============
   // Capabilities
@@ -118,7 +124,7 @@ export const config: WebdriverIO.Config = {
 
           // 🩹 Stability improvements
           'appium:newCommandTimeout': 300,
-          'appium:wdaLaunchTimeout': 300000,
+          'appium:wdaLaunchTimeout': Number(process.env.WDA_LAUNCH_TIMEOUT ?? 300000),
           'appium:wdaConnectionTimeout': 300000,
           'appium:wdaStartupRetries': 3,
           'appium:wdaStartupRetryInterval': 5000,
@@ -163,8 +169,10 @@ export const config: WebdriverIO.Config = {
   //
   // Default timeout in milliseconds for request
   // if browser driver or grid doesn't send response
-  // Must be >= wdaLaunchTimeout (300000) to allow WDA time to start
-  connectionRetryTimeout: 360000,
+  // Allow the iOS client to wait for WDA to finish compiling on a cold runner.
+  connectionRetryTimeout: isAndroid
+    ? 360000
+    : Number(process.env.WDIO_CONNECTION_RETRY_TIMEOUT ?? 360000),
   //
   // Default request retries count
   connectionRetryCount: 3,
@@ -201,6 +209,7 @@ export const config: WebdriverIO.Config = {
   // Options to be passed to Mocha.
   // See the full list at http://mochajs.org/
   mochaOpts: {
+    ...(iosGateShard ? { grep: '@ios_gate' } : {}),
     ui: 'bdd',
     timeout: 15 * 60 * 1000, // 15 minutes
     ...(!isAndroid ? { rootHooks: iosDiagnostics.rootHooks } : {}),

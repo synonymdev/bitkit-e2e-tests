@@ -2,6 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [[ -n "${TREZOR_FIXTURE_URL:-}" ]]; then
+  exec python3 "$ROOT_DIR/scripts/remote-trezor.py" "$@"
+fi
 if [[ -n "${BITKIT_LOCAL_BACKEND_ROOT:-}" ]]; then
   stack="$("$ROOT_DIR/scripts/local-backend" path)"
   export TREZOR_SERVICE="${TREZOR_SERVICE:-trezor-user-env-mac}"
