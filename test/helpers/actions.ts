@@ -1946,7 +1946,15 @@ export async function dismissMoveToSparkIntroIfShown({
     if (id === tapped || attempt === 3) {
       throw new Error(`Move to Spark sheet still visible after ${tapped}`);
     }
-    await elementById(id).click();
+    // The quote can replace the button between settling and the tap; recheck the sheet and settle again.
+    const clicked = await elementById(id)
+      .click()
+      .then(() => true)
+      .catch(() => false);
+    if (!clicked) {
+      if (!(await isMoveToSparkShown())) break;
+      continue;
+    }
     tapped = id;
     const closed = await browser
       .waitUntil(async () => !(await isMoveToSparkShown()), { timeout: 10_000, interval: 200 })

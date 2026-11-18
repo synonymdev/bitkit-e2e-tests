@@ -42,6 +42,7 @@ function homeScreen({
   sparkId = 'MoveToSparkIntroLater',
   sparkFlipAt = Infinity,
   sparkFlipsOnTap = false,
+  sparkTapRejects = false,
 } = {}) {
   let elapsed = 0;
   let dismissed = false;
@@ -91,6 +92,10 @@ function homeScreen({
         assert.ok(visible(id), `${id} must be visible when tapped`);
         clicks.push(id);
         if (SPARK_IDS.has(id)) {
+          if (sparkTapRejects && !sparkFlipped) {
+            sparkFlipped = true;
+            throw new Error('element is no longer attached');
+          }
           if (sparkFlipsOnTap && !sparkFlipped) sparkFlipped = true;
           else sparkDismissed = sparkDismissWorks;
         }
@@ -170,6 +175,11 @@ for (const isAndroid of [true, false]) {
     [
       'taps again when the modal changes state under the tap',
       { sparkId: 'UpdateSpendingBalanceLater', sparkFlipsOnTap: true },
+      ['UpdateSpendingBalanceLater', 'UpdateSpendingBalanceDismiss'],
+    ],
+    [
+      'taps the new button when the state change makes the first tap fail',
+      { sparkId: 'UpdateSpendingBalanceLater', sparkTapRejects: true },
       ['UpdateSpendingBalanceLater', 'UpdateSpendingBalanceDismiss'],
     ],
     [
