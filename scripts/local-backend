@@ -138,11 +138,14 @@ case "${1:-}" in
     }
     spark pay "$2"
     ;;
-  spark-down|spark-logs)
+  spark-down)
     check_revision
-    command="${1#spark-}"
+    spark down
+    ;;
+  spark-logs)
+    check_revision
     shift
-    compose --profile spark "$command" "$@"
+    compose --profile spark logs "$@"
     ;;
   down|ps|logs)
     check_revision

@@ -125,7 +125,7 @@ BACKEND=local ./scripts/build-ios-sim.sh
 ./scripts/run-spark-e2e.sh ios
 ```
 
-Use a dedicated emulator and simulator because the test reinstalls Bitkit and creates a new wallet. The iOS wrapper accepts `SIMULATOR_NAME` and `SIMULATOR_OS_VERSION` for the chosen simulator. The Docker images build from source on the first start.
+Use a dedicated emulator and simulator because the test reinstalls Bitkit and creates a new wallet. Set `SIMULATOR_NAME` to the dedicated simulator's unique name and `SIMULATOR_OS_VERSION` to its installed runtime so Appium requests the matching capability. The Docker images build from source on the first start. Run `./scripts/local-backend spark-down` to stop the Spark services when done.
 
 To run the case in GitHub Actions, dispatch the Android **E2E** and iOS **e2e-tests** workflows with `spark_only=true` and select the E2E branch that contains the spec.
 
