@@ -59,6 +59,16 @@ for key in USDT_RPC_URL USDT_BUNDLER_URL USDT_DEPOSITS_URL USDT_BRIDGES_URL USDT
   fi
 done
 
+if [[ -n "${SPARK_LOCAL_CONFIG_B64:-}" ]]; then
+  xcode_version="$(xcodebuild -version)"
+  if [[ "$xcode_version" =~ ^Xcode[[:space:]]26\.0([.]|[[:space:]]) ]]; then
+    # Xcode 26.0 omits swift-secp256k1's default C traits when building the package.
+    XCODE_EXTRA_ARGS+=(
+      'GCC_PREPROCESSOR_DEFINITIONS=$(inherited) ENABLE_MODULE_ECDH=1 ENABLE_MODULE_MUSIG=1 ENABLE_MODULE_RECOVERY=1 ENABLE_MODULE_SCHNORRSIG=1'
+    )
+  fi
+fi
+
 echo "Building iOS simulator app (BACKEND=$BACKEND, E2E_BACKEND=$E2E_BACKEND, TREZOR_BRIDGE=$TREZOR_BRIDGE, TREZOR_BRIDGE_URL=$TREZOR_BRIDGE_URL)..."
 
 xcodebuild \
