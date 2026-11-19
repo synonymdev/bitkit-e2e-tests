@@ -127,7 +127,7 @@ BACKEND=local ./scripts/build-ios-sim.sh
 
 Use a dedicated emulator and simulator because the test reinstalls Bitkit and creates a new wallet. Set `SIMULATOR_NAME` to the dedicated simulator's unique name and `SIMULATOR_OS_VERSION` to its installed runtime so Appium requests the matching capability. The Docker images build from source on the first start. Run `./scripts/local-backend spark-down` to stop the Spark services when done.
 
-To run the case in GitHub Actions, dispatch the Android **E2E** and iOS **e2e-tests** workflows with `spark_only=true` and select the E2E branch that contains the spec.
+The **Local E2E Nightly** workflows run this case on Android and iOS at 05:35 UTC against E2E `main`. To run it on demand, dispatch the workflow in the app repository. Set `e2e_branch` if the spec is on another ref.
 
 ### USDT local execution
 
