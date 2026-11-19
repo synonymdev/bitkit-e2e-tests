@@ -56,6 +56,40 @@ spark() (
   ./spark "$@"
 )
 
+spark_build() {
+  # Some Spark services use the same tag. Select one target per image.
+  local targets=(spark-so-0 spark-migrations-0 spark-ldk-server spark-sspd spark-ready spark-lnurl spark-data-sync)
+  if [[ -z "${SPARK_IMAGE_CACHE:-}" ]]; then
+    compose --profile spark build "${targets[@]}"
+    return
+  fi
+
+  local definitions target image archive
+  local images=()
+  definitions="$(compose --profile spark config --format json)"
+  for target in "${targets[@]}"; do
+    image="$(jq -er --arg target "$target" '.services[$target].image | strings | select(length > 0)' <<< "$definitions")"
+    images+=("$image")
+  done
+
+  if [[ -s "$SPARK_IMAGE_CACHE" ]] &&
+    docker image load --input "$SPARK_IMAGE_CACHE" &&
+    docker image inspect "${images[@]}" >/dev/null; then
+    echo 'Loaded pinned Spark images from cache.'
+    return
+  fi
+
+  compose --profile spark build "${targets[@]}"
+  if archive="$(mktemp "${SPARK_IMAGE_CACHE}.XXXXXX")"; then
+    if docker image save --output "$archive" "${images[@]}" && mv "$archive" "$SPARK_IMAGE_CACHE"; then
+      echo 'Saved pinned Spark images for caching.'
+      return
+    fi
+    rm -f "$archive"
+  fi
+  echo 'Could not save the Spark image cache. Continuing with the built images.' >&2
+}
+
 spark_up() {
   prepare
   local SPARK_PUBLIC_HOST=127.0.0.1
@@ -67,10 +101,7 @@ spark_up() {
     if [[ "$service" == spark-* ]]; then spark_services+=("$service"); fi
   done <<< "$services"
   compose up -d --no-recreate bitcoind bitcoinsetup electrs
-  # The operators, migrations and Lightning nodes share image tags. Build one service
-  # per image so BuildKit cannot publish the same tag from multiple targets at once.
-  compose --profile spark build spark-so-0 spark-migrations-0 spark-ldk-server spark-sspd \
-    spark-ready spark-lnurl spark-data-sync
+  spark_build
   # Let Compose refresh Spark services when their advertised host changes.
   compose --profile spark up -d --no-build "${spark_services[@]}"
   local status=0
