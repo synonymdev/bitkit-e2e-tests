@@ -147,7 +147,7 @@ spark_init_env() {
   prepare
   local SPARK_PUBLIC_HOST=127.0.0.1
   export SPARK_PUBLIC_HOST
-  compose --profile spark run --rm --no-deps --pull never -T spark-init >&2
+  compose --profile spark up --no-deps --no-build --pull never --exit-code-from spark-init spark-init >&2
   spark_env
 }
 
