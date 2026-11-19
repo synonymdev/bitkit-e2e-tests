@@ -61,6 +61,28 @@ spark_services() {
   compose --profile spark config --services | awk '/^spark-/'
 }
 
+spark_fixture_services() {
+  printf '%s\n' "${spark_base_services[@]}"
+  spark_services
+}
+
+spark_fixture_images() {
+  compose --profile spark config --images "$@" | LC_ALL=C sort -u
+}
+
+spark_image_fingerprint() {
+  local service_list service image_list image image_id
+  local services=() image_ids=()
+  service_list="$(spark_fixture_services)" || return
+  while IFS= read -r service; do services+=("$service"); done <<< "$service_list"
+  image_list="$(spark_fixture_images "${services[@]}")" || return
+  while IFS= read -r image; do
+    image_id="$(docker image inspect --format '{{.Id}}' "$image")" || return
+    image_ids+=("$image $image_id")
+  done <<< "$image_list"
+  printf '%s\n' "${image_ids[@]}" | shasum -a 256 | awk '{print $1}'
+}
+
 spark_build() {
   # Some Spark services use the same tag. Select one target per image.
   local targets=(spark-so-0 spark-migrations-0 spark-ldk-server spark-sspd spark-ready spark-lnurl spark-data-sync)
@@ -99,14 +121,14 @@ spark_pack() {
   local archive="$1"
   prepare
   local services service image_list image
-  local targets=("${spark_base_services[@]}")
+  local targets=()
   local images=()
-  services="$(spark_services)"
+  services="$(spark_fixture_services)"
   while IFS= read -r service; do targets+=("$service"); done <<< "$services"
 
   SPARK_IMAGE_CACHE= spark_build
   compose --profile spark pull --ignore-buildable "${targets[@]}"
-  image_list="$(compose --profile spark config --images "${targets[@]}" | sort -u)"
+  image_list="$(spark_fixture_images "${targets[@]}")"
   while IFS= read -r image; do images+=("$image"); done <<< "$image_list"
   docker image save --output "$archive" "${images[@]}"
 }
@@ -118,14 +140,24 @@ spark_up() {
   local services service
   local profile_services=()
   local start_args=(-d)
+  local base_args=(--no-recreate)
   services="$(spark_services)"
   while IFS= read -r service; do profile_services+=("$service"); done <<< "$services"
   if [[ -n "${SPARK_IMAGE_ARCHIVE:-}" ]]; then
     docker image load --input "$SPARK_IMAGE_ARCHIVE"
-    start_args+=(--pull never)
   fi
-  compose up "${start_args[@]}" --no-recreate "${spark_base_services[@]}"
-  if [[ -z "${SPARK_IMAGE_ARCHIVE:-}" ]]; then spark_build; fi
+  if [[ -n "${SPARK_IMAGE_FINGERPRINT:-}" ]]; then
+    if [[ "$(spark_image_fingerprint)" != "$SPARK_IMAGE_FINGERPRINT" ]]; then
+      echo 'The local Docker images do not match the pinned Spark fixture archive.' >&2
+      return 1
+    fi
+  fi
+  if [[ -n "${SPARK_IMAGE_ARCHIVE:-}${SPARK_IMAGE_FINGERPRINT:-}" ]]; then
+    start_args+=(--pull never)
+    base_args+=(--no-build)
+  fi
+  compose up "${start_args[@]}" "${base_args[@]}" "${spark_base_services[@]}"
+  if [[ -z "${SPARK_IMAGE_ARCHIVE:-}${SPARK_IMAGE_FINGERPRINT:-}" ]]; then spark_build; fi
   # Let Compose refresh Spark services when their advertised host changes.
   compose --profile spark up "${start_args[@]}" --no-build "${profile_services[@]}"
   local status=0
@@ -205,6 +237,10 @@ case "${1:-}" in
     spark_pack "$2"
     ;;
   spark-up) spark_up ;;
+  spark-image-fingerprint)
+    check_revision
+    spark_image_fingerprint
+    ;;
   spark-init-env) spark_init_env ;;
   spark-env) spark_env ;;
   spark-pay)
@@ -243,7 +279,7 @@ case "${1:-}" in
     exec "$@"
     ;;
   *)
-    echo 'Usage: ./scripts/local-backend {prepare|path|up|down|ps|logs|github-env|run <command>|spark-pack <image-archive>|spark-up|spark-init-env|spark-env|spark-pay <invoice>|spark-down|spark-logs}' >&2
+    echo 'Usage: ./scripts/local-backend {prepare|path|up|down|ps|logs|github-env|run <command>|spark-pack <image-archive>|spark-up|spark-image-fingerprint|spark-init-env|spark-env|spark-pay <invoice>|spark-down|spark-logs}' >&2
     exit 2
     ;;
 esac
