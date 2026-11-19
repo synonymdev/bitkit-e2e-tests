@@ -4,6 +4,7 @@ import { promisify } from 'node:util';
 import {
   acknowledgeReceivedPayment,
   completeOnboarding,
+  elementById,
   expectSpendingBalance,
   expectTextWithin,
   getAddressFromQRCode,
@@ -24,7 +25,13 @@ const describeSpark = process.env.BITKIT_LOCAL_SPARK === '1' ? describe : descri
 async function openSparkConnection() {
   await openSettings('advanced');
   await tapAndExpect({ id: 'Channels' }, { anyVisible: [{ id: 'SparkConnection' }] });
-  await tapAndExpect({ id: 'SparkConnection' }, { anyVisible: [{ id: 'SparkBalance' }] });
+  await tapAndExpect(
+    { id: 'SparkConnection' },
+    { anyVisible: [{ id: 'SparkBalance' }, { id: 'SparkDepositAddress' }] }
+  );
+  if (!(await elementById('SparkBalance').isDisplayed())) {
+    await swipeFullScreen('up', { upStartYPercent: 0.68, upEndYPercent: 0.34 });
+  }
 }
 
 describeSpark('Spark on local regtest', () => {
