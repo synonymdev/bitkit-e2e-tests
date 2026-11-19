@@ -143,6 +143,14 @@ spark_env() {
   printf 'SPARK_LOCAL_CHAIN_URL=http://127.0.0.1:23090/api\n'
 }
 
+spark_init_env() {
+  prepare
+  local SPARK_PUBLIC_HOST=127.0.0.1
+  export SPARK_PUBLIC_HOST
+  compose --profile spark run --rm --no-deps --pull never -T spark-init >&2
+  spark_env
+}
+
 set_runner_env() {
   export BITKIT_LOCAL_BACKEND_ROOT="$stack"
   export ELECTRUM_PORT="${ELECTRUM_PORT:-60001}"
@@ -197,6 +205,7 @@ case "${1:-}" in
     spark_pack "$2"
     ;;
   spark-up) spark_up ;;
+  spark-init-env) spark_init_env ;;
   spark-env) spark_env ;;
   spark-pay)
     check_revision
@@ -234,7 +243,7 @@ case "${1:-}" in
     exec "$@"
     ;;
   *)
-    echo 'Usage: ./scripts/local-backend {prepare|path|up|down|ps|logs|github-env|run <command>|spark-pack <image-archive>|spark-up|spark-env|spark-pay <invoice>|spark-down|spark-logs}' >&2
+    echo 'Usage: ./scripts/local-backend {prepare|path|up|down|ps|logs|github-env|run <command>|spark-pack <image-archive>|spark-up|spark-init-env|spark-env|spark-pay <invoice>|spark-down|spark-logs}' >&2
     exit 2
     ;;
 esac

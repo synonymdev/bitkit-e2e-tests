@@ -51,6 +51,15 @@ if [[ -n "$TREZOR_ELECTRUM_URL" ]]; then
   XCODE_EXTRA_ARGS+=("TREZOR_ELECTRUM_URL=$TREZOR_ELECTRUM_URL")
 fi
 
+if [[ -n "${SOURCE_PACKAGES:-}" ]]; then
+  XCODE_EXTRA_ARGS+=(
+    -clonedSourcePackagesDirPath "$SOURCE_PACKAGES"
+    -disablePackageRepositoryCache
+    -disableAutomaticPackageResolution
+    -skipPackageUpdates
+  )
+fi
+
 # Embed fixture endpoints so they survive Appium reinstalls and app relaunches.
 for key in USDT_RPC_URL USDT_BUNDLER_URL USDT_DEPOSITS_URL USDT_BRIDGES_URL USDT_BRIDGE_NETWORKS \
   SPARK_LOCAL_CONFIG_B64 SPARK_LOCAL_CHAIN_URL; do
