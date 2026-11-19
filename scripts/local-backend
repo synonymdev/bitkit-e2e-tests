@@ -67,8 +67,12 @@ spark_up() {
     if [[ "$service" == spark-* ]]; then spark_services+=("$service"); fi
   done <<< "$services"
   compose up -d --no-recreate bitcoind bitcoinsetup electrs
+  # The operators, migrations and Lightning nodes share image tags. Build one service
+  # per image so BuildKit cannot publish the same tag from multiple targets at once.
+  compose --profile spark build spark-so-0 spark-migrations-0 spark-ldk-server spark-sspd \
+    spark-ready spark-lnurl spark-data-sync
   # Let Compose refresh Spark services when their advertised host changes.
-  compose --profile spark up -d --build "${spark_services[@]}"
+  compose --profile spark up -d --no-build "${spark_services[@]}"
   local status=0
   compose --profile spark wait spark-ready || status=$?
   compose --profile spark logs --no-log-prefix spark-ready
