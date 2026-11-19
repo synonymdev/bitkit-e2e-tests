@@ -52,7 +52,8 @@ if [[ -n "$TREZOR_ELECTRUM_URL" ]]; then
 fi
 
 # Embed fixture endpoints so they survive Appium reinstalls and app relaunches.
-for key in USDT_RPC_URL USDT_BUNDLER_URL USDT_DEPOSITS_URL USDT_BRIDGES_URL USDT_BRIDGE_NETWORKS; do
+for key in USDT_RPC_URL USDT_BUNDLER_URL USDT_DEPOSITS_URL USDT_BRIDGES_URL USDT_BRIDGE_NETWORKS \
+  SPARK_LOCAL_CONFIG_B64 SPARK_LOCAL_CHAIN_URL; do
   if [[ -n "${!key+x}" ]]; then
     XCODE_EXTRA_ARGS+=("$key=${!key}")
   fi
@@ -65,7 +66,7 @@ xcodebuild \
   -scheme Bitkit \
   -configuration Debug \
   -sdk iphonesimulator \
-  -destination 'platform=iOS Simulator,OS=latest,name=iPhone 17' \
+  -destination 'generic/platform=iOS Simulator' \
   -derivedDataPath "$IOS_ROOT/build" \
   "${XCODE_EXTRA_ARGS[@]}" \
   clean build
