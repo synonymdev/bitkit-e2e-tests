@@ -1060,11 +1060,9 @@ export async function restoreWallet(
     }
   }
 
-  // A restored wallet whose channels hold a balance gets the Move to Spark intro once Spark connects, over home.
+  // A restored wallet whose channels hold a balance gets the Move to Spark sheet once Spark connects, over home.
   await browser.waitUntil(
-    async () =>
-      (await isTestIdDisplayed('TotalBalance-primary')) ||
-      (await isTestIdDisplayed('MoveToSparkIntroLater')),
+    async () => (await isTestIdDisplayed('TotalBalance-primary')) || (await isMoveToSparkShown()),
     { timeout: 90_000, timeoutMsg: 'Wallet home did not show after restore' }
   );
   await dismissMoveToSparkIntroIfShown();
@@ -1644,7 +1642,7 @@ export async function acknowledgeReceivedPayment({ timeout = 30_000 }: { timeout
   await sleep(500);
   await tap('ReceivedTransactionButton');
   await sleep(300);
-  // A Lightning receive can make the intro due; home shows it about 2 s after the received sheet closes, before
+  // A Lightning receive can make the Move to Spark sheet due; home shows it about 2 s after the received sheet closes, before
   // balance reads that cannot recover from it.
   await dismissMoveToSparkIntroIfShown({ timeout: 3_000 });
 }
@@ -1771,7 +1769,7 @@ async function triggerTimedSheetUnlessPresent(
     async () =>
       (await isTestIdDisplayed(sheetId)) ||
       (await isTestIdDisplayed('UsdtIntroDecline')) ||
-      (await isTestIdDisplayed('MoveToSparkIntroLater')) ||
+      (await isMoveToSparkShown()) ||
       (await isTestIdDisplayed('HeaderMenu')) ||
       (await isTestIdDisplayed('TotalBalance')),
     {
@@ -1801,13 +1799,11 @@ async function triggerTimedSheetUnlessPresent(
   await doTriggerTimedSheet();
 
   // Move to Spark outranks the other timed sheets, so the trigger can surface it instead of sheetId. Wait for
-  // whichever shows first, so a run where sheetId shows does not also wait out the intro.
+  // whichever shows first, so a run where sheetId shows does not also wait out the Move to Spark sheet.
   await browser
-    .waitUntil(
-      async () =>
-        (await isTestIdDisplayed(sheetId)) || (await isTestIdDisplayed('MoveToSparkIntroLater')),
-      { timeout: 3_000 }
-    )
+    .waitUntil(async () => (await isTestIdDisplayed(sheetId)) || (await isMoveToSparkShown()), {
+      timeout: 3_000,
+    })
     .catch(() => undefined);
   if (await dismissMoveToSparkIntroIfShown()) {
     await awaitSheetAfterMoveToSpark(sheetId);
@@ -1816,7 +1812,7 @@ async function triggerTimedSheetUnlessPresent(
 
 /**
  * Dismisses a sheet that covers home in place of sheetId.
- * @returns true when the Move to Spark intro was dismissed and the queue has moved on
+ * @returns true when the Move to Spark sheet was dismissed and the queue has moved on
  */
 async function dismissInterveningSheets(sheetId: string): Promise<boolean> {
   if (await dismissMoveToSparkIntroIfShown()) {
@@ -1830,7 +1826,7 @@ async function dismissInterveningSheets(sheetId: string): Promise<boolean> {
 
 /**
  * Home re-checks the queue about 2 s after a dismiss, so the next timed sheet usually surfaces by itself once the
- * Move to Spark intro is gone. It can be another sheet than sheetId (QuickPay before Background Payments); the
+ * Move to Spark sheet is gone. It can be another sheet than sheetId (QuickPay before Background Payments); the
  * caller's own wait then decides, so the queue is triggered only when home is uncovered.
  * @returns true, as the caller should not trigger the queue again
  */
@@ -1845,37 +1841,139 @@ async function awaitSheetAfterMoveToSpark(sheetId: string): Promise<boolean> {
   return true;
 }
 
+/** Containers of every Move to Spark sheet state: the old intro and the Update Spending Balance modal. */
+const MOVE_TO_SPARK_SHEET_IDS = [
+  'MoveToSparkIntro',
+  'UpdateSpendingBalance',
+  'SpendingBalanceUpdated',
+  'MoveToSparkTooLarge',
+  'MoveToSparkFailed',
+  'MoveToSparkInFlight',
+  'MoveToSparkPartlyMoved',
+] as const;
+
+/** Buttons that close the sheet without moving funds, one per state. */
+const MOVE_TO_SPARK_DISMISS_IDS = [
+  'MoveToSparkIntroLater',
+  'UpdateSpendingBalanceLater',
+  'UpdateSpendingBalanceDismiss',
+  'SpendingBalanceUpdatedOk',
+] as const;
+
+/** The modal quotes on open and can switch state within about a second, so a button must hold this long. */
+const MOVE_TO_SPARK_SETTLE_MS = 1_000;
+
+/** Matches any of the ids in one query, so polling loops pay a single round trip. */
+function elementByAnyId(ids: readonly string[]): ChainablePromiseElement {
+  if (driver.isAndroid) {
+    return $(`android=new UiSelector().resourceIdMatches("${ids.join('|')}")`);
+  }
+  return $(`-ios predicate string:name IN {${ids.map((id) => `'${id}'`).join(', ')}}`);
+}
+
+async function isMoveToSparkShown(): Promise<boolean> {
+  return elementByAnyId([...MOVE_TO_SPARK_SHEET_IDS, ...MOVE_TO_SPARK_DISMISS_IDS])
+    .isDisplayed()
+    .catch(() => false);
+}
+
+async function visibleMoveToSparkDismissId(): Promise<string | undefined> {
+  for (const id of MOVE_TO_SPARK_DISMISS_IDS) {
+    if (await isTestIdDisplayed(id)) return id;
+  }
+  return undefined;
+}
+
 /**
- * Dismisses the Move to Spark intro with Later if it is showing.
+ * Waits until one dismiss button has stayed the same (and, on Android, in place) for MOVE_TO_SPARK_SETTLE_MS.
+ * @returns the settled button id, or undefined when the sheet closed meanwhile
+ */
+async function settleMoveToSparkDismiss(): Promise<string | undefined> {
+  let previous = '';
+  let since = 0;
+  let settled: string | undefined;
+  await browser.waitUntil(
+    async () => {
+      settled = undefined;
+      const id = await visibleMoveToSparkDismissId();
+      if (!id) {
+        previous = '';
+        return !(await isMoveToSparkShown());
+      }
+      const button = elementById(id);
+      if (!(await button.isEnabled())) {
+        previous = '';
+        return false;
+      }
+      const current = driver.isAndroid
+        ? JSON.stringify([id, await button.getLocation(), await button.getSize()])
+        : id;
+      if (current !== previous) {
+        previous = current;
+        since = Date.now();
+        return false;
+      }
+      if (Date.now() - since < MOVE_TO_SPARK_SETTLE_MS) return false;
+      settled = id;
+      return true;
+    },
+    { timeout: 15_000, interval: 200, timeoutMsg: 'Move to Spark sheet did not settle' }
+  );
+  return settled;
+}
+
+/**
+ * Dismisses the Move to Spark sheet if it is showing.
  * The apps show it once, at the top timed-sheet priority, when a wallet's Lightning channels can move a balance to a
- * ready Spark wallet. That turns true on state a test cannot see (a receive, Spark connecting), so the intro can
- * cover home at any step; the Later button is the probe, as it is queryable on both platforms.
+ * ready Spark wallet. That turns true on state a test cannot see (a receive, Spark connecting), so the sheet can
+ * cover home at any step. As the Update Spending Balance modal it quotes on open and may switch to a result state
+ * (too large, failed, moved), each with its own dismiss button; the tap waits for that and repeats once the state
+ * changes under it.
  *
- * @param options.timeout - How long to wait for the intro to appear (default: none, check once)
- * @returns true if the intro was shown and dismissed
+ * @param options.timeout - How long to wait for the sheet to appear (default: none, check once)
+ * @returns true if the sheet was shown and dismissed
  */
 export async function dismissMoveToSparkIntroIfShown({
   timeout = 0,
 }: { timeout?: number } = {}): Promise<boolean> {
-  const later = elementById('MoveToSparkIntroLater');
   const shown =
     timeout > 0
-      ? await later
-          .waitForDisplayed({ timeout })
+      ? await browser
+          .waitUntil(isMoveToSparkShown, { timeout, interval: 200 })
           .then(() => true)
           .catch(() => false)
-      : await isTestIdDisplayed('MoveToSparkIntroLater');
+      : await isMoveToSparkShown();
   if (!shown) return false;
-  console.info('→ Move to Spark intro visible, dismissing with Later...');
-  await sleep(500);
-  await later.click();
-  await later.waitForDisplayed({ reverse: true });
+  console.info('→ Move to Spark sheet visible, dismissing...');
+  let tapped: string | undefined;
+  for (let attempt = 0; ; attempt++) {
+    const id = await settleMoveToSparkDismiss();
+    if (!id) break;
+    if (id === tapped || attempt === 3) {
+      throw new Error(`Move to Spark sheet still visible after ${tapped}`);
+    }
+    // The quote can replace the button between settling and the tap; recheck the sheet and settle again.
+    const clicked = await elementById(id)
+      .click()
+      .then(() => true)
+      .catch(() => false);
+    if (!clicked) {
+      if (!(await isMoveToSparkShown())) break;
+      continue;
+    }
+    tapped = id;
+    const closed = await browser
+      .waitUntil(async () => !(await isMoveToSparkShown()), { timeout: 10_000, interval: 200 })
+      .then(() => true)
+      .catch(() => false);
+    if (closed) break;
+  }
   await sleep(500);
   return true;
 }
 
 /**
- * Runs a wait and, when it fails while the Move to Spark intro covers the screen, dismisses the intro and retries
+ * Runs a wait and, when it fails while the Move to Spark sheet covers the screen, dismisses the sheet and retries
  * once, as the ANR recovery does for system dialogs.
  */
 export async function withMoveToSparkIntroRecovery<T>(wait: () => Promise<T>): Promise<T> {

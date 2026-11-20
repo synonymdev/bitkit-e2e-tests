@@ -1,7 +1,34 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { expectBalanceWithWait, tap, waitForWalletHomeCondition } from '../helpers/actions.ts';
+import {
+  dismissMoveToSparkIntroIfShown,
+  expectBalanceWithWait,
+  tap,
+  waitForWalletHomeCondition,
+} from '../helpers/actions.ts';
 import { doTriggerTimedSheet, openSettings } from '../helpers/navigation.ts';
+
+const SPARK_IDS = new Set([
+  'MoveToSparkIntro',
+  'UpdateSpendingBalance',
+  'SpendingBalanceUpdated',
+  'MoveToSparkTooLarge',
+  'MoveToSparkFailed',
+  'MoveToSparkInFlight',
+  'MoveToSparkPartlyMoved',
+  'MoveToSparkIntroLater',
+  'UpdateSpendingBalanceLater',
+  'UpdateSpendingBalanceDismiss',
+  'SpendingBalanceUpdatedOk',
+]);
+
+/** The ids a selector names: `~id`, `resourceId("id")`, `resourceIdMatches("a|b")` or `name IN {'a', 'b'}`. */
+function selectorIds(selector: string): string[] {
+  if (selector.startsWith('~')) return [selector.slice(1)];
+  const predicate = selector.match(/name IN \{(.*)\}/);
+  if (predicate) return predicate[1].split(',').map((id) => id.trim().replace(/'/g, ''));
+  return selector.split('"')[1].split('|');
+}
 
 function homeScreen({
   homeAt = 0,
@@ -12,15 +39,23 @@ function homeScreen({
   reappearsAt = Infinity,
   sparkAt = Infinity,
   sparkDismissWorks = true,
+  sparkId = 'MoveToSparkIntroLater',
+  sparkFlipAt = Infinity,
+  sparkFlipsOnTap = false,
+  sparkTapRejects = false,
 } = {}) {
   let elapsed = 0;
   let dismissed = false;
   let sparkDismissed = false;
+  let sparkFlipped = false;
   const clicks: string[] = [];
   const introVisible = () => (!dismissed || elapsed >= reappearsAt) && elapsed >= introAt;
   const sparkVisible = () => !sparkDismissed && elapsed >= sparkAt;
+  // The Update Spending Balance modal leaves its quote state for the too-large state once the quote fails.
+  const sparkButton = () =>
+    sparkFlipped || elapsed >= sparkFlipAt ? 'UpdateSpendingBalanceDismiss' : sparkId;
   const visible = (id: string) => {
-    if (id === 'MoveToSparkIntroLater') return sparkVisible();
+    if (SPARK_IDS.has(id)) return sparkVisible() && id === sparkButton();
     if (id.startsWith('UsdtIntro')) return introVisible() && !sparkVisible();
     return elapsed >= homeAt && !introVisible() && !sparkVisible();
   };
@@ -40,11 +75,12 @@ function homeScreen({
     }
   };
   const select = (selector: string) => {
-    const id = selector.startsWith('~') ? selector.slice(1) : selector.split('"')[1];
+    const ids = selectorIds(selector);
+    const id = ids[0];
     return {
-      isDisplayed: async () => visible(id),
-      isExisting: async () => visible(id),
-      isEnabled: async () => visible(id),
+      isDisplayed: async () => ids.some(visible),
+      isExisting: async () => ids.some(visible),
+      isEnabled: async () => ids.some(visible),
       getLocation: async () => ({
         x: 20,
         y: 700 - Math.min(100, Math.max(0, elapsed - introAt) / 5),
@@ -55,7 +91,14 @@ function homeScreen({
       click: async () => {
         assert.ok(visible(id), `${id} must be visible when tapped`);
         clicks.push(id);
-        if (id === 'MoveToSparkIntroLater') sparkDismissed = sparkDismissWorks;
+        if (SPARK_IDS.has(id)) {
+          if (sparkTapRejects && !sparkFlipped) {
+            sparkFlipped = true;
+            throw new Error('element is no longer attached');
+          }
+          if (sparkFlipsOnTap && !sparkFlipped) sparkFlipped = true;
+          else sparkDismissed = sparkDismissWorks;
+        }
         if (id.startsWith('UsdtIntro')) {
           if (driver.isAndroid) {
             assert.ok(elapsed >= introAt + 500, 'Do not tap the entering Android sheet');
@@ -104,7 +147,11 @@ for (const isAndroid of [true, false]) {
       t.mock.method(Date, 'now', () => screen.elapsed);
 
       await navigate();
-      assert.deepEqual(screen.clicks, ['MoveToSparkIntroLater', 'UsdtIntroDecline', ...expectedClicks]);
+      assert.deepEqual(screen.clicks, [
+        'MoveToSparkIntroLater',
+        'UsdtIntroDecline',
+        ...expectedClicks,
+      ]);
     });
   }
 
@@ -118,6 +165,41 @@ for (const isAndroid of [true, false]) {
     await assert.rejects(tap('HeaderMenu'));
     assert.deepEqual(screen.clicks, ['MoveToSparkIntroLater']);
   });
+
+  for (const [name, options, sparkClicks] of [
+    [
+      'waits out a quote that fails into the too-large state',
+      { sparkId: 'UpdateSpendingBalanceLater', sparkFlipAt: 500 },
+      ['UpdateSpendingBalanceDismiss'],
+    ],
+    [
+      'taps again when the modal changes state under the tap',
+      { sparkId: 'UpdateSpendingBalanceLater', sparkFlipsOnTap: true },
+      ['UpdateSpendingBalanceLater', 'UpdateSpendingBalanceDismiss'],
+    ],
+    [
+      'taps the new button when the state change makes the first tap fail',
+      { sparkId: 'UpdateSpendingBalanceLater', sparkTapRejects: true },
+      ['UpdateSpendingBalanceLater', 'UpdateSpendingBalanceDismiss'],
+    ],
+    [
+      'dismisses a moved balance with OK',
+      { sparkId: 'SpendingBalanceUpdatedOk' },
+      ['SpendingBalanceUpdatedOk'],
+    ],
+  ] as const) {
+    test(`${platform}: Update Spending Balance ${name}`, async (t) => {
+      const previous = { browser: globalThis.browser, driver: globalThis.driver, $: globalThis.$ };
+      const screen = homeScreen({ sparkAt: 0, ...options });
+      Object.assign(globalThis, { browser: screen.browser, $: screen.$, driver: { isAndroid } });
+      t.after(() => Object.assign(globalThis, previous));
+      t.mock.method(Date, 'now', () => screen.elapsed);
+
+      assert.equal(await dismissMoveToSparkIntroIfShown(), true);
+      assert.deepEqual(screen.clicks, sparkClicks);
+      assert.equal(await dismissMoveToSparkIntroIfShown(), false);
+    });
+  }
 
   test(`${platform}: resolves a late intro during balance synchronization`, async (t) => {
     const previous = { browser: globalThis.browser, driver: globalThis.driver, $: globalThis.$ };
