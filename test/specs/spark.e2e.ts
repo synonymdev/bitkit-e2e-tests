@@ -23,7 +23,7 @@ import { ciIt } from '../helpers/suite';
 const runCommand = promisify(execFile);
 const describeSpark = process.env.BITKIT_LOCAL_SPARK === '1' ? describe : describe.skip;
 
-function reportSparkCase(status: 'setup' | 'started' | 'passed' | 'failed') {
+function reportSparkCase(status: 'setup' | 'setup-failed' | 'started' | 'passed' | 'failed') {
   const output = process.env.GITHUB_OUTPUT;
   if (!output) return;
   try {
@@ -76,8 +76,13 @@ describeSpark('Spark on local regtest', () => {
 
   ciIt('@spark_1 - Receive a Lightning payment into Spark', async () => {
     reportSparkCase('setup');
-    await reinstallApp();
-    await completeOnboarding();
+    try {
+      await reinstallApp();
+      await completeOnboarding();
+    } catch (error) {
+      reportSparkCase('setup-failed');
+      throw error;
+    }
 
     reportSparkCase('started');
     try {

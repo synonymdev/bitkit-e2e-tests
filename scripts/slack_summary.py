@@ -26,6 +26,7 @@ Mode-specific env vars:
     LOCAL_NIGHTLY_RESULT - Overall result for e2e-local-nightly
     SPARK_IMAGES_RESULT - Optional iOS image preparation result
     SPARK_FIXTURE_RESULT - Local Spark fixture startup result
+    SPARK_APP_SETUP_RESULT - Failure or interruption preparing the app on a Spark attempt
     SPARK_CASE_RESULT   - Final result reported for @spark_1
 
 Optional env vars:
@@ -155,20 +156,20 @@ def render_e2e_local_nightly_message() -> str:
         "spark-images": os.environ.get("SPARK_IMAGES_RESULT", ""),
         "app build": os.environ.get("BUILD_RESULT", ""),
         "Spark fixture": os.environ.get("SPARK_FIXTURE_RESULT", ""),
+        "Spark app setup (one or more attempts)": os.environ.get("SPARK_APP_SETUP_RESULT", ""),
     }
     tests_result = os.environ.get("E2E_TESTS_RESULT", "unknown")
     case_result = {
         "passed": "success",
         "failed": "failure",
         "started": "interrupted",
-        "setup": "did not run",
     }.get(os.environ.get("SPARK_CASE_RESULT"), "no result")
-    if tests_result == "cancelled" and case_result in ("interrupted", "no result"):
-        case_result = "cancelled"
-    elif case_result == "no result" and (tests_result == "skipped" or any(
-        result in ("failure", "skipped") for result in setup.values()
+    if case_result == "no result" and (tests_result == "skipped" or any(
+        result in ("failure", "skipped", "interrupted") for result in setup.values()
     )):
         case_result = "did not run"
+    elif tests_result == "cancelled" and case_result in ("interrupted", "no result"):
+        case_result = "cancelled"
     return _render_message(
         kind="local nightly",
         overall_result=os.environ.get("LOCAL_NIGHTLY_RESULT", "unknown"),

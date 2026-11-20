@@ -248,13 +248,26 @@ class TestRenderLocalNightlyMessage(unittest.TestCase):
             ("failed", ":x: failure"),
             ("passed", ":white_check_mark: success"),
             ("started", ":warning: interrupted"),
-            ("setup", ":fast_forward: did not run"),
         )
         for case_status, display in cases:
             with self.subTest(case_status=case_status):
                 os.environ["SPARK_CASE_RESULT"] = case_status
                 message = render_e2e_local_nightly_message()
                 self.assertIn("e2e-spark: :x: failure", message)
+                self.assertIn(f"@spark_1: {display}", message)
+
+    def test_app_setup_failure_and_case_result_are_independent(self):
+        os.environ["SPARK_APP_SETUP_RESULT"] = "failure"
+        cases = (
+            ("", ":fast_forward: did not run"),
+            ("failed", ":x: failure"),
+            ("passed", ":white_check_mark: success"),
+        )
+        for case_status, display in cases:
+            with self.subTest(case_status=case_status):
+                os.environ["SPARK_CASE_RESULT"] = case_status
+                message = render_e2e_local_nightly_message()
+                self.assertIn("Spark app setup (one or more attempts): :x: failure", message)
                 self.assertIn(f"@spark_1: {display}", message)
 
     def test_cancelled_job_matches_the_final_case_outcome(self):
