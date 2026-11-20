@@ -118,7 +118,7 @@ async function getSparkDepositClaimFee(txid: string) {
   const feeAmount = $(
     driver.isIOS
       ? '//XCUIElementTypeStaticText[@label="Claim fee"]/following-sibling::XCUIElementTypeStaticText[1]'
-      : '//*[@text="Claim fee"]/parent::*/*[@resource-id="MoneyText"]'
+      : '//*[@text="Claim fee"]/following-sibling::*[@resource-id="MoneyText"][1]'
   );
   const digits = (await feeAmount.getText()).replace(/[^\d]/g, '');
   if (!digits) throw new Error('The Spark deposit claim fee was not displayed in sats');
