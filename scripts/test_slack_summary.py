@@ -11,7 +11,9 @@ from slack_summary import (
     format_status,
     get_platform_display,
     get_status_icon,
+    main,
     post_to_slack,
+    render_e2e_local_nightly_message,
     render_e2e_migration_message,
     render_e2e_staging_message,
 )
@@ -198,6 +200,78 @@ class TestRenderMigrationMessage(unittest.TestCase):
         self.assertIn("build: :white_check_mark: success", message)
         self.assertIn("e2e-tests: :white_check_mark: success", message)
         self.assertNotIn("prepare-wallets", message)
+
+
+class TestRenderLocalNightlyMessage(unittest.TestCase):
+    def setUp(self):
+        env_patcher = patch.dict(os.environ, {}, clear=True)
+        env_patcher.start()
+        self.addCleanup(env_patcher.stop)
+
+    def test_android_pass_links_to_run_and_checked_out_ref(self):
+        os.environ.update({
+            "PLATFORM": "android",
+            "LOCAL_NIGHTLY_RESULT": "success",
+            "BUILD_RESULT": "success",
+            "SPARK_FIXTURE_RESULT": "success",
+            "E2E_TESTS_RESULT": "success",
+            "SPARK_CASE_RESULT": "success",
+            "RUN_URL": "https://github.com/synonymdev/bitkit-android/actions/runs/123",
+            "RUN_ATTEMPT": "2",
+            "E2E_TESTS_REF": "abc123",
+        })
+        message = render_e2e_local_nightly_message()
+        self.assertIn(":white_check_mark: Bitkit Android E2E local nightly: success", message)
+        self.assertIn("@spark_1: :white_check_mark: success", message)
+        self.assertIn("Run: https://github.com/synonymdev/bitkit-android/actions/runs/123", message)
+        self.assertIn("Run attempt: 2", message)
+        self.assertIn("E2E tests ref: abc123", message)
+        self.assertNotIn("spark-images", message)
+
+    def test_ios_failure_before_appium(self):
+        os.environ.update({
+            "PLATFORM": "ios",
+            "LOCAL_NIGHTLY_RESULT": "failure",
+            "SPARK_IMAGES_RESULT": "success",
+            "BUILD_RESULT": "success",
+            "SPARK_FIXTURE_RESULT": "failure",
+            "E2E_TESTS_RESULT": "failure",
+        })
+        message = render_e2e_local_nightly_message()
+        self.assertIn(":x: Bitkit iOS E2E local nightly: failure", message)
+        self.assertIn("Spark fixture: :x: failure", message)
+        self.assertIn("@spark_1: :fast_forward: did not run", message)
+
+    def test_case_result_distinguishes_test_failure_from_later_job_failure(self):
+        os.environ.update({"LOCAL_NIGHTLY_RESULT": "failure", "E2E_TESTS_RESULT": "failure"})
+        for result, icon in (("failure", ":x:"), ("success", ":white_check_mark:")):
+            with self.subTest(result=result):
+                os.environ["SPARK_CASE_RESULT"] = result
+                message = render_e2e_local_nightly_message()
+                self.assertIn("e2e-spark: :x: failure", message)
+                self.assertIn(f"@spark_1: {icon} {result}", message)
+
+    def test_cancelled_job_matches_the_final_case_outcome(self):
+        os.environ.update({
+            "E2E_TESTS_RESULT": "cancelled",
+            "SPARK_CASE_RESULT": "failure",
+        })
+        message = render_e2e_local_nightly_message()
+        self.assertIn("@spark_1: :warning: cancelled", message)
+
+    def test_older_e2e_ref_without_case_output_has_no_confirmed_result(self):
+        os.environ.update({"LOCAL_NIGHTLY_RESULT": "success", "E2E_TESTS_RESULT": "success"})
+        message = render_e2e_local_nightly_message()
+        self.assertIn("@spark_1: :grey_question: no result", message)
+
+    def test_cli_posts_one_summary(self):
+        os.environ.update({"LOCAL_NIGHTLY_RESULT": "success", "SPARK_CASE_RESULT": "success"})
+        with patch("sys.argv", ["slack_summary.py", "e2e-local-nightly"]), \
+                patch("sys.stdout", new=io.StringIO()), \
+                patch("slack_summary.post_to_slack", return_value=True) as post:
+            self.assertEqual(main(), 0)
+        post.assert_called_once()
+        self.assertIn("@spark_1: :white_check_mark: success", post.call_args.args[0])
 
 
 class TestPostToSlack(unittest.TestCase):

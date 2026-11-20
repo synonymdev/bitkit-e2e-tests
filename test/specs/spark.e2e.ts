@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { appendFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { promisify } from 'node:util';
 import {
@@ -22,6 +23,13 @@ import { ciIt } from '../helpers/suite';
 const runCommand = promisify(execFile);
 const describeSpark = process.env.BITKIT_LOCAL_SPARK === '1' ? describe : describe.skip;
 
+function reportSparkCase(status: 'started' | 'passed') {
+  const output = process.env.GITHUB_OUTPUT;
+  if (output) {
+    appendFileSync(output, `spark-case=${status}\n`);
+  }
+}
+
 async function openSparkConnection() {
   await openSettings('advanced');
   await tapAndExpect({ id: 'Channels' }, { anyVisible: [{ id: 'SparkConnection' }] });
@@ -36,6 +44,7 @@ async function openSparkConnection() {
 
 describeSpark('Spark on local regtest', () => {
   ciIt('@spark_1 - Receive a Lightning payment into Spark', async () => {
+    reportSparkCase('started');
     await reinstallApp();
     await completeOnboarding();
 
@@ -64,5 +73,6 @@ describeSpark('Spark on local regtest', () => {
 
     await openSparkConnection();
     expect(await getAmountUnder('SparkBalance')).toBe(10_000);
+    reportSparkCase('passed');
   });
 });

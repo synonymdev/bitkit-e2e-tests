@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Slack summary script for Bitkit E2E staging and migration workflows.
+Slack summary script for Bitkit E2E staging, migration and local nightly workflows.
 
 Renders a summary message from environment variables and posts it to a
 Slack webhook. Modeled on synonymdev/bitkit-nightly slack_summary.py style.
@@ -8,12 +8,11 @@ Slack webhook. Modeled on synonymdev/bitkit-nightly slack_summary.py style.
 Usage:
     python3 scripts/slack_summary.py e2e-staging
     python3 scripts/slack_summary.py e2e-migration
+    python3 scripts/slack_summary.py e2e-local-nightly
 
 Required env vars:
     SLACK_WEBHOOK_URL   - Slack incoming webhook URL (skips gracefully if unset)
     PLATFORM            - ios|android
-    BUILD_RESULT        - build job result
-    E2E_BRANCH_RESULT   - e2e-branch job result
     E2E_TESTS_RESULT    - e2e-tests job result
     RUN_URL             - GitHub Actions run URL
     RUN_ATTEMPT         - Current run attempt number
@@ -21,12 +20,20 @@ Required env vars:
 Mode-specific env vars:
     STAGING_RESULT      - Overall result for e2e-staging
     MIGRATION_RESULT    - Overall result for e2e-migration
+    BUILD_RESULT        - App build result
+    E2E_BRANCH_RESULT   - e2e-branch result for staging and migration
     PREPARE_WALLETS_RESULT - Optional iOS migration job result
+    LOCAL_NIGHTLY_RESULT - Overall result for e2e-local-nightly
+    SPARK_IMAGES_RESULT - Optional iOS image preparation result
+    SPARK_FIXTURE_RESULT - Local Spark fixture startup result
+    SPARK_CASE_RESULT   - Final result reported for @spark_1
 
 Optional env vars:
     E2E_TESTS_REF       - Resolved e2e-tests branch/ref
     GITHUB_REPOSITORY   - Repository name (e.g. synonymdev/bitkit-ios)
 """
+
+from __future__ import annotations
 
 import json
 import os
@@ -35,7 +42,7 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 
-MODES = ("e2e-staging", "e2e-migration")
+MODES = ("e2e-staging", "e2e-migration", "e2e-local-nightly")
 
 
 def get_status_icon(status: str) -> str:
@@ -47,7 +54,7 @@ def get_status_icon(status: str) -> str:
         return ":x:"
     elif status_lower == "cancelled":
         return ":warning:"
-    elif status_lower == "skipped":
+    elif status_lower in ("skipped", "did not run"):
         return ":fast_forward:"
     else:
         return ":grey_question:"
@@ -74,14 +81,11 @@ def _render_message(
     *,
     kind: str,
     overall_result: str,
-    build_job: str,
-    tests_job: str,
+    jobs: dict[str, str],
+    case: tuple[str, str] | None = None,
+    results_heading: str = "Jobs",
 ) -> str:
     platform = os.environ.get("PLATFORM", "")
-    build_result = os.environ.get("BUILD_RESULT", "unknown")
-    e2e_branch_result = os.environ.get("E2E_BRANCH_RESULT", "unknown")
-    e2e_tests_result = os.environ.get("E2E_TESTS_RESULT", "unknown")
-    prepare_wallets_result = os.environ.get("PREPARE_WALLETS_RESULT", "")
     run_url = os.environ.get("RUN_URL", "")
     run_attempt = os.environ.get("RUN_ATTEMPT", "1")
     e2e_tests_ref = os.environ.get("E2E_TESTS_REF", "")
@@ -107,14 +111,25 @@ def _render_message(
         lines.append(f"Repository: {repo}")
 
     lines.append("")
-    lines.append("Jobs:")
-    lines.append(f"  {build_job}: {format_status(build_result)}")
-    lines.append(f"  e2e-branch: {format_status(e2e_branch_result)}")
-    if prepare_wallets_result:
-        lines.append(f"  prepare-wallets: {format_status(prepare_wallets_result)}")
-    lines.append(f"  {tests_job}: {format_status(e2e_tests_result)}")
+    lines.append(f"{results_heading}:")
+    lines.extend(f"  {job}: {format_status(result)}" for job, result in jobs.items())
+    if case:
+        name, result = case
+        lines.append(f"\n{name}: {format_status(result)}")
 
     return "\n".join(lines)
+
+
+def _standard_jobs(build_job: str, tests_job: str) -> dict[str, str]:
+    jobs = {
+        build_job: os.environ.get("BUILD_RESULT", "unknown"),
+        "e2e-branch": os.environ.get("E2E_BRANCH_RESULT", "unknown"),
+    }
+    prepare_wallets = os.environ.get("PREPARE_WALLETS_RESULT", "")
+    if prepare_wallets:
+        jobs["prepare-wallets"] = prepare_wallets
+    jobs[tests_job] = os.environ.get("E2E_TESTS_RESULT", "unknown")
+    return jobs
 
 
 def render_e2e_staging_message() -> str:
@@ -122,8 +137,7 @@ def render_e2e_staging_message() -> str:
     return _render_message(
         kind="staging",
         overall_result=os.environ.get("STAGING_RESULT", "unknown"),
-        build_job="build-staging",
-        tests_job="e2e-tests-staging",
+        jobs=_standard_jobs("build-staging", "e2e-tests-staging"),
     )
 
 
@@ -132,8 +146,30 @@ def render_e2e_migration_message() -> str:
     return _render_message(
         kind="migration",
         overall_result=os.environ.get("MIGRATION_RESULT", "unknown"),
-        build_job="build",
-        tests_job="e2e-tests",
+        jobs=_standard_jobs("build", "e2e-tests"),
+    )
+
+
+def render_e2e_local_nightly_message() -> str:
+    setup = {
+        "spark-images": os.environ.get("SPARK_IMAGES_RESULT", ""),
+        "app build": os.environ.get("BUILD_RESULT", ""),
+        "Spark fixture": os.environ.get("SPARK_FIXTURE_RESULT", ""),
+    }
+    tests_result = os.environ.get("E2E_TESTS_RESULT", "unknown")
+    case_result = os.environ.get("SPARK_CASE_RESULT") or "no result"
+    if tests_result == "cancelled" and case_result != "success":
+        case_result = "cancelled"
+    elif case_result == "no result" and (tests_result == "skipped" or any(
+        result in ("failure", "skipped") for result in setup.values()
+    )):
+        case_result = "did not run"
+    return _render_message(
+        kind="local nightly",
+        overall_result=os.environ.get("LOCAL_NIGHTLY_RESULT", "unknown"),
+        jobs={job: result for job, result in {**setup, "e2e-spark": tests_result}.items() if result},
+        case=("@spark_1", case_result),
+        results_heading="Stages",
     )
 
 
@@ -187,6 +223,8 @@ def main() -> int:
         message = render_e2e_staging_message()
     elif mode == "e2e-migration":
         message = render_e2e_migration_message()
+    elif mode == "e2e-local-nightly":
+        message = render_e2e_local_nightly_message()
     else:
         print(f"Unknown mode: {mode}", file=sys.stderr)
         print(f"Available modes: {', '.join(MODES)}", file=sys.stderr)
