@@ -4,7 +4,7 @@
 # Inputs/roots:
 # - E2E root: this repo (bitkit-e2e-tests)
 # - iOS root: $IOS_ROOT, or ../bitkit-ios if unset
-# - Simulator architecture: $IOS_SIMULATOR_ARCH, or Xcode's default if unset
+# - Simulator architecture: $IOS_SIMULATOR_ARCH, defaulting to arm64 for BitkitCore
 #
 # Output:
 # - Copies Debug iphonesimulator build: Bitkit.app -> aut/Bitkit.app
@@ -39,6 +39,7 @@ else
 fi
 
 XCODE_EXTRA_ARGS+=(
+  "ARCHS=${IOS_SIMULATOR_ARCH:-arm64}"
   "E2E_BACKEND=$E2E_BACKEND"
   "E2E_NETWORK=$E2E_NETWORK"
   "TREZOR_BRIDGE=$TREZOR_BRIDGE"
@@ -59,10 +60,6 @@ if [[ -n "${SOURCE_PACKAGES:-}" ]]; then
     -disableAutomaticPackageResolution
     -skipPackageUpdates
   )
-fi
-
-if [[ -n "${IOS_SIMULATOR_ARCH:-}" ]]; then
-  XCODE_EXTRA_ARGS+=("ARCHS=$IOS_SIMULATOR_ARCH")
 fi
 
 # Embed fixture endpoints so they survive Appium reinstalls and app relaunches.
