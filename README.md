@@ -109,6 +109,27 @@ To build from a worktree instead of `../bitkit-android` / `../bitkit-ios` (dirty
 
 ---
 
+### Spark receive on local regtest
+
+The `@spark_1` spec uses the Spark operators and Lightning payer from the repository's `BITKIT_DOCKER_REVISION`. Start the fixture before building either app so both builds embed the fixture's Spark settings.
+
+```bash
+./scripts/local-backend spark-up
+spark_settings=$(./scripts/local-backend spark-env)
+while IFS= read -r setting; do export "$setting"; done <<< "$spark_settings"
+
+BACKEND=local ./scripts/build-android-apk.sh
+BACKEND=local ./scripts/build-ios-sim.sh
+
+./scripts/run-spark-e2e.sh android
+./scripts/run-spark-e2e.sh ios
+```
+
+Use a dedicated emulator and simulator because the test reinstalls Bitkit and creates a new wallet. Set `SIMULATOR_NAME` to the dedicated simulator's unique name and `SIMULATOR_OS_VERSION` to its installed runtime so Appium requests the matching capability. The Docker images build from source on the first start. Run `./scripts/local-backend spark-down` to stop the Spark services when done.
+
+The **Local E2E Nightly** workflows run this case on Android and iOS at 05:35 UTC against E2E `main`. To run it on demand, dispatch the workflow in the app repository. Set `e2e_branch` if the spec is on another ref. The job makes up to three attempts and uploads logs and diagnostics by attempt.
+CI caches the Spark images by Docker pin and runner architecture. The iOS workflow prepares ARM64 images and wallet settings on hosted Linux, then builds the app on hosted macOS. The self-hosted Mac reuses matching Docker images when available, starts a fresh fixture, and verifies its wallet settings before running the test.
+
 ### USDT local execution
 
 [USDT E2E setup](docs/usdt-e2e.md) starts a pinned fixture from `bitkit-docker`,
