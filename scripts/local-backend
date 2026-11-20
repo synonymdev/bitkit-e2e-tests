@@ -251,6 +251,40 @@ case "${1:-}" in
     }
     spark pay "$2"
     ;;
+  spark-invoice)
+    check_revision
+    [[ "$#" -eq 2 && "${2:-}" =~ ^[1-9][0-9]*$ ]] || {
+      echo 'Usage: ./scripts/local-backend spark-invoice <sats>' >&2
+      exit 2
+    }
+    spark invoice "$2" | jq -e '{invoice, payment_hash}'
+    ;;
+  spark-payment-details)
+    check_revision
+    [[ "$#" -eq 2 && "${2:-}" =~ ^[a-f0-9]{64}$ ]] || {
+      echo 'Usage: ./scripts/local-backend spark-payment-details <payment-hash>' >&2
+      exit 2
+    }
+    compose --profile spark exec -T spark-ldk-alice ldk-server-cli \
+      --config /local/ldk-alice.toml --base-url localhost:3536 get-payment-details "$2" |
+      jq -e '.payment | {amount_msat, direction, status}'
+    ;;
+  spark-fund)
+    check_revision
+    [[ "$#" -eq 3 && "${2:-}" =~ ^bcrt1[qp][02-9ac-hj-np-z]+$ && "${3:-}" =~ ^[1-9][0-9]*$ ]] || {
+      echo 'Usage: ./scripts/local-backend spark-fund <regtest-address> <sats>' >&2
+      exit 2
+    }
+    spark send "$2" "$3" -m 0
+    ;;
+  spark-mine)
+    check_revision
+    [[ "$#" -eq 1 ]] || {
+      echo 'Usage: ./scripts/local-backend spark-mine' >&2
+      exit 2
+    }
+    spark mine 1
+    ;;
   spark-down)
     check_revision
     spark down
@@ -279,7 +313,7 @@ case "${1:-}" in
     exec "$@"
     ;;
   *)
-    echo 'Usage: ./scripts/local-backend {prepare|path|up|down|ps|logs|github-env|run <command>|spark-pack <image-archive>|spark-up|spark-image-fingerprint|spark-init-env|spark-env|spark-pay <invoice>|spark-down|spark-logs}' >&2
+    echo 'Usage: ./scripts/local-backend {prepare|path|up|down|ps|logs|github-env|run <command>|spark-pack <image-archive>|spark-up|spark-image-fingerprint|spark-init-env|spark-env|spark-pay <invoice>|spark-invoice <sats>|spark-payment-details <payment-hash>|spark-fund <address> <sats>|spark-mine|spark-down|spark-logs}' >&2
     exit 2
     ;;
 esac

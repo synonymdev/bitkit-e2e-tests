@@ -18,6 +18,6 @@ if [[ "$1" == android ]]; then
   done
 fi
 
-# Each dedicated run must execute the payment even on a reused runner.
+# Run fresh wallets on every attempt, including on a reused runner.
 exec ./scripts/local-backend run env -u CI BITKIT_LOCAL_SPARK=1 "./ci_run_$1.sh" \
-  --spec ./test/specs/spark.e2e.ts --mochaOpts.grep '@spark_1\b'
+  --spec ./test/specs/spark.e2e.ts
