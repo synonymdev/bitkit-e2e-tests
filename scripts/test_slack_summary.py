@@ -215,7 +215,7 @@ class TestRenderLocalNightlyMessage(unittest.TestCase):
             "BUILD_RESULT": "success",
             "SPARK_FIXTURE_RESULT": "success",
             "E2E_TESTS_RESULT": "success",
-            "SPARK_CASE_RESULT": "success",
+            "SPARK_CASE_RESULT": "passed",
             "RUN_URL": "https://github.com/synonymdev/bitkit-android/actions/runs/123",
             "RUN_ATTEMPT": "2",
             "E2E_TESTS_REF": "abc123",
@@ -244,20 +244,28 @@ class TestRenderLocalNightlyMessage(unittest.TestCase):
 
     def test_case_result_distinguishes_test_failure_from_later_job_failure(self):
         os.environ.update({"LOCAL_NIGHTLY_RESULT": "failure", "E2E_TESTS_RESULT": "failure"})
-        for result, icon in (("failure", ":x:"), ("success", ":white_check_mark:")):
-            with self.subTest(result=result):
-                os.environ["SPARK_CASE_RESULT"] = result
+        cases = (
+            ("failed", ":x: failure"),
+            ("passed", ":white_check_mark: success"),
+            ("started", ":warning: interrupted"),
+            ("setup", ":fast_forward: did not run"),
+        )
+        for case_status, display in cases:
+            with self.subTest(case_status=case_status):
+                os.environ["SPARK_CASE_RESULT"] = case_status
                 message = render_e2e_local_nightly_message()
                 self.assertIn("e2e-spark: :x: failure", message)
-                self.assertIn(f"@spark_1: {icon} {result}", message)
+                self.assertIn(f"@spark_1: {display}", message)
 
     def test_cancelled_job_matches_the_final_case_outcome(self):
-        os.environ.update({
-            "E2E_TESTS_RESULT": "cancelled",
-            "SPARK_CASE_RESULT": "failure",
-        })
+        os.environ.update({"E2E_TESTS_RESULT": "cancelled", "SPARK_CASE_RESULT": "started"})
         message = render_e2e_local_nightly_message()
         self.assertIn("@spark_1: :warning: cancelled", message)
+
+        os.environ["SPARK_CASE_RESULT"] = "failed"
+        message = render_e2e_local_nightly_message()
+        self.assertIn("e2e-spark: :warning: cancelled", message)
+        self.assertIn("@spark_1: :x: failure", message)
 
     def test_older_e2e_ref_without_case_output_has_no_confirmed_result(self):
         os.environ.update({"LOCAL_NIGHTLY_RESULT": "success", "E2E_TESTS_RESULT": "success"})
@@ -265,7 +273,7 @@ class TestRenderLocalNightlyMessage(unittest.TestCase):
         self.assertIn("@spark_1: :grey_question: no result", message)
 
     def test_cli_posts_one_summary(self):
-        os.environ.update({"LOCAL_NIGHTLY_RESULT": "success", "SPARK_CASE_RESULT": "success"})
+        os.environ.update({"LOCAL_NIGHTLY_RESULT": "success", "SPARK_CASE_RESULT": "passed"})
         with patch("sys.argv", ["slack_summary.py", "e2e-local-nightly"]), \
                 patch("sys.stdout", new=io.StringIO()), \
                 patch("slack_summary.post_to_slack", return_value=True) as post:

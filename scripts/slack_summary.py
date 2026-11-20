@@ -52,7 +52,7 @@ def get_status_icon(status: str) -> str:
         return ":white_check_mark:"
     elif status_lower == "failure":
         return ":x:"
-    elif status_lower == "cancelled":
+    elif status_lower in ("cancelled", "interrupted"):
         return ":warning:"
     elif status_lower in ("skipped", "did not run"):
         return ":fast_forward:"
@@ -157,8 +157,13 @@ def render_e2e_local_nightly_message() -> str:
         "Spark fixture": os.environ.get("SPARK_FIXTURE_RESULT", ""),
     }
     tests_result = os.environ.get("E2E_TESTS_RESULT", "unknown")
-    case_result = os.environ.get("SPARK_CASE_RESULT") or "no result"
-    if tests_result == "cancelled" and case_result != "success":
+    case_result = {
+        "passed": "success",
+        "failed": "failure",
+        "started": "interrupted",
+        "setup": "did not run",
+    }.get(os.environ.get("SPARK_CASE_RESULT"), "no result")
+    if tests_result == "cancelled" and case_result in ("interrupted", "no result"):
         case_result = "cancelled"
     elif case_result == "no result" and (tests_result == "skipped" or any(
         result in ("failure", "skipped") for result in setup.values()

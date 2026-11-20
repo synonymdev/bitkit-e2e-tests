@@ -23,10 +23,13 @@ import { ciIt } from '../helpers/suite';
 const runCommand = promisify(execFile);
 const describeSpark = process.env.BITKIT_LOCAL_SPARK === '1' ? describe : describe.skip;
 
-function reportSparkCase(status: 'started' | 'passed') {
+function reportSparkCase(status: 'setup' | 'started' | 'passed' | 'failed') {
   const output = process.env.GITHUB_OUTPUT;
-  if (output) {
+  if (!output) return;
+  try {
     appendFileSync(output, `spark-case=${status}\n`);
+  } catch (error) {
+    console.warn('Could not record Spark case status', error);
   }
 }
 
@@ -43,11 +46,7 @@ async function openSparkConnection() {
 }
 
 describeSpark('Spark on local regtest', () => {
-  ciIt('@spark_1 - Receive a Lightning payment into Spark', async () => {
-    reportSparkCase('started');
-    await reinstallApp();
-    await completeOnboarding();
-
+  async function receiveLightningPayment() {
     await openSparkConnection();
     expect(await getAmountUnder('SparkBalance')).toBe(0);
     await doNavigationClose();
@@ -73,6 +72,20 @@ describeSpark('Spark on local regtest', () => {
 
     await openSparkConnection();
     expect(await getAmountUnder('SparkBalance')).toBe(10_000);
+  }
+
+  ciIt('@spark_1 - Receive a Lightning payment into Spark', async () => {
+    reportSparkCase('setup');
+    await reinstallApp();
+    await completeOnboarding();
+
+    reportSparkCase('started');
+    try {
+      await receiveLightningPayment();
+    } catch (error) {
+      reportSparkCase('failed');
+      throw error;
+    }
     reportSparkCase('passed');
   });
 });
