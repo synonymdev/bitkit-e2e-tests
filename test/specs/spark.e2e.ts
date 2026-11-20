@@ -66,7 +66,7 @@ async function receiveSparkLightning() {
 
   await sparkFixture('spark-pay', invoice);
   await acknowledgeReceivedPayment({ timeout: 90_000 });
-  await expectSpendingBalance(lightningFundingSats);
+  await expectFundedSparkWallet(lightningFundingSats);
 }
 
 async function copySparkDepositAddress() {
@@ -109,34 +109,42 @@ async function expectOneSparkDeposit(txid: string, { claimed }: { claimed: boole
 }
 
 async function waitForSparkWalletHome(condition: () => Promise<boolean>) {
+  const backupLater = elementById('BackupIntroViewCancel');
   const quickPay = elementById(
     driver.isAndroid ? 'QuickpayIntro-button' : 'QuickpayIntroDescription'
   );
   const deadline = Date.now() + 90_000;
   while (Date.now() < deadline) {
-    let introVisible = false;
+    let backupVisible = false;
+    let quickPayVisible = false;
     let readySince: number | undefined;
     await waitForWalletHomeCondition(
       async () => {
-        introVisible = await quickPay.isDisplayed();
-        if (introVisible) return true;
+        backupVisible = await backupLater.isDisplayed();
+        quickPayVisible = !backupVisible && (await quickPay.isDisplayed());
+        if (backupVisible || quickPayVisible) return true;
         if (!(await condition())) {
           readySince = undefined;
           return false;
         }
-        // A funded wallet can show the QuickPay intro two seconds after Home appears.
+        // Funded-wallet reminders can appear two seconds after Home appears.
         readySince ??= Date.now();
         return Date.now() - readySince >= 2_500;
       },
       { timeout: Math.max(1, deadline - Date.now()) }
     );
-    if (!introVisible) return;
-    await tryDismissQuickPayIntroIfVisible();
+    if (backupVisible) {
+      if (await backupLater.isDisplayed()) await backupLater.click();
+    } else if (quickPayVisible) {
+      await tryDismissQuickPayIntroIfVisible();
+    } else {
+      return;
+    }
   }
   throw new Error('Spark wallet home did not settle');
 }
 
-async function expectSparkDepositBalance(amount: number) {
+async function expectFundedSparkWallet(amount: number) {
   await waitForSparkWalletHome(async () => {
     return (
       (await elementById('ActivitySpending').isDisplayed()) &&
@@ -225,12 +233,12 @@ describeSpark('Spark on local regtest', () => {
     await expectSpendingBalance(0);
 
     await sparkFixture('spark-mine');
-    await expectSparkDepositBalance(depositSats);
+    await expectFundedSparkWallet(depositSats);
     await openSparkConnection();
     await expectOneSparkDeposit(txid, { claimed: true });
 
     await launchFreshApp();
-    await expectSparkDepositBalance(depositSats);
+    await expectFundedSparkWallet(depositSats);
     await openSparkConnection();
     await expectOneSparkDeposit(txid, { claimed: true });
   });
