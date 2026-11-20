@@ -29,7 +29,9 @@ export async function waitForMainnetWalletReady({
   await expectTextWithin('Status-electrum', 'Connected', { timeout: APP_STATUS_ROW_TIMEOUT_MS });
 
   if (includeLightningStatus) {
-    await expectTextWithin('Status-lightning_node', 'Running', {
+    await expectTextWithin('Status-lightning_node', ['Running', 'Synced'], {
+      // iOS can expose the row title and status together in its accessibility label.
+      strategy: driver.isAndroid ? 'exact' : 'contains',
       timeout: APP_STATUS_ROW_TIMEOUT_MS,
     });
     await expectTextWithin('Status-lightning_connection', 'Open', {
