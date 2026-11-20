@@ -208,91 +208,47 @@ class TestRenderLocalNightlyMessage(unittest.TestCase):
         env_patcher.start()
         self.addCleanup(env_patcher.stop)
 
-    def test_android_pass_links_to_run_and_checked_out_ref(self):
+    def test_android_summary_has_one_job(self):
         os.environ.update({
             "PLATFORM": "android",
             "LOCAL_NIGHTLY_RESULT": "success",
-            "BUILD_RESULT": "success",
-            "SPARK_FIXTURE_RESULT": "success",
             "E2E_TESTS_RESULT": "success",
-            "SPARK_CASE_RESULT": "passed",
             "RUN_URL": "https://github.com/synonymdev/bitkit-android/actions/runs/123",
             "RUN_ATTEMPT": "2",
             "E2E_TESTS_REF": "abc123",
         })
         message = render_e2e_local_nightly_message()
         self.assertIn(":white_check_mark: Bitkit Android E2E local nightly: success", message)
-        self.assertIn("@spark_1: :white_check_mark: success", message)
         self.assertIn("Run: https://github.com/synonymdev/bitkit-android/actions/runs/123", message)
         self.assertIn("Run attempt: 2", message)
         self.assertIn("E2E tests ref: abc123", message)
-        self.assertNotIn("spark-images", message)
+        self.assertEqual(message.split("Jobs:\n", 1)[1], "  e2e-spark: :white_check_mark: success")
 
-    def test_ios_failure_before_appium(self):
+    def test_ios_summary_distinguishes_failed_setup_from_skipped_e2e(self):
         os.environ.update({
             "PLATFORM": "ios",
             "LOCAL_NIGHTLY_RESULT": "failure",
             "SPARK_IMAGES_RESULT": "success",
-            "BUILD_RESULT": "success",
-            "SPARK_FIXTURE_RESULT": "failure",
-            "E2E_TESTS_RESULT": "failure",
+            "BUILD_RESULT": "failure",
+            "E2E_TESTS_RESULT": "skipped",
         })
         message = render_e2e_local_nightly_message()
         self.assertIn(":x: Bitkit iOS E2E local nightly: failure", message)
-        self.assertIn("Spark fixture: :x: failure", message)
-        self.assertIn("@spark_1: :fast_forward: did not run", message)
-
-    def test_case_result_distinguishes_test_failure_from_later_job_failure(self):
-        os.environ.update({"LOCAL_NIGHTLY_RESULT": "failure", "E2E_TESTS_RESULT": "failure"})
-        cases = (
-            ("failed", ":x: failure"),
-            ("passed", ":white_check_mark: success"),
-            ("started", ":warning: interrupted"),
+        self.assertEqual(
+            message.split("Jobs:\n", 1)[1].splitlines(),
+            ["  spark-images: :white_check_mark: success",
+             "  build-spark-ios: :x: failure",
+             "  e2e-spark: :fast_forward: skipped"],
         )
-        for case_status, display in cases:
-            with self.subTest(case_status=case_status):
-                os.environ["SPARK_CASE_RESULT"] = case_status
-                message = render_e2e_local_nightly_message()
-                self.assertIn("e2e-spark: :x: failure", message)
-                self.assertIn(f"@spark_1: {display}", message)
-
-    def test_app_setup_failure_and_case_result_are_independent(self):
-        os.environ["SPARK_APP_SETUP_RESULT"] = "failure"
-        cases = (
-            ("", ":fast_forward: did not run"),
-            ("failed", ":x: failure"),
-            ("passed", ":white_check_mark: success"),
-        )
-        for case_status, display in cases:
-            with self.subTest(case_status=case_status):
-                os.environ["SPARK_CASE_RESULT"] = case_status
-                message = render_e2e_local_nightly_message()
-                self.assertIn("Spark app setup (one or more attempts): :x: failure", message)
-                self.assertIn(f"@spark_1: {display}", message)
-
-    def test_cancelled_job_matches_the_final_case_outcome(self):
-        os.environ.update({"E2E_TESTS_RESULT": "cancelled", "SPARK_CASE_RESULT": "started"})
-        message = render_e2e_local_nightly_message()
-        self.assertIn("@spark_1: :warning: cancelled", message)
-
-        os.environ["SPARK_CASE_RESULT"] = "failed"
-        message = render_e2e_local_nightly_message()
-        self.assertIn("e2e-spark: :warning: cancelled", message)
-        self.assertIn("@spark_1: :x: failure", message)
-
-    def test_older_e2e_ref_without_case_output_has_no_confirmed_result(self):
-        os.environ.update({"LOCAL_NIGHTLY_RESULT": "success", "E2E_TESTS_RESULT": "success"})
-        message = render_e2e_local_nightly_message()
-        self.assertIn("@spark_1: :grey_question: no result", message)
 
     def test_cli_posts_one_summary(self):
-        os.environ.update({"LOCAL_NIGHTLY_RESULT": "success", "SPARK_CASE_RESULT": "passed"})
+        os.environ.update({"LOCAL_NIGHTLY_RESULT": "success", "E2E_TESTS_RESULT": "success"})
         with patch("sys.argv", ["slack_summary.py", "e2e-local-nightly"]), \
                 patch("sys.stdout", new=io.StringIO()), \
                 patch("slack_summary.post_to_slack", return_value=True) as post:
             self.assertEqual(main(), 0)
         post.assert_called_once()
-        self.assertIn("@spark_1: :white_check_mark: success", post.call_args.args[0])
+        self.assertIn("e2e-spark: :white_check_mark: success", post.call_args.args[0])
 
 
 class TestPostToSlack(unittest.TestCase):

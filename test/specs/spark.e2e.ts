@@ -1,5 +1,4 @@
 import { execFile } from 'node:child_process';
-import { appendFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { promisify } from 'node:util';
 import {
@@ -23,16 +22,6 @@ import { ciIt } from '../helpers/suite';
 const runCommand = promisify(execFile);
 const describeSpark = process.env.BITKIT_LOCAL_SPARK === '1' ? describe : describe.skip;
 
-function reportSparkCase(status: 'setup' | 'setup-failed' | 'started' | 'passed' | 'failed') {
-  const output = process.env.GITHUB_OUTPUT;
-  if (!output) return;
-  try {
-    appendFileSync(output, `spark-case=${status}\n`);
-  } catch (error) {
-    console.warn('Could not record Spark case status', error);
-  }
-}
-
 async function openSparkConnection() {
   await openSettings('advanced');
   await tapAndExpect({ id: 'Channels' }, { anyVisible: [{ id: 'SparkConnection' }] });
@@ -46,7 +35,10 @@ async function openSparkConnection() {
 }
 
 describeSpark('Spark on local regtest', () => {
-  async function receiveLightningPayment() {
+  ciIt('@spark_1 - Receive a Lightning payment into Spark', async () => {
+    await reinstallApp();
+    await completeOnboarding();
+
     await openSparkConnection();
     expect(await getAmountUnder('SparkBalance')).toBe(0);
     await doNavigationClose();
@@ -72,25 +64,5 @@ describeSpark('Spark on local regtest', () => {
 
     await openSparkConnection();
     expect(await getAmountUnder('SparkBalance')).toBe(10_000);
-  }
-
-  ciIt('@spark_1 - Receive a Lightning payment into Spark', async () => {
-    reportSparkCase('setup');
-    try {
-      await reinstallApp();
-      await completeOnboarding();
-    } catch (error) {
-      reportSparkCase('setup-failed');
-      throw error;
-    }
-
-    reportSparkCase('started');
-    try {
-      await receiveLightningPayment();
-    } catch (error) {
-      reportSparkCase('failed');
-      throw error;
-    }
-    reportSparkCase('passed');
   });
 });

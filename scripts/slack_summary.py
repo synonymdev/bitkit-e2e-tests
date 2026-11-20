@@ -25,9 +25,6 @@ Mode-specific env vars:
     PREPARE_WALLETS_RESULT - Optional iOS migration job result
     LOCAL_NIGHTLY_RESULT - Overall result for e2e-local-nightly
     SPARK_IMAGES_RESULT - Optional iOS image preparation result
-    SPARK_FIXTURE_RESULT - Local Spark fixture startup result
-    SPARK_APP_SETUP_RESULT - Failure or interruption preparing the app on a Spark attempt
-    SPARK_CASE_RESULT   - Final result reported for @spark_1
 
 Optional env vars:
     E2E_TESTS_REF       - Resolved e2e-tests branch/ref
@@ -53,9 +50,9 @@ def get_status_icon(status: str) -> str:
         return ":white_check_mark:"
     elif status_lower == "failure":
         return ":x:"
-    elif status_lower in ("cancelled", "interrupted"):
+    elif status_lower == "cancelled":
         return ":warning:"
-    elif status_lower in ("skipped", "did not run"):
+    elif status_lower == "skipped":
         return ":fast_forward:"
     else:
         return ":grey_question:"
@@ -83,8 +80,6 @@ def _render_message(
     kind: str,
     overall_result: str,
     jobs: dict[str, str],
-    case: tuple[str, str] | None = None,
-    results_heading: str = "Jobs",
 ) -> str:
     platform = os.environ.get("PLATFORM", "")
     run_url = os.environ.get("RUN_URL", "")
@@ -112,11 +107,8 @@ def _render_message(
         lines.append(f"Repository: {repo}")
 
     lines.append("")
-    lines.append(f"{results_heading}:")
+    lines.append("Jobs:")
     lines.extend(f"  {job}: {format_status(result)}" for job, result in jobs.items())
-    if case:
-        name, result = case
-        lines.append(f"\n{name}: {format_status(result)}")
 
     return "\n".join(lines)
 
@@ -152,30 +144,16 @@ def render_e2e_migration_message() -> str:
 
 
 def render_e2e_local_nightly_message() -> str:
-    setup = {
-        "spark-images": os.environ.get("SPARK_IMAGES_RESULT", ""),
-        "app build": os.environ.get("BUILD_RESULT", ""),
-        "Spark fixture": os.environ.get("SPARK_FIXTURE_RESULT", ""),
-        "Spark app setup (one or more attempts)": os.environ.get("SPARK_APP_SETUP_RESULT", ""),
-    }
-    tests_result = os.environ.get("E2E_TESTS_RESULT", "unknown")
-    case_result = {
-        "passed": "success",
-        "failed": "failure",
-        "started": "interrupted",
-    }.get(os.environ.get("SPARK_CASE_RESULT"), "no result")
-    if case_result == "no result" and (tests_result == "skipped" or any(
-        result in ("failure", "skipped", "interrupted") for result in setup.values()
-    )):
-        case_result = "did not run"
-    elif tests_result == "cancelled" and case_result in ("interrupted", "no result"):
-        case_result = "cancelled"
+    jobs = {}
+    for job, variable in (("spark-images", "SPARK_IMAGES_RESULT"), ("build-spark-ios", "BUILD_RESULT")):
+        result = os.environ.get(variable)
+        if result:
+            jobs[job] = result
+    jobs["e2e-spark"] = os.environ.get("E2E_TESTS_RESULT", "unknown")
     return _render_message(
         kind="local nightly",
         overall_result=os.environ.get("LOCAL_NIGHTLY_RESULT", "unknown"),
-        jobs={job: result for job, result in {**setup, "e2e-spark": tests_result}.items() if result},
-        case=("@spark_1", case_result),
-        results_heading="Stages",
+        jobs=jobs,
     )
 
 
