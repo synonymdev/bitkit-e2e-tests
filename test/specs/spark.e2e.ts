@@ -14,6 +14,7 @@ import {
   getAmountUnder,
   getClipboardPlaintext,
   getReceiveAddress,
+  getSavingsBalance,
   getSpendingBalance,
   multiTap,
   swipeFullScreen,
@@ -111,21 +112,39 @@ async function waitForSparkWalletHome(condition: () => Promise<boolean>) {
   const quickPay = elementById(
     driver.isAndroid ? 'QuickpayIntro-button' : 'QuickpayIntroDescription'
   );
-  await waitForWalletHomeCondition(async () => (await quickPay.isDisplayed()) || condition(), {
-    timeout: 90_000,
-  });
-  await tryDismissQuickPayIntroIfVisible();
-  await waitForWalletHomeCondition(condition, { timeout: 90_000 });
+  const deadline = Date.now() + 90_000;
+  while (Date.now() < deadline) {
+    let introVisible = false;
+    let readySince: number | undefined;
+    await waitForWalletHomeCondition(
+      async () => {
+        introVisible = await quickPay.isDisplayed();
+        if (introVisible) return true;
+        if (!(await condition())) {
+          readySince = undefined;
+          return false;
+        }
+        // A funded wallet can show the QuickPay intro two seconds after Home appears.
+        readySince ??= Date.now();
+        return Date.now() - readySince >= 2_500;
+      },
+      { timeout: Math.max(1, deadline - Date.now()) }
+    );
+    if (!introVisible) return;
+    await tryDismissQuickPayIntroIfVisible();
+  }
+  throw new Error('Spark wallet home did not settle');
 }
 
 async function expectSparkDepositBalance(amount: number) {
   await waitForSparkWalletHome(async () => {
     return (
       (await elementById('ActivitySpending').isDisplayed()) &&
-      (await getSpendingBalance()) === amount
+      (await elementById('ActivitySavings').isDisplayed()) &&
+      (await getSpendingBalance()) === amount &&
+      (await getSavingsBalance()) === 0
     );
   });
-  await expectSavingsBalance(0);
 }
 
 describeSpark('Spark on local regtest', () => {
