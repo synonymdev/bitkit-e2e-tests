@@ -14,10 +14,12 @@ import {
   getAmountUnder,
   getClipboardPlaintext,
   getReceiveAddress,
+  getSpendingBalance,
   multiTap,
   swipeFullScreen,
   tap,
   tryDismissQuickPayIntroIfVisible,
+  waitForWalletHomeCondition,
 } from '../helpers/actions';
 import { confirmGateAction, enterGateAddress } from '../helpers/gate-actions';
 import { doNavigationClose, openSettings } from '../helpers/navigation';
@@ -95,12 +97,35 @@ async function copySparkDepositAddress() {
 
 async function expectOneSparkDeposit(txid: string, { claimed }: { claimed: boolean }) {
   await swipeFullScreen('up', { upStartYPercent: 0.75, upEndYPercent: 0.4 });
-  await expectTextWithin('SparkDeposit', txid.slice(0, 8), { timeout: 90_000 });
-  const depositRows = $$('//*[@resource-id="SparkDeposit" or @name="SparkDeposit"]');
-  expect(await depositRows.length).toBe(1);
   const claimFee = elementByText('Claim fee', 'exact');
-  if (claimed) await claimFee.waitForDisplayed({ timeout: 30_000 });
-  else await expect(claimFee).not.toExist();
+  if (claimed) await claimFee.waitForDisplayed({ timeout: 90_000 });
+  await expectTextWithin('SparkDeposit', txid.slice(0, 8), { timeout: 90_000 });
+  const depositRows = $$(
+    '//*[@resource-id="SparkDeposit"] | //XCUIElementTypeButton[@name="SparkDeposit"]'
+  );
+  expect(await depositRows.length).toBe(1);
+  if (!claimed) await expect(claimFee).not.toExist();
+}
+
+async function waitForSparkWalletHome(condition: () => Promise<boolean>) {
+  const quickPay = elementById(
+    driver.isAndroid ? 'QuickpayIntro-button' : 'QuickpayIntroDescription'
+  );
+  await waitForWalletHomeCondition(async () => (await quickPay.isDisplayed()) || condition(), {
+    timeout: 90_000,
+  });
+  await tryDismissQuickPayIntroIfVisible();
+  await waitForWalletHomeCondition(condition, { timeout: 90_000 });
+}
+
+async function expectSparkDepositBalance(amount: number) {
+  await waitForSparkWalletHome(async () => {
+    return (
+      (await elementById('ActivitySpending').isDisplayed()) &&
+      (await getSpendingBalance()) === amount
+    );
+  });
+  await expectSavingsBalance(0);
 }
 
 describeSpark('Spark on local regtest', () => {
@@ -125,11 +150,11 @@ describeSpark('Spark on local regtest', () => {
     const sendSats = 1_000;
     await doNavigationClose();
     await receiveSparkLightning();
-    await tryDismissQuickPayIntroIfVisible();
 
     const { invoice, payment_hash: paymentHash } = JSON.parse(
       await sparkFixture('spark-invoice', String(sendSats))
     );
+    await waitForSparkWalletHome(() => elementById('Send').isDisplayed());
     await enterGateAddress(invoice);
     await expectTextWithin('ReviewAmount-primary', formatSats(sendSats));
     await confirmGateAction({ anyVisible: [{ id: 'SendSuccess' }], timeout: 90_000 });
@@ -181,14 +206,12 @@ describeSpark('Spark on local regtest', () => {
     await expectSpendingBalance(0);
 
     await sparkFixture('spark-mine');
-    await expectSpendingBalance(depositSats);
-    await expectSavingsBalance(0);
+    await expectSparkDepositBalance(depositSats);
     await openSparkConnection();
     await expectOneSparkDeposit(txid, { claimed: true });
 
     await launchFreshApp();
-    await expectSpendingBalance(depositSats);
-    await expectSavingsBalance(0);
+    await expectSparkDepositBalance(depositSats);
     await openSparkConnection();
     await expectOneSparkDeposit(txid, { claimed: true });
   });
