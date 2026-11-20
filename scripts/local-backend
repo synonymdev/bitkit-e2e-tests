@@ -275,7 +275,21 @@ case "${1:-}" in
       echo 'Usage: ./scripts/local-backend spark-fund <regtest-address> <sats>' >&2
       exit 2
     }
-    spark send "$2" "$3" -m 0
+    funding="$(spark send "$2" "$3" -m 0)"
+    [[ "$funding" =~ ([a-f0-9]{64})$ ]] || {
+      echo 'The Spark miner did not report a transaction ID.' >&2
+      exit 1
+    }
+    printf '%s\n' "${BASH_REMATCH[1]}"
+    ;;
+  spark-tx)
+    check_revision
+    [[ "$#" -eq 2 && "${2:-}" =~ ^[a-f0-9]{64}$ ]] || {
+      echo 'Usage: ./scripts/local-backend spark-tx <txid>' >&2
+      exit 2
+    }
+    # The pinned CLI prints the transaction first, followed by its output spend records.
+    spark tx "$2" | jq -cse '.[0]'
     ;;
   spark-mine)
     check_revision
@@ -313,7 +327,7 @@ case "${1:-}" in
     exec "$@"
     ;;
   *)
-    echo 'Usage: ./scripts/local-backend {prepare|path|up|down|ps|logs|github-env|run <command>|spark-pack <image-archive>|spark-up|spark-image-fingerprint|spark-init-env|spark-env|spark-pay <invoice>|spark-invoice <sats>|spark-payment-details <payment-hash>|spark-fund <address> <sats>|spark-mine|spark-down|spark-logs}' >&2
+    echo 'Usage: ./scripts/local-backend {prepare|path|up|down|ps|logs|github-env|run <command>|spark-pack <image-archive>|spark-up|spark-image-fingerprint|spark-init-env|spark-env|spark-pay <invoice>|spark-invoice <sats>|spark-payment-details <payment-hash>|spark-fund <address> <sats>|spark-tx <txid>|spark-mine|spark-down|spark-logs}' >&2
     exit 2
     ;;
 esac

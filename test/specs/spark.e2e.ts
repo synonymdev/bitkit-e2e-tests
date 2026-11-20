@@ -4,9 +4,8 @@ import { promisify } from 'node:util';
 import {
   acknowledgeReceivedPayment,
   completeOnboarding,
-  dismissBackgroundPaymentsTimedSheet,
-  dismissQuickPayIntro,
   elementById,
+  elementByText,
   expectSavingsBalance,
   expectSpendingBalance,
   expectTextWithin,
@@ -18,6 +17,7 @@ import {
   multiTap,
   swipeFullScreen,
   tap,
+  tryDismissQuickPayIntroIfVisible,
 } from '../helpers/actions';
 import { confirmGateAction, enterGateAddress } from '../helpers/gate-actions';
 import { doNavigationClose, openSettings } from '../helpers/navigation';
@@ -66,6 +66,43 @@ async function receiveSparkLightning() {
   await expectSpendingBalance(lightningFundingSats);
 }
 
+async function copySparkDepositAddress() {
+  const readClipboard = () =>
+    driver.isIOS
+      ? driver.execute<string, [{ encoding: string }]>('mobile: getPasteboard', {
+          encoding: 'utf8',
+        })
+      : getClipboardPlaintext();
+  if (driver.isIOS) {
+    await driver.execute('mobile: setPasteboard', { content: '', encoding: 'utf8' });
+  }
+  const oldClipboard = (await readClipboard()).trim();
+  await tap('SparkDepositAddress');
+  let address = '';
+  await browser.waitUntil(
+    async () => {
+      address = (await readClipboard()).trim();
+      return address !== oldClipboard && /^bcrt1[qp][02-9ac-hj-np-z]+$/.test(address);
+    },
+    {
+      timeout: 15_000,
+      interval: 500,
+      timeoutMsg: 'Spark did not copy a fresh regtest deposit address',
+    }
+  );
+  return address;
+}
+
+async function expectOneSparkDeposit(txid: string, { claimed }: { claimed: boolean }) {
+  await swipeFullScreen('up', { upStartYPercent: 0.75, upEndYPercent: 0.4 });
+  await expectTextWithin('SparkDeposit', txid.slice(0, 8), { timeout: 90_000 });
+  const depositRows = $$('//*[@resource-id="SparkDeposit" or @name="SparkDeposit"]');
+  expect(await depositRows.length).toBe(1);
+  const claimFee = elementByText('Claim fee', 'exact');
+  if (claimed) await claimFee.waitForDisplayed({ timeout: 30_000 });
+  else await expect(claimFee).not.toExist();
+}
+
 describeSpark('Spark on local regtest', () => {
   beforeEach(async () => {
     await reinstallApp();
@@ -88,8 +125,7 @@ describeSpark('Spark on local regtest', () => {
     const sendSats = 1_000;
     await doNavigationClose();
     await receiveSparkLightning();
-    await dismissBackgroundPaymentsTimedSheet({ triggerTimedSheet: true });
-    await dismissQuickPayIntro({ triggerTimedSheet: true });
+    await tryDismissQuickPayIntroIfVisible();
 
     const { invoice, payment_hash: paymentHash } = JSON.parse(
       await sparkFixture('spark-invoice', String(sendSats))
@@ -116,15 +152,16 @@ describeSpark('Spark on local regtest', () => {
     );
 
     await expectTextWithin('ActivityShort-0', '-');
-    await expectTextWithin('ActivityShort-0', formatSats(sendSats));
+    await expectTextWithin('ActivityShort-0', 'Sent');
     await expectTextWithin('ActivityShort-1', '+');
     await expectTextWithin('ActivityShort-1', formatSats(lightningFundingSats));
     await expect(elementById('ActivityShort-2')).not.toExist();
     await tapAndExpect({ id: 'ActivityShort-0' }, { anyVisible: [{ id: 'ActivityAmount' }] });
+    expect(await getAmountUnder('ActivityAmount')).toBe(sendSats);
     const feeSats = (await elementById('ActivityFee').isExisting())
       ? await getAmountUnder('ActivityFee')
       : 0;
-    await doNavigationClose();
+    await tapAndExpect({ id: 'NavigationBack' }, { anyVisible: [{ id: 'TotalBalance-primary' }] });
     await expectSpendingBalance(lightningFundingSats - sendSats - feeSats);
     await expectSavingsBalance(0);
     await openSparkConnection();
@@ -133,28 +170,26 @@ describeSpark('Spark on local regtest', () => {
 
   ciIt('@spark_3 - Confirm an on-chain deposit into Spark', async () => {
     const depositSats = 100_000;
-    await tap('SparkDepositAddress');
-    const address = (await getClipboardPlaintext()).trim();
-    expect(address).toMatch(/^bcrt1[qp][02-9ac-hj-np-z]+$/);
+    const address = await copySparkDepositAddress();
+    const txid = await sparkFixture('spark-fund', address, String(depositSats));
 
-    await sparkFixture('spark-fund', address, String(depositSats));
-    await swipeFullScreen('up', { upStartYPercent: 0.75, upEndYPercent: 0.4 });
-    await elementById('SparkDeposit').waitForDisplayed({ timeout: 90_000 });
+    await expectOneSparkDeposit(txid, { claimed: false });
+    const pending = JSON.parse(await sparkFixture('spark-tx', txid));
+    expect(pending.status).toBe('in the mempool');
+    expect(pending.outputs).toContainEqual({ address, value: depositSats });
     await doNavigationClose();
     await expectSpendingBalance(0);
 
     await sparkFixture('spark-mine');
     await expectSpendingBalance(depositSats);
     await expectSavingsBalance(0);
-    await expectTextWithin('ActivityShort-0', '+');
-    await expectTextWithin('ActivityShort-0', formatSats(depositSats));
-    await expect(elementById('ActivityShort-1')).not.toExist();
+    await openSparkConnection();
+    await expectOneSparkDeposit(txid, { claimed: true });
 
     await launchFreshApp();
     await expectSpendingBalance(depositSats);
     await expectSavingsBalance(0);
-    await expectTextWithin('ActivityShort-0', '+');
-    await expectTextWithin('ActivityShort-0', formatSats(depositSats));
-    await expect(elementById('ActivityShort-1')).not.toExist();
+    await openSparkConnection();
+    await expectOneSparkDeposit(txid, { claimed: true });
   });
 });
