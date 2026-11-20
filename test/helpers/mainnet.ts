@@ -6,11 +6,13 @@ const APP_STATUS_ROW_TIMEOUT_MS = 90_000;
 type WaitForMainnetWalletReadyOptions = {
   logPrefix: string;
   includeLightningStatus?: boolean;
+  electrumTimeoutMs?: number;
 };
 
 export async function waitForMainnetWalletReady({
   logPrefix,
   includeLightningStatus = true,
+  electrumTimeoutMs = APP_STATUS_ROW_TIMEOUT_MS,
 }: WaitForMainnetWalletReadyOptions): Promise<void> {
   console.info(`→ [${logPrefix}] Waiting for wallet home screen...`);
   await elementById('TotalBalance-primary').waitForDisplayed({ timeout: WALLET_SYNC_TIMEOUT_MS });
@@ -26,10 +28,12 @@ export async function waitForMainnetWalletReady({
   await tap('DrawerAppStatus');
 
   await expectTextWithin('Status-internet', 'Connected', { timeout: APP_STATUS_ROW_TIMEOUT_MS });
-  await expectTextWithin('Status-electrum', 'Connected', { timeout: APP_STATUS_ROW_TIMEOUT_MS });
+  await expectTextWithin('Status-electrum', 'Connected', { timeout: electrumTimeoutMs });
 
   if (includeLightningStatus) {
-    await expectTextWithin('Status-lightning_node', 'Running', {
+    await expectTextWithin('Status-lightning_node', ['Running', 'Synced'], {
+      // iOS can expose the row title and status together in its accessibility label.
+      strategy: driver.isAndroid ? 'exact' : 'contains',
       timeout: APP_STATUS_ROW_TIMEOUT_MS,
     });
     await expectTextWithin('Status-lightning_connection', 'Open', {

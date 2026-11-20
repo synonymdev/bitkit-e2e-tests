@@ -171,7 +171,7 @@ export async function expectText(
  * to avoid false positives from similar text elsewhere on the screen.
  *
  * @param ancestorId - The resource-id or accessibility ID of the container element
- * @param text - The text string to search for within the container
+ * @param text - The text to find within the container, or a list of accepted alternatives
  * @param options - Configuration options
  * @param options.visible - Whether the text should be visible (default: true)
  * @param options.timeout - Maximum time to wait for the element in milliseconds (default: 30000)
@@ -190,7 +190,7 @@ export async function expectText(
  */
 export async function expectTextWithin(
   ancestorId: string,
-  text: string,
+  text: string | readonly [string, ...string[]],
   {
     visible = true,
     timeout = 30_000,
@@ -201,25 +201,31 @@ export async function expectTextWithin(
     strategy?: RetrieveStrategy;
   } = {}
 ) {
+  const alternatives = typeof text === 'string' ? [text] : text;
   const matchesParent = async (parent: ChainablePromiseElement) => {
     if (!driver.isIOS) return false;
     const label = await parent.getAttribute('label');
     const value = await parent.getAttribute('value');
     return [label, value].some(
       (value) =>
-        typeof value === 'string' && (strategy === 'exact' ? value === text : value.includes(text))
+        typeof value === 'string' &&
+        alternatives.some((candidate) =>
+          strategy === 'exact' ? value === candidate : value.includes(candidate)
+        )
     );
   };
 
-  const needle = (() => {
-    if (driver.isAndroid) {
-      return strategy === 'exact' ? `.//*[@text='${text}']` : `.//*[contains(@text,'${text}')]`;
-    }
-
-    return strategy === 'exact'
-      ? `.//*[self::XCUIElementTypeStaticText or self::XCUIElementTypeTextView or self::XCUIElementTypeTextField or self::XCUIElementTypeButton][@label='${text}' or @value='${text}']`
-      : `.//*[self::XCUIElementTypeStaticText or self::XCUIElementTypeTextView or self::XCUIElementTypeTextField or self::XCUIElementTypeButton][contains(@label,'${text}') or contains(@value,'${text}')]`;
-  })();
+  const attributes = driver.isAndroid ? ['@text'] : ['@label', '@value'];
+  const predicate = alternatives
+    .flatMap((candidate) =>
+      attributes.map((attr) =>
+        strategy === 'exact' ? `${attr}='${candidate}'` : `contains(${attr},'${candidate}')`
+      )
+    )
+    .join(' or ');
+  const needle = driver.isAndroid
+    ? `.//*[${predicate}]`
+    : `.//*[self::XCUIElementTypeStaticText or self::XCUIElementTypeTextView or self::XCUIElementTypeTextField or self::XCUIElementTypeButton][${predicate}]`;
 
   const parent = elementById(ancestorId);
   await parent.waitForDisplayed({ timeout });
@@ -234,7 +240,7 @@ export async function expectTextWithin(
           (await matchesParent(currentParent)) || (await currentParent.$(needle).isDisplayed())
         );
       },
-      { timeout, timeoutMsg: `Expected "${text}" within "${ancestorId}"` }
+      { timeout, timeoutMsg: `Expected "${alternatives.join('" or "')}" within "${ancestorId}"` }
     );
     return;
   }
