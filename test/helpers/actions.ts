@@ -507,10 +507,13 @@ export async function getClipboardPlaintext(): Promise<string> {
  *
  * CI intermittently fails `mobile: setPasteboard` with:
  *   Process ended with exitcode 60 (cmd: 'xcrun simctl pbcopy <udid>')
- * Retries that call, then falls back to typeText if the Paste menu never appears
- * (so RestoreButton waits don't hang after a silent empty paste).
+ * Retries that call, then uses the typing fallback if the Paste menu never appears.
  */
-export async function pasteIOSText(testId: string, text: string) {
+export async function pasteIOSText(
+  testId: string,
+  text: string,
+  typeFallback = () => typeText(testId, text)
+) {
   if (!driver.isIOS) {
     throw new Error('pasteIOSText can only be used on iOS devices');
   }
@@ -543,8 +546,8 @@ export async function pasteIOSText(testId: string, text: string) {
   }
 
   if (lastPasteboardError) {
-    console.warn('→ pasteIOSText: pasteboard unavailable, falling back to typeText');
-    await typeText(testId, text);
+    console.warn('→ pasteIOSText: pasteboard unavailable, typing instead');
+    await typeFallback();
     return;
   }
 
@@ -562,8 +565,8 @@ export async function pasteIOSText(testId: string, text: string) {
     await sleep(200); // Allow time for the paste action to propagate
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.warn(`→ pasteIOSText: Paste menu unavailable (${message}); falling back to typeText`);
-    await typeText(testId, text);
+    console.warn(`→ pasteIOSText: Paste menu unavailable (${message}); typing instead`);
+    await typeFallback();
   }
 }
 
@@ -996,7 +999,17 @@ export async function restoreWallet(
 
   // Seed
   if (driver.isIOS) {
-    await pasteIOSText('Word-0', seed);
+    await pasteIOSText('Word-0', seed, async () => {
+      // Typing the entire phrase into Word-0 fills the fields and dismisses the keyboard as
+      // soon as the first character of the final word arrives.
+      const words = seed.trim().split(/\s+/);
+      for (const [index, word] of words.entries()) {
+        const field = await elementById(`Word-${index}`);
+        await field.waitForDisplayed();
+        await field.setValue(word);
+      }
+      await confirmInputOnKeyboard();
+    });
   } else {
     await typeText('Word-0', seed);
   }
@@ -1021,6 +1034,7 @@ export async function restoreWallet(
   // Restore wallet
   const restoreBtn = await elementById('RestoreButton');
   await restoreBtn.waitForDisplayed({ timeout: 60_000 });
+  if (driver.isIOS) await restoreBtn.waitForEnabled({ timeout: 60_000 });
   await sleep(150);
   await restoreBtn.click();
   await waitForSetupWalletScreenFinish();
