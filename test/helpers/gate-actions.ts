@@ -1,4 +1,10 @@
-import { elementById, dragOnElement, formatSats, handleAndroidAlert } from './actions';
+import {
+  elementById,
+  dragOnElement,
+  formatSats,
+  handleAndroidAlert,
+  withMoveToSparkIntroRecovery,
+} from './actions';
 import {
   actAndExpect,
   dismissKeyboardAndExpect,
@@ -85,10 +91,25 @@ export async function enterGateAddress(
 
 export async function enterGateScanPrompt(address: string, { acceptCameraPermission = true } = {}) {
   const permission = 'com.android.permissioncontroller:id/permission_allow_foreground_only_button';
-  await tapAndExpect(
-    { id: 'Scan' },
-    { anyVisible: [{ id: 'ScanPrompt' }, ...(driver.isAndroid ? [{ id: permission }] : [])] }
-  );
+  const scannerOpened = { anyVisible: [{ id: 'ScanPrompt' }] };
+  if (driver.isIOS) {
+    await actAndExpect(
+      'tap scanner above the tab bar',
+      async () => {
+        const scan = await elementById('Scan');
+        await withMoveToSparkIntroRecovery(() => scan.waitForDisplayed());
+        const { x, y, width } = await driver.getElementRect(await scan.elementId);
+        // The scan button protrudes above the overlapping Send and Receive hit regions.
+        await driver.execute('mobile: tap', { x: x + width / 2, y: y + 2 });
+      },
+      scannerOpened
+    );
+  } else {
+    await tapAndExpect(
+      { id: 'Scan' },
+      { anyVisible: [...scannerOpened.anyVisible, { id: permission }] }
+    );
+  }
   if (acceptCameraPermission) await handleAndroidAlert('permission_allow_foreground_only_button');
   await tapAndExpect({ id: 'ScanPrompt' }, { anyVisible: [{ id: 'QRInput' }] });
   await typeAndExpect('QRInput', address, {}, { verifyClear: true });
