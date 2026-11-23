@@ -1,7 +1,7 @@
 import { actAndExpect, tapAndExpect } from './outcome';
 
 /** Edit the newly generated invoice, not a cached/placeholder Receive subtree. */
-export async function editGateLightningInvoice(paidInvoice: string) {
+export async function editGateLightningInvoice(paidInvoice?: string) {
   const outcome = { anyVisible: [{ id: 'ReceiveNumberPadTextField' }] };
   if (!driver.isAndroid) {
     await tapAndExpect({ id: 'SpecifyInvoiceButton' }, outcome);
@@ -32,7 +32,7 @@ export async function editGateLightningInvoice(paidInvoice: string) {
             ).toLowerCase();
             if (
               !/^lnbcrt(?:\d+[munp]?)?1[02-9ac-hj-np-z]+$/.test(invoice) ||
-              invoice === paidInvoice.toLowerCase()
+              invoice === paidInvoice?.toLowerCase()
             )
               continue;
             // Pager pages repeat these tags. Resolve Edit from this QR's nearest shared

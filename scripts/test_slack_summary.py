@@ -11,7 +11,9 @@ from slack_summary import (
     format_status,
     get_platform_display,
     get_status_icon,
+    main,
     post_to_slack,
+    render_e2e_local_nightly_message,
     render_e2e_migration_message,
     render_e2e_staging_message,
 )
@@ -198,6 +200,55 @@ class TestRenderMigrationMessage(unittest.TestCase):
         self.assertIn("build: :white_check_mark: success", message)
         self.assertIn("e2e-tests: :white_check_mark: success", message)
         self.assertNotIn("prepare-wallets", message)
+
+
+class TestRenderLocalNightlyMessage(unittest.TestCase):
+    def setUp(self):
+        env_patcher = patch.dict(os.environ, {}, clear=True)
+        env_patcher.start()
+        self.addCleanup(env_patcher.stop)
+
+    def test_android_summary_has_one_job(self):
+        os.environ.update({
+            "PLATFORM": "android",
+            "LOCAL_NIGHTLY_RESULT": "success",
+            "E2E_TESTS_RESULT": "success",
+            "RUN_URL": "https://github.com/synonymdev/bitkit-android/actions/runs/123",
+            "RUN_ATTEMPT": "2",
+            "E2E_TESTS_REF": "abc123",
+        })
+        message = render_e2e_local_nightly_message()
+        self.assertIn(":white_check_mark: Bitkit Android E2E local nightly: success", message)
+        self.assertIn("Run: https://github.com/synonymdev/bitkit-android/actions/runs/123", message)
+        self.assertIn("Run attempt: 2", message)
+        self.assertIn("E2E tests ref: abc123", message)
+        self.assertEqual(message.split("Jobs:\n", 1)[1], "  e2e-spark: :white_check_mark: success")
+
+    def test_ios_summary_distinguishes_failed_setup_from_skipped_e2e(self):
+        os.environ.update({
+            "PLATFORM": "ios",
+            "LOCAL_NIGHTLY_RESULT": "failure",
+            "SPARK_IMAGES_RESULT": "success",
+            "BUILD_RESULT": "failure",
+            "E2E_TESTS_RESULT": "skipped",
+        })
+        message = render_e2e_local_nightly_message()
+        self.assertIn(":x: Bitkit iOS E2E local nightly: failure", message)
+        self.assertEqual(
+            message.split("Jobs:\n", 1)[1].splitlines(),
+            ["  spark-images: :white_check_mark: success",
+             "  build-spark-ios: :x: failure",
+             "  e2e-spark: :fast_forward: skipped"],
+        )
+
+    def test_cli_posts_one_summary(self):
+        os.environ.update({"LOCAL_NIGHTLY_RESULT": "success", "E2E_TESTS_RESULT": "success"})
+        with patch("sys.argv", ["slack_summary.py", "e2e-local-nightly"]), \
+                patch("sys.stdout", new=io.StringIO()), \
+                patch("slack_summary.post_to_slack", return_value=True) as post:
+            self.assertEqual(main(), 0)
+        post.assert_called_once()
+        self.assertIn("e2e-spark: :white_check_mark: success", post.call_args.args[0])
 
 
 class TestPostToSlack(unittest.TestCase):

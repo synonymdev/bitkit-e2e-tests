@@ -4,6 +4,7 @@
 # Inputs/roots:
 # - E2E root: this repo (bitkit-e2e-tests)
 # - iOS root: $IOS_ROOT, or ../bitkit-ios if unset
+# - Simulator architecture: $IOS_SIMULATOR_ARCH, defaulting to arm64 for BitkitCore
 #
 # Output:
 # - Copies Debug iphonesimulator build: Bitkit.app -> aut/Bitkit.app
@@ -38,6 +39,7 @@ else
 fi
 
 XCODE_EXTRA_ARGS+=(
+  "ARCHS=${IOS_SIMULATOR_ARCH:-arm64}"
   "E2E_BACKEND=$E2E_BACKEND"
   "E2E_NETWORK=$E2E_NETWORK"
   "TREZOR_BRIDGE=$TREZOR_BRIDGE"
@@ -51,12 +53,32 @@ if [[ -n "$TREZOR_ELECTRUM_URL" ]]; then
   XCODE_EXTRA_ARGS+=("TREZOR_ELECTRUM_URL=$TREZOR_ELECTRUM_URL")
 fi
 
+if [[ -n "${SOURCE_PACKAGES:-}" ]]; then
+  XCODE_EXTRA_ARGS+=(
+    -clonedSourcePackagesDirPath "$SOURCE_PACKAGES"
+    -disablePackageRepositoryCache
+    -disableAutomaticPackageResolution
+    -skipPackageUpdates
+  )
+fi
+
 # Embed fixture endpoints so they survive Appium reinstalls and app relaunches.
-for key in USDT_RPC_URL USDT_BUNDLER_URL USDT_DEPOSITS_URL USDT_BRIDGES_URL USDT_BRIDGE_NETWORKS; do
+for key in USDT_RPC_URL USDT_BUNDLER_URL USDT_DEPOSITS_URL USDT_BRIDGES_URL USDT_BRIDGE_NETWORKS \
+  SPARK_LOCAL_CONFIG_B64 SPARK_LOCAL_CHAIN_URL; do
   if [[ -n "${!key+x}" ]]; then
     XCODE_EXTRA_ARGS+=("$key=${!key}")
   fi
 done
+
+if [[ -n "${SPARK_LOCAL_CONFIG_B64:-}" ]]; then
+  xcode_version="$(xcodebuild -version)"
+  if [[ "$xcode_version" =~ ^Xcode[[:space:]]26\.0([.]|[[:space:]]) ]]; then
+    # Xcode 26.0 omits swift-secp256k1's default C traits when building the package.
+    XCODE_EXTRA_ARGS+=(
+      'GCC_PREPROCESSOR_DEFINITIONS=$(inherited) ENABLE_MODULE_ECDH=1 ENABLE_MODULE_MUSIG=1 ENABLE_MODULE_RECOVERY=1 ENABLE_MODULE_SCHNORRSIG=1'
+    )
+  fi
+fi
 
 echo "Building iOS simulator app (BACKEND=$BACKEND, E2E_BACKEND=$E2E_BACKEND, TREZOR_BRIDGE=$TREZOR_BRIDGE, TREZOR_BRIDGE_URL=$TREZOR_BRIDGE_URL)..."
 
@@ -65,7 +87,7 @@ xcodebuild \
   -scheme Bitkit \
   -configuration Debug \
   -sdk iphonesimulator \
-  -destination 'platform=iOS Simulator,OS=latest,name=iPhone 17' \
+  -destination 'generic/platform=iOS Simulator' \
   -derivedDataPath "$IOS_ROOT/build" \
   "${XCODE_EXTRA_ARGS[@]}" \
   clean build
