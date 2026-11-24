@@ -1,4 +1,55 @@
-import { actAndExpect, tapAndExpect } from './outcome';
+import {
+  dismissMoveToSparkIntroIfShown,
+  elementById,
+  getAddressFromQRCode,
+  withMoveToSparkIntroRecovery,
+} from './actions';
+import {
+  actAndExpect,
+  dismissKeyboardAndExpect,
+  tapAndExpect,
+  tapStationaryAndExpect,
+  type Outcome,
+} from './outcome';
+
+export const receiveQrOutcome: Outcome = {
+  all: [
+    { visible: { id: 'QRCode' } },
+    { visible: { id: 'ShowDetails' } },
+    { enabled: { id: 'ReceiveCopyQR', value: true } },
+  ],
+};
+
+export async function openReceiveOnchainQr() {
+  await tapAndExpect({ id: 'Receive' }, receiveQrOutcome);
+  return getAddressFromQRCode('bitcoin');
+}
+
+export async function acknowledgeOnchainDeposit() {
+  await withMoveToSparkIntroRecovery(() =>
+    elementById('ReceivedTransaction').waitForDisplayed({ timeout: 60_000 })
+  );
+  const dismiss = { id: 'ReceivedTransactionButton' };
+  if (driver.isIOS) {
+    await browser.waitUntil(
+      async () => String(await elementById(dismiss.id).getAttribute('hittable')) === 'true',
+      { timeout: 30_000, timeoutMsg: 'The received payment button was not hittable' }
+    );
+  }
+  await tapStationaryAndExpect(dismiss, {
+    all: [{ hidden: dismiss }, { hidden: { id: 'ReceivedTransaction' } }],
+  });
+  await dismissMoveToSparkIntroIfShown({ timeout: 3_000 });
+}
+
+export async function dismissReceiveNoteKeyboard() {
+  if (driver.isAndroid) {
+    await dismissKeyboardAndExpect();
+    return;
+  }
+  // The iOS Receive note editor uses the Done submit label.
+  await tapAndExpect({ text: 'done' }, { all: [{ keyboardShown: false }] });
+}
 
 /** Edit the newly generated invoice, not a cached/placeholder Receive subtree. */
 export async function editGateLightningInvoice(paidInvoice?: string) {
