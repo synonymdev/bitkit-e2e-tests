@@ -49,8 +49,13 @@ async function openSparkConnection() {
     { id: 'SparkConnection' },
     { anyVisible: [{ id: 'SparkBalance' }, { id: 'SparkDepositAddress' }] }
   );
-  if (!(await elementById('SparkBalance').isDisplayed())) {
+  // Android can expose a clipped balance row before its amount is on screen.
+  const balance = driver.isAndroid
+    ? $('//*[@resource-id="SparkBalance"]//*[@resource-id="MoneyText"]')
+    : elementById('SparkBalance');
+  if (!(await balance.isDisplayed())) {
     await swipeFullScreen('up', { upStartYPercent: 0.68, upEndYPercent: 0.34 });
+    await balance.waitForDisplayed();
   }
 }
 
