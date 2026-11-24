@@ -171,7 +171,7 @@ export async function expectText(
  * to avoid false positives from similar text elsewhere on the screen.
  *
  * @param ancestorId - The resource-id or accessibility ID of the container element
- * @param text - The text string to search for within the container
+ * @param text - The text to find within the container, or a list of accepted alternatives
  * @param options - Configuration options
  * @param options.visible - Whether the text should be visible (default: true)
  * @param options.timeout - Maximum time to wait for the element in milliseconds (default: 30000)
@@ -190,7 +190,7 @@ export async function expectText(
  */
 export async function expectTextWithin(
   ancestorId: string,
-  text: string,
+  text: string | readonly [string, ...string[]],
   {
     visible = true,
     timeout = 30_000,
@@ -201,25 +201,31 @@ export async function expectTextWithin(
     strategy?: RetrieveStrategy;
   } = {}
 ) {
+  const alternatives = typeof text === 'string' ? [text] : text;
   const matchesParent = async (parent: ChainablePromiseElement) => {
     if (!driver.isIOS) return false;
     const label = await parent.getAttribute('label');
     const value = await parent.getAttribute('value');
     return [label, value].some(
       (value) =>
-        typeof value === 'string' && (strategy === 'exact' ? value === text : value.includes(text))
+        typeof value === 'string' &&
+        alternatives.some((candidate) =>
+          strategy === 'exact' ? value === candidate : value.includes(candidate)
+        )
     );
   };
 
-  const needle = (() => {
-    if (driver.isAndroid) {
-      return strategy === 'exact' ? `.//*[@text='${text}']` : `.//*[contains(@text,'${text}')]`;
-    }
-
-    return strategy === 'exact'
-      ? `.//*[self::XCUIElementTypeStaticText or self::XCUIElementTypeTextView or self::XCUIElementTypeTextField or self::XCUIElementTypeButton][@label='${text}' or @value='${text}']`
-      : `.//*[self::XCUIElementTypeStaticText or self::XCUIElementTypeTextView or self::XCUIElementTypeTextField or self::XCUIElementTypeButton][contains(@label,'${text}') or contains(@value,'${text}')]`;
-  })();
+  const attributes = driver.isAndroid ? ['@text'] : ['@label', '@value'];
+  const predicate = alternatives
+    .flatMap((candidate) =>
+      attributes.map((attr) =>
+        strategy === 'exact' ? `${attr}='${candidate}'` : `contains(${attr},'${candidate}')`
+      )
+    )
+    .join(' or ');
+  const needle = driver.isAndroid
+    ? `.//*[${predicate}]`
+    : `.//*[self::XCUIElementTypeStaticText or self::XCUIElementTypeTextView or self::XCUIElementTypeTextField or self::XCUIElementTypeButton][${predicate}]`;
 
   const parent = elementById(ancestorId);
   await parent.waitForDisplayed({ timeout });
@@ -234,7 +240,7 @@ export async function expectTextWithin(
           (await matchesParent(currentParent)) || (await currentParent.$(needle).isDisplayed())
         );
       },
-      { timeout, timeoutMsg: `Expected "${text}" within "${ancestorId}"` }
+      { timeout, timeoutMsg: `Expected "${alternatives.join('" or "')}" within "${ancestorId}"` }
     );
     return;
   }
@@ -501,10 +507,13 @@ export async function getClipboardPlaintext(): Promise<string> {
  *
  * CI intermittently fails `mobile: setPasteboard` with:
  *   Process ended with exitcode 60 (cmd: 'xcrun simctl pbcopy <udid>')
- * Retries that call, then falls back to typeText if the Paste menu never appears
- * (so RestoreButton waits don't hang after a silent empty paste).
+ * Retries that call, then uses the typing fallback if the Paste menu never appears.
  */
-export async function pasteIOSText(testId: string, text: string) {
+export async function pasteIOSText(
+  testId: string,
+  text: string,
+  typeFallback = () => typeText(testId, text)
+) {
   if (!driver.isIOS) {
     throw new Error('pasteIOSText can only be used on iOS devices');
   }
@@ -537,8 +546,8 @@ export async function pasteIOSText(testId: string, text: string) {
   }
 
   if (lastPasteboardError) {
-    console.warn('→ pasteIOSText: pasteboard unavailable, falling back to typeText');
-    await typeText(testId, text);
+    console.warn('→ pasteIOSText: pasteboard unavailable, typing instead');
+    await typeFallback();
     return;
   }
 
@@ -556,8 +565,8 @@ export async function pasteIOSText(testId: string, text: string) {
     await sleep(200); // Allow time for the paste action to propagate
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.warn(`→ pasteIOSText: Paste menu unavailable (${message}); falling back to typeText`);
-    await typeText(testId, text);
+    console.warn(`→ pasteIOSText: Paste menu unavailable (${message}); typing instead`);
+    await typeFallback();
   }
 }
 
@@ -990,7 +999,17 @@ export async function restoreWallet(
 
   // Seed
   if (driver.isIOS) {
-    await pasteIOSText('Word-0', seed);
+    await pasteIOSText('Word-0', seed, async () => {
+      // Typing the entire phrase into Word-0 fills the fields and dismisses the keyboard as
+      // soon as the first character of the final word arrives.
+      const words = seed.trim().split(/\s+/);
+      for (const [index, word] of words.entries()) {
+        const field = await elementById(`Word-${index}`);
+        await field.waitForDisplayed();
+        await field.setValue(word);
+      }
+      await confirmInputOnKeyboard();
+    });
   } else {
     await typeText('Word-0', seed);
   }
@@ -1015,6 +1034,7 @@ export async function restoreWallet(
   // Restore wallet
   const restoreBtn = await elementById('RestoreButton');
   await restoreBtn.waitForDisplayed({ timeout: 60_000 });
+  if (driver.isIOS) await restoreBtn.waitForEnabled({ timeout: 60_000 });
   await sleep(150);
   await restoreBtn.click();
   await waitForSetupWalletScreenFinish();

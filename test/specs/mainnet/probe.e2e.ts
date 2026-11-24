@@ -26,6 +26,7 @@ import { ciIt } from '../../helpers/suite';
 const DEFAULT_PROBE_DELAY_MS = 10_000;
 const DEFAULT_PROBE_RETRIES = 2;
 const DEFAULT_PROBE_RETRY_DELAY_MS = 5_000;
+const PROBE_ELECTRUM_TIMEOUT_MS = 180_000;
 
 function resolveEnvValue(name: string): string {
   const value = process.env[name];
@@ -226,7 +227,10 @@ describe('@probe_mainnet - Lightning probe smoke', () => {
         expectBackupSheet: false,
         reinstall: false,
       });
-      await waitForMainnetWalletReady({ logPrefix: 'Probe' });
+      await waitForMainnetWalletReady({
+        logPrefix: 'Probe',
+        electrumTimeoutMs: PROBE_ELECTRUM_TIMEOUT_MS,
+      });
 
       const resetScores = resolveProbeResetScores();
       let scoresResetFloorS: number | null = null;
