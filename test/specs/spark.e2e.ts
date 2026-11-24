@@ -114,11 +114,26 @@ async function getSparkDepositClaimFee(txid: string) {
     },
     { timeout: 90_000, interval: 1_500, timeoutMsg: 'Spark did not display the claimed deposit' }
   );
-  await expectTextWithin('SparkDeposit', txid.slice(0, 8));
+  if (driver.isAndroid) {
+    const elementId = await elementById('SparkScrollView').elementId;
+    await browser.waitUntil(
+      async () =>
+        (await driver.execute('mobile: scrollGesture', {
+          elementId,
+          direction: 'down',
+          percent: 1,
+        })) === false,
+      { timeout: 15_000, timeoutMsg: 'Could not reach the end of the Spark deposit history' }
+    );
+    // On a fresh wallet the history starts below the balance and ends at the bottom of this view.
+    // Seeing both boundaries makes the row count include the entire history on Android.
+    await expect(elementById('SparkBalance')).toBeDisplayed();
+  }
   const depositRows = $$(
     '//*[@resource-id="SparkDeposit"] | //XCUIElementTypeButton[@name="SparkDeposit"]'
   );
   expect(await depositRows.length).toBe(1);
+  await expectTextWithin('SparkDeposit', txid.slice(0, 8));
 
   const feeAmount = $(
     driver.isIOS
